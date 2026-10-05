@@ -36,8 +36,6 @@ export function ConstructionPayablesRouteView() {
     <ConstructionPayablesView 
       properties={erp.data.properties}
       propertyCosts={erp.data.propertyCosts}
-      purchaseOrders={erp.data.purchaseOrders}
-      onCreatePurchaseOrder={erp.handleCreateConstructionPurchaseOrder}
       contracts={erp.data.contracts}
       activePeriod={erp.activePeriod}
       periods={erp.data.periods}

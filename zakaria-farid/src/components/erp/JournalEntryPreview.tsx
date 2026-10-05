@@ -226,8 +226,8 @@ export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({
         <thead>
           <tr>
             <th style={{ textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'كود الحساب والاسم' : 'Account & Title'}</th>
-            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'مدين (له فلوس)' : 'Debit'}</th>
-            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'دائن (التزام عليه)' : 'Credit'}</th>
+            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'مدين' : 'Debit'}</th>
+            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'دائن' : 'Credit'}</th>
           </tr>
         </thead>
         <tbody>

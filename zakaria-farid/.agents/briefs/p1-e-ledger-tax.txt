@@ -1,0 +1,39 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md. FINANCIAL_CORE: never alter posting rules or balances.
+User-confirmed decisions (PROJECT_SPEC.md 2026-10-04): (a) taxes incl. 2.5% disposal tax are entered and recorded MANUALLY by the user — no automatic generation; (b) accounting is unified CASH-BASIS: the GL is the single source of truth for money figures; schedule-based dues are "scheduled collections (off-ledger)", never accrual receivables.
+
+1. Manual tax recording. src/components/admin/erp/v2/views/ApartmentTaxesView.tsx: add "Record tax" (EN/AR) opening a small form: contract (select from contracts), tax type (free text with suggestions e.g. "Real estate disposal tax 2.5%", "Stamp duty", "Other"), taxable base, rate % (optional), amount (required; if rate given, prefill amount = base × rate but keep it editable), date, notes. Persist to erp_tax_records (columns: tax_id, contract_id, tax_type, taxable_base, tax_rate, tax_amount, remittance_status 'Pending', created_at) via a new function in src/lib/erp/supabaseService.ts, then update local state (add a handler to src/components/admin/erp/context/ERPWorkstationContext.tsx next to the existing tax remittance handler ~line 1227/3012, plus context value/type). Recording a tax creates NO journal entry (cash-basis: tax hits the GL only when remitted). Ensure the existing "mark remitted" action posts the cash outflow (check what it does today; if it posts nothing, post Dr tax expense/liability account per the existing CoA convention used elsewhere / Cr 101000 or 102000 — report the accounts chosen and why).
+   In supabaseService.ts contract creation (~line 729-748) a tax row is inserted only when the user typed a tax amount in the contract wizard — KEEP that (it is manual), but stop hardcoding tax_type 'Disposal 2.5% Case A'; use contract.tax_description || 'Manual tax'.
+2. Chart of accounts shows 34 accounts but the DB erp_accounts has 29 — 5 are injected from code. Find where the ledger/CoA view merges hardcoded accounts (search src/lib/erp and src/components/admin/erp/v2/views/ledger for account arrays merged with DB accounts) and show only DB accounts. If a posting path relies on an injected code-only account, list it in the report instead of breaking it (do not remove accounts that journal lines reference; instead report them as needing a DB seed).
+3. CoA table "Total" row sums debit- and credit-natured balances together (showed 1,950,000 for 975k assets + 975k liabilities). Replace with separate totals: Total Debit-nature balances / Total Credit-nature balances (and Δ = 0 check), or remove the meaningless sum. Find in the ledger views (search "accounts displayed").
+4. Account 103300 is labelled "(Retired)" but shows status Active. Status must derive from the DB account's active flag; if the DB row is active but the name says retired, show it as Inactive only if the DB has such a flag — otherwise report (do not rename DB data).
+5. "Entries by Type" groups a receipt (JE-RCP-…, source_module for installment collection) as "Other". Map collection receipts / advance collections / InstaPay receipts to "Sales & Revenue" (or a new "Collections" bucket if the component supports adding one). Find the categorisation function.
+6. Cash-basis labelling in the ledger area and the collections agenda (src/components/admin/erp/v2/views/* for PDC/dues agenda — search "Net Projected Flow"): "Net Projected Flow (Liquidity)" currently shows gross contract value (4.5M) incl. already-collected cash. Redefine as current GL cash (101000+102000) + remaining scheduled collections (nominal − amount_paid of open tranches) − pending payables; label it "Projected liquidity (cash + scheduled, off-ledger)". "Inflow Receivables" label → "Scheduled collections (off-ledger)" and value = remaining, not gross. Remove the duplicated currency suffix ("EGP ج.م") in that view.
+
+Files allowed: ApartmentTaxesView.tsx, supabaseService.ts (new tax insert fn + the tax_type line only), ERPWorkstationContext.tsx (only the tax region + context value/type entries for the new handler), ledger view files under src/components/admin/erp/v2/views/ledger/ and the general-ledger view, the dues/PDC agenda view file(s) containing "Net Projected Flow", and any CoA/ledger helper in src/lib/erp you must change for items 2-5 (list them). NOT CockpitView.tsx, NOT rescission files, NOT HandCollectionModal.tsx, NOT ZFContractInspectionModal.tsx (other agents).
+</task>
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip it and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Another agent edits OTHER files in this tree concurrently. Touch only files allowed in your brief. Report unrelated tsc errors; do not fix them.
+- Preserve UTF-8 (Arabic strings). Do targeted edits; never rewrite whole files. Do not delete imports/lines you did not intend to change.
+- After any "remove X" change, grep for X and confirm 0 remaining references (or justify each).
+- Hooks: never place a hook after an early return.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit                (must be clean for your files)
+  npx eslint <files you touched>  (no new errors vs HEAD; report counts)
+  git diff --stat -- <files you touched>
+For every target grep given in the brief: count + reason for each remaining hit.
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access, no migrations.</action_safety>
+
+<structured_output_contract>
+1. Per numbered item: done/skipped + file:line
+2. Decisions you made that the brief left open
+3. Gates (tsc, eslint per file vs HEAD, grep counts)
+4. Open questions
+</structured_output_contract>

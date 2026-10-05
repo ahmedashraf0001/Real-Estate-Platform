@@ -208,7 +208,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
         .velocity-grid.is-light .channel-card,
         .velocity-grid.is-light .urgent-queue-card {
           background: #FFFFFF;
-          border: 1.5px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
         }
 
@@ -221,11 +221,11 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
         }
 
         .channel-card {
-          border-top: 2px solid #E5B869;
+          border-top: 2px solid var(--admin-accent);
         }
 
         .velocity-grid.is-light .channel-card {
-          border-top: 2px solid #946F23;
+          border-top: 2px solid var(--admin-accent);
         }
 
         .section-header {
@@ -238,19 +238,19 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           width: 36px;
           height: 36px;
           border-radius: 10px;
-          background: rgba(229, 184, 105, 0.12);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #E5B869;
+          color: var(--admin-accent);
           flex-shrink: 0;
-          border: 1px solid rgba(229, 184, 105, 0.25);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         .velocity-grid.is-light .section-icon-box {
-          background: rgba(148, 111, 35, 0.08);
-          border-color: rgba(148, 111, 35, 0.25);
-          color: #946F23;
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
         }
 
         .section-icon-box.alert-box {
@@ -359,7 +359,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
 
         .velocity-grid.is-light .channel-conv-pill {
           background: #F1F5F9;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #334155;
         }
 
@@ -401,7 +401,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
 
         .velocity-grid.is-light .urgent-lead-row {
           background: #F8FAFC;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
         }
 
         .urgent-lead-row:hover {
@@ -455,7 +455,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
 
         .velocity-grid.is-light .lead-time-tag {
           background: #F1F5F9;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #64748B;
         }
 
@@ -520,21 +520,21 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
         }
 
         .velocity-grid.is-light .phone-btn {
-          background: rgba(148, 111, 35, 0.08);
-          border: 1px solid rgba(148, 111, 35, 0.25);
-          color: #946F23;
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
         }
 
         .phone-btn:hover {
-          background: #E5B869;
-          color: #0A0C10;
-          border-color: #E5B869;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
+          border-color: var(--admin-accent);
         }
 
         .velocity-grid.is-light .phone-btn:hover {
-          background: #946F23;
-          color: #FFFFFF;
-          border-color: #946F23;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
+          border-color: var(--admin-accent);
         }
 
         .crm-btn {
@@ -546,14 +546,14 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
 
         .velocity-grid.is-light .crm-btn {
           background: #F1F5F9;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #334155;
         }
 
         .crm-btn:hover {
-          background: #E5B869;
-          color: #0A0C10;
-          border-color: #E5B869;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
+          border-color: var(--admin-accent);
         }
 
         .velocity-grid.is-light .crm-btn:hover {

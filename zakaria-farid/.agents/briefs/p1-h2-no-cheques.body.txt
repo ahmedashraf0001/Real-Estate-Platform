@@ -1,0 +1,22 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md. FINANCIAL_CORE: every journal entry stays balanced.
+User-confirmed (PROJECT_SPEC.md 2026-10-04):
+ (a) There are NO cheques. Payments are either direct cash (Main Safe 101000) or InstaPay transfer (102000). Money is recorded only when actually received.
+ (b) The down payment is NOT auto-collected when a contract is created; it stays pending until received and recorded through the normal collection flow.
+
+CURRENT BEHAVIOR (verified in DB):
+ - Creating a contract inserts one `erp_pdc_records` row per future tranche with status 'In Safe' (src/lib/erp/supabaseService.ts ~line 708-723 "Auto-generate Post-Dated Cheques"), and amendments insert replacement PDCs (~line 1129).
+ - Tranche 0 (down payment) is marked Paid with amount_paid = DP at creation (supabaseService ~988-989; src/components/admin/erp/context/ERPWorkstationContext.tsx ~1450 `dpSchedule.status = 'Paid'`), an advance-payment JE (Dr 101000 / Cr 203000) is posted (`ContractsEngine.createAdvancePaymentEntry` ~1525), and contract total_cash_collected starts at the DP.
+ - The contract wizard (src/components/admin/erp/v2/modals/NewContractWizardModal.tsx) step 3 shows "Down Payment Destination Treasury" and "Instant GL Posting: Dr Safe / Cr Deferred Revenue".
+
+REQUIRED:
+1. Contract creation: create schedules only (tranche 0 = down payment, status Pending, amount_paid 0); total_cash_collected = 0; NO advance-payment JE; NO PDC rows. Remove the treasury selector and the "Instant GL posting" summary from the wizard; replace with a short note (EN/AR): "No ledger entry is posted until the down payment is actually received and recorded."
+2. Amendments/escalations: do not insert replacement PDC rows (~1129 and any similar path). Keep schedule superseding logic intact.
+3. Collections must work purely from installment schedules. src/lib/erp/installmentsVaultProjection.ts already has a synthetic path for schedules without a matched PDC (id `SCH-…`, ~line 326+). Make sure: tranche 0 appears as a collectible due ("Down payment"); the collection handler `handleConfirmHandCollection` (ERPWorkstationContext ~2732) resolves the schedule via the item's scheduleId/schedule_id and skips `persistPDCStatus` + local pdc updates when the item is not a real PDC row; the partial-payment logic (Partially Paid / Paid, remaining) stays as is. The receipt JE stays Dr 101000|102000 / Cr 203000.
+4. UI wording: payment channels are only "Cash" / "InstaPay" (EN) and "نقدي" / "إنستاباي" (AR). Remove cheque terminology from collection/agenda UIs you touch ("In Safe" cheque badges, "Cheque #", "PDC" labels). Hide or remove entry points that CREATE new cheques (e.g. NewChequeModal launch buttons / "New Cheque" shortcut) — grep for `NewChequeModal`, `onOpenNewCheque`, `setShowNewCheque`; list each removed entry point. Do NOT delete erp_pdc_records reading code wholesale (old rows may exist); just stop creating them and stop showing cheque-specific actions.
+5. Cockpit KPI and agenda totals must not count legacy PDC rows as cash or receivables (grep `pdcRecords` in canonical metrics / cockpit; schedules are the source). List each change.
+
+Gate addition: run `npx tsx --test src/lib/erp/__tests__/financialAgendaDualTables.test.ts src/lib/erp/__tests__/invariants.test.ts src/lib/erp/__tests__/periodLockAndPosting.test.ts` — report results; if a test asserts the old auto-DP/PDC behavior, update that test to the new user-confirmed behavior and say so.
+
+Files allowed: supabaseService.ts (contract creation + amendment paths), ERPWorkstationContext.tsx (contract creation + collection handler regions only), NewContractWizardModal.tsx, installmentsVaultProjection.ts, HandCollectionModal.tsx, HandInstallmentsVaultView.tsx, canonical metrics file(s) if needed, files that host cheque-creation entry points (list them), and the 3 test files above. NOT CockpitView.tsx (another agent is editing it — if a change there is needed, list it in the report instead).
+</task>

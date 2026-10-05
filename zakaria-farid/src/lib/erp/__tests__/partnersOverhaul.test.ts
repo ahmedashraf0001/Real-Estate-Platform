@@ -11,10 +11,27 @@ import {
   executeFullSubstitution
 } from '../partnersEngine';
 import { InvariantsValidator } from '../invariants';
-import { ERPPartnerProfile, ERPPartnerTransaction, ERPContract } from '../types';
+import { ERPPartnerProfile, ERPPartnerTransaction, ERPContract, ERPPropertyCostItem } from '../types';
 import { Property } from '@/lib/supabase/types';
 import { D } from '../math';
 import { PRIMARY_DEVELOPER_NAME } from '../partnersDirectory';
+
+/** One recorded cost item: partner capital owed is a share of recorded costs (user-confirmed 2026-10-05). */
+const recordedCosts = (propertyId: string, total: string): ERPPropertyCostItem[] => [{
+  item_id: `cost-${propertyId}`,
+  property_id: propertyId,
+  category: 'civil_structure',
+  phase: 'structural_skeleton',
+  item_name_ar: 'تكلفة مسجلة',
+  item_name_en: 'Recorded cost',
+  quantity: 1,
+  unit: 'lump',
+  unit_cost_egp: total,
+  total_cost_egp: total,
+  logged_date: '2026-01-01',
+  logged_by: 'test',
+  status: 'verified',
+} as ERPPropertyCostItem];
 
 describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)', () => {
 
@@ -130,7 +147,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       ]
     } as any;
 
-    it('accurately computes implied total capital from founder injection without float drift', () => {
+    it('computes required capital as share of recorded costs without float drift', () => {
       const transactions: ERPPartnerTransaction[] = [
         {
           id: 'tx-1',
@@ -147,7 +164,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions);
+      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '25000000.00'));
 
       // 50% founder share with 12.5M injected => implied total = 25,000,000.00
       assert.strictEqual(capitalInfo.founderInjectedEgp, '12500000.00');
@@ -199,7 +216,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions);
+      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '20000000.00'));
       assert.strictEqual(capitalInfo.impliedTotalCapitalEgp, '20000000.00');
 
       const ahmed = capitalInfo.partnerStatuses.find(p => p.partnerName === 'م. أحمد الشريف');
@@ -240,7 +257,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions);
+      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '20000000.00'));
       const hany = capitalInfo.partnerStatuses.find(p => p.partnerName === 'د. هاني المنياوي');
       assert.ok(hany);
       assert.strictEqual(hany.requiredContributionEgp, '4000000.00');
@@ -249,7 +266,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(hany.hasArrears, false);
     });
 
-    it('safely handles zero founder injection without division-by-zero errors', () => {
+    it('safely handles a building with no recorded costs without division-by-zero errors', () => {
       const capitalInfo = computeDynamicBuildingCapital(testBuilding, []);
       assert.strictEqual(capitalInfo.founderInjectedEgp, '0.00');
       assert.strictEqual(capitalInfo.impliedTotalCapitalEgp, '0.00');
@@ -264,7 +281,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
   });
 
   describe('3. Double-Entry GL Journal Invariants (§INV-4.1)', () => {
-    it('creates perfectly balanced capital injection journal entry via InstaPay into Treasury (Dr 101000 / Cr 301000)', () => {
+    it('creates perfectly balanced capital injection journal entry via InstaPay into Treasury (Dr 102000 / Cr 301000)', () => {
       const je = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: 'م. أحمد الشريف',
         amount: '3500000.00',
@@ -278,12 +295,12 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       const balanceCheck = InvariantsValidator.verifyDoubleEntryBalance([je]);
       assert.strictEqual(balanceCheck.passed, true, 'Capital injection must be strictly balanced');
 
-      const dr101 = je.lines.find(l => l.account_code === '101000');
+      const dr102 = je.lines.find(l => l.account_code === '102000');
       const cr301 = je.lines.find(l => l.account_code === '301000');
 
-      assert.ok(dr101, 'Must debit Treasury Safe account 101000 for InstaPay channel');
-      assert.strictEqual(dr101.debit_amount, '3500000.00');
-      assert.strictEqual(dr101.credit_amount, '0.00');
+      assert.ok(dr102, 'Must debit account 102000 for InstaPay channel');
+      assert.strictEqual(dr102.debit_amount, '3500000.00');
+      assert.strictEqual(dr102.credit_amount, '0.00');
 
       assert.ok(cr301, 'Must credit account 301000 (Partner Capital)');
       assert.strictEqual(cr301.debit_amount, '0.00');
@@ -335,7 +352,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(cr301.credit_amount, '1200000.00');
     });
 
-    it('creates profit payout / dividend journal entry via InstaPay from Treasury (Dr 303000 / Cr 101000)', () => {
+    it('creates profit payout / dividend journal entry via InstaPay (Dr 303000 / Cr 102000)', () => {
       const payoutInstaJe = PartnersEngine.createPayoutJournalEntry({
         partnerName: 'د. هاني المنياوي',
         amount: '750000.00',
@@ -349,12 +366,12 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(balCheck.passed, true);
 
       const dr303 = payoutInstaJe.lines.find(l => l.account_code === '303000');
-      const cr101 = payoutInstaJe.lines.find(l => l.account_code === '101000');
+      const cr102 = payoutInstaJe.lines.find(l => l.account_code === '102000');
 
       assert.ok(dr303, 'Must debit account 303000 (Partner Profit Distributions & Withdrawals)');
       assert.strictEqual(dr303.debit_amount, '750000.00');
-      assert.ok(cr101, 'Must credit Treasury Safe account 101000 (InstaPay channel)');
-      assert.strictEqual(cr101.credit_amount, '750000.00');
+      assert.ok(cr102, 'Must credit InstaPay account 102000');
+      assert.strictEqual(cr102.credit_amount, '750000.00');
     });
 
     it('creates profit payout / dividend journal entry via Commercial Bank (Dr 303000 / Cr 102000)', () => {
@@ -552,7 +569,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      // Founder injected 12,000,000 (their 60% share).
+      // Recorded costs 20,000,000.
       // Tarek required 40% = 8,000,000. But Tarek injected only 5,000,000 => arrears = 3,000,000.
       const mockTxs: ERPPartnerTransaction[] = [
         {
@@ -587,7 +604,9 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         mockProfiles,
         [mockBuilding],
         [],
-        mockTxs
+        mockTxs,
+        [],
+        recordedCosts('bldg-attr-1', '20000000.00')
       );
 
       const tarek = summaries.find(s => s.partnerName === 'د. طارق محمود');
@@ -909,7 +928,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capInfo = computeDynamicBuildingCapital(testBldg, txs);
+      const capInfo = computeDynamicBuildingCapital(testBldg, txs, recordedCosts('prop-arrears-targeted', '30000000.00'));
       const inArrears: Array<{ partnerName: string; propertyId: string; buildingTitle: string; arrearsEgp: string }> = [];
 
       capInfo.partnerStatuses.forEach(p => {

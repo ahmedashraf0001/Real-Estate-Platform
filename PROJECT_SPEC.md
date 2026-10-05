@@ -139,3 +139,26 @@ The platform combines a public-facing property showcase with a comprehensive bac
 - **Admin Shell Redesign**: The administrative shell chrome (`src/components/admin/AdminSidebar.tsx` and `AdminUniversalHeader.tsx`) is explicitly deferred pending a dedicated independent design review; `SURFACE_UI` must not modify the Admin shell.
 - **Operational Modal Deduplication**: Consolidation of parallel modal implementations (`CashCollectionReceiptModal` vs `HandCollectionModal`, and `PartnerOperationsModal` vs standalone modals) is reserved for a future gated work order.
 - **Installment Revenue Recognition Migration**: Gradual transition from Model B Handover Recognition to installment-proportional revenue recognition is queued for future financial core iteration.
+
+## Decisions — 2026-10-04 (E2E P1 round)
+- [user-confirmed] Public website demo/fallback listings (`FALLBACK_PROPERTIES`) are removed; empty DB shows honest empty states.
+- [user-confirmed] Contract rescission penalty is user-adjustable per rescission (default 10%), not hardcoded.
+- [user-confirmed] Taxes (incl. 2.5% disposal tax) are entered and recorded manually by the user; no automatic tax generation.
+- [user-confirmed] Accounting basis is unified cash-basis: GL is the single source of truth for financial figures; schedule-based dues are shown as off-ledger "scheduled collections", never as accrual receivables.
+- [user-confirmed] Tax remittance goes through the accrued disposition tax liability (204000): recording a tax accrues it to 204000; remitting clears 204000 against cash.
+- [user-confirmed] Accounting periods are created automatically for any new year/month as needed; the user can also manually close a fiscal year.
+- [user-confirmed] There are NO cheques. Payments are either direct cash or InstaPay transfer. Money is recorded only when actually received (no post-dated cheque records, no auto-generated PDCs).
+- [user-confirmed] The down payment is NOT auto-collected when a contract is created; it stays pending until actually received and recorded.
+- [user-confirmed 2026-10-05] InstaPay money is recorded in account 102000 (InstaPay) everywhere: collections, expenses, contractor settlements, partner funding and partner payouts. Cash is 101000 (Main Safe). Supersedes the older "unified treasury 101000" design.
+
+## Cost & pricing calculator (2026-10-05) [user-confirmed]
+- Built-property pricing = "cost floor vs market": show actual recorded cost per m² and the break-even price, the market price per m² (defaults to current list price / area, editable), and let the user pick a price per m² between them. Show total price, profit, margin on price, return on cost, and the change versus the current list price. Saving writes the whole-property price to the catalog (`price_egp`). The old cost-times-margin-only suggestion is removed.
+- Feasibility mode stays, simplified: land cost, built area, construction cost per m² (finish-tier presets, editable), extra costs %, expected sale price per m² → total cost, revenue, profit, margin, return on cost, break-even price per m². No steel/concrete quantity breakdown.
+
+- [user-confirmed 2026-10-05] Purchase orders are removed from the ERP (the draft PO popup, its sidebar action and list). Contractor bills and site expenses are the only ways to record construction spend.
+
+## Money math (2026-10-05) [user-confirmed]
+- [user-confirmed 2026-10-05] Rounding to piastres is half-up (0.005 → 0.01), applied once at the end of a calculation. Percentages and ratios (RSV factor, partner share %, penalty %, down-payment %) are applied at full precision, never pre-rounded to 2 decimals.
+- [user-confirmed 2026-10-05] No hardcoded cost ratios (the old 45% of contract value / list price). Unit cost for cancellations and partner figures = cost actually recorded for the property/unit (its RSV share for building units). If no cost is recorded, show "cost not recorded" and block the cancellation posting until costs exist.
+- [user-confirmed 2026-10-05] A journal entry is posted into the accounting period that contains its entry date (created automatically if missing); posting is refused if that period is closed.
+- [user-confirmed 2026-10-05] Partner capital owed = partner share % × costs actually recorded for the building so far (not derived from the founder's payments).

@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Wallet, 
-  Plus, 
   Eye, 
   CheckCircle2, 
   Clock, 
@@ -33,6 +32,7 @@ import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
 import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import { 
   buildProjectedVaultItems, 
   calculateVaultKPIs, 
@@ -53,6 +53,8 @@ import {
 import { InstallmentDetailDrawer } from './installments/InstallmentDetailDrawer';
 import { InstallmentsCalendarStrip } from './installments/InstallmentsCalendarStrip';
 import { InstallmentsAnalyticsCharts } from './installments/InstallmentsAnalyticsCharts';
+import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
+import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
 import styles from '../ZFWorkstationShell.module.css';
 
 // Format number with thousands commas
@@ -74,9 +76,8 @@ export interface HandInstallmentsVaultViewProps {
   isMutating?: boolean;
   onCollectItem: (item: ERPPDCRecord) => void;
   onCollectDueToday?: () => void;
-  onOpenNewCheque: () => void;
+  onOpenNewCheque?: () => void;
   onOpenNewSupplement?: (contractId?: string) => void;
-  onInspectCheque: (item: ERPPDCRecord) => void;
   onBounceItem?: (item: ERPPDCRecord) => void | Promise<void>;
   onPDCStatusChange?: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => Promise<void>;
   onRecordPayablePayment?: (updatedItem: ERPPropertyCostItem) => Promise<void>;
@@ -91,7 +92,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   isAr = true,
   isMutating = false,
   onCollectItem,
-  onOpenNewCheque,
+  onOpenNewCheque: _onOpenNewCheque,
   onOpenNewSupplement,
   onBounceItem,
   onPDCStatusChange,
@@ -166,6 +167,14 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   const agendaKPIs = useMemo(() => {
     return calculateFinancialAgendaKPIs(projectedItems, projectedOutflows, todayStr);
   }, [projectedItems, projectedOutflows, todayStr]);
+
+  // Cash-basis projected liquidity: GL cash (101000 + 102000) + open scheduled collections − open payables
+  const erpCtx = useERPWorkstationContext();
+  const glJournalEntries = erpCtx?.data?.journalEntries;
+  const projectedLiquidity = useMemo(() => {
+    const glCash = getAvailableCash(glJournalEntries || []).totalCash;
+    return glCash.plus(agendaKPIs.netScheduledFlow);
+  }, [glJournalEntries, agendaKPIs.netScheduledFlow]);
 
   // 5. TODAY'S AGENDA REAL DUES
   const todayAgendaItems = useMemo(() => {
@@ -518,12 +527,12 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         borderRadius: '6px',
         fontSize: '0.7rem',
         fontWeight: 700,
-        background: isInstapay ? 'rgba(37, 99, 235, 0.08)' : 'rgba(100, 116, 139, 0.08)',
-        color: isInstapay ? 'var(--erp-accent, #2563eb)' : '#334155',
-        border: `1px solid ${isInstapay ? 'rgba(37, 99, 235, 0.2)' : '#e2e8f0'}`
+        background: isInstapay ? 'color-mix(in srgb, var(--erp-accent) 8%, transparent)' : 'rgba(100, 116, 139, 0.08)',
+        color: isInstapay ? 'var(--erp-accent)' : '#334155',
+        border: `1px solid ${isInstapay ? 'color-mix(in srgb, var(--erp-accent) 20%, transparent)' : '#e2e8f0'}`
       }}>
         {isInstapay ? <CreditCard size={11} /> : <Wallet size={11} />}
-        <span>{isInstapay ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'كاش بالخزينة' : 'Cash in Hand')}</span>
+        <span>{isInstapay ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'نقدي' : 'Cash')}</span>
       </span>
     );
   };
@@ -608,7 +617,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--erp-accent, #2563eb)',
+              color: 'var(--erp-accent)',
               flexShrink: 0
             }}>
               <Building2 size={30} />
@@ -625,13 +634,13 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 fontWeight: 800,
                 color: 'var(--erp-accent, #2563eb)',
                 background: 'var(--erp-accent-subtle, #eff6ff)',
-                border: '1px solid rgba(37, 99, 235, 0.2)',
+                border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                 padding: '0.15rem 0.55rem',
                 borderRadius: '6px'
               }}>
                 {isAr ? 'بيانات الأصل والوحدة' : 'Verified Real Estate Asset'}
               </span>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0F172A' }}>
                 {printingItem.projectTitle}
               </h3>
             </div>
@@ -644,7 +653,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               <span style={{ color: '#cbd5e1' }}>•</span>
               <span>
                 <strong style={{ color: '#64748b' }}>{isAr ? 'رقم العقد: ' : 'Contract: '}</strong>
-                <span style={{ color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}>#{printingItem.contractNumber}</span>
+                <span style={{ color: 'var(--erp-accent)', fontWeight: 800 }}>#{printingItem.contractNumber}</span>
               </span>
             </div>
 
@@ -652,13 +661,13 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.35rem',
-              background: 'var(--erp-accent-subtle, #eff6ff)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
+              background: 'var(--erp-accent-subtle)',
+              border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
               padding: '0.15rem 0.55rem',
               borderRadius: '6px',
               fontSize: '0.74rem',
               fontWeight: 800,
-              color: 'var(--erp-accent, #2563eb)',
+              color: 'var(--erp-accent)',
               width: 'fit-content'
             }}>
               <Layers size={12} />
@@ -680,8 +689,8 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           </span>
           <span style={{
             fontSize: '0.85rem',
-            fontWeight: 900,
-            color: printingDocType === 'receipt' ? '#16a34a' : 'var(--erp-accent, #2563eb)',
+            fontWeight: 800,
+            color: printingDocType === 'receipt' ? '#16a34a' : 'var(--erp-accent)',
             display: 'inline-block',
             marginTop: '0.2rem'
           }}>
@@ -715,7 +724,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               <>
                 <div style={{
                   fontSize: '2rem',
-                  fontWeight: 900,
+                  fontWeight: 800,
                   color: '#0F172A',
                   fontVariantNumeric: 'tabular-nums',
                   marginTop: '0.2rem',
@@ -724,9 +733,9 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                   gap: '0.35rem'
                 }}>
                   <span>{formatNumberWithCommas(printAmount)}</span>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--erp-accent)' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                 </div>
-                <div style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', marginTop: '0.35rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--erp-accent)', marginTop: '0.35rem' }}>
                   {isAr 
                     ? `فقط وقدره: ${tafqeetEGP(printAmount)} لا غير`
                     : tafqeetEGP(printAmount)}
@@ -739,7 +748,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         <div style={{ textAlign: isAr ? 'left' : 'right', flexShrink: 0 }}>
           <span style={{
             display: 'inline-block',
-            background: printingDocType === 'receipt' ? '#16a34a' : 'var(--erp-accent, #2563eb)',
+            background: printingDocType === 'receipt' ? '#16a34a' : 'var(--erp-accent)',
             color: '#ffffff',
             padding: '0.45rem 0.95rem',
             borderRadius: '8px',
@@ -749,7 +758,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             {printingDocType === 'receipt' ? (isAr ? 'مُسدد بالخزينة' : 'Receipt Settled') : (isAr ? 'واجب السداد' : 'Payment Required')}
           </span>
           <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.4rem', fontWeight: 600 }}>
-            {printingItem.paymentMethod === 'INSTAPAY' ? (isAr ? 'قناة الدفع: إنستاباي' : 'Channel: InstaPay') : (isAr ? 'قناة الدفع: كاش بالخزينة' : 'Channel: Cash in Hand')}
+            {printingItem.paymentMethod === 'INSTAPAY' ? (isAr ? 'قناة الدفع: إنستاباي' : 'Channel: InstaPay') : (isAr ? 'قناة الدفع: نقدي' : 'Channel: Cash')}
           </div>
         </div>
       </div>
@@ -768,7 +777,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '22%', color: '#64748b' }}>
               {isAr ? 'اسم العميل المتعاقد:' : 'Buyer Name:'}
             </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 900, width: '38%', color: '#0F172A' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '38%', color: '#0F172A' }}>
               {printingItem.buyerName}
             </td>
             <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '18%', color: '#64748b' }}>
@@ -825,7 +834,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             <span style={{
               background: 'var(--erp-accent-subtle, #eff6ff)',
               color: 'var(--erp-accent, #2563eb)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
+              border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
               padding: '0.12rem 0.55rem',
               borderRadius: '12px',
               fontSize: '0.68rem',
@@ -856,39 +865,18 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   ) : null;
 
   return (
-    <div className={styles.stageContainer} style={{ width: '100%', minWidth: 0, maxWidth: '100vw', boxSizing: 'border-box' }}>
-      {/* 1. STAGE HEADER & ACTIONS */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            {isAr ? 'أجندة التعاملات المالية والاستحقاقات (تدفقات الخزينة)' : 'Financial Transactions & Dues Agenda (Treasury Cash Flow)'}
-          </h1>
-          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-            {isAr 
-              ? 'المتابعة الشاملة لتدفقات الخزينة: المقبوضات الواردة من العملاء والمدفوعات الصادرة للمقاولين والموردين (كاش / إنستاباي)'
-              : 'Comprehensive treasury cash flow tracking: client receivables and contractor payables (Cash / InstaPay)'}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className={styles.btnPrimary}
-            onClick={onOpenNewCheque}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            <Plus size={14} />
-            <span>{isAr ? 'تسجيل دفعة تعاقدية جديدة' : 'Add Contract Installment'}</span>
-          </button>
-        </div>
-      </div>
+    <div className={styles.stageContainer} style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
+      <ZFPageHeader
+        title={isAr ? 'أجندة المستحقات' : 'Dues agenda'}
+        subtitle={isAr ? 'الأقساط المستحقة من العملاء والمبالغ المستحقة للمقاولين، كاش أو إنستاباي.' : 'Installments due from clients and amounts due to contractors, cash or InstaPay.'}
+      />
 
       {/* 2. THE 4 DISCRETE FLOATING VAULT METRICS (With Wave Sparklines & Interactive Table Links) */}
-      <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
+      <ZFKpiGrid>
         {/* Card 1: Inflows (Client Dues) */}
         <ZFKpiCard
-          title={isAr ? 'المقبوضات الواردة (أقساط العملاء)' : 'Inflow Receivables (Clients)'}
-          value={agendaKPIs.inflowsTotal}
+          title={isAr ? 'تحصيلات مجدولة (خارج الدفاتر)' : 'Scheduled collections (off-ledger)'}
+          value={agendaKPIs.inflowsRemaining}
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Wallet size={16} />}
           accentColor="emerald"
@@ -933,24 +921,24 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
         {/* Card 3: Net Cashflow (Treasury Spread) */}
         <ZFKpiCard
-          title={isAr ? 'صافي التدفق المتوقع (السيولة)' : 'Net Projected Flow (Liquidity)'}
-          value={agendaKPIs.netProjectedCashflow}
+          title={isAr ? 'السيولة المتوقعة (نقدية + مجدول)' : 'Projected liquidity (cash + scheduled)'}
+          value={projectedLiquidity}
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Layers size={16} />}
-          accentColor={agendaKPIs.netProjectedCashflow.gte(0) ? 'blue' : 'rose'}
+          accentColor={projectedLiquidity.gte(0) ? 'blue' : 'rose'}
           showSparkline={true}
           sparklineData={[25, 30, 24, 38, 45, 48, 52, 60]}
           delta={{
-            value: isAr ? (agendaKPIs.netProjectedCashflow.gte(0) ? 'فائض سيولة' : 'عجز سيولة') : (agendaKPIs.netProjectedCashflow.gte(0) ? 'Surplus' : 'Deficit'),
-            isPositive: agendaKPIs.netProjectedCashflow.gte(0)
+            value: isAr ? (projectedLiquidity.gte(0) ? 'فائض سيولة' : 'عجز سيولة') : (projectedLiquidity.gte(0) ? 'Surplus' : 'Deficit'),
+            isPositive: projectedLiquidity.gte(0)
           }}
-          subtitleLabel={isAr ? 'الفارق' : 'Net Spread'}
-          subtitleValue={`${agendaKPIs.netProjectedCashflow.formatEGP(isAr)} ج.م`}
+          subtitleLabel={isAr ? 'صافي المجدول' : 'Net scheduled'}
+          subtitleValue={agendaKPIs.netScheduledFlow.formatEGP(isAr)}
           onClick={() => {
             setTableSelection('both');
             setMaturityTab('all');
           }}
-          style={tableSelection === 'both' ? { borderColor: '#2563eb', boxShadow: '0 0 0 2px rgba(37, 99, 235, 0.2)' } : undefined}
+          style={tableSelection === 'both' ? { borderColor: 'var(--erp-accent)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--erp-accent) 20%, transparent)' } : undefined}
           tooltip={isAr ? 'انقر لعرض الجدولين معاً (المقبوضات + المدفوعات)' : 'Click to view dual stacked tables'}
         />
 
@@ -988,7 +976,6 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '0.75rem',
-          marginBottom: '1.25rem',
           flexWrap: 'wrap'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -1011,8 +998,8 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                 {isAr 
-                  ? `إجمالي المبالغ العاجلة: ${agendaKPIs.urgentSum.formatEGP(isAr)} ج.م (متأخرات ومستحقات اليوم)` 
-                  : `Total urgent balance: ${agendaKPIs.urgentSum.formatEGP(isAr)} EGP`}
+                  ? `إجمالي المبالغ العاجلة: ${agendaKPIs.urgentSum.formatEGP(isAr)} (متأخرات ومستحقات اليوم)` 
+                  : `Total urgent balance: ${agendaKPIs.urgentSum.formatEGP(isAr)}`}
               </div>
             </div>
           </div>
@@ -1045,14 +1032,14 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'var(--erp-accent-subtle, #eff6ff)',
-          border: '1px solid rgba(37, 99, 235, 0.25)',
+          background: 'var(--erp-accent-subtle)',
+          border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
           borderRadius: '8px',
           padding: '0.45rem 0.85rem',
           marginBottom: '1rem',
           fontSize: '0.78rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
             <Calendar size={14} />
             <span>
               {isAr 
@@ -1070,7 +1057,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--erp-accent, #2563eb)',
+              color: 'var(--erp-accent)',
               fontWeight: 700,
               fontSize: '0.74rem',
               cursor: 'pointer',
@@ -1090,7 +1077,6 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '0.85rem',
         flexWrap: 'wrap',
         gap: '0.65rem'
       }}>
@@ -1109,11 +1095,10 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               borderRadius: '6px',
               border: 'none',
               background: tableSelection === 'both' ? '#ffffff' : 'transparent',
-              color: tableSelection === 'both' ? 'var(--erp-accent, #2563eb)' : '#64748b',
+              color: tableSelection === 'both' ? 'var(--erp-accent)' : '#64748b',
               fontWeight: tableSelection === 'both' ? 800 : 600,
               fontSize: '0.74rem',
               cursor: 'pointer',
-              boxShadow: tableSelection === 'both' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
@@ -1132,7 +1117,6 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               fontWeight: tableSelection === 'inflows' ? 800 : 600,
               fontSize: '0.74rem',
               cursor: 'pointer',
-              boxShadow: tableSelection === 'inflows' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
@@ -1151,7 +1135,6 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               fontWeight: tableSelection === 'outflows' ? 800 : 600,
               fontSize: '0.74rem',
               cursor: 'pointer',
-              boxShadow: tableSelection === 'outflows' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
@@ -1314,7 +1297,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                   <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
                     {isAr ? 'إجمالي المحصل: ' : 'Cleared: '}
                     <strong style={{ fontVariantNumeric: 'tabular-nums', marginInlineStart: '0.25rem' }}>
-                      {agendaKPIs.inflowsCleared.formatEGP(isAr)} ج.م
+                      {agendaKPIs.inflowsCleared.formatEGP(isAr)}
                     </strong>
                   </span>
                   <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
@@ -1394,7 +1377,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                                 borderRadius: '5px',
                                 background: item.isDownPayment ? 'rgba(56, 189, 248, 0.08)' : 'var(--erp-accent-subtle, #eff6ff)',
                                 color: item.isDownPayment ? '#0284c7' : 'var(--erp-accent, #2563eb)',
-                                border: item.isDownPayment ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid rgba(37, 99, 235, 0.2)'
+                                border: item.isDownPayment ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)'
                               }}>
                                 {item.description}
                               </span>
@@ -1425,49 +1408,25 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                               {isCleared ? (
                                 <button
                                   type="button"
+                                  className={styles.btnSecondary}
                                   onClick={() => {
                                     setPrintingItemId(item.id);
                                     setPrintingDocType('receipt');
                                   }}
                                   title={isAr ? 'طباعة سند القبض الرسمي المعتمد' : 'Print Official Receipt Voucher'}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.28rem 0.6rem',
-                                    borderRadius: '6px',
-                                    border: '1px solid #cbd5e1',
-                                    background: '#ffffff',
-                                    color: '#0f172a',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer'
-                                  }}
                                 >
-                                  <Printer size={12} color="var(--erp-accent, #2563eb)" />
+                                  <Printer size={12} />
                                   <span>{isAr ? 'سند القبض' : 'Receipt'}</span>
                                 </button>
                               ) : (
                                 <button
                                   type="button"
+                                  className={styles.btnPrimary}
                                   onClick={() => {
                                     setPrintingItemId(item.id);
                                     setPrintingDocType('due_notice');
                                   }}
                                   title={isAr ? 'طباعة إشعار استحقاق ومطالبة سداد' : 'Print Installment Due Notice'}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.28rem 0.6rem',
-                                    borderRadius: '6px',
-                                    border: '1px solid rgba(37, 99, 235, 0.25)',
-                                    background: 'var(--erp-accent-subtle, #eff6ff)',
-                                    color: 'var(--erp-accent, #2563eb)',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
                                 >
                                   <FileCheck size={12} />
                                   <span>{isAr ? 'إشعار استحقاق' : 'Due Notice'}</span>
@@ -1493,22 +1452,9 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                                 ) : (
                                   <button
                                     type="button"
+                                    className={styles.btnPrimary}
                                     onClick={() => handleTriggerCollect(item)}
                                     disabled={isMutating}
-                                    style={{
-                                      background: 'var(--erp-accent, #2563eb)',
-                                      border: 'none',
-                                      color: '#ffffff',
-                                      padding: '0.32rem 0.75rem',
-                                      borderRadius: '6px',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '0.3rem',
-                                      transition: 'all 0.15s ease'
-                                    }}
                                   >
                                     <Wallet size={12} />
                                     <span>{isAr ? 'تحصيل (كاش / إنستاباي)' : 'Collect'}</span>
@@ -1600,7 +1546,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                   <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
                     {isAr ? 'إجمالي المسدد: ' : 'Paid: '}
                     <strong style={{ fontVariantNumeric: 'tabular-nums', marginInlineStart: '0.25rem' }}>
-                      {agendaKPIs.outflowsPaid.formatEGP(isAr)} ج.م
+                      {agendaKPIs.outflowsPaid.formatEGP(isAr)}
                     </strong>
                   </span>
                   <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
@@ -1805,16 +1751,15 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                     flexDirection: 'column',
                     gap: '0.85rem',
                     cursor: 'pointer',
-                    boxShadow: 'none',
                     transition: 'all 0.15s ease'
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--erp-accent, #2563eb)')}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--erp-accent)')}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = item.status === 'overdue' ? 'rgba(220, 38, 38, 0.4)' : '#cbd5e1')}
                 >
                   {/* Card Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                         #{item.instrumentNumber}
                       </span>
                       <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
@@ -1845,7 +1790,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                       <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
                         {isAr ? 'القيمة الإجمالية:' : 'Amount:'}
                       </span>
-                      <strong style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                      <strong style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                         {D(item.nominalValue).formatEGP(isAr)}
                       </strong>
                     </div>
@@ -1865,23 +1810,10 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                     {!isCleared ? (
                       <button
                         type="button"
+                        className={styles.btnPrimary}
                         onClick={() => handleTriggerCollect(item)}
                         disabled={isMutating}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.35rem',
-                          background: 'var(--erp-accent, #2563eb)',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '0.45rem',
-                          fontSize: '0.76rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
+                        style={{ flex: 1 }}
                       >
                         <Wallet size={13} />
                         <span>{isAr ? 'تحصيل (كاش / إنستاباي)' : 'Collect'}</span>
@@ -1909,48 +1841,22 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                     {isCleared ? (
                       <button
                         type="button"
+                        className={styles.btnSecondary}
                         onClick={() => {
                           setPrintingItemId(item.id);
                           setPrintingDocType('receipt');
                         }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.3rem',
-                          padding: '0.45rem 0.75rem',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          background: '#ffffff',
-                          color: '#0f172a',
-                          fontSize: '0.76rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
                       >
-                        <Printer size={13} color="var(--erp-accent, #2563eb)" />
+                        <Printer size={13} />
                         <span>{isAr ? 'سند القبض' : 'Receipt'}</span>
                       </button>
                     ) : (
                       <button
                         type="button"
+                        className={styles.btnPrimary}
                         onClick={() => {
                           setPrintingItemId(item.id);
                           setPrintingDocType('due_notice');
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.3rem',
-                          padding: '0.45rem 0.75rem',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(37, 99, 235, 0.25)',
-                          background: 'var(--erp-accent-subtle, #eff6ff)',
-                          color: 'var(--erp-accent, #2563eb)',
-                          fontSize: '0.76rem',
-                          fontWeight: 700,
-                          cursor: 'pointer'
                         }}
                       >
                         <FileCheck size={13} />
@@ -2001,7 +1907,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               maxWidth: '520px', 
               width: '100%', 
               background: '#ffffff',
-              borderRadius: '14px',
+              borderRadius: '12px',
               border: '1px solid #cbd5e1',
               boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
               overflow: 'hidden'
@@ -2052,12 +1958,12 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                   <span style={{ color: '#64748b' }}>{isAr ? 'القيمة الإجمالية:' : 'Total Amount:'}</span>
-                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{D(settlingOutflowItem.totalAmount).formatEGP(isAr)} ج.م</strong>
+                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{D(settlingOutflowItem.totalAmount).formatEGP(isAr)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '0.4rem' }}>
                   <span style={{ color: '#64748b', fontWeight: 700 }}>{isAr ? 'المتبقي المستحق للسداد:' : 'Remaining Due:'}</span>
                   <strong style={{ color: '#d97706', fontVariantNumeric: 'tabular-nums', fontSize: '0.92rem' }}>
-                    {D(settlingOutflowItem.remainingAmount).formatEGP(isAr)} ج.م
+                    {D(settlingOutflowItem.remainingAmount).formatEGP(isAr)}
                   </strong>
                 </div>
               </div>
@@ -2102,16 +2008,16 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                       gap: '0.4rem',
                       padding: '0.65rem',
                       borderRadius: '8px',
-                      border: settleMethod === 'CASH' ? '2px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                      background: settleMethod === 'CASH' ? 'var(--erp-accent-subtle, #eff6ff)' : '#ffffff',
-                      color: settleMethod === 'CASH' ? 'var(--erp-accent, #2563eb)' : '#334155',
+                      border: settleMethod === 'CASH' ? '2px solid var(--erp-accent)' : '1px solid #cbd5e1',
+                      background: settleMethod === 'CASH' ? 'var(--erp-accent-subtle)' : '#ffffff',
+                      color: settleMethod === 'CASH' ? 'var(--erp-accent)' : '#334155',
                       fontWeight: 800,
                       fontSize: '0.78rem',
                       cursor: 'pointer'
                     }}
                   >
                     <Wallet size={15} />
-                    <span>{isAr ? 'كاش بالخزينة' : 'Cash in Hand'}</span>
+                    <span>{isAr ? 'نقدي' : 'Cash'}</span>
                   </button>
 
                   <button
@@ -2124,9 +2030,9 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                       gap: '0.4rem',
                       padding: '0.65rem',
                       borderRadius: '8px',
-                      border: settleMethod === 'INSTAPAY' ? '2px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                      background: settleMethod === 'INSTAPAY' ? 'var(--erp-accent-subtle, #eff6ff)' : '#ffffff',
-                      color: settleMethod === 'INSTAPAY' ? 'var(--erp-accent, #2563eb)' : '#334155',
+                      border: settleMethod === 'INSTAPAY' ? '2px solid var(--erp-accent)' : '1px solid #cbd5e1',
+                      background: settleMethod === 'INSTAPAY' ? 'var(--erp-accent-subtle)' : '#ffffff',
+                      color: settleMethod === 'INSTAPAY' ? 'var(--erp-accent)' : '#334155',
                       fontWeight: 800,
                       fontSize: '0.78rem',
                       cursor: 'pointer'
@@ -2163,17 +2069,8 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', marginTop: '0.5rem' }}>
                 <button
                   type="button"
+                  className={styles.btnSecondary}
                   onClick={() => setSettlingOutflowItem(null)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#475569',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
                 >
                   {isAr ? 'إلغاء' : 'Cancel'}
                 </button>
@@ -2245,7 +2142,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', fontWeight: 800, color: '#0f172a' }}>
-                    <Clock size={13} color="var(--erp-accent, #2563eb)" />
+                    <Clock size={13} color="var(--erp-accent)" />
                     <span>{isAr ? 'مواعيد اليوم' : "Today's Agenda"}</span>
                   </div>
                   <span style={{ fontSize: '0.68rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>{todayStr}</span>
@@ -2368,7 +2265,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               width: '100%', 
               maxHeight: '94vh', 
               overflowY: 'auto',
-              borderRadius: '16px',
+              borderRadius: '12px',
               border: '1.5px solid #D8D2C4',
               boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
             }} 

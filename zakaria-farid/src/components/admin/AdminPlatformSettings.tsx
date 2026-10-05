@@ -356,12 +356,12 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
 
           {/* Public Price Privacy (POA) Card */}
           <div className={`settings-card ${settings.hidePropertyPrices ? 'poa-active-card' : ''}`} style={{
-            border: settings.hidePropertyPrices ? (isLight ? '1.5px solid #946F23' : '1.5px solid rgba(221, 167, 82, 0.5)') : undefined,
-            background: settings.hidePropertyPrices ? (isLight ? 'rgba(148, 111, 35, 0.06)' : 'var(--admin-gold-glow, rgba(221, 167, 82, 0.04))') : undefined
+            border: settings.hidePropertyPrices ? '1.5px solid var(--admin-accent)' : undefined,
+            background: settings.hidePropertyPrices ? 'var(--admin-accent-tint)' : undefined
           }}>
             <div className="card-section-head-between">
               <div className="card-section-head-left">
-                <div className="card-icon-wrap" style={{ color: settings.hidePropertyPrices ? (isLight ? '#946F23' : '#DDA752') : undefined }}>
+                <div className="card-icon-wrap" style={{ color: settings.hidePropertyPrices ? 'var(--admin-accent)' : undefined }}>
                   {settings.hidePropertyPrices ? <EyeOff size={18} /> : <Eye size={18} />}
                 </div>
                 <div>
@@ -385,9 +385,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                     setSettings(next);
                     saveStoredPlatformSettings(next);
                   }}
-                  style={{ width: 18, height: 18, accentColor: '#946F23', cursor: 'pointer' }}
+                  style={{ width: 18, height: 18, accentColor: 'var(--admin-accent)', cursor: 'pointer' }}
                 />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: settings.hidePropertyPrices ? 'var(--admin-gold-primary, #946F23)' : (isLight ? '#475569' : 'var(--admin-text-muted, #64748B)') }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: settings.hidePropertyPrices ? 'var(--admin-accent)' : (isLight ? '#475569' : 'var(--admin-text-muted, #64748B)') }}>
                   {settings.hidePropertyPrices ? (isAr ? 'مفعل (مخفي)' : 'Enabled (Hidden)') : (isAr ? 'معطل (معروض)' : 'Disabled (Visible)')}
                 </span>
               </label>
@@ -1379,7 +1379,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           min-width: 0;
           box-sizing: border-box;
           background: #11141D;
-          border: 1px solid rgba(212, 175, 55, 0.22);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 22%, transparent);
           border-radius: 12px;
           padding: 16px;
           display: flex;
@@ -1416,9 +1416,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           text-transform: uppercase;
           letter-spacing: 0.08em;
           padding: 3px 8px;
-          background: rgba(212, 175, 55, 0.12);
-          color: #D4AF37;
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          background: var(--admin-accent-tint);
+          color: var(--admin-accent);
+          border: 1px solid var(--admin-accent-border);
           border-radius: 4px;
         }
 
@@ -1504,7 +1504,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
 
         .btn-outline-gold:hover {
           background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(212, 175, 55, 0.4);
+          border-color: var(--admin-accent-border);
           color: #FFFFFF;
         }
 
@@ -1512,9 +1512,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           height: 40px;
           padding: 0 16px;
           border-radius: 8px;
-          background: linear-gradient(135deg, #D4AF37 0%, #B89628 100%);
-          border: 1px solid #E6CA65;
-          color: #0A0C10;
+          background: var(--admin-accent);
+          border: 1px solid var(--admin-accent);
+          color: var(--admin-on-accent);
           font-size: 0.82rem;
           font-weight: 700;
           display: inline-flex;
@@ -1525,11 +1525,11 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           transition: all 0.2s ease;
           width: 100%;
           box-sizing: border-box;
-          box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
+          box-shadow: none;
         }
 
         .btn-solid-gold:hover {
-          filter: brightness(1.1);
+          background: var(--admin-accent-hover);
         }
 
         /* Tabs Scroller */
@@ -1578,9 +1578,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         }
 
         .settings-tab-btn.active {
-          background: rgba(212, 175, 55, 0.15);
-          border-color: #D4AF37;
-          color: #D4AF37;
+          background: var(--admin-accent-tint);
+          border-color: var(--admin-accent);
+          color: var(--admin-accent);
         }
 
         /* Tab Pane & Cards */
@@ -1644,9 +1644,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           width: 36px;
           height: 36px;
           border-radius: 8px;
-          background: rgba(212, 175, 55, 0.1);
-          border: 1px solid rgba(212, 175, 55, 0.25);
-          color: #D4AF37;
+          background: var(--admin-accent-tint);
+          border: 1px solid var(--admin-accent-border);
+          color: var(--admin-accent);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1701,12 +1701,12 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
 
         .toggle-checkbox-card:hover {
           background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(212, 175, 55, 0.3);
+          border-color: var(--admin-accent-border);
         }
 
         .toggle-checkbox-card input[type="checkbox"] {
           margin-top: 3px;
-          accent-color: #D4AF37;
+          accent-color: var(--admin-accent);
           width: 18px;
           height: 18px;
           cursor: pointer;
@@ -1788,7 +1788,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .field-group textarea:focus,
         .field-group select:focus {
           outline: none;
-          border-color: #D4AF37;
+          border-color: var(--admin-accent);
         }
 
         .field-group textarea {
@@ -1808,8 +1808,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .sub-chapter-divider {
           font-size: 0.76rem;
           font-weight: 700;
-          color: #D4AF37;
-          border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+          color: var(--admin-accent);
+          border-bottom: 1px solid var(--admin-accent-border);
           padding-bottom: 4px;
           margin-top: 6px;
         }
@@ -1819,9 +1819,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           height: 34px;
           padding: 0 12px;
           border-radius: 6px;
-          background: rgba(212, 175, 55, 0.15);
-          border: 1px solid rgba(212, 175, 55, 0.35);
-          color: #D4AF37;
+          background: var(--admin-accent-tint);
+          border: 1px solid var(--admin-accent-border);
+          color: var(--admin-accent);
           font-size: 0.78rem;
           font-weight: 600;
           display: inline-flex;
@@ -1832,8 +1832,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         }
 
         .new-district-form {
-          background: rgba(212, 175, 55, 0.05);
-          border: 1px dashed rgba(212, 175, 55, 0.3);
+          background: var(--admin-accent-tint);
+          border: 1px dashed var(--admin-accent-border);
           border-radius: 8px;
           padding: 14px;
           display: flex;
@@ -1844,7 +1844,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .new-form-title {
           font-size: 0.85rem;
           font-weight: 700;
-          color: #D4AF37;
+          color: var(--admin-accent);
           margin: 0;
         }
 
@@ -1869,9 +1869,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           height: 32px;
           padding: 0 14px;
           border-radius: 6px;
-          background: #D4AF37;
+          background: var(--admin-accent);
           border: none;
-          color: #0A0C10;
+          color: var(--admin-on-accent);
           font-size: 0.76rem;
           font-weight: 700;
           cursor: pointer;
@@ -1921,8 +1921,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .district-rank {
           font-size: 0.7rem;
           font-weight: 700;
-          color: #D4AF37;
-          background: rgba(212, 175, 55, 0.12);
+          color: var(--admin-accent);
+          background: var(--admin-accent-tint);
           padding: 2px 6px;
           border-radius: 4px;
         }
@@ -2027,8 +2027,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .admin-settings-root.is-light .settings-header-card,
         :global([data-theme="light"]) .admin-settings-root .settings-header-card {
           background: #FFFFFF !important;
-          border: 1.5px solid #D8D2C4 !important;
-          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+          border: 1px solid var(--admin-card-border) !important;
+          box-shadow: var(--admin-card-shadow) !important;
         }
 
         .admin-settings-root.is-light .settings-main-title,
@@ -2044,9 +2044,9 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
 
         .admin-settings-root.is-light .gold-pill,
         :global([data-theme="light"]) .admin-settings-root .gold-pill {
-          background: rgba(148, 111, 35, 0.08) !important;
-          border: 1px solid rgba(148, 111, 35, 0.25) !important;
-          color: #946F23 !important;
+          background: var(--admin-accent-tint) !important;
+          border: 1px solid var(--admin-accent-border) !important;
+          color: var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .live-pill,
@@ -2060,7 +2060,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .admin-settings-root.is-light .btn-outline-gold,
         :global([data-theme="light"]) .admin-settings-root .btn-outline-gold {
           background: #F8FAFC !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           color: #0F172A !important;
           font-weight: 700;
         }
@@ -2068,29 +2068,29 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .admin-settings-root.is-light .btn-outline-gold:hover,
         :global([data-theme="light"]) .admin-settings-root .btn-outline-gold:hover {
           background: #F1F5F9 !important;
-          border-color: #946F23 !important;
-          color: #946F23 !important;
+          border-color: var(--admin-accent) !important;
+          color: var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .btn-solid-gold,
         :global([data-theme="light"]) .admin-settings-root .btn-solid-gold {
-          background: linear-gradient(135deg, #DDA752 0%, #B8860B 100%) !important;
-          border: 1px solid #DDA752 !important;
-          color: #0A0E18 !important;
+          background: var(--admin-accent) !important;
+          border: 1px solid var(--admin-accent) !important;
+          color: var(--admin-on-accent) !important;
           font-weight: 800;
-          box-shadow: 0 4px 14px rgba(221, 167, 82, 0.35);
+          box-shadow: none !important;
         }
 
         .admin-settings-root.is-light .btn-solid-gold:hover,
         :global([data-theme="light"]) .admin-settings-root .btn-solid-gold:hover {
-          filter: brightness(1.06);
+          background: var(--admin-accent-hover) !important;
         }
 
         /* Navigation Tabs */
         .admin-settings-root.is-light .settings-tab-btn,
         :global([data-theme="light"]) .admin-settings-root .settings-tab-btn {
           background: #FFFFFF !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           color: #475569 !important;
           font-weight: 700;
         }
@@ -2099,14 +2099,14 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         :global([data-theme="light"]) .admin-settings-root .settings-tab-btn:hover {
           background: #F8FAFC !important;
           color: #0F172A !important;
-          border-color: #946F23 !important;
+          border-color: var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .settings-tab-btn.active,
         :global([data-theme="light"]) .admin-settings-root .settings-tab-btn.active {
-          background: rgba(148, 111, 35, 0.1) !important;
-          border: 1.5px solid #946F23 !important;
-          color: #946F23 !important;
+          background: var(--admin-accent-tint) !important;
+          border: 1px solid var(--admin-accent) !important;
+          color: var(--admin-accent) !important;
           font-weight: 800;
         }
 
@@ -2114,14 +2114,14 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .admin-settings-root.is-light .settings-card,
         :global([data-theme="light"]) .admin-settings-root .settings-card {
           background: #FFFFFF !important;
-          border: 1.5px solid #D8D2C4 !important;
-          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+          border: 1px solid var(--admin-card-border) !important;
+          box-shadow: var(--admin-card-shadow) !important;
         }
 
         .admin-settings-root.is-light .settings-card.poa-active-card,
         :global([data-theme="light"]) .admin-settings-root .settings-card.poa-active-card {
-          background: rgba(148, 111, 35, 0.06) !important;
-          border: 1.5px solid #946F23 !important;
+          background: var(--admin-accent-tint) !important;
+          border: 1.5px solid var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .card-title,
@@ -2138,23 +2138,23 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
 
         .admin-settings-root.is-light .card-icon-wrap,
         :global([data-theme="light"]) .admin-settings-root .card-icon-wrap {
-          background: rgba(148, 111, 35, 0.08) !important;
-          border: 1px solid rgba(148, 111, 35, 0.25) !important;
-          color: #946F23 !important;
+          background: var(--admin-accent-tint) !important;
+          border: 1px solid var(--admin-accent-border) !important;
+          color: var(--admin-accent) !important;
         }
 
         /* Toggle Checkbox Cards */
         .admin-settings-root.is-light .toggle-checkbox-card,
         :global([data-theme="light"]) .admin-settings-root .toggle-checkbox-card {
           background: #F8FAFC !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           border-radius: 10px;
         }
 
         .admin-settings-root.is-light .toggle-checkbox-card:hover,
         :global([data-theme="light"]) .admin-settings-root .toggle-checkbox-card:hover {
           background: #F1F5F9 !important;
-          border-color: #946F23 !important;
+          border-color: var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .toggle-title,
@@ -2171,27 +2171,27 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
 
         .admin-settings-root.is-light .toggle-checkbox-card input[type="checkbox"],
         :global([data-theme="light"]) .admin-settings-root .toggle-checkbox-card input[type="checkbox"] {
-          accent-color: #946F23;
+          accent-color: var(--admin-accent);
         }
 
         /* District Rows */
         .admin-settings-root.is-light .district-row-card,
         :global([data-theme="light"]) .admin-settings-root .district-row-card {
           background: #F8FAFC !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           border-radius: 10px;
         }
 
         .admin-settings-root.is-light .district-row-card:hover,
         :global([data-theme="light"]) .admin-settings-root .district-row-card:hover {
           background: #F1F5F9 !important;
-          border-color: #946F23 !important;
+          border-color: var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .district-rank,
         :global([data-theme="light"]) .admin-settings-root .district-rank {
-          background: rgba(148, 111, 35, 0.1) !important;
-          color: #946F23 !important;
+          background: var(--admin-accent-tint) !important;
+          color: var(--admin-accent) !important;
           font-weight: 800;
         }
 
@@ -2217,21 +2217,21 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         .admin-settings-root.is-light .field-group-sm input,
         :global([data-theme="light"]) .admin-settings-root .field-group-sm input {
           background: #FFFFFF !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           color: #0F172A !important;
           font-weight: 700;
         }
 
         .admin-settings-root.is-light .field-group-sm input:focus,
         :global([data-theme="light"]) .admin-settings-root .field-group-sm input:focus {
-          border-color: #946F23 !important;
+          border-color: var(--admin-accent) !important;
           outline: none;
         }
 
         .admin-settings-root.is-light .btn-icon-toggle,
         :global([data-theme="light"]) .admin-settings-root .btn-icon-toggle {
           background: #FFFFFF !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           color: #64748B !important;
         }
 
@@ -2263,7 +2263,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         :global([data-theme="light"]) .admin-settings-root .field-group textarea,
         :global([data-theme="light"]) .admin-settings-root .field-group select {
           background: #FFFFFF !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-input-border) !important;
           color: #0F172A !important;
           font-weight: 600;
         }
@@ -2274,7 +2274,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         :global([data-theme="light"]) .admin-settings-root .field-group input:focus,
         :global([data-theme="light"]) .admin-settings-root .field-group textarea:focus,
         :global([data-theme="light"]) .admin-settings-root .field-group select:focus {
-          border-color: #946F23 !important;
+          border-color: var(--admin-accent) !important;
           outline: none;
         }
 
@@ -2288,50 +2288,50 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         /* New District Form */
         .admin-settings-root.is-light .btn-add-district,
         :global([data-theme="light"]) .admin-settings-root .btn-add-district {
-          background: rgba(148, 111, 35, 0.1) !important;
-          border: 1px solid rgba(148, 111, 35, 0.3) !important;
-          color: #946F23 !important;
+          background: var(--admin-accent-tint) !important;
+          border: 1px solid var(--admin-accent-border) !important;
+          color: var(--admin-accent) !important;
           font-weight: 700;
         }
 
         .admin-settings-root.is-light .btn-add-district:hover,
         :global([data-theme="light"]) .admin-settings-root .btn-add-district:hover {
-          background: rgba(148, 111, 35, 0.18) !important;
-          border-color: #946F23 !important;
+          background: var(--admin-accent-subtle) !important;
+          border-color: var(--admin-accent) !important;
         }
 
         .admin-settings-root.is-light .new-district-form,
         :global([data-theme="light"]) .admin-settings-root .new-district-form {
-          background: #FDFBF7 !important;
-          border: 1.5px dashed rgba(148, 111, 35, 0.35) !important;
+          background: var(--admin-card-bg-subtle) !important;
+          border: 1.5px dashed var(--admin-accent-border) !important;
         }
 
         .admin-settings-root.is-light .new-form-title,
         :global([data-theme="light"]) .admin-settings-root .new-form-title {
-          color: #946F23 !important;
+          color: var(--admin-accent) !important;
           font-weight: 800;
         }
 
         .admin-settings-root.is-light .btn-cancel,
         :global([data-theme="light"]) .admin-settings-root .btn-cancel {
           background: #FFFFFF !important;
-          border: 1px solid #D8D2C4 !important;
+          border: 1px solid var(--admin-card-border) !important;
           color: #475569 !important;
         }
 
         .admin-settings-root.is-light .btn-confirm,
         :global([data-theme="light"]) .admin-settings-root .btn-confirm {
-          background: linear-gradient(135deg, #DDA752 0%, #B8860B 100%) !important;
+          background: var(--admin-accent) !important;
           border: none !important;
-          color: #0A0E18 !important;
+          color: var(--admin-on-accent) !important;
           font-weight: 800;
         }
 
         /* Editorial Dividers */
         .admin-settings-root.is-light .sub-chapter-divider,
         :global([data-theme="light"]) .admin-settings-root .sub-chapter-divider {
-          color: #946F23 !important;
-          border-bottom: 1px solid rgba(148, 111, 35, 0.25) !important;
+          color: var(--admin-accent) !important;
+          border-bottom: 1px solid var(--admin-accent-border) !important;
           font-weight: 800;
         }
       `}</style>

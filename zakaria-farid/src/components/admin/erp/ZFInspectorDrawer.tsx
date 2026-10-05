@@ -19,14 +19,12 @@ import {
   Printer, 
   Coins, 
   PieChart,
-  Layers,
-  Clock
+  Layers
 } from 'lucide-react';
 import { 
   ERPContract, 
   ERPInstallmentSchedule, 
   ERPContractAmendment, 
-  ERPPDCRecord, 
   ERPRescissionRecord, 
   ERPJournalEntry, 
   ERPTaxRecord, 
@@ -38,6 +36,10 @@ import { localizeBuyerName, localizeJournalDescription } from '@/components/erp/
 import { RSVEngine } from '@/lib/erp/rsv';
 import { ZFModalShell } from './v2/common/ZFModalShell';
 import styles from './v2/ZFWorkstationShell.module.css';
+import dStyles from './ZFInspectorDrawer.module.css';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseRecord = any;
 
 export type InspectorPayload = 
   | { 
@@ -47,13 +49,6 @@ export type InspectorPayload =
       amendments?: ERPContractAmendment[]; 
       latestJournalEntry?: ERPJournalEntry;
       allJournalEntries?: ERPJournalEntry[];
-    }
-  | { 
-      type: 'cheque'; 
-      cheque: ERPPDCRecord;
-      linkedContract?: ERPContract;
-      linkedSchedule?: ERPInstallmentSchedule;
-      clearingJournalEntry?: ERPJournalEntry;
     }
   | {
       type: 'tax';
@@ -69,8 +64,8 @@ export type InspectorPayload =
   | { type: 'rescission'; rescission: ERPRescissionRecord }
   | { 
       type: 'journal'; 
-      entry?: ERPJournalEntry | any; 
-      journalEntry?: ERPJournalEntry | any;
+      entry?: ERPJournalEntry | LooseRecord; 
+      journalEntry?: ERPJournalEntry | LooseRecord;
       amount?: string;
       title?: string;
       party?: string;
@@ -87,7 +82,6 @@ export interface ZFInspectorDrawerProps {
   onNavigateToTab?: (tab: string) => void;
   onToggleHandover?: (contract: ERPContract) => void;
   onOpenHandoverModal?: (contract: ERPContract) => void;
-  onUpdateChequeStatus?: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => void;
   onInspectContract?: (contract: ERPContract) => void;
   onRemitTax?: (taxId: string) => void;
   isMutating?: boolean;
@@ -115,7 +109,6 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
   onNavigateToTab,
   onToggleHandover,
   onOpenHandoverModal,
-  onUpdateChequeStatus,
   onInspectContract,
   onRemitTax,
   isMutating = false,
@@ -178,7 +171,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
           : (isAr ? 'سارٍ ومنتظم' : 'Active');
 
     const progressPct = grossValue.gt(0) 
-      ? Math.min(100, cashCollected.div(grossValue).times(100).toNumber()).toFixed(1)
+      ? Math.min(100, cashCollected.times(100).div(grossValue).toNumber()).toFixed(1)
       : '0.0';
 
     const handoverDate = contract.handover_date || '—';
@@ -234,7 +227,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   onClick={() => onOpenEscalation(contract)}
                   disabled={isMutating}
                 >
-                  <TrendingUp size={14} color="#2563eb" />
+                  <TrendingUp size={14} color="var(--erp-accent)" />
                   <span>{isAr ? 'طلب زيادة سعر' : 'Escalation'}</span>
                 </button>
               )}
@@ -327,7 +320,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'المحصل نقداً بالخزينة' : 'Total Cash Collected'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: '#16a34a' }}>
+              <span className={`${styles.inspectMetricValue} ${dStyles.textGreen}`}>
                 {formatEgp(cashCollected, isAr)}
               </span>
               <span className={styles.inspectMetricSub}>
@@ -339,7 +332,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'المتبقي كأقساط مجدولة' : 'Remaining Receivables'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: isFullyCollected ? '#16a34a' : '#d97706' }}>
+              <span className={`${styles.inspectMetricValue} ${isFullyCollected ? dStyles.textGreen : dStyles.textAmber}`}>
                 {formatEgp(remainingAR, isAr)}
               </span>
               <span className={styles.inspectMetricSub}>
@@ -424,10 +417,9 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 </div>
 
                 {contract.status === 'Active' && (onOpenHandoverModal || onToggleHandover) && (
-                  <div className={styles.inspectFactItemWide} style={{ marginTop: '0.25rem' }}>
+                  <div className={`${styles.inspectFactItemWide} ${dStyles.factItemMargin}`}>
                     <button
                       type="button"
-                      className={styles.inspectBtnSecondary}
                       onClick={() => {
                         if (contract.handover_status === 'Pending' && onOpenHandoverModal) {
                           onOpenHandoverModal(contract);
@@ -436,7 +428,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                         }
                       }}
                       disabled={isMutating}
-                      style={{ width: '100%', justifyContent: 'center' }}
+                      className={`${styles.inspectBtnSecondary} ${dStyles.btnFullWidth}`}
                     >
                       <RotateCcw size={13} />
                       <span>
@@ -457,7 +449,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <Calendar size={15} />
                   <span>{isAr ? 'جدول الأقساط والتحصيل' : 'Installment Schedule'}</span>
                 </span>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                <span className={dStyles.colHeaderExtra}>
                   {activeSchedules.length} {isAr ? 'دفعة مسجلة' : 'tranches'}
                 </span>
               </div>
@@ -472,20 +464,20 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
 
                   return (
                     <div key={sch.schedule_id} className={styles.inspectInstallmentCard}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <strong style={{ fontSize: '0.78rem', color: '#0f172a' }}>{trancheTitle}</strong>
-                          <span className={`${styles.statusPill} ${isPaid ? styles.statusPillGreen : isSchOverdue ? styles.statusPillRed : styles.statusPillAmber}`} style={{ padding: '0.1rem 0.4rem', fontSize: '0.62rem' }}>
+                      <div className={dStyles.itemCardStack}>
+                        <div className={dStyles.wipPoolLeft}>
+                          <strong className={dStyles.textDark}>{trancheTitle}</strong>
+                          <span className={`${styles.statusPill} ${isPaid ? styles.statusPillGreen : isSchOverdue ? styles.statusPillRed : styles.statusPillAmber} ${dStyles.pillSm}`}>
                             {isPaid ? (isAr ? 'مدفوع' : 'Paid') : isSchOverdue ? (isAr ? 'متأخر' : 'Overdue') : (isAr ? 'مستحق' : 'Due')}
                           </span>
                         </div>
-                        <span style={{ fontSize: '0.68rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+                        <span className={dStyles.itemCardSub}>
                           {isAr ? 'استحقاق: ' : 'Due: '} {sch.due_date}
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                      <div className={dStyles.itemCardActions}>
+                        <span className={dStyles.wipPoolAmount}>
                           {formatEgp(sch.nominal_value, isAr)}
                         </span>
                         {!isPaid && onPayInstallment && (
@@ -513,338 +505,16 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
   }
 
   // ---------------------------------------------------------------------------
-  // 2. CHEQUE INSPECTION
-  // ---------------------------------------------------------------------------
-  if (payload.type === 'cheque') {
-    const cheque = payload.cheque;
-    const isCleared = cheque.status === 'Cleared';
-    const isDeposited = cheque.status === 'Deposited';
-    const isBounced = cheque.status === 'Bounced';
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isPastDue = !isCleared && cheque.due_date < todayStr;
-    const bankName = cheque.bank_name || (cheque as any).drawee_bank || (isAr ? 'البنك التجاري' : 'Commercial Bank');
-    const depositDate = cheque.deposited_date || (cheque as any).deposit_date || '—';
-
-    const statusPillClass = isCleared 
-      ? styles.statusPillGreen 
-      : isDeposited 
-        ? styles.statusPillBlue 
-        : isBounced 
-          ? styles.statusPillRed 
-          : styles.statusPillAmber;
-
-    const statusPillText = isCleared
-      ? (isAr ? 'تم التحصيل بالخزينة (101000)' : 'Cleared in 101000')
-      : isDeposited
-        ? (isAr ? 'مودع برسم التحصيل البنكي' : 'Deposited at Bank')
-        : isBounced
-          ? (isAr ? 'شيك مرتد' : 'Bounced')
-          : (isAr ? 'في عهدة الخزينة' : 'In Safe Custody');
-
-    return (
-      <ZFModalShell
-        isOpen={Boolean(payload)}
-        onClose={onClose}
-        isAr={isAr}
-        maxWidth="850px"
-        maxHeight="90vh"
-        zIndex={isOverModal ? 10001 : 1000}
-        icon={<Landmark size={18} />}
-        title={isAr ? 'فحص شيك وسند استحقاق' : 'Cheque & PDC Inspection'}
-        subtitle={isAr ? 'منظومة مقاصة الشيكات البنكية وحساب 105000' : 'PDC Clearing & Account 105000 Workflow'}
-        footer={
-          <div className={styles.inspectActionFooter}>
-            <div className={styles.inspectActionGroup}>
-              {cheque.status === 'In Safe' && onUpdateChequeStatus && (
-                <button
-                  type="button"
-                  className={styles.inspectBtnPrimary}
-                  onClick={() => onUpdateChequeStatus(cheque.cheque_id, 'Deposited')}
-                  disabled={isMutating}
-                >
-                  <Landmark size={14} />
-                  <span>{isAr ? 'إيداع برسم التحصيل البنكي' : 'Deposit at Bank'}</span>
-                </button>
-              )}
-
-              {cheque.status === 'Deposited' && onUpdateChequeStatus && (
-                <button
-                  type="button"
-                  className={styles.inspectBtnPrimary}
-                  onClick={() => onUpdateChequeStatus(cheque.cheque_id, 'Cleared')}
-                  disabled={isMutating}
-                >
-                  <CheckCircle2 size={14} />
-                  <span>{isAr ? 'تأكيد الصرف والتحصيل البنكي' : 'Confirm Bank Clearance'}</span>
-                </button>
-              )}
-
-              {!isCleared && onUpdateChequeStatus && (
-                <button
-                  type="button"
-                  className={styles.inspectBtnSecondary}
-                  onClick={() => onUpdateChequeStatus(cheque.cheque_id, 'Cleared')}
-                  disabled={isMutating}
-                >
-                  <Coins size={14} />
-                  <span>{isAr ? 'تسجيل تحصيل فوري بالخزينة (كاش / إنستاباي)' : 'Mark Cleared to Safe'}</span>
-                </button>
-              )}
-
-              {cheque.status === 'Deposited' && onUpdateChequeStatus && (
-                <button
-                  type="button"
-                  className={styles.inspectBtnDanger}
-                  onClick={() => onUpdateChequeStatus(cheque.cheque_id, 'Bounced')}
-                  disabled={isMutating}
-                >
-                  <RotateCcw size={14} />
-                  <span>{isAr ? 'إثبات ارتداد الشيك' : 'Record Bounce'}</span>
-                </button>
-              )}
-
-              {payload.linkedContract && onInspectContract && (
-                <button
-                  type="button"
-                  className={styles.inspectBtnSecondary}
-                  onClick={() => onInspectContract(payload.linkedContract!)}
-                >
-                  <FileText size={14} color="#2563eb" />
-                  <span>{isAr ? 'فتح ملف العقد' : 'View Contract'}</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                className={styles.inspectBtnSecondary}
-                onClick={() => typeof window !== 'undefined' && window.print()}
-              >
-                <Printer size={14} />
-                <span>{isAr ? 'طباعة إيصال الشيك' : 'Print Receipt'}</span>
-              </button>
-            </div>
-
-            <button type="button" className={styles.inspectBtnSecondary} onClick={onClose}>
-              <span>{isAr ? 'إغلاق الفاحص' : 'Close'}</span>
-            </button>
-          </div>
-        }
-      >
-        <div className={styles.inspectModalShell}>
-          {/* Tier 1: Top Identity Ribbon */}
-          <div className={styles.inspectIdentityRibbon}>
-            <div className={styles.inspectIdentityLeft}>
-              <div className={styles.inspectSquircleIcon}>
-                <Landmark size={16} />
-              </div>
-              <span className={styles.inspectCodeBadge}>
-                #{cheque.cheque_number}
-              </span>
-              <button
-                type="button"
-                className={styles.inspectCopyBtn}
-                onClick={() => handleCopy(cheque.cheque_number)}
-                title={isAr ? 'نسخ رقم الشيك' : 'Copy cheque number'}
-              >
-                {copiedCode === cheque.cheque_number ? <Check size={12} color="#16a34a" /> : <Copy size={12} />}
-                <span>{copiedCode === cheque.cheque_number ? (isAr ? 'تم النسخ' : 'Copied') : (isAr ? 'نسخ' : 'Copy')}</span>
-              </button>
-              <span className={styles.inspectIdentityTitle}>
-                {cheque.drawer_name} • {bankName}
-              </span>
-            </div>
-            <div className={styles.inspectIdentityRight}>
-              <span className={`${styles.statusPill} ${statusPillClass}`}>
-                {statusPillText}
-              </span>
-            </div>
-          </div>
-
-          {/* Tier 2: Executive 4-Metric Strip */}
-          <div className={styles.inspectMetricsGrid}>
-            <div className={styles.inspectMetricCard}>
-              <span className={styles.inspectMetricLabel}>
-                {isAr ? 'القيمة الاسمية للشيك' : 'Nominal Cheque Value'}
-              </span>
-              <span className={styles.inspectMetricValue}>
-                {formatEgp(cheque.nominal_value, isAr)}
-              </span>
-              <span className={styles.inspectMetricSub}>
-                {isAr ? 'المبلغ المستحق السداد' : 'Full face value'}
-              </span>
-            </div>
-
-            <div className={styles.inspectMetricCard}>
-              <span className={styles.inspectMetricLabel}>
-                {isAr ? 'المبلغ المحصل فعلياً' : 'Collected Amount'}
-              </span>
-              <span className={styles.inspectMetricValue} style={{ color: isCleared ? '#16a34a' : '#64748b' }}>
-                {formatEgp(isCleared ? cheque.nominal_value : '0.00', isAr)}
-              </span>
-              <span className={styles.inspectMetricSub}>
-                {isCleared ? (isAr ? 'مقيد بالخزينة (101000)' : 'Credited to 101000') : (isAr ? 'معلق قيد التحصيل' : 'Pending clearing')}
-              </span>
-            </div>
-
-            <div className={styles.inspectMetricCard}>
-              <span className={styles.inspectMetricLabel}>
-                {isAr ? 'الرصيد المعلق' : 'Outstanding Balance'}
-              </span>
-              <span className={styles.inspectMetricValue} style={{ color: isCleared ? '#16a34a' : '#d97706' }}>
-                {formatEgp(isCleared ? '0.00' : cheque.nominal_value, isAr)}
-              </span>
-              <span className={styles.inspectMetricSub}>
-                {isCleared ? (isAr ? 'مسدد بالكامل ✓' : 'Zero balance') : (isAr ? 'مستحق السداد' : 'Outstanding')}
-              </span>
-            </div>
-
-            <div className={styles.inspectMetricCard}>
-              <span className={styles.inspectMetricLabel}>
-                {isAr ? 'تاريخ الاستحقاق' : 'Maturity Due Date'}
-              </span>
-              <span className={styles.inspectMetricValue}>
-                {cheque.due_date}
-              </span>
-              <span className={styles.inspectMetricSub}>
-                {isPastDue ? (isAr ? 'استحقاق منقضٍ' : 'Past due date') : (isAr ? 'استحقاق مجدول' : 'Scheduled date')}
-              </span>
-            </div>
-          </div>
-
-          {/* Tier 3: 2-Column Body */}
-          <div className={styles.inspectBodyColumns}>
-            {/* Right Column: Core Specifications & Audit Metadata */}
-            <div className={styles.inspectColumn}>
-              <div className={styles.inspectColHeader}>
-                <span className={styles.inspectColTitle}>
-                  <Landmark size={15} />
-                  <span>{isAr ? 'بيانات الشيك والساحب' : 'Cheque & Drawer Details'}</span>
-                </span>
-              </div>
-
-              <div className={styles.inspectFactsList}>
-                <div className={styles.inspectFactItem}>
-                  <span className={styles.inspectFactLabel}>{isAr ? 'البنك المسحوب عليه' : 'Drawee Bank'}</span>
-                  <span className={styles.inspectFactVal}>{bankName}</span>
-                </div>
-
-                <div className={styles.inspectFactItem}>
-                  <span className={styles.inspectFactLabel}>{isAr ? 'فرع البنك / رقم الحساب' : 'Branch / Account'}</span>
-                  <span className={styles.inspectFactVal}>{(cheque as any).bank_branch || (isAr ? 'الفرع الرئيسي' : 'Main Branch')}</span>
-                </div>
-
-                <div className={styles.inspectFactItem}>
-                  <span className={styles.inspectFactLabel}>{isAr ? 'تاريخ استلام الشيك' : 'Received Date'}</span>
-                  <span className={styles.inspectFactVal}>{(cheque as { received_date?: string }).received_date || '—'}</span>
-                </div>
-
-                <div className={styles.inspectFactItem}>
-                  <span className={styles.inspectFactLabel}>{isAr ? 'تاريخ الإيداع بالبنك' : 'Deposit Date'}</span>
-                  <span className={styles.inspectFactVal}>{depositDate}</span>
-                </div>
-
-                <div className={styles.inspectFactItemWide}>
-                  <span className={styles.inspectFactLabel}>{isAr ? 'حساب التوجيه المحاسبي' : 'Routing Account'}</span>
-                  <span className={styles.inspectFactVal}>
-                    {isCleared ? '101000 - الخزينة الرئيسية / 102000 الحساب البنكي' : '105000 - أوراق القبض (Notes Receivable)'}
-                  </span>
-                </div>
-
-                <div className={styles.inspectFactItemWide}>
-                  <span className={styles.inspectFactLabel}>{isAr ? 'البيان والغرض' : 'Memo / Purpose'}</span>
-                  <span className={styles.inspectFactVal}>
-                    {(cheque as any).notes || (cheque as any).memo || (isAr ? 'سند تحصيل قسط تعاقد معتمد' : 'Contract installment payment instrument')}
-                  </span>
-                </div>
-
-                {payload.linkedContract && (
-                  <div className={styles.inspectFactItemWide}>
-                    <span className={styles.inspectFactLabel}>{isAr ? 'العقد والوحدة المرتبطة' : 'Linked Contract'}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.2rem' }}>
-                      <span className={styles.inspectFactVal}>
-                        #{payload.linkedContract.contract_number} ({payload.linkedContract.unit_id})
-                      </span>
-                      {onInspectContract && (
-                        <button
-                          type="button"
-                          className={styles.inspectBtnSecondary}
-                          onClick={() => onInspectContract(payload.linkedContract!)}
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
-                        >
-                          {isAr ? 'فتح العقد' : 'View'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Left Column: Settlement Lifecycle & Accounting Ledger */}
-            <div className={styles.inspectColumn}>
-              <div className={styles.inspectColHeader}>
-                <span className={styles.inspectColTitle}>
-                  <CheckCircle2 size={15} />
-                  <span>{isAr ? 'مسار التحصيل والقيد المحاسبي' : 'Clearing Workflow & Ledger'}</span>
-                </span>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                  حساب 101000
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.78rem' }}>
-                {/* Visual Lifecycle Stepper */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} />
-                    <span style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>{isAr ? 'في الخزينة' : 'In Safe'}</span>
-                  </div>
-                  <div style={{ flex: 1, height: 1, background: isDeposited || isCleared ? '#2563eb' : '#cbd5e1', margin: '0 0.4rem' }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isDeposited || isCleared ? '#2563eb' : '#cbd5e1' }} />
-                    <span style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>{isAr ? 'مودع بالبنك' : 'Deposited'}</span>
-                  </div>
-                  <div style={{ flex: 1, height: 1, background: isCleared ? '#16a34a' : '#cbd5e1', margin: '0 0.4rem' }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isCleared ? '#16a34a' : isBounced ? '#dc2626' : '#cbd5e1' }} />
-                    <span style={{ fontSize: '0.65rem', color: isCleared ? '#16a34a' : isBounced ? '#dc2626' : '#475569', fontWeight: 700 }}>
-                      {isCleared ? (isAr ? 'تم الصرف ✓' : 'Cleared') : isBounced ? (isAr ? 'مرتد ✗' : 'Bounced') : (isAr ? 'المقاصة' : 'Settlement')}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 0.85rem' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                    {isAr ? 'الأثر المحاسبي المعتمد (Double-Entry Ledger)' : 'Accounting Impact'}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', fontVariantNumeric: 'tabular-nums', padding: '0.2rem 0' }}>
-                    <span>Dr 101000 الخزينة الموحدة / 102000 البنك التجاري</span>
-                    <strong>{formatEgp(cheque.nominal_value, isAr)}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontVariantNumeric: 'tabular-nums', padding: '0.2rem 0' }}>
-                    <span>Cr 105000 أوراق القبض (Notes Receivable)</span>
-                    <strong>{formatEgp(cheque.nominal_value, isAr)}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ZFModalShell>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 3. TAX INSPECTION
+  // 2. TAX INSPECTION
   // ---------------------------------------------------------------------------
   if (payload.type === 'tax') {
     const tax = payload.tax;
     const isRemitted = tax.remittance_status === 'Remitted to ETA';
     const ratePct = (Number(tax.tax_rate) * 100).toFixed(1);
-    const dueDate = (tax as any).due_date || tax.created_at?.split('T')[0] || '—';
-    const remittedAt = (tax as any).remitted_at;
-    const taxPeriod = (tax as any).tax_period || '2026';
-    const remittanceRef = (tax as any).remittance_reference || (remittedAt ? `ETA-${tax.tax_id.slice(0, 6)}` : '—');
+    const dueDate = ((tax as LooseRecord).due_date as string | undefined) || tax.created_at?.split('T')[0] || '—';
+    const remittedAt = (tax as LooseRecord).remitted_at as string | undefined;
+    const taxPeriod = ((tax as LooseRecord).tax_period as string | undefined) || '2026';
+    const remittanceRef = ((tax as LooseRecord).remittance_reference as string | undefined) || (remittedAt ? `ETA-${tax.tax_id.slice(0, 6)}` : '—');
 
     return (
       <ZFModalShell
@@ -885,7 +555,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   className={styles.inspectBtnSecondary}
                   onClick={() => onInspectContract(payload.linkedContract!)}
                 >
-                  <FileText size={14} color="#2563eb" />
+                  <FileText size={14} color="var(--erp-accent)" />
                   <span>{isAr ? 'فتح ملف العقد' : 'View Contract'}</span>
                 </button>
               )}
@@ -910,7 +580,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
           {/* Tier 1: Top Identity Ribbon */}
           <div className={styles.inspectIdentityRibbon}>
             <div className={styles.inspectIdentityLeft}>
-              <div className={styles.inspectSquircleIcon} style={{ background: '#f0fdf4', color: '#16a34a' }}>
+              <div className={`${styles.inspectSquircleIcon} ${dStyles.squircleGreen}`}>
                 <ShieldCheck size={16} />
               </div>
               <span className={styles.inspectCodeBadge}>
@@ -966,7 +636,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'قيمة الضريبة المستحقة' : 'Tax Amount Due'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: isRemitted ? '#16a34a' : '#d97706' }}>
+              <span className={`${styles.inspectMetricValue} ${isRemitted ? dStyles.textGreen : dStyles.textAmber}`}>
                 {formatEgp(tax.tax_amount, isAr)}
               </span>
               <span className={styles.inspectMetricSub}>
@@ -1031,7 +701,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 {payload.linkedContract && (
                   <div className={styles.inspectFactItemWide}>
                     <span className={styles.inspectFactLabel}>{isAr ? 'العقد المرتبط' : 'Linked Contract'}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.2rem' }}>
+                    <div className={dStyles.rowBetweenMargin}>
                       <span className={styles.inspectFactVal}>
                         #{payload.linkedContract.contract_number} ({payload.linkedContract.unit_id})
                       </span>
@@ -1040,7 +710,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                           type="button"
                           className={styles.inspectBtnSecondary}
                           onClick={() => onInspectContract(payload.linkedContract!)}
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                          
                         >
                           {isAr ? 'فتح العقد' : 'View'}
                         </button>
@@ -1058,27 +728,27 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <BookOpen size={15} />
                   <span>{isAr ? 'الأثر المالي وقيد التوريد' : 'Double-Entry Remittance Impact'}</span>
                 </span>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                <span className={dStyles.colHeaderExtra}>
                   حساب 205000
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.78rem' }}>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 0.85rem' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+              <div className={dStyles.stackTight}>
+                <div className={dStyles.infoCard}>
+                  <div className={dStyles.infoCardTitle}>
                     {isAr ? 'القيد المحاسبي المعتمد للتوريد' : 'Statutory Remittance Entry'}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', fontVariantNumeric: 'tabular-nums', padding: '0.2rem 0' }}>
+                  <div className={dStyles.infoCardRow}>
                     <span>Dr 205000 مصلحة الضرائب - التزامات وخصم</span>
                     <strong>{formatEgp(tax.tax_amount, isAr)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontVariantNumeric: 'tabular-nums', padding: '0.2rem 0' }}>
+                  <div className={dStyles.infoCardRowMuted}>
                     <span>Cr 101000 الخزينة الموحدة / 102000 الحساب البنكي</span>
                     <strong>{formatEgp(tax.tax_amount, isAr)}</strong>
                   </div>
                 </div>
 
-                <div style={{ color: '#64748b', fontSize: '0.72rem', lineHeight: 1.4 }}>
+                <div className={dStyles.infoCardHelp}>
                   {isAr 
                     ? 'يتم توريد الضريبة إلى مصلحة الضرائب المصرية بموجب إشعار الخصم والإضافة المعتمد وحساب رقم 205000.'
                     : 'Tax liabilities are remitted to the ETA under statutory withholding and remittance regulations via Account 205000.'}
@@ -1238,7 +908,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'معامل التكلفة (RSV Factor)' : 'RSV Cost Ratio'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: '#2563eb' }}>
+              <span className={`${styles.inspectMetricValue} ${dStyles.textAccent}`}>
                 {rsvPct}%
               </span>
               <span className={styles.inspectMetricSub}>
@@ -1250,7 +920,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'هامش الربح الإجمالي المتوقع' : 'Expected Gross Margin'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: '#16a34a' }}>
+              <span className={`${styles.inspectMetricValue} ${dStyles.textGreen}`}>
                 {grossMarginPct}%
               </span>
               <span className={styles.inspectMetricSub}>
@@ -1317,40 +987,28 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <PieChart size={15} />
                   <span>{isAr ? 'تصنيف تكاليف التنفيذ وامتصاص التكلفة' : 'WIP Breakdown & Absorption Allocation'}</span>
                 </span>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                <span className={dStyles.colHeaderExtra}>
                   حـ/ 150000
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.78rem' }}>
+              <div className={dStyles.stackTight}>
                 {/* 1. WIP Cost Breakdown by Category */}
                 <div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+                  <div className={dStyles.wipPoolTitle}>
                     {isAr ? 'توزيع بنود تكلفة التنفيذ (Capitalized WIP Breakdown):' : 'Capitalized WIP Cost Pools:'}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div className={dStyles.wipPoolList}>
                     {wipCategories.map((cat, idx) => {
                       const catAmount = totalWipD.times(cat.ratio);
                       return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'space-between', 
-                            padding: '0.4rem 0.6rem', 
-                            background: '#f8fafc', 
-                            borderRadius: '6px', 
-                            border: '1px solid #e2e8f0',
-                            fontSize: '0.72rem'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--erp-accent, #2563eb)' }} />
-                            <span style={{ fontWeight: 600, color: '#0f172a' }}>{isAr ? cat.nameAr : cat.nameEn}</span>
-                            <span style={{ color: '#64748b', fontSize: '0.66rem' }}>({cat.ratio * 100}%)</span>
+                        <div key={idx} className={dStyles.wipPoolCard}>
+                          <div className={dStyles.wipPoolLeft}>
+                            <span className={dStyles.wipPoolDot} />
+                            <span className={dStyles.wipPoolName}>{isAr ? cat.nameAr : cat.nameEn}</span>
+                            <span className={dStyles.wipPoolRatio}>({cat.ratio * 100}%)</span>
                           </div>
-                          <span style={{ fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                          <span className={dStyles.wipPoolAmount}>
                             {formatEgp(catAmount, isAr)}
                           </span>
                         </div>
@@ -1362,29 +1020,29 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 {/* 2. Absorption Allocation Unit Table (if linked contracts available) */}
                 {linkedContractsList.length > 0 && (
                   <div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <div className={dStyles.simRowHighlight}>
                       <Layers size={13} color="var(--erp-accent, #2563eb)" />
                       <span>{isAr ? 'امتصاص التكلفة للوحدات المربوطة:' : 'Absorption Allocation to Units:'}</span>
                     </div>
-                    <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem', textAlign: isAr ? 'right' : 'left' }}>
+                    <div className={dStyles.wipScrollArea}>
+                      <table className={dStyles.table}>
                         <thead>
-                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
-                            <th style={{ padding: '0.3rem 0.45rem', color: '#64748b' }}>{isAr ? 'الوحدة' : 'Unit'}</th>
-                            <th style={{ padding: '0.3rem 0.45rem', color: '#64748b', textAlign: 'end' }}>{isAr ? 'سعر البيع' : 'Sale Value'}</th>
-                            <th style={{ padding: '0.3rem 0.45rem', color: '#64748b', textAlign: 'end' }}>{isAr ? 'التكلفة (COGS)' : 'Allocated COGS'}</th>
+                          <tr>
+                            <th className={dStyles.th}>{isAr ? 'الوحدة' : 'Unit'}</th>
+                            <th className={dStyles.thNum}>{isAr ? 'سعر البيع' : 'Sale Value'}</th>
+                            <th className={dStyles.thNum}>{isAr ? 'التكلفة (COGS)' : 'Allocated COGS'}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {linkedContractsList.map((c, idx) => {
                             const unitCOGS = RSVEngine.computeUnitCOGS(c.gross_contract_value, alloc.rsv_factor || '0');
                             return (
-                              <tr key={c.contract_id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '0.35rem 0.45rem', fontWeight: 600 }}>{c.unit_id}</td>
-                                <td style={{ padding: '0.35rem 0.45rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>
+                              <tr key={c.contract_id || idx} className={dStyles.tr}>
+                                <td className={dStyles.td}>{c.unit_id}</td>
+                                <td className={dStyles.tdNum}>
                                   {formatEgp(c.gross_contract_value, isAr)}
                                 </td>
-                                <td style={{ padding: '0.35rem 0.45rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', color: '#2563eb', fontWeight: 700 }}>
+                                <td className={`${dStyles.tdNum} ${dStyles.textAccent}`}>
                                   {formatEgp(unitCOGS, isAr)}
                                 </td>
                               </tr>
@@ -1397,8 +1055,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 )}
 
                 {/* 3. Unit Simulator */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
-                  <label htmlFor="sim-unit-val" style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 700 }}>
+                <div className={dStyles.simStack}>
+                  <label htmlFor="sim-unit-val" className={dStyles.simUnitValLabel}>
                     {isAr ? 'محاكي تكلفة وأرباح الوحدة المقترحة (ج.م):' : 'Unit Profitability Simulator (EGP):'}
                   </label>
                   <input
@@ -1406,24 +1064,17 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     type="number"
                     value={simulatedUnitValue}
                     onChange={(e) => setSimulatedUnitValue(e.target.value)}
-                    style={{
-                      padding: '0.4rem 0.6rem',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      fontVariantNumeric: 'tabular-nums',
-                      outline: 'none'
-                    }}
+                    className={dStyles.simInput}
                   />
 
-                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.55rem 0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontVariantNumeric: 'tabular-nums', padding: '0.15rem 0' }}>
+                  <div className={dStyles.simBox}>
+                    <div className={dStyles.simLine}>
                       <span>{isAr ? 'تكلفة الاستنزال المقدرة (Dr 501000 COGS):' : 'Relieved Cost (COGS):'}</span>
-                      <strong style={{ color: '#0f172a' }}>{formatEgp(simCOGS, isAr)}</strong>
+                      <strong className={dStyles.textDark}>{formatEgp(simCOGS, isAr)}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontVariantNumeric: 'tabular-nums', padding: '0.15rem 0' }}>
+                    <div className={dStyles.simLineSuccess}>
                       <span>{isAr ? 'صافي هامش الربح المحقق:' : 'Derived Net Margin:'}</span>
-                      <strong style={{ color: '#16a34a' }}>{formatEgp(simProfit, isAr)}</strong>
+                      <strong className={dStyles.textGreen}>{formatEgp(simProfit, isAr)}</strong>
                     </div>
                   </div>
                 </div>
@@ -1441,8 +1092,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
   if (payload.type === 'rescission') {
     const resc = payload.rescission;
     const isBranch1 = resc.branch === 'Pre-Delivery';
-    const unitId = (resc as any).unit_id || resc.contract_id;
-    const buyerName = (resc as any).buyer_name || (isAr ? 'ملف تسوية فسخ تعاقد' : 'Contract Rescission');
+    const unitId = ((resc as LooseRecord).unit_id as string | undefined) || resc.contract_id;
+    const buyerName = ((resc as LooseRecord).buyer_name as string | undefined) || (isAr ? 'ملف تسوية فسخ تعاقد' : 'Contract Rescission');
 
     return (
       <ZFModalShell
@@ -1492,7 +1143,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
           {/* Tier 1: Top Identity Ribbon */}
           <div className={styles.inspectIdentityRibbon}>
             <div className={styles.inspectIdentityLeft}>
-              <div className={styles.inspectSquircleIcon} style={{ background: '#fef2f2', color: '#dc2626' }}>
+              <div className={`${styles.inspectSquircleIcon} ${dStyles.squircleRed}`}>
                 <RotateCcw size={16} />
               </div>
               <span className={styles.inspectCodeBadge}>
@@ -1548,7 +1199,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'الغرامة المحتجزة (10%)' : 'Retained Penalty (10%)'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: '#16a34a' }}>
+              <span className={`${styles.inspectMetricValue} ${dStyles.textGreen}`}>
                 {formatEgp(resc.penalty_retained, isAr)}
               </span>
               <span className={styles.inspectMetricSub}>
@@ -1560,7 +1211,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'صافي التزام الرد للعميل' : 'Net Refund Liability'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: '#dc2626' }}>
+              <span className={`${styles.inspectMetricValue} ${dStyles.textRed}`}>
                 {formatEgp(resc.net_refund_liability, isAr)}
               </span>
               <span className={styles.inspectMetricSub}>
@@ -1628,23 +1279,23 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.78rem' }}>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 0.85rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a', fontVariantNumeric: 'tabular-nums', padding: '0.2rem 0' }}>
+              <div className={dStyles.stackTight}>
+                <div className={dStyles.infoCard}>
+                  <div className={dStyles.infoCardRow}>
                     <span>{isAr ? 'إجمالي المقبوض نقداً من العميل:' : 'Total Cash Collected:'}</span>
                     <strong>+ {formatEgp(resc.total_cash_collected, isAr)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontVariantNumeric: 'tabular-nums', padding: '0.2rem 0' }}>
+                  <div className={`${dStyles.infoCardRow} ${dStyles.textGreen}`}>
                     <span>{isAr ? 'الغرامة القانونية المحتجزة (10%):' : 'Retained Penalty (10%):'}</span>
                     <strong>- {formatEgp(resc.penalty_retained, isAr)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626', fontVariantNumeric: 'tabular-nums', borderTop: '1px solid #cbd5e1', marginTop: '0.35rem', paddingTop: '0.35rem' }}>
+                  <div className={`${dStyles.simRowHighlight} ${dStyles.textRed}`}>
                     <span>{isAr ? 'صافي الالتزام المستحق رده للعميل:' : 'Net Refund Liability:'}</span>
-                    <strong style={{ fontSize: '0.9rem' }}>= {formatEgp(resc.net_refund_liability, isAr)}</strong>
+                    <strong className={dStyles.fontLg}>= {formatEgp(resc.net_refund_liability, isAr)}</strong>
                   </div>
                 </div>
 
-                <div style={{ color: '#64748b', fontSize: '0.72rem', lineHeight: 1.4 }}>
+                <div className={dStyles.infoCardHelp}>
                   {isAr 
                     ? 'يتم إصدار أمر صرف شيك أو تحويل بنكي لصالح العميل بقيمة صافي الالتزام بعد توقيع محضر التسوية النهائي.'
                     : 'A disbursement cheque or bank wire will be issued to the customer for the net refund upon signing the settlement agreement.'}
@@ -1663,19 +1314,19 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
   const entry = payload.type === 'journal' ? (payload.entry || payload.journalEntry) : null;
   const entryNumber = String(entry?.entry_number || (typeof entry?.entry_id === 'string' ? entry.entry_id.slice(0, 8) : entry?.entry_id) || 'JE-AUTO');
   const entryDesc = entry?.description || (payload.type === 'journal' ? payload.title : '') || (isAr ? 'قيد عمليات يومية' : 'Journal Entry');
-  const entryDate = (entry as any)?.posting_date ? String((entry as any).posting_date).slice(0, 10) : (entry?.entry_date ? String(entry.entry_date).slice(0, 10) : new Date().toISOString().split('T')[0]);
-  const lines: any[] = Array.isArray(entry?.lines) ? entry.lines : [];
+  const entryDate = (entry as LooseRecord)?.posting_date ? String((entry as LooseRecord).posting_date).slice(0, 10) : (entry?.entry_date ? String(entry.entry_date).slice(0, 10) : new Date().toISOString().split('T')[0]);
+  const lines: LooseRecord[] = Array.isArray(entry?.lines) ? (entry.lines as unknown as LooseRecord[]) : [];
 
   const totalDebit = lines.length > 0 
-    ? lines.reduce((s: number, l: any) => {
-        const val = Number(l?.debit_amount || (l as any)?.debit || 0);
+    ? lines.reduce((s: number, l: LooseRecord) => {
+        const val = Number(l?.debit_amount || l?.debit || 0);
         return s + (Number.isFinite(val) ? val : 0);
       }, 0)
     : (payload.type === 'journal' && payload.amount && Number.isFinite(Number(payload.amount)) ? Number(payload.amount) : 0);
 
   const totalCredit = lines.length > 0 
-    ? lines.reduce((s: number, l: any) => {
-        const val = Number(l?.credit_amount || (l as any)?.credit || 0);
+    ? lines.reduce((s: number, l: LooseRecord) => {
+        const val = Number(l?.credit_amount || l?.credit || 0);
         return s + (Number.isFinite(val) ? val : 0);
       }, 0)
     : (payload.type === 'journal' && payload.amount && Number.isFinite(Number(payload.amount)) ? Number(payload.amount) : 0);
@@ -1786,7 +1437,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
             <span className={styles.inspectMetricLabel}>
               {isAr ? 'موقف التوازن المحاسبي' : 'Ledger Balance'}
             </span>
-            <span className={styles.inspectMetricValue} style={{ color: isBalanced ? '#16a34a' : '#dc2626' }}>
+            <span className={`${styles.inspectMetricValue} ${isBalanced ? dStyles.textGreen : dStyles.textRed}`}>
               {isBalanced ? (isAr ? 'متوازن ٠.٠٠' : 'Balanced 0.00') : (isAr ? 'غير متوازن!' : 'Unbalanced!')}
             </span>
             <span className={styles.inspectMetricSub}>
@@ -1821,7 +1472,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
             <div className={styles.inspectFactsList}>
               <div className={styles.inspectFactItem}>
                 <span className={styles.inspectFactLabel}>{isAr ? 'المستند المؤيد' : 'Source Doc'}</span>
-                <span className={styles.inspectFactVal}>{(entry as any)?.source_document || entry?.source_module || 'Cash Movement / Daily Operations'}</span>
+                <span className={styles.inspectFactVal}>{String((entry as LooseRecord)?.source_document || entry?.source_module || 'Cash Movement / Daily Operations')}</span>
               </div>
 
               <div className={styles.inspectFactItem}>
@@ -1850,40 +1501,41 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 <BookOpen size={15} />
                 <span>{isAr ? 'أطراف القيد المحاسبي المزدوج' : 'Double-Entry Ledger Lines'}</span>
               </span>
-              <span style={{ fontSize: '0.72rem', color: isBalanced ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+              <span className={`${dStyles.colHeaderStatus} ${isBalanced ? dStyles.textGreen : dStyles.textRed}`}>
                 {isBalanced ? (isAr ? 'متوازن ✓' : 'Balanced ✓') : (isAr ? 'غير متوازن' : 'Unbalanced')}
               </span>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem', textAlign: isAr ? 'right' : 'left' }}>
+            <div className={dStyles.tableWrap}>
+              <table className={dStyles.table}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
-                    <th style={{ padding: '0.4rem 0.5rem', color: '#64748b', fontWeight: 700 }}>{isAr ? 'كود' : 'Code'}</th>
-                    <th style={{ padding: '0.4rem 0.5rem', color: '#64748b', fontWeight: 700 }}>{isAr ? 'الحساب' : 'Account'}</th>
-                    <th style={{ padding: '0.4rem 0.5rem', color: '#64748b', fontWeight: 700, textAlign: 'end' }}>{isAr ? 'مدين' : 'Debit'}</th>
-                    <th style={{ padding: '0.4rem 0.5rem', color: '#64748b', fontWeight: 700, textAlign: 'end' }}>{isAr ? 'دائن' : 'Credit'}</th>
+                  <tr>
+                    <th className={dStyles.th}>{isAr ? 'كود' : 'Code'}</th>
+                    <th className={dStyles.th}>{isAr ? 'الحساب' : 'Account'}</th>
+                    <th className={dStyles.thNum}>{isAr ? 'مدين' : 'Debit'}</th>
+                    <th className={dStyles.thNum}>{isAr ? 'دائن' : 'Credit'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lines.length > 0 ? (
-                    lines.map((line: any, idx: number) => {
-                      const coaAccount = line?.account_code ? CANONICAL_COA[line.account_code] : undefined;
-                      const coaName = coaAccount ? (isAr ? coaAccount.account_name_ar : coaAccount.account_name_en) : ((line as any)?.account_name || (isAr ? 'حساب عام' : 'General Account'));
-                      const debitVal = Number(line?.debit_amount || (line as any)?.debit || 0);
-                      const creditVal = Number(line?.credit_amount || (line as any)?.credit || 0);
+                    lines.map((line: LooseRecord, idx: number) => {
+                      const accountCode = String(line?.account_code || '');
+                      const coaAccount = accountCode ? CANONICAL_COA[accountCode] : undefined;
+                      const coaName = coaAccount ? (isAr ? coaAccount.account_name_ar : coaAccount.account_name_en) : (String(line?.account_name || '') || (isAr ? 'حساب عام' : 'General Account'));
+                      const debitVal = Number(line?.debit_amount || line?.debit || 0);
+                      const creditVal = Number(line?.credit_amount || line?.credit || 0);
                       return (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>
+                        <tr key={idx} className={dStyles.tr}>
+                          <td className={dStyles.tdCode}>
                             {line?.account_code || '—'}
                           </td>
-                          <td style={{ padding: '0.45rem 0.5rem', color: '#0f172a', fontWeight: 600 }}>
+                          <td className={dStyles.td}>
                             {coaName}
                           </td>
-                          <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+                          <td className={dStyles.tdNum}>
                             {debitVal > 0 ? formatEgp(debitVal, isAr) : '—'}
                           </td>
-                          <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+                          <td className={dStyles.tdNum}>
                             {creditVal > 0 ? formatEgp(creditVal, isAr) : '—'}
                           </td>
                         </tr>
@@ -1891,26 +1543,26 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     })
                   ) : (
                     <>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>101000</td>
-                        <td style={{ padding: '0.45rem 0.5rem', color: '#0f172a', fontWeight: 600 }}>{isAr ? 'الخزينة الرئيسية الموحدة' : 'Treasury Main Safe'}</td>
-                        <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEgp(totalDebit, isAr)}</td>
-                        <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end' }}>—</td>
+                      <tr className={dStyles.tr}>
+                        <td className={dStyles.tdCode}>101000</td>
+                        <td className={dStyles.td}>{isAr ? 'الخزينة الرئيسية الموحدة' : 'Treasury Main Safe'}</td>
+                        <td className={dStyles.tdNum}>{formatEgp(totalDebit, isAr)}</td>
+                        <td className={dStyles.tdNum}>—</td>
                       </tr>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>401000</td>
-                        <td style={{ padding: '0.45rem 0.5rem', color: '#0f172a', fontWeight: 600 }}>{isAr ? 'حساب العمليات والإيرادات' : 'Operations Revenue'}</td>
-                        <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end' }}>—</td>
-                        <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEgp(totalCredit, isAr)}</td>
+                      <tr className={dStyles.tr}>
+                        <td className={dStyles.tdCode}>401000</td>
+                        <td className={dStyles.td}>{isAr ? 'حساب العمليات والإيرادات' : 'Operations Revenue'}</td>
+                        <td className={dStyles.tdNum}>—</td>
+                        <td className={dStyles.tdNum}>{formatEgp(totalCredit, isAr)}</td>
                       </tr>
                     </>
                   )}
                 </tbody>
                 <tfoot>
-                  <tr style={{ background: '#f8fafc', borderTop: '2px solid #cbd5e1', fontWeight: 800 }}>
-                    <td colSpan={2} style={{ padding: '0.45rem 0.5rem', color: '#0f172a' }}>{isAr ? 'الإجمالي' : 'Total'}</td>
-                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>{formatEgp(totalDebit, isAr)}</td>
-                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>{formatEgp(totalCredit, isAr)}</td>
+                  <tr className={dStyles.tfoot}>
+                    <td colSpan={2} className={dStyles.tfootTd}>{isAr ? 'الإجمالي' : 'Total'}</td>
+                    <td className={dStyles.tfootTdNum}>{formatEgp(totalDebit, isAr)}</td>
+                    <td className={dStyles.tfootTdNum}>{formatEgp(totalCredit, isAr)}</td>
                   </tr>
                 </tfoot>
               </table>

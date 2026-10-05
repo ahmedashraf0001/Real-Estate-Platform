@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
@@ -78,6 +78,7 @@ interface ZFNavigationDockProps {
   onQuickRequest?: () => void;
   width?: number;
   isResizing?: boolean;
+  quickMenu?: Array<{ key: string; labelAr: string; labelEn: string; icon: React.ReactNode; onSelect: () => void }>;
 }
 
 export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
@@ -96,9 +97,33 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   onQuickRequest,
   width,
   isResizing = false,
+  quickMenu,
 }) => {
   const pathname = usePathname() || '';
   const router = useRouter();
+
+  const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+  const menuWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isQuickMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsQuickMenuOpen(false);
+      }
+    };
+    const handleMouseDown = (e: MouseEvent) => {
+      if (menuWrapperRef.current && !menuWrapperRef.current.contains(e.target as Node)) {
+        setIsQuickMenuOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [isQuickMenuOpen]);
 
   const effectiveActiveModule = useMemo<ERPNavModule>(() => {
     if (activeModule) return activeModule;
@@ -354,18 +379,43 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         )}
 
         {/* 2. Full-width solid-color primary button (Full Pill) */}
-        <div className={styles.actionBtnWrapper}>
+        <div ref={menuWrapperRef} className={`${styles.actionBtnWrapper} ${styles.quickMenuAnchor}`}>
           <button
             type="button"
             className={styles.primaryActionButton}
-            onClick={onQuickRequest || (() => onSelectModule?.('operations'))}
-            title={isAr ? '+ طلب جديد / قيد فوري' : '+ New Request / Entry'}
+            onClick={
+              quickMenu && quickMenu.length > 0
+                ? () => setIsQuickMenuOpen(prev => !prev)
+                : (onQuickRequest || (() => onSelectModule?.('operations')))
+            }
+            aria-haspopup={quickMenu && quickMenu.length > 0 ? 'menu' : undefined}
+            aria-expanded={quickMenu && quickMenu.length > 0 ? isQuickMenuOpen : undefined}
+            title={isAr ? 'إجراء جديد' : 'New action'}
           >
             <Plus size={15} strokeWidth={2.5} />
             {!isCollapsed && (
-              <span>{isAr ? '+ طلب جديد' : '+ New Request'}</span>
+              <span>{isAr ? 'طلب جديد' : 'New request'}</span>
             )}
           </button>
+          {quickMenu && quickMenu.length > 0 && isQuickMenuOpen && (
+            <div role="menu" className={styles.quickMenu}>
+              {quickMenu.map(item => (
+                <button
+                  key={item.key}
+                  role="menuitem"
+                  type="button"
+                  className={styles.quickMenuItem}
+                  onClick={() => {
+                    setIsQuickMenuOpen(false);
+                    item.onSelect();
+                  }}
+                >
+                  {item.icon}
+                  <span>{isAr ? item.labelAr : item.labelEn}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 4. Nav items grouped under plain gray section labels */}

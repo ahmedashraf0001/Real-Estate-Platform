@@ -228,6 +228,8 @@ FIN-OS employs an expansive, edge-to-edge docked 3-column / 2-column enterprise 
 
 ### D. Top-of-Page Anatomy & Quick Actions Policy
 
+> **Implementation (2026-10-05):** every page header is `<ZFPageHeader title subtitle actions />` from `v2/common/ZFPageHeader.tsx` (1.35rem/700 title, one muted line with no account codes or bold spans, trailing actions with at most one `btnPrimary`). No in-page breadcrumb (the top bar already shows it), no badges beside the title, no two-tone titles. Cards use `ZFPanel`; page-level mode toggles use `ZFSegmented`; buttons use the shell classes `btnPrimary` / `btnSecondary` / `btnDanger` / `btnGhost` (+ `btnSm`), 34px tall. Inline gradients and card shadows are not allowed; accent colors come only from `--erp-accent*` tokens (use `color-mix(in srgb, var(--erp-accent) N%, transparent)` for tints).
+
 All primary FIN-OS workstations must strictly follow the top-of-page anatomy established in the canonical ERP blueprint (`erp-dashboard.png`):
 
 ```
@@ -550,9 +552,9 @@ These negative constraints reflect explicit corrections made during previous des
 
 ---
 
-## 9. Curated Accent Palette Customization System (FIN-OS Exclusive)
+## 9. Curated Accent Palette Customization System (FIN-OS + Admin)
 
-Scoped strictly to **FIN-OS** (leaving the outer Admin shell untouched), operators can personalize the platform's primary accent color from a curated set of 8 pre-verified, enterprise-grade palettes.
+One stored choice drives **both FIN-OS and the Admin dashboard** (`useAccentPreset` in `src/lib/theme/accentPalette.ts`; Admin applies it through `AdminAccentBridge` with per-preset dark-mode values). Operators can personalize the platform's primary accent color from a curated set of 8 pre-verified, enterprise-grade palettes.
 
 ### 9.A. No Open Color Picker Invariant
 To guarantee WCAG AA accessibility, contrast legibility (≥ 4.5:1 against white backgrounds and white button text), and institutional dignity, **freeform/arbitrary color pickers are strictly banned**. Only the 8 hand-verified presets below may be selected.

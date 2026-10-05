@@ -1,0 +1,1 @@
+Read and execute the full brief in .agents/briefs/calc-rebuild.body.txt (cwd = zakaria-farid). It is the complete task; follow its execution_rules, files, component, layout, wiring, gates and structured_output_contract exactly.

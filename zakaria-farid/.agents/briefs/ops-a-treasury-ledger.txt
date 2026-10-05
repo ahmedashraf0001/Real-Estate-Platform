@@ -1,0 +1,243 @@
+ROLE: LEAF — implementer. Execute exactly. Do not redesign, rename, or add features.
+TRACK: FINANCIAL_CORE
+PROJECT ROOT: zakaria-farid/ (run every command from there)
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report: terse, payload verbatim.
+- Do NOT commit. Do NOT touch any file not in <files>.
+</execution_rules>
+
+<goal>
+Create ONE pure module that turns posted journal entries into the treasury cash book for the
+Daily Operations page. Source of truth = journal lines on 101000 (Safe) and 102000 (InstaPay) ONLY.
+No PDC records, no property-cost rows, no description guessing for amounts. Cash-basis: money exists
+only when a journal entry moved 101000/102000.
+</goal>
+
+<files>
+CREATE src/lib/erp/treasuryLedger.ts
+CREATE src/lib/erp/__tests__/treasuryLedger.test.ts
+(no other file)
+</files>
+
+<spec>
+Imports allowed: `D`, `Decimal` from '@/lib/erp/math'; types `ERPJournalEntry`, `ERPContract` from
+'@/lib/erp/types'. Nothing else.
+
+1. Exports — types (copy exactly):
+
+export type CashAccountCode = '101000' | '102000';
+export type TreasuryPeriod = 'today' | '7d' | 'month' | 'all';
+export type CashMovementKind =
+  | 'customer_collection' | 'partner_injection' | 'loan_inflow' | 'other_inflow'
+  | 'contractor_payment' | 'site_expense' | 'operating_expense' | 'tax_remittance'
+  | 'customer_refund' | 'partner_distribution' | 'loan_repayment' | 'other_outflow'
+  | 'internal_transfer';
+export type CashDirection = 'IN' | 'OUT' | 'TRANSFER';
+
+export interface TreasuryMovement {
+  id: string;                 // entry.entry_id
+  entryNumber: string;        // entry.entry_number || entry.entry_id
+  date: string;               // entry.entry_date (YYYY-MM-DD); fallback toLocalDateStr(new Date(entry.created_at))
+  time: string;               // local HH:mm from entry.created_at; '' if created_at missing/invalid
+  timestamp: number;          // Date.parse(entry.created_at); if NaN -> Date.parse(date + 'T00:00:00'); if NaN -> 0
+  kind: CashMovementKind;
+  direction: CashDirection;
+  account: CashAccountCode;           // IN/OUT: the cash account moved. TRANSFER: the DEBITED cash account (destination)
+  fromAccount?: CashAccountCode;      // TRANSFER only: the CREDITED cash account (source)
+  amount: Decimal;            // always positive
+  signedAmount: Decimal;      // IN: +amount, OUT: -amount, TRANSFER: D(0)
+  opposingAccountCode: string; // see rule 3; '' for TRANSFER
+  originalDescription: string; // entry.description || ''
+  description: string;        // see rule 5
+  counterparty: string;       // see rule 6
+  contract?: ERPContract;
+  entry: ERPJournalEntry;
+  balanceAfter: Decimal;      // total cash (101000+102000) after this movement, chronological (rule 7)
+}
+
+export interface TreasuryAccountSummary {
+  code: CashAccountCode | 'TOTAL';
+  opening: Decimal; inflow: Decimal; outflow: Decimal; closing: Decimal;
+}
+export interface TreasuryKindSummary {
+  kind: CashMovementKind; direction: CashDirection; count: number; amount: Decimal;
+  share: number | null;       // amount / total of same direction * 100, rounded to 1 decimal; null for TRANSFER or when direction total is 0
+}
+export interface TreasurySummary {
+  period: TreasuryPeriod; from: string | null; to: string | null;
+  accounts: TreasuryAccountSummary[];   // exactly 3 rows in order: '101000', '102000', 'TOTAL'
+  inflow: Decimal; outflow: Decimal; net: Decimal; count: number;  // company level, TRANSFER excluded from inflow/outflow, included in count
+  byKind: TreasuryKindSummary[];        // only kinds with count > 0; order: IN rows, then OUT rows, then TRANSFER; inside each group amount desc, tie -> kind asc
+}
+
+2. Exports — constants:
+
+export const CASH_MOVEMENT_KIND_LABELS: Record<CashMovementKind, { ar: string; en: string }> = {
+  customer_collection:  { ar: 'تحصيل من عميل',        en: 'Customer collection' },
+  partner_injection:    { ar: 'تمويل من الشركاء',     en: 'Partner funding' },
+  loan_inflow:          { ar: 'قرض / تسهيل',          en: 'Loan drawdown' },
+  other_inflow:         { ar: 'إيداع آخر',            en: 'Other receipt' },
+  contractor_payment:   { ar: 'سداد مستحقات مقاول',   en: 'Contractor payment' },
+  site_expense:         { ar: 'تكاليف إنشاء مباشرة',  en: 'Direct construction cost' },
+  operating_expense:    { ar: 'مصروفات تشغيل',        en: 'Operating expense' },
+  tax_remittance:       { ar: 'سداد ضرائب',           en: 'Tax remittance' },
+  customer_refund:      { ar: 'رد مبالغ لعميل',       en: 'Customer refund' },
+  partner_distribution: { ar: 'توزيعات / مسحوبات شركاء', en: 'Partner distribution' },
+  loan_repayment:       { ar: 'سداد قرض',             en: 'Loan repayment' },
+  other_outflow:        { ar: 'صرف آخر',              en: 'Other payment' },
+  internal_transfer:    { ar: 'تحويل بين الخزينة وإنستاباي', en: 'Safe ⇄ InstaPay transfer' },
+};
+
+export const CASH_ACCOUNT_LABELS: Record<CashAccountCode, { ar: string; en: string }> = {
+  '101000': { ar: 'الخزينة', en: 'Safe' },
+  '102000': { ar: 'إنستاباي', en: 'InstaPay' },
+};
+
+export const TREASURY_PERIOD_LABELS: Record<TreasuryPeriod, { ar: string; en: string }> = {
+  today: { ar: 'اليوم', en: 'Today' },
+  '7d':  { ar: 'آخر ٧ أيام', en: 'Last 7 days' },
+  month: { ar: 'هذا الشهر', en: 'This month' },
+  all:   { ar: 'كل الفترات', en: 'All time' },
+};
+
+3. Rules for buildTreasuryMovements(entries: ERPJournalEntry[] | null | undefined,
+   contracts: ERPContract[] | null | undefined, isAr: boolean): TreasuryMovement[]
+
+ Per entry (skip null entries, treat missing lines as []):
+ a. cashDr[code] = sum debit_amount, cashCr[code] = sum credit_amount of lines with account_code
+    '101000' / '102000' (use D(x || 0)). netByCode = Dr - Cr per cash code.
+ b. If both cash codes have non-zero net AND one is positive and the other negative
+    -> TRANSFER: account = code with positive net, fromAccount = code with negative net,
+    amount = positive net of destination, kind 'internal_transfer', opposingAccountCode ''.
+ c. Else totalNet = net101000 + net102000. If totalNet == 0 -> skip the entry entirely.
+    If totalNet > 0 -> direction IN; if < 0 -> OUT. amount = |totalNet|.
+    account = the cash code with the largest |net| (tie -> '101000').
+ d. opposing line = among NON-cash lines, the one with the largest max(debit, credit);
+    tie -> lowest line_number; if line_number missing keep array order. opposingAccountCode =
+    its account_code or '' if none.
+ e. kind (use first matching rule, prefix match on opposingAccountCode):
+    IN:  '301','302' -> partner_injection; '202' -> loan_inflow;
+         '103','104','203','4' -> customer_collection; else other_inflow.
+    OUT: '201' -> contractor_payment; '105','15','603' -> site_expense;
+         '204','604' -> tax_remittance; '206' -> customer_refund; '303' -> partner_distribution;
+         '202' -> loan_repayment; '5','6' -> operating_expense; else other_outflow.
+    Order matters: check '603' before '6', '604' before '6'.
+
+4. Contract match (first hit wins): any line.contract_id equal to contract.contract_id;
+   else entry.source_entity_id === contract.contract_id; else contract.contract_number is a
+   non-empty substring of entry.description.
+
+5. description:
+   const hasArabic = /[؀-ۿ]/.test(originalDescription)
+   if (!isAr) -> originalDescription || label.en
+   if (isAr && hasArabic) -> originalDescription
+   if (isAr && !hasArabic) -> label.ar + (contract ? ` — عقد ${contract.contract_number}` : '')
+   (label = CASH_MOVEMENT_KIND_LABELS[kind]). The UI shows originalDescription as a secondary line
+   when it differs from description — not your concern here.
+
+6. counterparty (isAr ? ar : en):
+   contract -> contract.buyer_name
+   partner_injection | partner_distribution -> 'الشركاء' | 'Partners'
+   tax_remittance -> 'مصلحة الضرائب' | 'Tax authority'
+   internal_transfer -> 'داخلي' | 'Internal'
+   loan_inflow | loan_repayment -> 'البنك' | 'Bank'
+   anything else -> '—'
+
+7. Ordering + running balance: sort ascending by (timestamp, then date string, then id).
+   Walk in that order with running = D(0); for non-TRANSFER add signedAmount; TRANSFER adds 0.
+   balanceAfter = running after the row. Return the array sorted DESCENDING (newest first)
+   — i.e. reverse of the ascending walk.
+
+8. export function toLocalDateStr(d: Date): string  -> `${YYYY}-${MM}-${DD}` from local getters.
+
+9. export function getTreasuryPeriodRange(period: TreasuryPeriod, todayStr: string):
+   { from: string | null; to: string | null }
+   today -> {from: todayStr, to: todayStr}
+   7d    -> {from: todayStr minus 6 days, to: todayStr}  (compute with new Date(y, m-1, d-6) + toLocalDateStr)
+   month -> {from: `${todayStr.slice(0,7)}-01`, to: todayStr}
+   all   -> {from: null, to: null}
+
+10. export function isInTreasuryPeriod(m: TreasuryMovement, range: {from: string|null; to: string|null}): boolean
+   -> (!from || m.date >= from) && (!to || m.date <= to)
+
+11. export function summarizeTreasury(movements: TreasuryMovement[], period: TreasuryPeriod,
+   todayStr: string): TreasurySummary
+   range = getTreasuryPeriodRange(period, todayStr).
+   For each cash code C:
+     closing = sum over ALL movements with (!range.to || date <= range.to) of effect on C, where
+       effect on C: IN/OUT with account C -> signedAmount; TRANSFER: +amount if account == C,
+       -amount if fromAccount == C; else 0.
+     inflow  = sum over in-period movements of positive effects on C (IN to C, TRANSFER into C)
+     outflow = sum over in-period movements of |negative effects| on C (OUT from C, TRANSFER out of C)
+     opening = closing - inflow + outflow
+   TOTAL row = per-field sum of the two code rows EXCEPT inflow/outflow of TOTAL exclude TRANSFER
+   (so TOTAL.opening = sum openings, TOTAL.closing = sum closings, TOTAL.inflow = company inflow,
+   TOTAL.outflow = company outflow). Check TOTAL.opening + inflow - outflow == closing holds.
+   inflow/outflow/net/count = company level over in-period movements (TRANSFER excluded from
+   inflow/outflow; counted in count). byKind per rule 1.
+
+12. Never mutate inputs. No console logging. No `any` except where unavoidable on line fields
+   (none expected: ERPJournalLine has account_code, debit_amount, credit_amount, contract_id?, line_number).
+   Verify field names in src/lib/erp/types.ts before use; if a name differs, use the real one and
+   list it in the report.
+</spec>
+
+<tests>
+File src/lib/erp/__tests__/treasuryLedger.test.ts using `import { describe, it } from 'node:test'`
+and `import assert from 'node:assert/strict'`, relative imports '../treasuryLedger', '../math',
+'../canonicalMetrics'. Build entries with a local helper
+  je(id, date, createdAt, description, lines: [code, debit, credit, extra?][]) returning an
+  ERPJournalEntry cast via `as unknown as ERPJournalEntry` (fill required fields with simple values).
+Fixture FX (all date '2026-10-04' unless stated), one contract
+  { contract_id: 'c1', contract_number: 'ZF-2026-9197', buyer_name: 'Verify Buyer' } (cast):
+  e1 '2026-10-04T11:19:00Z' 'Installment collected via InstaPay' : 102000 Dr 450000 ; 203000 Cr 450000 (contract_id c1 on both lines)
+  e2 '2026-10-04T11:23:00Z' 'Apartment tax remittance settlement' : 204000 Dr 75000 ; 102000 Cr 75000
+  e3 '2026-10-04T11:27:00Z' 'Refund payout to customer Verify Buyer for rescinded contract ZF-2026-9197' : 206200 Dr 150000 ; 101000 Cr 150000
+  e4 '2026-10-04T11:35:00Z' 'مصروف موقع' : 151000 Dr 100000 ; 102000 Cr 100000
+  e5 '2026-10-04T12:00:00Z' 'Move to safe' : 101000 Dr 20000 ; 102000 Cr 20000
+  e6 '2026-10-04T12:10:00Z' 'Accrual only' : 604000 Dr 75000 ; 204000 Cr 75000   (no cash -> skipped)
+  e7 date '2026-09-20', '2026-09-20T09:00:00Z' 'Capital' : 101000 Dr 500000 ; 301000 Cr 500000
+Cases (exact assertions):
+  1. buildTreasuryMovements(FX) length 6 (e6 skipped); first element id 'e5' (newest), last 'e7'.
+  2. kinds: e1 customer_collection IN 102000; e2 tax_remittance OUT; e3 customer_refund OUT 101000;
+     e4 site_expense OUT; e5 internal_transfer TRANSFER account '101000' fromAccount '102000' amount 20000
+     signedAmount 0; e7 partner_injection IN.
+  3. balanceAfter: e7 500000, e1 950000, e2 875000, e3 725000, e4 625000, e5 625000.
+  4. isAr=true: e1.description === 'تحصيل من عميل — عقد ZF-2026-9197', e1.counterparty 'Verify Buyer';
+     e4.description === 'مصروف موقع'; e3.contract?.contract_id === 'c1' (description substring match);
+     e2.counterparty 'مصلحة الضرائب'. isAr=false: e2.description === 'Apartment tax remittance settlement'.
+  5. summarizeTreasury(all, 'all', '2026-10-04'): TOTAL closing 625000 and equals
+     getAvailableCash(FX).totalCash; 101000 closing 370000 (500000-150000+20000); 102000 closing 255000;
+     inflow 950000, outflow 325000, net 625000, count 6.
+  6. summarizeTreasury(all, 'today', '2026-10-04'): TOTAL opening 500000, inflow 450000, outflow 325000,
+     closing 625000; 101000 opening 500000 inflow 20000 outflow 150000 closing 370000; count 5;
+     byKind order: [customer_collection IN share 100, customer_refund OUT 46.2, site_expense OUT 30.8,
+     tax_remittance OUT 23.1, internal_transfer TRANSFER share null].
+  7. getTreasuryPeriodRange('7d','2026-10-04') -> {from '2026-09-28', to '2026-10-04'};
+     ('month','2026-10-04') -> from '2026-10-01'; ('7d','2026-03-03') -> from '2026-02-25'.
+  8. Empty/null input: buildTreasuryMovements(null, null, true) -> []; summarizeTreasury([], 'all', '2026-10-04')
+     TOTAL closing equals D(0), byKind [].
+  9. Inputs not mutated: JSON.stringify(FX) before === after.
+Compare Decimals with `.eq(...)` or `.toFixed(2)` string equality.
+</tests>
+
+<gates>
+npx tsx --test src/lib/erp/__tests__/treasuryLedger.test.ts      (all pass)
+npx tsc --noEmit                                                   (0 errors)
+npx eslint src/lib/erp/treasuryLedger.ts src/lib/erp/__tests__/treasuryLedger.test.ts   (0 errors)
+</gates>
+
+<structured_output_contract>
+Report (caveman, ≤15 lines):
+STATUS: done | partial | blocked
+FILES: list
+GATES: each command -> pass/fail + first failing line verbatim
+DEVIATIONS: every place you departed from the spec + why (field names, etc.) or "none"
+OPEN: anything unresolved or "none"
+</structured_output_contract>

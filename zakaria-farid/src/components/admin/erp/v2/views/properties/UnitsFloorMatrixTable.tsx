@@ -355,17 +355,8 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
           <button
             type="button"
             onClick={resetAllFilters}
-            style={{
-              marginTop: '0.85rem',
-              padding: '0.45rem 1rem',
-              borderRadius: '6px',
-              background: 'var(--erp-accent, #2563eb)',
-              color: '#ffffff',
-              border: 'none',
-              fontSize: '0.76rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
+            className={shellStyles.btnPrimary}
+            style={{ marginTop: '0.85rem' }}
           >
             {isAr ? 'إعادة ضبط كافة الفلاتر' : 'Reset all filters'}
           </button>
@@ -425,11 +416,11 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
               <span 
                 style={{
                   fontSize: '0.62rem',
-                  background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
-                  color: 'var(--erp-accent, #2563eb)',
+                  background: 'var(--erp-accent-tint, color-mix(in srgb, var(--erp-accent) 8%, transparent))',
+                  color: 'var(--erp-accent)',
                   padding: '1px 4px',
                   borderRadius: '3px',
-                  border: '1px solid rgba(37, 99, 235, 0.2)',
+                  border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                 }}
                 title={unit.buildingUnit?.tax_description || (isAr ? 'ضريبة محددة يدوياً' : 'Manual Tax')}
               >
@@ -439,7 +430,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
           </div>
         </td>
 
-        <td className={`${shellStyles.canonicalTd} ${styles.colDownPayment}`} style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--erp-accent, #2563eb)', fontWeight: 600 }}>
+        <td className={`${shellStyles.canonicalTd} ${styles.colDownPayment}`} style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--erp-accent)', fontWeight: 600 }}>
           {formatEgp(unit.downPayment)}
         </td>
 
@@ -508,20 +499,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                   onOpenContractForProperty(unit.property, unit.buildingUnit);
                 }}
                 disabled={isMutating}
-                style={{
-                  padding: '4px 9px',
-                  borderRadius: '6px',
-                  background: 'var(--erp-accent, #2563eb)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                }}
+                className={`${shellStyles.btnPrimary} ${shellStyles.btnSm}`}
                 title={isAr ? 'تحرير عقد بيع لهذه الشقة' : 'Contract'}
               >
                 <Plus size={12} />
@@ -564,7 +542,6 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
         border: '1px solid var(--erp-border, #cbd5e1)', 
         borderRadius: '12px',
         overflow: 'hidden',
-        boxShadow: 'none'
       }}
     >
       {/* ─── 1. TABLE TOP TOOLBAR: TITLE & CONTROLS ─── */}
@@ -581,7 +558,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-          <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
+          <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--erp-text-title)' }}>
             {selectedProjectObj 
               ? (isAr ? `مصفوفة وحدات: ${selectedProjectObj.title_ar || selectedProjectObj.title_en}` : `Units: ${selectedProjectObj.title_en || selectedProjectObj.title_ar}`)
               : (isAr ? 'مصفوفة الوحدات والأدوار' : 'Units & Floor Matrix')}
@@ -617,11 +594,10 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                 borderRadius: '5px',
                 border: 'none',
                 background: viewFormat === 'direct' ? '#ffffff' : 'transparent',
-                color: viewFormat === 'direct' ? 'var(--erp-accent, #2563eb)' : '#64748b',
+                color: viewFormat === 'direct' ? 'var(--erp-accent)' : '#64748b',
                 fontSize: '0.72rem',
                 fontWeight: viewFormat === 'direct' ? 700 : 500,
                 cursor: 'pointer',
-                boxShadow: viewFormat === 'direct' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.15s ease',
               }}
               title={isAr ? 'عرض جدول الوحدات المباشر' : 'Direct Units View'}
@@ -640,11 +616,10 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                 borderRadius: '5px',
                 border: 'none',
                 background: viewFormat === 'hierarchical' ? '#ffffff' : 'transparent',
-                color: viewFormat === 'hierarchical' ? 'var(--erp-accent, #2563eb)' : '#64748b',
+                color: viewFormat === 'hierarchical' ? 'var(--erp-accent)' : '#64748b',
                 fontSize: '0.72rem',
                 fontWeight: viewFormat === 'hierarchical' ? 700 : 500,
                 cursor: 'pointer',
-                boxShadow: viewFormat === 'hierarchical' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.15s ease',
               }}
               title={isAr ? 'عرض التسلسل الهرمي للمباني والأدوار' : 'Hierarchical Building View'}
@@ -658,19 +633,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
             <button
               type="button"
               onClick={() => onSelectProject(null)}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                padding: '2px 8px',
-                fontSize: '0.72rem',
-                color: 'var(--erp-accent, #2563eb)',
-                cursor: 'pointer',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}
+              className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
             >
               <span>{isAr ? 'عرض كافة المشروعات' : 'Clear project filter'}</span>
               <X size={11} />
@@ -687,20 +650,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
               <button
                 type="button"
                 onClick={collapseAll}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.38rem 0.65rem',
-                  borderRadius: '6px',
-                  background: '#f8fafc',
-                  border: '1px solid var(--erp-border, #cbd5e1)',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  color: '#334155',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
                 title={isAr ? 'طي كافة أقسام العمارات والأدوار' : 'Collapse All Buildings and Floors'}
               >
                 <FolderMinus size={13} color="#64748b" />
@@ -711,23 +661,10 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
               <button
                 type="button"
                 onClick={expandAllBuildingsOnly}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.38rem 0.65rem',
-                  borderRadius: '6px',
-                  background: '#f8fafc',
-                  border: '1px solid var(--erp-border, #cbd5e1)',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  color: '#334155',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
                 title={isAr ? 'عرض قائمة الأدوار لكافة المباني' : 'Expand All Buildings'}
               >
-                <Building2 size={13} color="var(--erp-accent, #2563eb)" />
+                <Building2 size={13} />
                 <span>{isAr ? 'عرض الأدوار' : 'Show Floors'}</span>
               </button>
 
@@ -735,23 +672,10 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
               <button
                 type="button"
                 onClick={expandAll}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.38rem 0.65rem',
-                  borderRadius: '6px',
-                  background: '#f8fafc',
-                  border: '1px solid var(--erp-border, #cbd5e1)',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  color: '#334155',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
                 title={isAr ? 'توسيع كافة الأدوار وعرض تفاصيل جميع الوحدات' : 'Expand All Units'}
               >
-                <FolderPlus size={13} color="var(--erp-accent, #2563eb)" />
+                <FolderPlus size={13} />
                 <span>{isAr ? 'توسيع كافة الوحدات' : 'Expand All Units'}</span>
               </button>
             </>
@@ -967,21 +891,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
             <button
               type="button"
               onClick={resetAllFilters}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                height: '34px',
-                padding: '0 10px',
-                borderRadius: '8px',
-                border: '1px solid #fecaca',
-                background: '#fef2f2',
-                color: '#dc2626',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
+              className={`${shellStyles.btnDanger} ${shellStyles.btnSm}`}
               title={isAr ? 'إعادة ضبط كافة معايير التصفية والبحث' : 'Reset all filters'}
             >
               <RotateCcw size={12} />
@@ -1093,11 +1003,11 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                               width: '28px',
                               height: '28px',
                               borderRadius: '7px',
-                              background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                              background: 'var(--erp-accent-tint, color-mix(in srgb, var(--erp-accent) 8%, transparent))',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: 'var(--erp-accent, #2563eb)',
+                              color: 'var(--erp-accent)',
                             }}>
                               {group.isBuilding ? <Building2 size={15} /> : <Home size={15} />}
                             </div>
@@ -1139,7 +1049,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                                 type="button"
                                 onClick={() => onSelectProject(isIsolated ? null : group.propertyId)}
                                 style={{
-                                  background: isIsolated ? 'var(--erp-accent, #2563eb)' : '#ffffff',
+                                  background: isIsolated ? 'var(--erp-accent)' : '#ffffff',
                                   color: isIsolated ? '#ffffff' : '#334155',
                                   border: '1px solid var(--erp-border, #cbd5e1)',
                                   borderRadius: '6px',
@@ -1210,11 +1120,11 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                                     width: '24px',
                                     height: '24px',
                                     borderRadius: '5px',
-                                    background: isFloorExpanded ? 'var(--erp-accent-soft, #eff6ff)' : '#e2e8f0',
+                                    background: isFloorExpanded ? 'var(--erp-accent-subtle)' : '#e2e8f0',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    color: isFloorExpanded ? 'var(--erp-accent, #2563eb)' : '#475569',
+                                    color: isFloorExpanded ? 'var(--erp-accent)' : '#475569',
                                   }}>
                                     <Layers size={13} />
                                   </div>
@@ -1333,7 +1243,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                     width: '30px',
                     height: '30px',
                     borderRadius: '6px',
-                    background: isActive ? 'var(--erp-accent, #2563eb)' : '#ffffff',
+                    background: isActive ? 'var(--erp-accent)' : '#ffffff',
                     color: isActive ? '#ffffff' : '#334155',
                     border: '1px solid var(--erp-border, #cbd5e1)',
                     fontSize: '0.75rem',

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { usePropertyCosts } from '../../../context/ERPWorkstationContext';
 import { 
   BarChart3, 
   PieChart as PieChartIcon, 
@@ -36,6 +37,7 @@ export const PartnersAnalyticsCharts: React.FC<PartnersAnalyticsChartsProps> = (
   selectedBuildingId,
   isAr = true,
 }) => {
+  const propertyCosts = usePropertyCosts();
   const [chartScope, setChartScope] = useState<'selected' | 'all'>('selected');
 
   const buildingProperties = useMemo(() => {
@@ -53,7 +55,7 @@ export const PartnersAnalyticsCharts: React.FC<PartnersAnalyticsChartsProps> = (
   // 1. Grouped Bar Chart: Required vs Paid Capital
   const capitalComparisonData = useMemo(() => {
     if (chartScope === 'selected' && activeBuilding) {
-      const capInfo = computeDynamicBuildingCapital(activeBuilding, transactions);
+      const capInfo = computeDynamicBuildingCapital(activeBuilding, transactions, propertyCosts);
       const categories = capInfo.partnerStatuses.map(p => {
         const name = p.partnerName;
         return name.length > 16 ? `${name.slice(0, 15)}...` : name;
@@ -78,12 +80,12 @@ export const PartnersAnalyticsCharts: React.FC<PartnersAnalyticsChartsProps> = (
     });
 
     const requiredSeries = buildingProperties.map(b => {
-      const info = computeDynamicBuildingCapital(b, transactions);
+      const info = computeDynamicBuildingCapital(b, transactions, propertyCosts);
       return D(info.impliedTotalCapitalEgp).toNumber();
     });
 
     const paidSeries = buildingProperties.map(b => {
-      const info = computeDynamicBuildingCapital(b, transactions);
+      const info = computeDynamicBuildingCapital(b, transactions, propertyCosts);
       return D(info.totalActualInjectedEgp).toNumber();
     });
 
@@ -94,7 +96,7 @@ export const PartnersAnalyticsCharts: React.FC<PartnersAnalyticsChartsProps> = (
         { name: isAr ? 'إجمالي المودع (ج.م)' : 'Injected Capital (EGP)', data: paidSeries.length > 0 ? paidSeries : [0] }
       ]
     };
-  }, [chartScope, activeBuilding, buildingProperties, transactions, isAr]);
+  }, [chartScope, activeBuilding, buildingProperties, transactions, isAr, propertyCosts]);
 
   // 2. Partner Roles Donut Chart: Capital contribution by role
   const roleDistributionData = useMemo(() => {

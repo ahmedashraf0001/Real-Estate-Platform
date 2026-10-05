@@ -123,7 +123,7 @@
 }
 
 .barSegmentBlue {
-  background: #2563eb;
+  background: var(--erp-accent);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -253,7 +253,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--erp-accent);
   flex-shrink: 0;
 }
 

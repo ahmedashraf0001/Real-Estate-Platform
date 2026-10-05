@@ -1,0 +1,65 @@
+FIN-OS POPUP (MODAL / DRAWER) CLEAN-UP RULES — mechanical, apply ONLY inside the files your brief assigns.
+
+FIRST read .agents/briefs/ui-rules.body.txt and apply its RULES B, G, S, R, F, C to every assigned file (skip RULE H
+and RULE K — they are for pages). Then apply the popup rules below.
+
+Button classes live in src/components/admin/erp/v2/ZFWorkstationShell.module.css: btnPrimary, btnSecondary, btnDanger,
+btnGhost, btnSm. Import it as `shellStyles` if the file does not import it yet (path relative to the file).
+
+P1 — titles & subtitles. In the `title` / `subtitle` props passed to ZFModalShell / ZFDrawerShell (and in the
+  <h2>/<h3> of popups that render their own header), remove from the literal strings:
+    - any parenthesised fragment: '(…)' and '（…）'  e.g. 'سداد مستحق مقاول (101000)' -> 'سداد مستحق مقاول'
+    - account references: 'حساب 123456', 'حـ/123456', 'GL 123456', 'Account 123456', '#123456'
+    - trailing ' — …' / ' - …' / ' | …' / ' • …' tails
+    - the words 'المعتمد', 'المعتمدة', 'الرسمي', 'الرسمية', 'التنفيذي', 'التنفيذية', 'الذكي', 'الذكية', 'الموحد', 'الموحدة',
+      'المتكامل', 'المتكاملة', 'Official', 'Executive', 'Smart', 'Unified', 'Enterprise', 'Certified', 'Audited'
+      when they are standalone adjectives in a title/subtitle (keep them inside data values and table cells).
+  Collapse double spaces, trim. Do not translate or otherwise rephrase. If a subtitle becomes empty, remove the prop.
+
+P2 — header badges. Delete the `headerExtra` prop (and any badge <span> rendered next to a popup title) when its
+  content is only literal text (no {variables}). Keep data-driven ones (e.g. a contract number, a status from data).
+
+P3 — header icon. In `icon={<X … />}` passed to the shell: remove `color`, `strokeWidth` and `style` props from the
+  icon element. Size stays.
+
+P4 — footer. In the `footer` of each popup:
+    cancel / close / back / 'إلغاء' / 'رجوع' / 'السابق' buttons      -> className shellStyles.btnSecondary
+    the submit / confirm / next / save button                         -> className shellStyles.btnPrimary
+    a submit that deletes, rescinds, voids, reverses or cancels data -> className shellStyles.btnDanger
+  Remove their visual inline keys exactly as RULE B lists. Keep disabled/onClick/type/form attributes. The footer
+  wrapper itself: if it has inline style, keep only display/justifyContent/alignItems/gap/width/flexWrap keys.
+  Drop leading '+ ', trailing ' ←' / ' →' / '...' from button labels (icons stay as elements).
+
+P5 — width. maxWidth prop on ZFModalShell / ZFDrawerShell (and inline maxWidth/width on hand-rolled popup cards):
+    value <= 520px -> '480px' ; 521–760px -> '640px' ; 761–980px -> '880px' ; > 980px -> 'min(1100px, 94vw)'
+  (convert rem with 16px = 1rem; leave percentage / vw-only values alone).
+
+P6 — decorative blocks. Delete JSX elements that are pure decoration: a block whose children are only an icon plus
+  literal marketing text (no {variables}, no inputs, no buttons) and that sits in the popup header area or at the top
+  of the body as a "hero"/banner (e.g. "تسوية قانونية معتمدة", "IFRS 15", "Audited", "secure", "real-time", "RLS").
+  Informational notes that explain a rule the user must know (penalties, irreversibility, what gets posted where)
+  are NOT decoration: restyle them instead (P7).
+
+P7 — notes & callouts. A note/callout box (bordered or tinted div with an icon and explanatory text):
+    inline style -> { display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.6rem 0.75rem',
+                      borderRadius: '8px', fontSize: '0.75rem', lineHeight: 1.55, background: <bg>, color: <fg> }
+    neutral/info/accent notes: bg 'var(--erp-border-subtle)', fg 'var(--erp-text-body)'
+    warning (amber text or bg in the original): bg '#fffbeb', fg '#92400e'
+    danger (red text or bg in the original):    bg '#fef2f2', fg '#b91c1c'
+    success (green):                            bg '#f0fdf4', fg '#166534'
+  No border, no shadow. Icon inside: size 14, remove its color prop (inherits fg). Nested <strong> keep, but remove
+  their inline color.
+
+P8 — section labels inside the body (small headings above groups of fields): fontSize '0.78rem', fontWeight 700,
+  color 'var(--erp-text-title)', remove textTransform/letterSpacing/uppercase and any decorative left/right border
+  bar or numbered circle badge ('1', '2', '١'…) styling — keep the text.
+
+P9 — emoji. Remove emoji characters from all user-visible strings (✅ ⚠️ 💰 🏦 📋 🔒 ✨ 🎯 📌 etc.).
+
+P10 — field controls. Inputs/selects/textareas with inline style: height '38px' (inputs/selects; not textareas),
+  borderRadius '8px', border '1px solid var(--erp-border)', fontSize '0.85rem', background 'var(--erp-bg-panel)'.
+  Labels above fields: fontSize '0.75rem', fontWeight 600, color 'var(--erp-text-body)'. Keep everything else.
+
+NEVER change: handlers, validation, computed values, journal-entry preview tables (account codes ARE allowed inside
+those tables and inside account <select> options), props/types, imports other than adding shellStyles/removing
+unused ones, any file not assigned. Keep UTF-8 Arabic byte-exact.

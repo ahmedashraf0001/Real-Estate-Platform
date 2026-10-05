@@ -124,8 +124,8 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
         flexDirection: 'column',
         background: '#ffffff !important',
         borderRadius: '12px',
-        border: isSelected ? '1.5px solid var(--erp-accent, #2563eb)' : '1px solid var(--erp-border, #cbd5e1)',
-        boxShadow: isSelected ? '0 0 0 1px var(--erp-accent, #2563eb), 0 4px 14px -2px rgba(37, 99, 235, 0.15)' : '0 1px 3px rgba(0,0,0,0.03)',
+        border: isSelected ? '1.5px solid var(--erp-accent)' : '1px solid var(--erp-border, #cbd5e1)',
+        boxShadow: isSelected ? '0 0 0 1px var(--erp-accent), 0 4px 14px -2px color-mix(in srgb, var(--erp-accent) 15%, transparent)' : undefined,
         overflow: 'hidden',
         cursor: onSelect ? 'pointer' : 'default',
         transition: 'all 0.2s ease',
@@ -167,7 +167,7 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.5) 0%, rgba(15, 23, 42, 0.0) 50%, rgba(15, 23, 42, 0.25) 100%)',
+            background: 'rgba(15, 23, 42, 0.5)',
             pointerEvents: 'none',
           }} 
         />
@@ -180,22 +180,22 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
           zIndex: 2,
         }}>
           {metrics.isContracted ? (
-            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`} style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.12)', backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
+            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`} style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
               <CheckCircle2 size={12} />
               <span>{isAr ? 'تم التعاقد بالكامل' : 'Fully Sold'}</span>
             </span>
           ) : metrics.contractedUnitsCount > 0 ? (
-            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillBlue}`} style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.12)', backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
+            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillBlue}`} style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
               <Clock size={12} />
               <span>{isAr ? `مباع جزئياً (${metrics.contractedUnitsCount}/${metrics.totalUnitsCount})` : `Partially Sold (${metrics.contractedUnitsCount}/${metrics.totalUnitsCount})`}</span>
             </span>
           ) : property.completion_status === 'ready' ? (
-            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`} style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.12)', backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
+            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`} style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
               <Check size={12} />
               <span>{isAr ? 'جاهز للتسليم' : 'Ready'}</span>
             </span>
           ) : (
-            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillAmber}`} style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.12)', backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
+            <span className={`${shellStyles.statusPill} ${shellStyles.statusPillAmber}`} style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.92)' }}>
               <Clock size={12} />
               <span>{isAr ? 'قيد التنفيذ والإنشاء' : 'Under Construction'}</span>
             </span>
@@ -211,9 +211,9 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
           <span style={{
             fontSize: '0.68rem',
             fontWeight: 700,
-            color: 'var(--erp-accent, #2563eb)',
-            background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
-            border: '1px solid rgba(37, 99, 235, 0.2)',
+            color: 'var(--erp-accent)',
+            background: 'var(--erp-accent-tint, color-mix(in srgb, var(--erp-accent) 8%, transparent))',
+            border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
             padding: '0.15rem 0.55rem',
             borderRadius: '5px',
             display: 'inline-flex',
@@ -235,7 +235,7 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
             textOverflow: 'ellipsis',
             maxWidth: '55%',
           }}>
-            <MapPin size={11} color="var(--erp-accent, #2563eb)" />
+            <MapPin size={11} color="var(--erp-accent)" />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {property.location || (isAr ? 'موقع متميز' : 'Prime Location')}
             </span>
@@ -245,9 +245,9 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
         {/* Multi-Line Title (Unclipped, Up to 2 Lines) */}
         <h3 style={{
           margin: 0,
-          fontSize: '1.02rem',
-          fontWeight: 800,
-          color: '#0f172a',
+          fontSize: '0.88rem',
+          fontWeight: 700,
+          color: 'var(--erp-text-title)',
           lineHeight: 1.4,
           minHeight: '2.8rem',
           display: '-webkit-box',
@@ -275,7 +275,7 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
               style={{
                 width: `${metrics.completionPct}%`,
                 height: '100%',
-                background: metrics.completionPct === 100 ? '#10b981' : 'var(--erp-accent, #2563eb)',
+                background: metrics.completionPct === 100 ? '#10b981' : 'var(--erp-accent)',
                 borderRadius: '9999px',
                 transition: 'width 0.4s ease',
               }}
@@ -344,16 +344,6 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
               type="button"
               onClick={onViewUnits}
               className={shellStyles.btnPrimary}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem',
-                padding: '0.48rem 0.55rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
               title={isAr ? 'عرض مصفوفة شقق وعمارات هذا المشروع' : 'View Units Matrix'}
             >
               <Layers size={13} />
@@ -367,20 +357,10 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
               type="button"
               onClick={onOpenContract}
               className={shellStyles.btnPrimary}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem',
-                padding: '0.48rem 0.55rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
               title={isAr ? 'تحرير عقد بيع جديد' : 'New Contract'}
             >
               <Plus size={13} />
-              <span>{isAr ? 'عقد بيع جديد' : '+ Contract'}</span>
+              <span>{isAr ? 'عقد بيع جديد' : 'Contract'}</span>
             </button>
           )}
 
@@ -390,17 +370,7 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
               type="button"
               onClick={onOpenLifecycle}
               className={shellStyles.btnSecondary}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.25rem',
-                padding: '0.48rem 0.55rem',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
+              style={{ whiteSpace: 'nowrap' }}
               title={isAr ? 'تحليل دورة الحياة والجدوى للمشروع' : 'Lifecycle Analysis'}
             >
               <LineChart size={13} />

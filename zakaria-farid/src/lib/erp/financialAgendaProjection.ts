@@ -53,7 +53,10 @@ export interface FinancialAgendaKPIs {
   outflowsSettlementRate: number;
 
   // Net Liquidity Position
-  netProjectedCashflow: Decimal; // Inflows - Outflows
+  netProjectedCashflow: Decimal; // Inflows - Outflows (gross nominal)
+  inflowsRemaining: Decimal; // Open scheduled collections (nominal - paid), off-ledger
+  outflowsRemaining: Decimal; // Open payables (remaining)
+  netScheduledFlow: Decimal; // inflowsRemaining - outflowsRemaining
   urgentCount: number; // overdue + due today across both
   urgentSum: Decimal;
 }
@@ -211,6 +214,7 @@ export function calculateFinancialAgendaKPIs(
   let inflowsDueWeekCount = 0;
   let inflowsCleared = D(0);
   let inflowsClearedCount = 0;
+  let inflowsRemaining = D(0);
 
   for (const item of inflows) {
     const nominal = D(item.nominalValue || 0);
@@ -219,6 +223,7 @@ export function calculateFinancialAgendaKPIs(
 
     inflowsTotal = inflowsTotal.plus(nominal);
     inflowsCount += 1;
+    if (item.status !== 'cleared') inflowsRemaining = inflowsRemaining.plus(remaining);
 
     if (item.status === 'cleared') {
       inflowsCleared = inflowsCleared.plus(paid);
@@ -252,6 +257,7 @@ export function calculateFinancialAgendaKPIs(
   let outflowsDueWeekCount = 0;
   let outflowsPaid = D(0);
   let outflowsPaidCount = 0;
+  let outflowsRemaining = D(0);
 
   for (const item of outflows) {
     const total = D(item.totalAmount || 0);
@@ -260,6 +266,7 @@ export function calculateFinancialAgendaKPIs(
 
     outflowsTotal = outflowsTotal.plus(total);
     outflowsCount += 1;
+    if (item.status !== 'paid') outflowsRemaining = outflowsRemaining.plus(remaining);
 
     if (item.status === 'paid') {
       outflowsPaid = outflowsPaid.plus(paid);
@@ -284,6 +291,7 @@ export function calculateFinancialAgendaKPIs(
 
   // 3. Consolidated Net Liquidity
   const netProjectedCashflow = inflowsTotal.minus(outflowsTotal);
+  const netScheduledFlow = inflowsRemaining.minus(outflowsRemaining);
   const urgentCount = inflowsOverdueCount + inflowsDueTodayCount + outflowsOverdueCount + outflowsDueTodayCount;
   const urgentSum = inflowsOverdue.plus(inflowsDueToday).plus(outflowsOverdue).plus(outflowsDueToday);
 
@@ -313,6 +321,9 @@ export function calculateFinancialAgendaKPIs(
     outflowsSettlementRate,
 
     netProjectedCashflow,
+    inflowsRemaining,
+    outflowsRemaining,
+    netScheduledFlow,
     urgentCount,
     urgentSum
   };

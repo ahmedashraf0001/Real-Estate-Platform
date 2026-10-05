@@ -1,0 +1,37 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md.
+GOAL: remove the last hardcoded demo data from the ERP cockpit and admin dashboard so they show only real data or honest empty states. (A previous change already removed data-layer fallbacks.) Files in scope ONLY:
+  src/components/admin/erp/v2/views/CockpitView.tsx
+  src/components/admin/erp/v2/views/CockpitDualCharts.tsx
+  src/lib/services/dashboardAnalytics.ts
+
+1. CockpitView.tsx ~856-888: "Fallback contractor records if propertyCosts is empty" pushes fake rows `pc_mock_1` (Nile Contracting Co., CON-114, 780,000) and `pc_mock_2` (Al Ahram Contracting, CON-089, 1,250,000). Delete the block. With no data the Recent Transactions table must show its empty state (add a short EN/AR empty message only if none exists).
+2. CockpitDualCharts.tsx:
+   a. Sales Value vs Capital Cost: `canonicalFallback` (~line 79-127, invented projects e.g. "Lagoon View Luxury Residential" 95M) returned when `initialProjects` is empty (~128) → return [] and render an empty state ("No projects with sales/cost data yet" / AR equivalent).
+   b. Cash Flow & Liquidity Forecast: hardcoded monthly series (~269-274: Sep 75/48, Oct 56/31 …) and totals (+223M/-135M). Replace with real data: inflow = sum of installment schedule amounts due per month (remaining for Partially Paid if the field exists, else nominal of non-paid, non-void tranches) for the next 6 months starting the current month; outflow = pending property-cost/contractor payables due per month if such data is available in the component's props; if a series has no real source in the existing props, render 0 and say so in the report. Check what props CockpitDualCharts already receives (and what CockpitView passes) before deciding; you may pass additional existing data from CockpitView. Empty → empty state, not fake numbers.
+3. dashboardAnalytics.ts `generateStrategicAdvisories` (~203-260): an advisory "Ras El Hekma & North Coast Expansion Opportunity / +103.5% 5Yr Gain" is emitted with no supporting data. Keep only advisories derived from the passed properties/leads (e.g. stale leads count); remove static market-pitch advisories. If none apply, return []. Make sure the admin dashboard page (src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/page.tsx uses `advisories[0]`) handles an empty array without crashing — if it doesn't, add the minimal guard there (that file is then also in scope; report it).
+Do not change styling, layout or unrelated logic.
+</task>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Other agents edit other files concurrently. Touch only the files above. Report unrelated tsc errors, don't fix them.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit
+  npx eslint <files touched>   (no new errors vs HEAD)
+  grep -nE "pc_mock|Lagoon View|Nile Contracting|103\.5|inflow: 75" <files touched>   (target 0; justify any remaining)
+  git diff --stat -- <files touched>
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access.</action_safety>
+
+<structured_output_contract>
+1. Per item: change (file:line)
+2. Cash-flow data source decision per series
+3. Gates + grep result
+4. Open questions
+</structured_output_contract>

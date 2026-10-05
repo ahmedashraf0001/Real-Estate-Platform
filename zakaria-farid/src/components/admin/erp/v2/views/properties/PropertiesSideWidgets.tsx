@@ -179,7 +179,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
               border-radius: 50%;
               background: ${pinColor};
               border: 2px solid #ffffff;
-              box-shadow: 0 0 0 2px ${isSelected ? '#2563eb' : 'rgba(37,99,235,0.4)'}, 0 2px 5px rgba(0,0,0,0.3);
+              box-shadow: 0 0 0 2px ${isSelected ? 'var(--erp-accent)' : 'color-mix(in srgb, var(--erp-accent) 40%, transparent)'}, 0 2px 5px rgba(0,0,0,0.3);
               cursor: pointer;
             "></div>`,
             className: 'mini-map-pin',
@@ -355,7 +355,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   padding: '0.55rem 0.75rem',
                   fontSize: '0.8rem',
                   fontWeight: 700,
-                  boxShadow: '0 1px 3px rgba(37, 99, 235, 0.2)',
+                  boxShadow: '0 1px 3px color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                   cursor: 'pointer',
                 }}
               >

@@ -2,27 +2,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle,
-  Building2,
-  Calendar,
-  Check,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  CircleDollarSign,
-  CreditCard,
-  FileCheck,
+  Clock,
   HardHat,
-  Hammer,
-  Layers,
-  Loader2,
-  Paintbrush,
-  Plus,
   ReceiptText,
-  Send,
-  ShieldCheck,
-  WalletCards,
-  Zap
+  Smartphone,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,7 +17,6 @@ import {
   createDirectConstructionExpense,
   type ConstructionExpensePaymentSource
 } from '@/lib/erp/propertyCostEngine';
-import { tafqeetEGP, tafqeetNumber } from '@/lib/erp/tafqeet';
 import {
   type ERPAccountingPeriod,
   type ERPJournalEntry,
@@ -42,8 +25,20 @@ import {
   type PropertyLifecyclePhase
 } from '@/lib/erp/types';
 import type { Property } from '@/lib/supabase/types';
-import { ZFCustomSelect, type ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import {
+  zfForm,
+  ZFField,
+  ZFMoneyInput,
+  ZFChoices,
+  type ZFChoiceOption,
+  ZFFacts,
+  ZFEffect,
+  ZFJournalPeek,
+  ZFFormFooter
+} from '../common/ZFForm';
 import { ZFModalShell } from '../common/ZFModalShell';
+import { ZFSegmented } from '../common/ZFPageHeader';
+import shellStyles from '../ZFWorkstationShell.module.css';
 import styles from './ZFDirectExpenseModal.module.css';
 
 export interface ZFDirectExpenseModalProps {
@@ -59,14 +54,20 @@ export interface ZFDirectExpenseModalProps {
   initialPaymentSource?: ConstructionExpensePaymentSource;
 }
 
-export type StrictPaymentMethod = 'CASH_101000' | 'INSTAPAY_101000' | 'DEFERRED_201000';
+export type StrictPaymentMethod = 'CASH_101000' | 'INSTAPAY_102000' | 'DEFERRED_201000';
 
-interface ExpenseSuccessData {
-  amount: string;
-  itemName: string;
-  propertyTitle: string;
-}
-
+const ACCOUNT_NAMES: Record<string, { ar: string; en: string }> = {
+  '101000': { ar: 'الخزينة الرئيسية', en: 'Main Treasury' },
+  '102000': { ar: 'حساب إنستاباي البنكي', en: 'InstaPay Account' },
+  '201000': { ar: 'موردون ومقاولون', en: 'Accounts Payable' },
+  '151000': { ar: 'خرسانات وهيكل إنشائي', en: 'Civil & Structure' },
+  '152000': { ar: 'كهروميكانيك وتأسيسات', en: 'MEP Infrastructure' },
+  '153000': { ar: 'تشطيبات وتجهيزات', en: 'Finishing & Fit-out' },
+  '150000': { ar: 'حصة وتكاليف الأرض', en: 'Land Allocation' },
+  '154000': { ar: 'تراخيص وإشراف هندسي', en: 'Permits & Engineering' },
+  '155000': { ar: 'مصنعيات ومقاولو باطن', en: 'Labor & Subcontractors' },
+  '156000': { ar: 'ضرائب ورسوم إنشائية', en: 'Construction Taxes & Fees' }
+};
 
 export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
   isOpen,
@@ -82,16 +83,14 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
 }) => {
   const amountInputRef = useRef<HTMLInputElement>(null);
 
-  // Stepper State (Step 1, 2, 3)
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [kind, setKind] = useState<'claim' | 'site'>(purpose ?? 'site');
 
-  // Step 1: Project & Category State
+  // Fields State
   const [entryDate, setEntryDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [propertyId, setPropertyId] = useState(initialPropertyId || '');
   const [category, setCategory] = useState<PropertyCostCategory>('civil_structure');
   const [phase, setPhase] = useState<PropertyLifecyclePhase>('structural_skeleton');
 
-  // Step 2: Item Details & Value State
   const [itemName, setItemName] = useState('');
   const [supplier, setSupplier] = useState('');
   const [invoiceRef, setInvoiceRef] = useState('');
@@ -99,8 +98,11 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('مقطوعية');
 
-  // Step 3: Payment Method & Schedule State
-  const initialMethod: StrictPaymentMethod = initialPaymentSource === '201000' ? 'DEFERRED_201000' : 'CASH_101000';
+  const initialMethod: StrictPaymentMethod =
+    kind === 'site'
+      ? (initialPaymentSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000')
+      : (initialPaymentSource === '201000' ? 'DEFERRED_201000' : initialPaymentSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000');
+
   const [paymentMethod, setPaymentMethod] = useState<StrictPaymentMethod>(initialMethod);
   const [instapayRef, setInstapayRef] = useState('');
   const [scheduleNow, setScheduleNow] = useState(false);
@@ -112,7 +114,6 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
 
   const [keepOpen, setKeepOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState<ExpenseSuccessData | null>(null);
 
   const targetPeriod = useMemo(() => {
     return resolvePeriodForDate(entryDate, periods || [activePeriod], activePeriod);
@@ -128,51 +129,17 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     return active.length > 0 ? active : properties;
   }, [properties]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const resetTimer = window.setTimeout(() => {
-      setPropertyId(initialPropertyId || underConstructionProperties[0]?.id || '');
-      setPaymentMethod(initialPaymentSource === '201000' ? 'DEFERRED_201000' : 'CASH_101000');
-      setScheduleNow(false);
-      setCurrentStep(1);
-      setSuccess(null);
-    }, 0);
-    return () => window.clearTimeout(resetTimer);
-  }, [initialPaymentSource, initialPropertyId, isOpen, underConstructionProperties]);
+  const money = (x: number | string | Decimal) => {
+    const n = typeof x === 'number' ? x : Number(x.toString()) || 0;
+    return n.toLocaleString('en-US', { maximumFractionDigits: 2 }) + (isAr ? ' ج.م' : ' EGP');
+  };
 
-  const propertyItems: ZFCustomSelectItem[] = useMemo(() => underConstructionProperties.map(property => ({
-    value: property.id,
-    labelAr: property.title_ar,
-    labelEn: property.title_en,
-    sublabelAr: [property.location, property.area_sqm ? `${property.area_sqm} م²` : null].filter(Boolean).join(' • '),
-    sublabelEn: [property.location, property.area_sqm ? `${property.area_sqm} sqm` : null].filter(Boolean).join(' • '),
-    icon: property.completion_status === 'off_plan' ? HardHat : Building2
-  })), [underConstructionProperties]);
-
-  // Comprehensive categories covering: land, structure, finishing, mep, permits, labor, other
-  const categoryItems: ZFCustomSelectItem[] = useMemo(() => [
-    { value: 'civil_structure', labelAr: 'خرسانات وحديد ومباني (Structure)', labelEn: 'Civil & Structure', sublabelAr: 'مواد وهيكل إنشائي خرساني', sublabelEn: 'Concrete & steel structure', icon: HardHat },
-    { value: 'finishing_interior', labelAr: 'تشطيبات وديكور معماري (Finishing)', labelEn: 'Finishing & Interiors', sublabelAr: 'سيراميك، دهانات، رخام، نجارة', sublabelEn: 'Fit-out, tiles, paints', icon: Paintbrush },
-    { value: 'mep_infrastructure', labelAr: 'كهروميكانيك وتأسيسات (MEP)', labelEn: 'MEP Infrastructure', sublabelAr: 'كهرباء، سباكة، مصاعد، وعوازل', sublabelEn: 'Electrical, plumbing, elevators', icon: Zap },
-    { value: 'land_allocation', labelAr: 'حصة وتكاليف الأرض (Land)', labelEn: 'Land Allocation', sublabelAr: 'تكاليف تخصيص وتجهيز الأرض', sublabelEn: 'Land cost & site prep', icon: Building2 },
-    { value: 'permits_engineering', labelAr: 'تراخيص ومخططات واستشارات (Permits)', labelEn: 'Permits & Engineering', sublabelAr: 'رخص بناء وإشراف هندسي ومساحة', sublabelEn: 'Permits & engineering supervision', icon: FileCheck },
-    { value: 'labor_subcontractor', labelAr: 'مصنعيات ومقاولو باطن (Labor)', labelEn: 'Labor & Subcontractors', sublabelAr: 'أجور تنفيذ ومصنعيات موقع', sublabelEn: 'Labor & execution works', icon: Hammer },
-    { value: 'taxes_fees', labelAr: 'ضرائب ورسوم إنشائية (Other / Taxes)', labelEn: 'Construction Taxes & Fees', sublabelAr: 'ضرائب ورسوم حكومية وأخرى', sublabelEn: 'Governmental fees & taxes', icon: ReceiptText }
-  ], []);
-
-  const phaseItems: ZFCustomSelectItem[] = useMemo(() => [
-    { value: 'planning_permits', labelAr: 'التخطيط والتراخيص', labelEn: 'Planning & Permits', icon: FileCheck },
-    { value: 'excavation_foundation', labelAr: 'الحفر والأساسات', labelEn: 'Excavation & Foundations', icon: Layers },
-    { value: 'structural_skeleton', labelAr: 'الهيكل والصبات والأسقف', labelEn: 'Structural Skeleton', icon: HardHat },
-    { value: 'masonry_roughing', labelAr: 'المباني والتأسيسات', labelEn: 'Masonry & Roughing', icon: Hammer },
-    { value: 'finishing_interiors', labelAr: 'التشطيبات والدهانات', labelEn: 'Finishing & Painting', icon: Paintbrush },
-    { value: 'final_inspection_handover', labelAr: 'المعاينة والتسليم', labelEn: 'Inspection & Handover', icon: CheckCircle2 }
-  ], []);
-
-  const total = D(amount || 0);
-  const down = paymentMethod === 'DEFERRED_201000' && scheduleNow ? D(downPayment || 0) : D(0);
-  const remaining = Decimal.max(0, total.minus(down));
-  const installmentValue = remaining.dividedBy(Math.max(1, parseInt(installmentsCount, 10) || 1));
+  const handleKindChange = (nextKind: 'claim' | 'site') => {
+    setKind(nextKind);
+    if (nextKind === 'site' && paymentMethod === 'DEFERRED_201000') {
+      setPaymentMethod('CASH_101000');
+    }
+  };
 
   const resetEntryFields = () => {
     setItemName('');
@@ -184,99 +151,204 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     setNotes('');
     setDownPayment('');
     setInstapayRef('');
-    setSuccess(null);
-    setCurrentStep(1);
+    setScheduleNow(false);
+    setTimeout(() => amountInputRef.current?.focus(), 50);
   };
 
-  const handleStepNext = () => {
-    if (currentStep === 1) {
-      if (!propertyId) {
-        toast.error(isAr ? 'يرجى اختيار المشروع العقاري' : 'Select a target property');
-        return;
-      }
-      if (!entryDate) {
-        toast.error(isAr ? 'يرجى إدخال تاريخ الفاتورة' : 'Enter bill date');
-        return;
-      }
-      if (isTargetPeriodLocked) {
-        toast.error(
-          isAr
-            ? `الفترة المحاسبية لهذا التاريخ مقفلة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`
-            : `Fiscal period is locked (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`
-        );
-        return;
-      }
-      setCurrentStep(2);
-      setTimeout(() => amountInputRef.current?.focus(), 50);
-    } else if (currentStep === 2) {
-      if (purpose === 'claim' && !supplier.trim()) {
-        toast.error(isAr ? 'أدخل اسم المقاول للمستخلص' : 'Enter the contractor name');
-        return;
-      }
-      if (!itemName.trim()) {
-        toast.error(isAr ? 'يرجى إدخال بيان البند أو خامته' : 'Enter item description');
-        return;
-      }
-      if (!total.gt(0)) {
-        toast.error(isAr ? 'يرجى إدخال مبلغ صحيح أكبر من صفر' : 'Enter an amount greater than zero');
-        return;
-      }
-      const q = Number(quantity);
-      if (!Number.isFinite(q) || q <= 0) {
-        toast.error(isAr ? 'الكمية يجب أن تكون أكبر من صفر' : 'Quantity must be greater than zero');
-        return;
-      }
-      setCurrentStep(3);
+  const prevIsOpenRef = useRef(false);
+  const resetPropsRef = useRef({
+    underConstructionProperties,
+    initialPropertyId,
+    initialPaymentSource,
+    purpose
+  });
+
+  useEffect(() => {
+    resetPropsRef.current = {
+      underConstructionProperties,
+      initialPropertyId,
+      initialPaymentSource,
+      purpose
+    };
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      prevIsOpenRef.current = false;
+      return;
     }
-  };
+    if (!prevIsOpenRef.current) {
+      const resetTimer = window.setTimeout(() => {
+        prevIsOpenRef.current = true;
+        const {
+          underConstructionProperties: curProps,
+          initialPropertyId: curPropId,
+          initialPaymentSource: curSource,
+          purpose: curPurpose
+        } = resetPropsRef.current;
+        const nextKind = curPurpose ?? 'site';
+        setKind(nextKind);
+        setPropertyId(curPropId || curProps[0]?.id || '');
+        setPaymentMethod(
+          nextKind === 'site'
+            ? (curSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000')
+            : (curSource === '201000' ? 'DEFERRED_201000' : curSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000')
+        );
+        setScheduleNow(false);
+        resetEntryFields();
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+  }, [isOpen]);
+
+  const total = D(amount || 0);
+  const down = paymentMethod === 'DEFERRED_201000' && scheduleNow ? D(downPayment || 0) : D(0);
+  const remaining = Decimal.max(0, total.minus(down));
+  const installmentValue = remaining.dividedBy(Math.max(1, parseInt(installmentsCount, 10) || 1));
+
+  const property = properties.find(candidate => candidate.id === propertyId);
+  const propertyTitle = property ? (isAr ? property.title_ar : property.title_en) : propertyId;
+
+  const paymentOptions = useMemo(() => {
+    const opts: ZFChoiceOption<StrictPaymentMethod>[] = [
+      {
+        id: 'CASH_101000',
+        label: kind === 'site' ? (isAr ? 'نقداً' : 'Cash') : (isAr ? 'نقداً الآن' : 'Cash now'),
+        sub: isAr ? 'من الخزينة' : 'From the safe',
+        icon: <Wallet size={16} />
+      },
+      {
+        id: 'INSTAPAY_102000',
+        label: kind === 'site' ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'إنستاباي الآن' : 'InstaPay now'),
+        sub: isAr ? 'من حساب إنستاباي' : 'From InstaPay',
+        icon: <Smartphone size={16} />
+      }
+    ];
+    if (kind === 'claim') {
+      opts.push({
+        id: 'DEFERRED_201000',
+        label: isAr ? 'لاحقاً' : 'Later',
+        sub: isAr ? 'يُسجل مستحقاً للمقاول' : 'Recorded as owed to the contractor',
+        icon: <Clock size={16} />
+      });
+    }
+    return opts;
+  }, [kind, isAr]);
+
+  const memoPreview = useMemo(() => {
+    const parts = [
+      itemName.trim() || (isAr ? 'مصروف بناء' : 'Construction expense'),
+      propertyTitle ? `${isAr ? 'مشروع' : 'Project'}: ${propertyTitle}` : '',
+      supplier.trim() ? `${kind === 'claim' ? (isAr ? 'المقاول' : 'Contractor') : (isAr ? 'المورد/المحل' : 'Supplier')}: ${supplier.trim()}` : '',
+      invoiceRef.trim() ? `${isAr ? 'مرجع' : 'Ref'}: ${invoiceRef.trim()}` : '',
+      paymentMethod === 'INSTAPAY_102000'
+        ? (instapayRef.trim() ? `[إنستاباي: ${instapayRef.trim()}]` : '[إنستاباي / InstaPay]')
+        : paymentMethod === 'CASH_101000'
+          ? '[كاش بالخزينة]'
+          : '[آجل على المورد]'
+    ];
+    return parts.filter(Boolean).join(' • ');
+  }, [itemName, propertyTitle, supplier, kind, invoiceRef, paymentMethod, instapayRef, isAr]);
+
+  const journalLines = useMemo(() => {
+    const tot = D(amount || 0);
+    if (!tot.gt(0)) return [];
+    try {
+      const paymentSource: ConstructionExpensePaymentSource =
+        paymentMethod === 'DEFERRED_201000'
+          ? '201000'
+          : paymentMethod === 'INSTAPAY_102000'
+            ? '102000'
+            : '101000';
+      const dwn = paymentMethod === 'DEFERRED_201000' && scheduleNow ? D(downPayment || 0) : D(0);
+      const lines = buildConstructionExpenseJournalLines({
+        category,
+        totalAmount: tot.toFixed(2),
+        paymentSource,
+        downPayment: dwn.toFixed(2),
+        downPaymentSource: '101000',
+        memo: memoPreview
+      });
+      return lines.map(line => {
+        const code = line.account_code;
+        const meta = ACCOUNT_NAMES[code];
+        const name = (isAr ? meta?.ar : meta?.en) || line.memo || '';
+        return {
+          code,
+          name,
+          debit: Number(line.debit_amount) > 0 ? line.debit_amount : undefined,
+          credit: Number(line.credit_amount) > 0 ? line.credit_amount : undefined
+        };
+      });
+    } catch {
+      return [];
+    }
+  }, [amount, category, paymentMethod, scheduleNow, downPayment, memoPreview, isAr]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (currentStep !== 3) {
-      handleStepNext();
-      return;
-    }
 
     const quantityValue = Number(quantity);
     const downPaymentValue = D(downPayment || 0);
 
+    // 1. Property validation
     if (!propertyId) {
       toast.error(isAr ? 'يرجى اختيار المشروع العقاري' : 'Select a target property');
-      setCurrentStep(1);
       return;
     }
-    if (!itemName.trim() || !total.gt(0)) {
-      toast.error(isAr ? 'يرجى استكمال بيانات البند والقيمة' : 'Complete item details and amount');
-      setCurrentStep(2);
+    // 2. Date validation
+    if (!entryDate) {
+      toast.error(isAr ? 'يرجى إدخال تاريخ الفاتورة' : 'Enter bill date');
       return;
     }
+    // 3. Locked period validation
+    if (isTargetPeriodLocked) {
+      toast.error(
+        isAr
+          ? `الفترة المحاسبية لهذا التاريخ مقفلة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`
+          : `Fiscal period is locked (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`
+      );
+      return;
+    }
+    // 4. Supplier required for claim
+    if (kind === 'claim' && !supplier.trim()) {
+      toast.error(isAr ? 'أدخل اسم المقاول للمستخلص' : 'Enter the contractor name');
+      return;
+    }
+    // 5. Description validation
+    if (!itemName.trim()) {
+      toast.error(isAr ? 'يرجى إدخال بيان البند أو خامته' : 'Enter item description');
+      return;
+    }
+    // 6. Amount validation
+    if (!total.gt(0)) {
+      toast.error(isAr ? 'يرجى إدخال مبلغ صحيح أكبر من صفر' : 'Enter an amount greater than zero');
+      return;
+    }
+    // 7. Quantity validation
+    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+      toast.error(isAr ? 'الكمية يجب أن تكون أكبر من صفر' : 'Quantity must be greater than zero');
+      return;
+    }
+    // 8. Due date validation for deferred
     if (paymentMethod === 'DEFERRED_201000' && !firstDueDate) {
       toast.error(isAr ? 'يرجى تحديد تاريخ استحقاق الفاتورة' : 'Specify invoice due date');
       return;
     }
+    // 9. Down payment negative check
     if (paymentMethod === 'DEFERRED_201000' && scheduleNow && downPaymentValue.lt(0)) {
       toast.error(isAr ? 'الدفعة المقدمة لا يمكن أن تكون قيمة سالبة' : 'Down payment cannot be negative');
       return;
     }
+    // 10. Down payment >= total check
     if (paymentMethod === 'DEFERRED_201000' && scheduleNow && downPaymentValue.gte(total)) {
       toast.error(isAr ? 'الدفعة المقدمة يجب أن تكون أقل من إجمالي الفاتورة' : 'Down payment must be less than the invoice total');
       return;
     }
-    if (isTargetPeriodLocked) {
-      toast.error(
-        isAr
-          ? `الفترة المحاسبية (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) مقفلة بموجب المعيار Invariant 0.9`
-          : `Fiscal period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) is ${targetPeriod.status}`
-      );
-      return;
-    }
 
-    // Map strict payment method to accounting payment source
     const paymentSource: ConstructionExpensePaymentSource =
-      paymentMethod === 'DEFERRED_201000' ? '201000' : '101000';
+      paymentMethod === 'DEFERRED_201000' ? '201000' : paymentMethod === 'INSTAPAY_102000' ? '102000' : '101000';
 
-    const property = properties.find(candidate => candidate.id === propertyId);
-    const propertyTitle = property ? (isAr ? property.title_ar : property.title_en) : propertyId;
     const normalizedAmount = total.toFixed(2);
     const normalizedDownPayment = paymentMethod === 'DEFERRED_201000' && scheduleNow
       ? downPaymentValue.toFixed(2)
@@ -285,9 +357,9 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     const memoParts = [
       itemName.trim(),
       propertyTitle ? `${isAr ? 'مشروع' : 'Project'}: ${propertyTitle}` : '',
-      supplier.trim() ? `${isAr ? 'المورد/المقاول' : 'Supplier'}: ${supplier.trim()}` : '',
+      supplier.trim() ? `${kind === 'claim' ? (isAr ? 'المقاول' : 'Contractor') : (isAr ? 'المورد/المقاول' : 'Supplier')}: ${supplier.trim()}` : '',
       invoiceRef.trim() ? `${isAr ? 'مرجع' : 'Ref'}: ${invoiceRef.trim()}` : '',
-      paymentMethod === 'INSTAPAY_101000'
+      paymentMethod === 'INSTAPAY_102000'
         ? (instapayRef.trim() ? `[إنستاباي: ${instapayRef.trim()}]` : '[إنستاباي / InstaPay]')
         : paymentMethod === 'CASH_101000'
           ? '[كاش بالخزينة]'
@@ -297,7 +369,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
 
     const finalNotes = [
       notes.trim(),
-      paymentMethod === 'INSTAPAY_101000' && instapayRef.trim() ? `مرجع إنستاباي: ${instapayRef.trim()}` : ''
+      paymentMethod === 'INSTAPAY_102000' && instapayRef.trim() ? `مرجع إنستاباي: ${instapayRef.trim()}` : ''
     ].filter(Boolean).join(' | ');
 
     setIsSubmitting(true);
@@ -318,18 +390,17 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         frequencyMonths: parseInt(frequencyMonths, 10) || 1,
         quantity: quantityValue,
         unit,
-        notes: [purpose ? `[FIN_OS_SECTION:${purpose === 'claim' ? 'contractors' : 'site'}]` : '', finalNotes].filter(Boolean).join(' | '),
+        notes: [`[FIN_OS_SECTION:${kind === 'claim' ? 'contractors' : 'site'}]`, finalNotes].filter(Boolean).join(' | '),
         loggedDate: entryDate,
         loggedBy: 'CFO_FARID'
       });
 
-      // Strict posting: Treasury (101000) or Accounts Payable (201000)
-      const journalLines = buildConstructionExpenseJournalLines({
+      const lines = buildConstructionExpenseJournalLines({
         category,
         totalAmount: normalizedAmount,
         paymentSource,
         downPayment: normalizedDownPayment,
-        downPaymentSource: '101000', // Strictly Treasury Account 101000
+        downPaymentSource: '101000',
         memo
       });
 
@@ -342,14 +413,13 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         source_module: 'WIP_ALLOCATION',
         source_entity_id: propertyId,
         created_by: 'CFO_FARID',
-        lines: journalLines.map(line => ({
+        lines: lines.map(line => ({
           ...line,
           unit_id: propertyTitle || undefined
         }))
       });
 
       await onSaveEntry(entry, costItem);
-      setSuccess({ amount: normalizedAmount, itemName: itemName.trim(), propertyTitle });
       toast.success(isAr ? 'تم حفظ الفاتورة وتحديث تكلفة المشروع والمستحقات بنجاح' : 'Bill saved and project costs updated');
 
       if (keepOpen) {
@@ -366,429 +436,400 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     }
   };
 
-  const selectedCategory = categoryItems.find(item => item.value === category);
-  const categoryLabel = isAr ? selectedCategory?.labelAr : selectedCategory?.labelEn;
+  const renderEffect = () => {
+    if (isTargetPeriodLocked) {
+      return (
+        <ZFEffect tone="danger">
+          {isAr
+            ? `الفترة المحاسبية لهذا التاريخ مقفلة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`
+            : `Fiscal period is closed (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`}
+        </ZFEffect>
+      );
+    }
+    if (!total.gt(0)) {
+      return (
+        <ZFEffect>
+          {isAr ? 'أدخل المبلغ لمعرفة ما سيُسجل.' : 'Enter an amount to see what will be recorded.'}
+        </ZFEffect>
+      );
+    }
+    if (paymentMethod === 'CASH_101000') {
+      return (
+        <ZFEffect>
+          {isAr ? (
+            <>
+              سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong> ويُخصم من الخزينة.
+            </>
+          ) : (
+            <>
+              <strong>{money(total)}</strong> will be added to the cost of <strong>{propertyTitle}</strong> and paid from the safe.
+            </>
+          )}
+        </ZFEffect>
+      );
+    }
+    if (paymentMethod === 'INSTAPAY_102000') {
+      return (
+        <ZFEffect>
+          {isAr ? (
+            <>
+              سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong> ويُخصم من حساب إنستاباي.
+            </>
+          ) : (
+            <>
+              <strong>{money(total)}</strong> will be added to the cost of <strong>{propertyTitle}</strong> and paid from InstaPay.
+            </>
+          )}
+        </ZFEffect>
+      );
+    }
+    if (down.gt(0)) {
+      return (
+        <ZFEffect>
+          {isAr ? (
+            <>
+              سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong>: يُدفع <strong>{money(down)}</strong> الآن من الخزينة والباقي <strong>{money(remaining)}</strong> مستحق للمقاول.
+            </>
+          ) : (
+            <>
+              <strong>{money(total)}</strong> will be added to the cost of <strong>{propertyTitle}</strong>: <strong>{money(down)}</strong> paid now from the safe and the remaining <strong>{money(remaining)}</strong> owed to the contractor.
+            </>
+          )}
+        </ZFEffect>
+      );
+    }
+    return (
+      <ZFEffect>
+        {isAr ? (
+          <>
+            سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong> ويُسجل مستحقاً {supplier.trim() ? <>لـ <strong>{supplier.trim()}</strong> </> : null}بتاريخ {firstDueDate}.
+          </>
+        ) : (
+          <>
+            <strong>{money(total)}</strong> will be added to the cost of <strong>{propertyTitle}</strong> and recorded as owed {supplier.trim() ? <>to <strong>{supplier.trim()}</strong> </> : null}due on {firstDueDate}.
+          </>
+        )}
+      </ZFEffect>
+    );
+  };
 
-  const postingSummary = paymentMethod === 'CASH_101000'
-    ? (isAr
-        ? `تُحمّل ${categoryLabel} على تكلفة المشروع (حساب 151000)، ويُصرف المبلغ فوراً من الخزينة الرئيسية (حساب 101000).`
-        : `${categoryLabel} is debited to project WIP and credited to physical treasury cash (101000).`)
-    : paymentMethod === 'INSTAPAY_101000'
-      ? (isAr
-          ? `تُحمّل ${categoryLabel} على تكلفة المشروع (حساب 151000)، ويُسجل التحويل فورياً عبر إنستاباي لحساب الخزينة (حساب 101000).`
-          : `${categoryLabel} is debited to project WIP and settled instantly via InstaPay into treasury (101000).`)
-      : down.gt(0)
-        ? (isAr
-            ? `تُحمّل ${categoryLabel} على تكلفة المشروع؛ تُخصم الدفعة المقدمة من الخزينة الرئيسية (101000) ويُسجل الباقي كالتزام مستحق للمورد (201000).`
-            : `${categoryLabel} is added to project WIP; down payment comes from treasury (101000) and balance is credited to AP (201000).`)
-        : (isAr
-            ? `تُحمّل ${categoryLabel} على تكلفة المشروع، ويُسجل كامل المبلغ كالتزام مستحق للمورد (حساب 201000).`
-            : `${categoryLabel} is added to project WIP and the full amount is credited to AP (201000).`);
-
+  const footer = (
+    <ZFFormFooter
+      aside={
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            className={styles.checkboxInput}
+            checked={keepOpen}
+            onChange={e => setKeepOpen(e.target.checked)}
+          />
+          <span>{isAr ? 'إضافة بند آخر بعد الحفظ' : 'Add another after saving'}</span>
+        </label>
+      }
+    >
+      <button
+        type="button"
+        className={shellStyles.btnSecondary}
+        onClick={onClose}
+        disabled={isSubmitting}
+      >
+        {isAr ? 'إلغاء' : 'Cancel'}
+      </button>
+      <button
+        type="submit"
+        form="zf-cost-form"
+        className={shellStyles.btnPrimary}
+        disabled={isSubmitting || isTargetPeriodLocked}
+      >
+        {isSubmitting
+          ? (isAr ? 'جارٍ الحفظ…' : 'Saving…')
+          : kind === 'claim'
+            ? (isAr ? 'حفظ المستخلص' : 'Save bill')
+            : (isAr ? 'حفظ المصروف' : 'Save expense')}
+      </button>
+    </ZFFormFooter>
+  );
 
   return (
     <ZFModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title={purpose === 'claim' ? (isAr ? 'قيد مستخلص مقاول' : 'Record Contractor Claim') : purpose === 'site' ? (isAr ? 'تسجيل مصروف موقع' : 'Record Site Expense') : (isAr ? 'تسجيل فاتورة ومصروف إنشائي' : 'Record Construction Bill & Expense')}
-      subtitle={isAr ? 'نظام FIN-OS الإداري المالي • مسار تدقيق المشروع، القيمة، وطرق السداد المعتمدة' : 'FIN-OS Financial Management • 3-Step Project Bill & Payment Wizard'}
-      icon={<ReceiptText size={18} />}
-      headerExtra={
-        <span className={styles.periodPill}>
-          {targetPeriod.status === 'OPEN'
-            ? `${isAr ? 'فترة مفتوحة' : 'Open'} (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`
-            : `${isAr ? 'فترة مقفلة' : 'Locked'} (${targetPeriod.fiscal_year}-M${targetPeriod.period_number})`}
-        </span>
+      maxWidth="640px"
+      icon={kind === 'claim' ? <HardHat size={18} /> : <ReceiptText size={18} />}
+      title={
+        purpose === undefined
+          ? (isAr ? 'تسجيل تكلفة بناء' : 'Record construction cost')
+          : kind === 'claim'
+            ? (isAr ? 'مستخلص مقاول' : 'Contractor bill')
+            : (isAr ? 'مصروف موقع' : 'Site expense')
+      }
+      subtitle={
+        kind === 'claim'
+          ? (isAr ? 'مبلغ لمقاول عن أعمال تمت. يُضاف لتكلفة المشروع ويُدفع الآن أو يُسجل مستحقاً عليه.' : 'Money owed to a contractor for completed work. Added to project cost; paid now or recorded as owed.')
+          : (isAr ? 'مشتريات ومصاريف دُفعت في الموقع. تُضاف لتكلفة المشروع وتُخصم من الخزينة أو إنستاباي.' : 'Purchases and costs paid on site. Added to project cost and paid from the safe or InstaPay.')
       }
       isAr={isAr}
-      maxWidth="780px"
+      footer={footer}
       closeOnBackdropClick={!isSubmitting}
     >
-      <form className={styles.form} onSubmit={handleSubmit}>
-        {/* Stepper Navigation Indicator */}
-        <div className={styles.stepperNav} role="tablist" aria-label={isAr ? 'خطوات تسجيل الفاتورة' : 'Bill Wizard Steps'}>
-          <button
-            type="button"
-            className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : ''} ${currentStep > 1 ? styles.stepItemCompleted : ''}`}
-            onClick={() => setCurrentStep(1)}
-          >
-            <span className={styles.stepNumber}>{currentStep > 1 ? <Check size={13} /> : '1'}</span>
-            <span className={styles.stepTitle}>{isAr ? 'بيانات المشروع والتصنيف' : 'Project & Category'}</span>
-          </button>
-          <div className={`${styles.stepLine} ${currentStep > 1 ? styles.stepLineActive : ''}`} />
+      <form id="zf-cost-form" className={zfForm.form} onSubmit={handleSubmit}>
+        {/* 0. Segmented selector if purpose is undefined */}
+        {purpose === undefined && (
+          <ZFSegmented
+            value={kind}
+            onChange={handleKindChange}
+            ariaLabel={isAr ? 'النوع' : 'Type'}
+            options={[
+              { id: 'claim', label: isAr ? 'مستخلص مقاول' : 'Contractor bill', icon: <HardHat size={14} /> },
+              { id: 'site', label: isAr ? 'مصروف موقع' : 'Site expense', icon: <ReceiptText size={14} /> }
+            ]}
+          />
+        )}
 
-          <button
-            type="button"
-            className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : ''} ${currentStep > 2 ? styles.stepItemCompleted : ''}`}
-            onClick={() => {
-              if (propertyId && entryDate) setCurrentStep(2);
-            }}
-          >
-            <span className={styles.stepNumber}>{currentStep > 2 ? <Check size={13} /> : '2'}</span>
-            <span className={styles.stepTitle}>{isAr ? 'تفاصيل البند والقيمة' : 'Item Details & Value'}</span>
-          </button>
-          <div className={`${styles.stepLine} ${currentStep > 2 ? styles.stepLineActive : ''}`} />
+        {/* 1. Project & Date row */}
+        <div className={zfForm.row}>
+          <ZFField label={isAr ? 'المشروع' : 'Project'} required>
+            <select
+              className={zfForm.control}
+              value={propertyId}
+              onChange={e => setPropertyId(e.target.value)}
+              required
+            >
+              {underConstructionProperties.map(prop => (
+                <option key={prop.id} value={prop.id}>
+                  {isAr ? prop.title_ar : prop.title_en}
+                </option>
+              ))}
+            </select>
+          </ZFField>
 
-          <button
-            type="button"
-            className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}
-            onClick={() => {
-              if (propertyId && entryDate && itemName.trim() && total.gt(0)) setCurrentStep(3);
-            }}
+          <ZFField
+            label={isAr ? 'التاريخ' : 'Date'}
+            required
+            error={isTargetPeriodLocked ? (isAr ? 'الفترة المحاسبية لهذا التاريخ مقفلة' : 'This date is in a closed period') : undefined}
           >
-            <span className={styles.stepNumber}>3</span>
-            <span className={styles.stepTitle}>{isAr ? 'طريقة السداد والجدولة' : 'Payment Method & Schedule'}</span>
-          </button>
+            <input
+              type="date"
+              className={zfForm.control}
+              value={entryDate}
+              onChange={e => setEntryDate(e.target.value)}
+              required
+            />
+          </ZFField>
         </div>
 
-        {success && (
-          <div className={styles.successPanel} role="status">
-            <span className={styles.successIcon}><Check size={16} /></span>
-            <div className={styles.successCopy}>
-              <strong>{isAr ? 'تم حفظ الفاتورة بنجاح' : 'Bill saved successfully'}</strong>
-              <span>{success.itemName} • {success.propertyTitle} • {D(success.amount).formatEGP(isAr)}</span>
-            </div>
-            <button type="button" className={styles.secondaryButton} onClick={resetEntryFields}>
-              <Plus size={14} />
-              {isAr ? 'فاتورة أخرى' : 'Another bill'}
-            </button>
-          </div>
-        )}
-
-        {/* ─── STEP 1: PROJECT & CATEGORY ─── */}
-        {currentStep === 1 && (
-          <section className={styles.section} aria-labelledby="step-1-heading">
-            <div className={styles.sectionHeading}>
-              <span className={styles.sectionIcon}><Building2 size={15} /></span>
-              <div>
-                <h4 id="step-1-heading">{isAr ? 'الخطوة 1: بيانات المشروع والتصنيف الإنشائي' : 'Step 1: Property & Cost Category'}</h4>
-                <p>{isAr ? 'حدد العقار المستهدف، تاريخ التسجيل، فئة التكلفة ومرحلة التنفيذ.' : 'Select target project, bill date, cost category and lifecycle phase.'}</p>
-              </div>
-            </div>
-
-            <div className={styles.gridTwo}>
-              <label className={styles.fieldWide}>
-                <span>{isAr ? 'المشروع العقاري *' : 'Target Property *'}</span>
-                <ZFCustomSelect value={propertyId} onChange={setPropertyId} items={propertyItems} isAr={isAr} searchable />
-              </label>
-              <label>
-                <span>{isAr ? 'تاريخ الفاتورة أو القيد *' : 'Bill Date *'}</span>
-                <input type="date" value={entryDate} onChange={event => setEntryDate(event.target.value)} required />
-                {isTargetPeriodLocked && (
-                  <div className={styles.lockedPeriodWarning}>
-                    <AlertTriangle size={15} className={styles.lockedWarningIcon} />
-                    <span>
-                      {isAr
-                        ? `الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) مقفلة بموجب Invariant 0.9`
-                        : `Period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) is ${targetPeriod.status}`}
-                    </span>
-                  </div>
-                )}
-              </label>
-            </div>
-
-            <div className={styles.gridTwo}>
-              <label>
-                <span>{isAr ? 'فئة التكلفة الإنشائية *' : 'Cost Category *'}</span>
-                <ZFCustomSelect value={category} onChange={value => setCategory(value as PropertyCostCategory)} items={categoryItems} isAr={isAr} searchable />
-              </label>
-              <label>
-                <span>{isAr ? 'مرحلة التنفيذ بالموقع *' : 'Construction Phase *'}</span>
-                <ZFCustomSelect value={phase} onChange={value => setPhase(value as PropertyLifecyclePhase)} items={phaseItems} isAr={isAr} />
-              </label>
-            </div>
-          </section>
-        )}
-
-        {/* ─── STEP 2: ITEM DETAILS & VALUE ─── */}
-        {currentStep === 2 && (
-          <section className={styles.section} aria-labelledby="step-2-heading">
-            <div className={styles.sectionHeading}>
-              <span className={styles.sectionIcon}><ReceiptText size={15} /></span>
-              <div>
-                <h4 id="step-2-heading">{isAr ? 'الخطوة 2: تفاصيل البند والقيمة' : 'Step 2: Item Details & Value'}</h4>
-                <p>{isAr ? 'أدخل وصف البند، بيانات المقاول أو المورد، والكمية والقيمة الإجمالية.' : 'Enter item description, supplier name, quantity and total value.'}</p>
-              </div>
-            </div>
-
-            <label>
-              <span>{isAr ? 'بيان البند أو التوريد أو الخامة *' : 'Item Description / Scope *'}</span>
+        {/* 2. Counterparty & Reference row */}
+        {kind === 'claim' ? (
+          <div className={zfForm.row}>
+            <ZFField label={isAr ? 'المقاول' : 'Contractor'} required>
               <input
-                value={itemName}
-                onChange={event => setItemName(event.target.value)}
-                placeholder={isAr ? 'مثال: توريد حديد تسليح عز لسقف الدور الثاني' : 'e.g. Steel reinforcement supply for 2nd floor'}
+                className={zfForm.control}
+                value={supplier}
+                onChange={e => setSupplier(e.target.value)}
+                placeholder={isAr ? 'اسم شركة المقاولات أو المقاول' : 'Contractor name'}
                 required
               />
-            </label>
-
-            <div className={styles.gridTwo}>
-              <label>
-                <span>{isAr ? 'المقاول أو المورد' : 'Supplier or Contractor'}</span>
-                <input
-                  required={purpose === 'claim'}
-                  value={supplier}
-                  onChange={event => setSupplier(event.target.value)}
-                  placeholder={isAr ? 'اسم شركة المقاولات أو المورد' : 'Contractor or supplier name'}
-                />
-              </label>
-              <label>
-                <span>{isAr ? 'رقم الفاتورة أو المستخلص (اختياري)' : 'Invoice or Claim Reference (optional)'}</span>
-                <input
-                  value={invoiceRef}
-                  onChange={event => setInvoiceRef(event.target.value)}
-                  placeholder="INV-..."
-                />
-              </label>
-            </div>
-
-            <div className={styles.amountGrid}>
-              <label className={styles.amountField}>
-                <span>{isAr ? 'إجمالي قيمة الفاتورة (ج.م) *' : 'Invoice Total (EGP) *'}</span>
-                <input
-                  ref={amountInputRef}
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={amount}
-                  onChange={event => setAmount(event.target.value)}
-                  placeholder="0.00"
-                  required
-                />
-              </label>
-              <label>
-                <span>{isAr ? 'الكمية *' : 'Quantity *'}</span>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={quantity}
-                  onChange={event => setQuantity(event.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                <span>{isAr ? 'الوحدة' : 'Unit'}</span>
-                <input value={unit} onChange={event => setUnit(event.target.value)} />
-              </label>
-            </div>
-
-            {/* Live Arabic Tafqeet Banner */}
-            {total.gt(0) && (
-              <div className={styles.tafqeetDisplay}>
-                <span style={{ fontWeight: 800 }}>{isAr ? 'التفقيط المالي القانوني: ' : 'Legal Amount in Words: '}</span>
-                <span>{tafqeetNumber(amount)}</span>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ─── STEP 3: PAYMENT METHOD & SCHEDULE ─── */}
-        {currentStep === 3 && (
-          <section className={styles.section} aria-labelledby="step-3-heading">
-            <div className={styles.sectionHeading}>
-              <span className={styles.sectionIcon}><WalletCards size={15} /></span>
-              <div>
-                <h4 id="step-3-heading">{isAr ? 'الخطوة 3: طريقة السداد والجدولة المالية' : 'Step 3: Payment Method & Schedule'}</h4>
-                <p>{isAr ? 'اختر طريقة السداد المعتمدة وفق معايير FIN-OS (كاش، إنستاباي، أو آجل للمورد).' : 'Choose approved FIN-OS payment method (Cash, InstaPay, or Supplier Payable).'}</p>
-              </div>
-            </div>
-
-            {/* Strict FIN-OS Payment Methods (Account 101000 or 201000) */}
-            <div className={styles.paymentOptions} role="radiogroup" aria-label={isAr ? 'طريقة السداد المعتمدة' : 'Approved payment methods'}>
-              {/* Method 1: Cash in Hand (101000) */}
-              <div
-                className={paymentMethod === 'CASH_101000' ? styles.paymentOptionActive : styles.paymentOption}
-                onClick={() => setPaymentMethod('CASH_101000')}
-                role="radio"
-                aria-checked={paymentMethod === 'CASH_101000'}
-                tabIndex={0}
-              >
-                <div className={styles.paymentOptionHeader}>
-                  <span className={styles.paymentOptionIcon}><CircleDollarSign size={16} /></span>
-                  <span>{isAr ? 'كاش بالخزينة' : 'Cash in Hand'}</span>
-                </div>
-                <small>{isAr ? 'صرف نقدي فوري من الخزينة الرئيسية (حساب 101000)' : 'Instant cash payout from treasury (101000)'}</small>
-              </div>
-
-              {/* Method 2: InstaPay Transfer (101000) */}
-              <div
-                className={paymentMethod === 'INSTAPAY_101000' ? styles.paymentOptionActive : styles.paymentOption}
-                onClick={() => setPaymentMethod('INSTAPAY_101000')}
-                role="radio"
-                aria-checked={paymentMethod === 'INSTAPAY_101000'}
-                tabIndex={0}
-              >
-                <div className={styles.paymentOptionHeader}>
-                  <span className={styles.paymentOptionIcon}><Zap size={16} /></span>
-                  <span>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
-                </div>
-                <small>{isAr ? 'تحويل رقمي فوري إلى حساب الخزينة (حساب 101000)' : 'Instant digital transfer via Treasury (101000)'}</small>
-              </div>
-
-              {/* Method 3: Deferred Payable (201000) */}
-              <div
-                className={paymentMethod === 'DEFERRED_201000' ? styles.paymentOptionActive : styles.paymentOption}
-                onClick={() => setPaymentMethod('DEFERRED_201000')}
-                role="radio"
-                aria-checked={paymentMethod === 'DEFERRED_201000'}
-                tabIndex={0}
-              >
-                <div className={styles.paymentOptionHeader}>
-                  <span className={styles.paymentOptionIcon}><CreditCard size={16} /></span>
-                  <span>{isAr ? 'آجل على المورد' : 'Supplier Payable'}</span>
-                </div>
-                <small>{isAr ? 'قيد مستحق على حساب الموردين (حساب 201000)' : 'Payable to supplier (201000) with scheduling'}</small>
-              </div>
-            </div>
-
-            {/* InstaPay Transfer Reference Box */}
-            {paymentMethod === 'INSTAPAY_101000' && (
-              <div className={styles.instapayBox}>
-                <label>
-                  <span>{isAr ? 'الرقم المرجعي لعملية إنستاباي (اختياري)' : 'InstaPay Transaction Reference'}</span>
-                  <input
-                    value={instapayRef}
-                    onChange={event => setInstapayRef(event.target.value)}
-                    placeholder="e.g. IPN-98471203"
-                  />
-                </label>
-              </div>
-            )}
-
-            {/* Deferred Payable & Schedule Configuration */}
-            {paymentMethod === 'DEFERRED_201000' && (
-              <div className={styles.schedulePanel}>
-                {!scheduleNow && (
-                  <label>
-                    <span>{isAr ? 'تاريخ استحقاق الفاتورة بالكامل *' : 'Full Invoice Due Date *'}</span>
-                    <input type="date" value={firstDueDate} onChange={event => setFirstDueDate(event.target.value)} required />
-                  </label>
-                )}
-                <label className={styles.toggleRow}>
-                  <span>
-                    <strong>{isAr ? 'جدولة المستحقات وأقساط المورد الآن' : 'Schedule Payables & Tranches Now'}</strong>
-                    <small>{isAr ? 'تفعيل خطة دفعات مجدولة مع إمكانية دفع دفعة مقدمة.' : 'Set up structured tranches with optional down payment.'}</small>
-                  </span>
-                  <input type="checkbox" checked={scheduleNow} onChange={event => setScheduleNow(event.target.checked)} />
-                </label>
-
-                {scheduleNow && (
-                  <div className={styles.scheduleFields}>
-                    <label>
-                      <span>{isAr ? 'الدفعة المقدمة المسددة فوراً (ج.م)' : 'Immediate Down Payment (EGP)'}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        max={amount || undefined}
-                        value={downPayment}
-                        onChange={event => setDownPayment(event.target.value)}
-                        placeholder="0.00"
-                      />
-                    </label>
-                    <label>
-                      <span>{isAr ? 'عدد الأقساط' : 'Installments Count'}</span>
-                      <input type="number" min="1" max="24" value={installmentsCount} onChange={event => setInstallmentsCount(event.target.value)} />
-                    </label>
-                    <label>
-                      <span>{isAr ? 'دورية السداد (أشهر)' : 'Frequency (months)'}</span>
-                      <input type="number" min="1" max="12" value={frequencyMonths} onChange={event => setFrequencyMonths(event.target.value)} />
-                    </label>
-                    <label>
-                      <span>{isAr ? 'تاريخ أول قسط *' : 'First Due Date *'}</span>
-                      <input type="date" value={firstDueDate} onChange={event => setFirstDueDate(event.target.value)} required />
-                    </label>
-                    {total.gt(0) && (
-                      <div className={styles.scheduleSummary}>
-                        <Calendar size={15} />
-                        <span>{isAr ? 'المتبقي المجدول' : 'Scheduled Balance'}: <strong>{remaining.formatEGP(isAr)}</strong></span>
-                        <span>{isAr ? 'قيمة القسط' : 'Tranche amount'}: <strong>{installmentValue.formatEGP(isAr)}</strong></span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Financial Effect Preview */}
-            <div className={styles.accountingPreview}>
-              <ShieldCheck size={16} />
-              <div>
-                <strong>{isAr ? 'الأثر المالي المحاسبي (FIN-OS Invariant 0.9)' : 'Accounting Posting Effect'}</strong>
-                <span>{postingSummary}</span>
-              </div>
-            </div>
-
-            <label>
-              <span>{isAr ? 'ملاحظات وتفاصيل إضافية' : 'Internal Notes'}</span>
-              <textarea
-                value={notes}
-                onChange={event => setNotes(event.target.value)}
-                rows={2}
-                placeholder={isAr ? 'أي اشتراطات فنية، نطاق أعمال، أو شروط دفع...' : 'Additional technical specifications or payment notes...'}
+            </ZFField>
+            <ZFField label={isAr ? 'رقم المستخلص' : 'Bill no.'}>
+              <input
+                className={`${zfForm.control} ${zfForm.mono}`}
+                value={invoiceRef}
+                onChange={e => setInvoiceRef(e.target.value)}
+                placeholder={isAr ? 'اختياري' : 'Optional'}
               />
-            </label>
-          </section>
+            </ZFField>
+          </div>
+        ) : (
+          <div className={zfForm.row}>
+            <ZFField label={isAr ? 'المورد أو المحل' : 'Supplier or shop'}>
+              <input
+                className={zfForm.control}
+                value={supplier}
+                onChange={e => setSupplier(e.target.value)}
+                placeholder={isAr ? 'اختياري' : 'Optional'}
+              />
+            </ZFField>
+            <ZFField label={isAr ? 'رقم الفاتورة' : 'Invoice no.'}>
+              <input
+                className={`${zfForm.control} ${zfForm.mono}`}
+                value={invoiceRef}
+                onChange={e => setInvoiceRef(e.target.value)}
+                placeholder={isAr ? 'اختياري' : 'Optional'}
+              />
+            </ZFField>
+          </div>
         )}
 
-        {/* ─── STEPPER NAVIGATION FOOTER ─── */}
-        <div className={styles.footer}>
-          <div className={styles.stepperNavButtons}>
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => setCurrentStep(prev => (prev - 1) as 1 | 2 | 3)}
-                disabled={isSubmitting}
-              >
-                {isAr ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                <span>{isAr ? 'السابق' : 'Previous'}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </button>
-            )}
-          </div>
+        {/* 3. Description field */}
+        <ZFField label={isAr ? 'البيان' : 'Description'} required>
+          <input
+            className={zfForm.control}
+            value={itemName}
+            onChange={e => setItemName(e.target.value)}
+            placeholder={
+              kind === 'claim'
+                ? (isAr ? 'مثال: مستخلص 3 – خرسانة الدور الثاني' : 'e.g. Bill 3 – 2nd floor concrete')
+                : (isAr ? 'مثال: أسمنت ورمل لصبة السقف' : 'e.g. Cement and sand for the roof slab')
+            }
+            required
+          />
+        </ZFField>
 
-          <div className={styles.actions}>
-            {currentStep === 3 && (
-              <label className={styles.keepOpen}>
-                <input type="checkbox" checked={keepOpen} onChange={event => setKeepOpen(event.target.checked)} />
-                <span>{isAr ? 'فاتورة أخرى بعد الحفظ' : 'Another bill after save'}</span>
-              </label>
-            )}
-
-            {currentStep < 3 ? (
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={handleStepNext}
-              >
-                <span>{isAr ? 'المتابعة للخطوة التالية' : 'Next Step'}</span>
-                {isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className={styles.primaryButton}
-                disabled={isSubmitting || isTargetPeriodLocked}
-              >
-                {isSubmitting ? <Loader2 size={15} className={styles.spinner} /> : <Send size={15} />}
-                {isTargetPeriodLocked
-                  ? (isAr ? `الفترة مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`)
-                  : (isAr ? 'تأكيد وتسجيل المصروف' : 'Confirm & Log Expense')}
-              </button>
-            )}
-          </div>
+        {/* 4. Amount & Cost Category row */}
+        <div className={zfForm.row}>
+          <ZFField label={isAr ? 'المبلغ' : 'Amount'} required>
+            <ZFMoneyInput
+              ref={amountInputRef}
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              placeholder="0.00"
+              unit={isAr ? 'ج.م' : 'EGP'}
+              required
+            />
+          </ZFField>
+          <ZFField label={isAr ? 'البند' : 'Cost type'}>
+            <select
+              className={zfForm.control}
+              value={category}
+              onChange={e => setCategory(e.target.value as PropertyCostCategory)}
+            >
+              <option value="civil_structure">{isAr ? 'خرسانات وحديد ومباني' : 'Structure'}</option>
+              <option value="finishing_interior">{isAr ? 'تشطيبات' : 'Finishing'}</option>
+              <option value="mep_infrastructure">{isAr ? 'كهرباء وسباكة وتكييف' : 'MEP'}</option>
+              <option value="land_allocation">{isAr ? 'الأرض' : 'Land'}</option>
+              <option value="permits_engineering">{isAr ? 'تراخيص وتصميم وإشراف' : 'Permits & design'}</option>
+              <option value="labor_subcontractor">{isAr ? 'مصنعيات' : 'Labour'}</option>
+              <option value="taxes_fees">{isAr ? 'ضرائب ورسوم' : 'Taxes & fees'}</option>
+            </select>
+          </ZFField>
         </div>
+
+        {/* 5. Stage field */}
+        <ZFField label={isAr ? 'مرحلة التنفيذ' : 'Stage'}>
+          <select
+            className={zfForm.control}
+            value={phase}
+            onChange={e => setPhase(e.target.value as PropertyLifecyclePhase)}
+          >
+            <option value="planning_permits">{isAr ? 'التخطيط والتراخيص' : 'Planning & Permits'}</option>
+            <option value="excavation_foundation">{isAr ? 'الحفر والأساسات' : 'Excavation & Foundations'}</option>
+            <option value="structural_skeleton">{isAr ? 'الهيكل والصبات والأسقف' : 'Structural Skeleton'}</option>
+            <option value="masonry_roughing">{isAr ? 'المباني والتأسيسات' : 'Masonry & Roughing'}</option>
+            <option value="finishing_interiors">{isAr ? 'التشطيبات والدهانات' : 'Finishing & Painting'}</option>
+            <option value="final_inspection_handover">{isAr ? 'المعاينة والتسليم' : 'Inspection & Handover'}</option>
+          </select>
+        </ZFField>
+
+        {/* 6. Payment method choices */}
+        <ZFField label={kind === 'claim' ? (isAr ? 'الدفع' : 'Payment') : (isAr ? 'دُفع من' : 'Paid from')}>
+          <ZFChoices
+            value={paymentMethod}
+            onChange={val => setPaymentMethod(val as StrictPaymentMethod)}
+            options={paymentOptions}
+          />
+        </ZFField>
+
+        {/* 7. Conditional payment method details */}
+        {paymentMethod === 'INSTAPAY_102000' && (
+          <ZFField label={isAr ? 'رقم عملية إنستاباي' : 'InstaPay reference'}>
+            <input
+              className={`${zfForm.control} ${zfForm.mono}`}
+              value={instapayRef}
+              onChange={e => setInstapayRef(e.target.value)}
+              placeholder="e.g. IPN-98471203"
+            />
+          </ZFField>
+        )}
+
+        {paymentMethod === 'DEFERRED_201000' && (
+          <>
+            <ZFField label={isAr ? 'تاريخ الاستحقاق' : 'Due date'} required>
+              <input
+                type="date"
+                className={zfForm.control}
+                value={firstDueDate}
+                onChange={e => setFirstDueDate(e.target.value)}
+                required
+              />
+            </ZFField>
+
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                className={styles.checkboxInput}
+                checked={scheduleNow}
+                onChange={e => setScheduleNow(e.target.checked)}
+              />
+              <span>{isAr ? 'تقسيط المبلغ على دفعات' : 'Split into installments'}</span>
+            </label>
+
+            {scheduleNow && (
+              <>
+                <div className={zfForm.row3}>
+                  <ZFField
+                    label={isAr ? 'دفعة مقدمة' : 'Down payment'}
+                    hint={isAr ? 'تُدفع الآن من الخزينة' : 'Paid now from the safe'}
+                  >
+                    <ZFMoneyInput
+                      value={downPayment}
+                      onChange={e => setDownPayment(e.target.value)}
+                      placeholder="0.00"
+                      unit={isAr ? 'ج.م' : 'EGP'}
+                    />
+                  </ZFField>
+                  <ZFField label={isAr ? 'عدد الدفعات' : 'Installments'}>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      className={zfForm.control}
+                      value={installmentsCount}
+                      onChange={e => setInstallmentsCount(e.target.value)}
+                    />
+                  </ZFField>
+                  <ZFField label={isAr ? 'كل' : 'Every'}>
+                    <select
+                      className={zfForm.control}
+                      value={frequencyMonths}
+                      onChange={e => setFrequencyMonths(e.target.value)}
+                    >
+                      <option value="1">{isAr ? 'شهر' : 'month'}</option>
+                      <option value="2">{isAr ? 'شهرين' : '2 months'}</option>
+                      <option value="3">{isAr ? '3 شهور' : '3 months'}</option>
+                    </select>
+                  </ZFField>
+                </div>
+
+                <ZFFacts
+                  items={[
+                    { label: isAr ? 'قيمة كل دفعة' : 'Each installment', value: money(installmentValue) },
+                    { label: isAr ? 'الباقي بعد المقدم' : 'Balance after down payment', value: money(remaining) }
+                  ]}
+                />
+              </>
+            )}
+          </>
+        )}
+
+        {/* 8. Notes */}
+        <ZFField label={isAr ? 'ملاحظات' : 'Notes'}>
+          <textarea
+            className={zfForm.control}
+            rows={2}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder={isAr ? 'ملاحظات اختيارية...' : 'Optional notes...'}
+          />
+        </ZFField>
+
+        {/* 9. Effect */}
+        {renderEffect()}
+
+        {/* 10. Journal peek */}
+        {total.gt(0) && journalLines.length > 0 && (
+          <ZFJournalPeek isAr={isAr} lines={journalLines} />
+        )}
       </form>
     </ZFModalShell>
   );
 };
-

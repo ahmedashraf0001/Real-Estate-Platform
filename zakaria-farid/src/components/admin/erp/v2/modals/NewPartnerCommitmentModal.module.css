@@ -1,0 +1,23 @@
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.templateBtn {
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: var(--erp-bg-canvas, #f8fafc);
+  font-size: 0.7rem;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.templateBtn:hover {
+  background: var(--erp-bg-panel, #ffffff);
+  border-color: var(--erp-accent, #2563eb);
+  color: var(--erp-accent, #2563eb);
+}

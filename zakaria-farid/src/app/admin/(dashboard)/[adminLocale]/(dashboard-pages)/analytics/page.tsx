@@ -91,9 +91,9 @@ export default async function AnalyticsPage({ params }: Props) {
               fontWeight: 800,
               padding: '3px 10px',
               borderRadius: '9999px',
-              background: 'rgba(229, 184, 105, 0.12)',
-              color: 'var(--admin-gold-primary, #E5B869)',
-              border: '1px solid rgba(229, 184, 105, 0.3)'
+              background: 'var(--admin-accent-tint)',
+              color: 'var(--admin-accent)',
+              border: '1px solid var(--admin-accent-border)'
             }}>
               {isAr ? 'مؤشرات حية متزامنة' : 'Live Real-Time Index'}
             </span>
@@ -138,11 +138,11 @@ export default async function AnalyticsPage({ params }: Props) {
               borderRadius: '10px',
               fontSize: '12.5px',
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
-              color: '#0A0C10',
+              background: 'var(--admin-accent)',
+              color: 'var(--admin-on-accent)',
               textDecoration: 'none',
               minHeight: '44px',
-              boxShadow: '0 3px 14px rgba(229, 184, 105, 0.3)',
+              boxShadow: 'none',
               transition: 'all 150ms ease'
             }}
           >
@@ -161,7 +161,7 @@ export default async function AnalyticsPage({ params }: Props) {
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: '1px solid var(--admin-card-border, rgba(229, 184, 105, 0.25))',
+          border: '1px solid var(--admin-card-border)',
           boxShadow: 'var(--admin-card-shadow, none)',
           display: 'flex',
           flexDirection: 'column',
@@ -172,7 +172,7 @@ export default async function AnalyticsPage({ params }: Props) {
             <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'أعلى عقار طلباً بالمحفظة' : 'Highest Velocity Asset'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: 'var(--admin-gold-primary, #E5B869)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--admin-accent-tint)', color: 'var(--admin-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingUp size={14} />
             </div>
           </div>
@@ -180,7 +180,7 @@ export default async function AnalyticsPage({ params }: Props) {
             <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.01em', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {topProperty ? (isAr ? topProperty.titleAr : topProperty.titleEn) : (isAr ? 'لا توجد بيانات' : 'No Data')}
             </span>
-            <p style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #E5B869)', margin: '3px 0 0', fontWeight: 600 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-accent)', margin: '3px 0 0', fontWeight: 600 }}>
               {topProperty ? `${topProperty.demandScore}/100 Demand Score (${topProperty.inquiryCount} Inquiries)` : '—'}
             </p>
           </div>
@@ -265,7 +265,7 @@ export default async function AnalyticsPage({ params }: Props) {
             <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'نسبة نجاح التعاقد' : 'Deal Conversion Rate'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: 'var(--admin-gold-primary, #E5B869)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--admin-accent-tint)', color: 'var(--admin-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BarChart3 size={14} />
             </div>
           </div>

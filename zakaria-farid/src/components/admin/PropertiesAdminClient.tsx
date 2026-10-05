@@ -210,8 +210,8 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   fontSize: '11.5px',
                   fontWeight: 800,
                   border: 'none',
-                  background: activeTab === 'active' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                  color: activeTab === 'active' ? '#0A0C10' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
+                  background: activeTab === 'active' ? 'var(--admin-accent)' : 'transparent',
+                  color: activeTab === 'active' ? '#FFFFFF' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
                 }}
@@ -227,8 +227,8 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   fontSize: '11.5px',
                   fontWeight: 800,
                   border: 'none',
-                  background: activeTab === 'archived' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                  color: activeTab === 'archived' ? '#0A0C10' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
+                  background: activeTab === 'archived' ? 'var(--admin-accent)' : 'transparent',
+                  color: activeTab === 'archived' ? '#FFFFFF' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
                 }}
@@ -257,9 +257,9 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               fontSize: '12px',
               fontWeight: 700,
               cursor: 'pointer',
-              background: hidePrices ? 'rgba(221, 167, 82, 0.18)' : 'var(--admin-card-bg-subtle, #F8FAFC)',
-              border: `1px solid ${hidePrices ? '#DDA752' : 'var(--admin-card-border, #CBD5E1)'}`,
-              color: hidePrices ? 'var(--admin-gold-primary, #946F23)' : 'var(--admin-text-title, #0F172A)',
+              background: hidePrices ? 'var(--admin-accent-subtle)' : 'var(--admin-card-bg-subtle, #F8FAFC)',
+              border: `1px solid ${hidePrices ? 'var(--admin-accent)' : 'var(--admin-card-border, #CBD5E1)'}`,
+              color: hidePrices ? 'var(--admin-accent)' : 'var(--admin-text-title, #0F172A)',
               transition: 'all 150ms ease'
             }}
             title={isAr ? 'التحكم في سرية الأسعار العامة' : 'Control public price visibility'}
@@ -282,10 +282,10 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               borderRadius: '10px',
               fontSize: '12.5px',
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
-              color: '#0A0C10',
+              background: 'var(--admin-accent)',
+              color: 'var(--admin-on-accent)',
               textDecoration: 'none',
-              boxShadow: '0 3px 14px rgba(229, 184, 105, 0.25)',
+              boxShadow: 'none',
               transition: 'all 150ms ease'
             }}
           >
@@ -310,7 +310,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
       }}>
         {/* Text Search */}
         <div style={{ flex: '1 1 260px', position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={15} style={{ position: 'absolute', [isAr ? 'right' : 'left']: '14px', color: '#E5B869', pointerEvents: 'none' }} />
+          <Search size={15} style={{ position: 'absolute', [isAr ? 'right' : 'left']: '14px', color: 'var(--admin-accent)', pointerEvents: 'none' }} />
           <input
             type="text"
             value={searchQuery}
@@ -341,7 +341,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
 
         {/* Property Type Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <SlidersHorizontal size={14} style={{ color: '#DDA752' }} />
+          <SlidersHorizontal size={14} style={{ color: 'var(--admin-accent)' }} />
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
@@ -357,18 +357,16 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               outline: 'none'
             }}
           >
-            <option value="all">{isAr ? 'جميع الأنواع المعمارية' : 'All Typologies'}</option>
-            <option value="villa">{isAr ? 'فيلات وقصور' : 'Villas & Mansions'}</option>
-            <option value="apartment">{isAr ? 'شقق فاخرة' : 'Apartments'}</option>
-            <option value="townhouse">{isAr ? 'تاون هاوس' : 'Townhouses'}</option>
-            <option value="duplex">{isAr ? 'دوبلكس' : 'Duplexes'}</option>
-            <option value="chalet">{isAr ? 'شاليهات' : 'Chalets'}</option>
+            <option value="all">{isAr ? 'جميع العقارات' : 'All'}</option>
+            <option value="apartment">{isAr ? 'شقق' : 'Apartments'}</option>
+            <option value="building">{isAr ? 'عمارات' : 'Buildings'}</option>
+            <option value="garage">{isAr ? 'جراجات' : 'Garages'}</option>
           </select>
         </div>
 
         {/* Sort Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ArrowUpDown size={14} style={{ color: '#DDA752' }} />
+          <ArrowUpDown size={14} style={{ color: 'var(--admin-accent)' }} />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -443,9 +441,9 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                       borderRadius: '7px',
                       fontSize: '11px',
                       fontWeight: 800,
-                      background: 'rgba(229, 184, 105, 0.15)',
-                      color: '#E5B869',
-                      border: '1px solid rgba(229, 184, 105, 0.35)',
+                      background: 'var(--admin-accent-subtle)',
+                      color: 'var(--admin-accent)',
+                      border: '1px solid var(--admin-accent-border)',
                       backdropFilter: 'blur(8px)',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -465,8 +463,8 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                     fontSize: '10.5px',
                     fontWeight: 700,
                     background: 'rgba(10, 13, 20, 0.85)',
-                    color: '#E5B869',
-                    border: '1px solid rgba(229, 184, 105, 0.3)',
+                    color: 'var(--admin-accent)',
+                    border: '1px solid var(--admin-accent-border)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px'
@@ -493,7 +491,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   </h3>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600 }}>
-                    <MapPin size={12} style={{ color: 'var(--admin-gold-primary, #E5B869)' }} />
+                    <MapPin size={12} style={{ color: 'var(--admin-accent)' }} />
                     <span>{p.location}</span>
                     <span>•</span>
                     <span>{typeLabel[p.type] ?? p.type}</span>
@@ -503,7 +501,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                     <span style={{ fontSize: '18px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'var(--admin-text-title, #0F172A)' }}>
                       {formatPriceParts(p.price_egp, adminLocale).num}
                     </span>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--admin-gold-primary, #946F23)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--admin-accent)' }}>
                       {formatPriceParts(p.price_egp, adminLocale).cur}
                     </span>
                   </p>
@@ -547,9 +545,9 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                         borderRadius: '7px',
                         fontSize: '11px',
                         fontWeight: 700,
-                        background: 'rgba(229, 184, 105, 0.12)',
-                        border: '1px solid rgba(229, 184, 105, 0.25)',
-                        color: 'var(--admin-gold-primary, #E5B869)',
+                        background: 'var(--admin-accent-subtle)',
+                        border: '1px solid var(--admin-accent-border)',
+                        color: 'var(--admin-accent)',
                         textDecoration: 'none'
                       }}
                     >

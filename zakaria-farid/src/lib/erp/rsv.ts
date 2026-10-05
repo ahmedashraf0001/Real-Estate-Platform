@@ -3,7 +3,7 @@
  * Enforces Spec §14.C.7 (WIP Cost Relief at Handover) and IFRS 15 Revenue & Cost Recognition.
  */
 
-import { D, Decimal, generateUUID } from './math';
+import { D, Decimal, generateUUID, ratio } from './math';
 import { ERPCostAllocation, ERPContract } from './types';
 import { Property } from '../supabase/types';
 
@@ -57,6 +57,11 @@ export interface PortfolioAllocationKPIs {
   count: number;
 }
 
+/** A factor as plain text so multiplication keeps every digit. */
+function factorText(f: string | Decimal): string {
+  return f instanceof Decimal ? f.toString() : String(f);
+}
+
 export class RSVEngine {
   /**
    * Compute Relative Sales Value (RSV) allocation factor:
@@ -78,15 +83,15 @@ export class RSVEngine {
       throw new Error('ERP RSV Error: Total incurred construction WIP cannot be negative.');
     }
 
-    // Ratio calculated with fixed 4 decimal precision
-    const factorRatio = wip.div(sales);
+    // Factor kept as a 6-decimal string: a Decimal would round it to 2 decimals.
+    const factorRatio = ratio(wip, sales, 6);
 
     return {
       allocation_id: generateUUID(),
       project_name: projectName,
       total_incurred_wip: wip.toFixed(2),
       total_sales_value: sales.toFixed(2),
-      rsv_factor: factorRatio.toFixed(4),
+      rsv_factor: factorRatio,
       calculated_at: new Date().toISOString()
     };
   }
@@ -100,8 +105,8 @@ export class RSVEngine {
     rsvFactor: string | Decimal
   ): Decimal {
     const v = D(unitContractValue);
-    const f = D(rsvFactor);
-    if (v.isNegative() || f.isNegative()) return D(0);
+    const f = factorText(rsvFactor);
+    if (v.isNegative() || Number(f) < 0) return D(0);
     return v.times(f);
   }
 
@@ -127,8 +132,8 @@ export class RSVEngine {
    * Compute Gross Margin Percentage formatted string
    */
   static computeGrossMarginPct(rsvFactor: string | Decimal): string {
-    const margin = this.computeGrossMargin(rsvFactor);
-    return `${margin.times(100).toFixed(2)}%`;
+    // 100 - 100 x factor, exact to 2 decimals (no pre-rounded factor).
+    return `${D(100).minus(D(100).times(factorText(rsvFactor))).toFixed(2)}%`;
   }
 
   /**
@@ -162,8 +167,8 @@ export class RSVEngine {
   }): COGSJournalEntryImpact {
     const rawVal = D(params.unitContractValue);
     const unitVal = rawVal.isNegative() ? D(0) : rawVal;
-    const rawFactor = D(params.rsvFactor);
-    const factor = rawFactor.isNegative() ? D(0) : rawFactor;
+    const rawFactor = factorText(params.rsvFactor);
+    const factor = Number(rawFactor) < 0 ? '0' : rawFactor;
     const unitCogs = this.computeUnitCOGS(unitVal, factor);
     const grossProfit = unitVal.minus(unitCogs);
     const grossMarginPct = this.computeGrossMarginPct(factor);
@@ -180,7 +185,7 @@ export class RSVEngine {
         account_name_en: 'Cost of Sales - Delivered Units',
         debit_amount: unitCogsStr,
         credit_amount: '0.00',
-        memo: `استنزال تكلفة الوحدة (${params.unitIdentifier}) بمشروع ${params.projectName} بمعامل RSV ${factor.toFixed(4)}`
+        memo: `استنزال تكلفة الوحدة (${params.unitIdentifier}) بمشروع ${params.projectName} بمعامل RSV ${factor}`
       },
       {
         account_code: '150000',
@@ -219,7 +224,7 @@ export class RSVEngine {
       entry_date: entryDate,
       unit_contract_value: unitValStr,
       allocated_cogs: unitCogsStr,
-      rsv_factor: factor.toFixed(4),
+      rsv_factor: factor,
       gross_profit: grossProfit.toFixed(2),
       gross_margin_pct: grossMarginPct,
       lines,
@@ -238,8 +243,8 @@ export class RSVEngine {
     contracts: ERPContract[] = [],
     property?: Property
   ): ProjectUnitAllocationItem[] {
-    const factor = D(allocation.rsv_factor || '0');
-    const safeFactor = factor.isNegative() ? D(0) : factor;
+    const factor = factorText(allocation.rsv_factor || '0');
+    const safeFactor = Number(factor) < 0 ? '0' : factor;
     const projName = (allocation.project_name || '').toLowerCase().trim();
 
     // 1. Filter real contracts matching this project
@@ -257,7 +262,7 @@ export class RSVEngine {
         const val = rawVal.isNegative() ? D(0) : rawVal;
         const cogs = this.computeUnitCOGS(val, safeFactor);
         const margin = val.minus(cogs);
-        const marginPct = val.isZero() ? '0.00%' : `${margin.div(val).times(100).toFixed(2)}%`;
+        const marginPct = val.isZero() ? '0.00%' : `${margin.times(100).div(val).toFixed(2)}%`;
         const isHandedOver = c.handover_status === 'Delivered';
 
         return {
@@ -281,7 +286,7 @@ export class RSVEngine {
         const unitVal = rawPrice.isNegative() ? D(0) : rawPrice;
         const cogs = this.computeUnitCOGS(unitVal, safeFactor);
         const margin = unitVal.minus(cogs);
-        const marginPct = unitVal.isZero() ? '0.00%' : `${margin.div(unitVal).times(100).toFixed(2)}%`;
+        const marginPct = unitVal.isZero() ? '0.00%' : `${margin.times(100).div(unitVal).toFixed(2)}%`;
 
         return {
           unit_id: u.unit_id || u.unit_number,
@@ -296,44 +301,8 @@ export class RSVEngine {
       });
     }
 
-    // 3. Fallback: If no contracts and no building_units, return empty if zero sales ceiling, or standard floor plan if sales exist
-    const totalSales = D(allocation.total_sales_value || '0');
-    if (totalSales.lte(0)) {
-      return [];
-    }
-
-    const unitCount = 8;
-    const unitShare = totalSales.div(unitCount);
-
-    const standardTypes = [
-      { code: 'U-101', nameAr: 'شقة أرضي بحديقة (101)', nameEn: 'Ground Unit with Garden (101)' },
-      { code: 'U-102', nameAr: 'شقة أرضي مدخل خاص (102)', nameEn: 'Ground Unit Private Entry (102)' },
-      { code: 'U-201', nameAr: 'شقة دور أول شرقي (201)', nameEn: 'First Floor East (201)' },
-      { code: 'U-202', nameAr: 'شقة دور أول غربي (202)', nameEn: 'First Floor West (202)' },
-      { code: 'U-301', nameAr: 'شقة دور ثان متكرر (301)', nameEn: 'Second Floor Typ (301)' },
-      { code: 'U-302', nameAr: 'شقة دور ثان متكرر (302)', nameEn: 'Second Floor Typ (302)' },
-      { code: 'U-401', nameAr: 'بنتهاوس فاخر بتراس (401)', nameEn: 'Luxury Penthouse Terrace (401)' },
-      { code: 'U-402', nameAr: 'بنتهاوس دوبلكس روف (402)', nameEn: 'Duplex Roof Penthouse (402)' },
-    ];
-
-    return standardTypes.map((t, idx) => {
-      // Apply slight variation to simulate natural unit pricing differences
-      const weightMultiplier = idx >= 6 ? D(1.25) : (idx < 2 ? D(0.9) : D(0.95));
-      const unitVal = unitShare.times(weightMultiplier);
-      const cogs = this.computeUnitCOGS(unitVal, safeFactor);
-      const margin = unitVal.minus(cogs);
-      const marginPct = unitVal.isZero() ? '0.00%' : `${margin.div(unitVal).times(100).toFixed(2)}%`;
-
-      return {
-        unit_id: t.code,
-        unit_title: t.nameAr,
-        unit_sales_value: unitVal.toFixed(2),
-        allocated_cost: cogs.toFixed(2),
-        gross_margin: margin.toFixed(2),
-        gross_margin_pct: marginPct,
-        handover_status: 'Pending'
-      };
-    });
+    // 3. No contracts and no defined units: nothing to break down (never invent units).
+    return [];
   }
 
   /**
@@ -349,10 +318,10 @@ export class RSVEngine {
     }
 
     const avgRsvFactor = totalSales.isZero() ? D(0) : totalWip.div(totalSales);
-    const avgRsvPct = `${avgRsvFactor.times(100).toFixed(2)}%`;
+    const avgRsvPctValue = totalSales.isZero() ? D(0) : totalWip.times(100).div(totalSales);
+    const avgRsvPct = `${avgRsvPctValue.toFixed(2)}%`;
     // Honest zero-state: If portfolio sales are zero, gross margin percentage is 0.00%, never false 100.00%
-    const avgGrossMarginFactor = totalSales.isZero() ? D(0) : D(1).minus(avgRsvFactor);
-    const avgGrossMarginPct = `${avgGrossMarginFactor.times(100).toFixed(2)}%`;
+    const avgGrossMarginPct = `${(totalSales.isZero() ? D(0) : D(100).minus(avgRsvPctValue)).toFixed(2)}%`;
     const totalGrossMarginValue = totalSales.minus(totalWip);
 
     return {

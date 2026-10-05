@@ -1,0 +1,83 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no other redesign.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first; `npx tsc --noEmit` after the TSX edit; gates at the end. Report with the caveman skill.
+- Do NOT git add/commit/stash/checkout/restore. Touch ONLY:
+    src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx
+    src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css
+- Keep all math calls (priceBuiltProperty, pricePerSqmForMarkup, priceUnitsAtRate, priceSliderBounds, estimateFeasibility), state,
+  reset-on-property-change logic, save handler, side widget and the feasibility mode logic. Only the BUILT-mode layout changes,
+  plus the feasibility KPI row in step 6.
+- Read src/components/admin/erp/v2/ZFKpiCard.tsx (ZFKpiGrid, ZFKpiCard props) and a page using it
+  (src/components/admin/erp/v2/views/ConstructionPayablesView.tsx ~line 1010) before editing.
+</execution_rules>
+
+<problem>
+Built mode looks empty and unlike other pages: no KPI row, a thin slider panel and a tall result panel side by side with
+large empty areas, and chips that duplicate the inputs. Every other page = header → 4 KPI cards → panels.
+</problem>
+
+<new_built_layout order="top to bottom">
+1. ZFPageHeader (unchanged), but move the SAVE button into its actions, after the ZFSegmented:
+   only when mode === 'built' && onUpdateSellingPrice && property — the existing save button markup/handler/disabled logic, with
+   className={shellStyles.btnPrimary} (no saveBtn class), label isAr ? 'حفظ السعر' : 'Save price' (saving: 'جارٍ الحفظ…').
+2. Picker bar (unchanged).
+3. <ZFKpiGrid> with 4 <ZFKpiCard>:
+   a. title isAr ? 'سعر البيع المقترح' : 'Proposed price', value fmt(result.totalPrice), currency cur, icon <BadgeDollarSign size={16} />,
+      accentColor "accent", subtitleLabel isAr ? 'سعر المتر' : 'Per m²', subtitleValue `${fmt(chosenPerSqm)} ${perSqm}`
+   b. title isAr ? 'الربح المتوقع' : 'Expected profit', value signed(result.profit), currency cur, icon <TrendingUp size={16} />,
+      accentColor n(result.profit) < 0 ? "rose" : "emerald", subtitleLabel isAr ? 'هامش الربح' : 'Margin', subtitleValue pctPlain(result.marginPct)
+   c. title isAr ? 'التكلفة الفعلية' : 'Actual cost', value fmt(audit.totalLoggedCost), currency cur, icon <Coins size={16} />,
+      accentColor "slate", subtitleLabel isAr ? 'تكلفة المتر' : 'Cost per m²', subtitleValue `${fmt(result.costPerSqm)} ${perSqm}`
+   d. title isAr ? 'الفرق عن السعر الحالي' : 'Change vs current', value signed(result.changeVsList), currency cur, icon <ArrowLeftRight size={16} />,
+      accentColor "blue", subtitleLabel isAr ? 'السعر الحالي' : 'Current price', subtitleValue `${fmt(list)} ${cur}`
+4. ONE full-width ZFPanel icon <SlidersHorizontal size={15} /> title isAr ? 'اختيار سعر المتر' : 'Choose price per m²'
+   hint isAr ? 'حرّك المؤشر، اكتب السعر، أو اختر من الجدول' : 'Drag, type, or pick a row below':
+   - the ladder (unchanged markup)
+   - the two inputs row (chosen per m², market per m² with its hint) — keep markup
+   - REMOVE the quick-picks chips field.
+   - notices (no-cost warn, below-cost danger) move here, under the inputs (same markup).
+5. ONE full-width ZFPanel flush icon <Table2 size={15} /> title isAr ? 'مقارنة الأسعار' : 'Price scenarios'
+   hint isAr ? 'اضغط على صف لاختياره' : 'Click a row to use it':
+   <div className={s.tableScroll}><table className={s.table}> header: 'السيناريو'/'Scenario', 'سعر المتر'/'Per m²' (s.num),
+   'سعر العقار'/'Property price' (s.num), 'الربح'/'Profit' (s.num), 'الهامش'/'Margin' (s.num), 'مقارنة بالسوق'/'Vs market' (s.num).
+   Rows (skip a row whose rate is 0; skip the cost rows when !result.hasCost; skip 'current' when listIsMarket):
+     break-even  'التعادل'/'Break-even'           rate = n(result.costPerSqm)
+     cost+15     'التكلفة +15%'/'Cost +15%'         rate = n(pricePerSqmForMarkup(result.costPerSqm, 15))
+     cost+30     'التكلفة +30%'/'Cost +30%'         rate = n(pricePerSqmForMarkup(result.costPerSqm, 30))
+     current     'السعر الحالي'/'Current price'     rate = listPerSqm
+     market      listIsMarket ? 'السوق = السعر الحالي' : 'سعر السوق' / EN 'Market' rate = n(marketPerSqm)
+   For each row compute r = priceBuiltProperty({ totalCost: audit.totalLoggedCost, areaSqm: area, marketPricePerSqm: marketPerSqm,
+   chosenPricePerSqm: rate, currentListPrice: list }) (in a useMemo over the inputs) and render fmt(rate), fmt(r.totalPrice),
+   signed(r.profit) with s.pos/s.neg, pctPlain(r.marginPct), pctText(r.vsMarketPct).
+   <tr className={`${s.scenarioRow}${Math.round(n(chosenPerSqm)) === Math.round(rate) ? ` ${s.scenarioActive}` : ''}`}
+       onClick={() => setChosenPerSqm(String(Math.round(rate)))} tabIndex={0} onKeyDown={Enter/Space -> same}>.
+6. Units table panel (unchanged, only when units exist).
+7. DELETE the old right-hand 'النتيجة' result panel (hero, rows, save button, hint) and the 2-column `s.grid` wrapper in built mode
+   (feasibility mode keeps its grid). Keep the hint text 'يحدّث سعر العقار في الكتالوج والموقع.' as the `title` attribute of the
+   header save button.
+8. Feasibility mode: insert a <ZFKpiGrid> right after the header with: 'إجمالي التكلفة'/'Total cost' fmt(feas.totalCost) (slate, Coins),
+   'الإيرادات المتوقعة'/'Expected revenue' fmt(feas.revenue) (accent, BadgeDollarSign), 'صافي الربح'/'Net profit' signed(feas.profit)
+   (emerald or rose, TrendingUp) subtitle margin, 'سعر التعادل للمتر'/'Break-even per m²' fmt(feas.breakEvenPricePerSqm) currency perSqm
+   (blue, Target). Then remove the hero block from the feasibility result panel (rows, stack and notices stay).
+</new_built_layout>
+
+<css>
+Append to CostPricingCalculator.module.css:
+.scenarioRow { cursor: pointer; }
+.scenarioRow:hover td { background: var(--erp-border-subtle); }
+.scenarioRow:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }
+.scenarioActive td, .scenarioActive:hover td { background: var(--erp-accent-subtle); }
+.scenarioActive td:first-child { font-weight: 700; color: var(--erp-accent); }
+Delete CSS classes that are no longer used anywhere in the TSX (hero*, saveBtn, chips/chip* if unused, actions) — grep before deleting.
+</css>
+
+<gates>
+npx tsc --noEmit
+npx eslint src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx
+npx tsx --test src/lib/erp/__tests__/pricingCalculator.test.ts
+</gates>
+
+<structured_output_contract>
+STATUS | sections done 1-8 | CSS classes deleted | GATES + first failing line | OPEN. Caveman, <=15 lines.
+</structured_output_contract>

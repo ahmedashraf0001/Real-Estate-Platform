@@ -453,7 +453,7 @@ export interface ERPPayableInstallment {
   status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
   payment_date?: string;
   payment_method?: 'CASH_101000' | 'INSTAPAY_101000' | 'INSTAPAY_102000' | 'BANK_102000';
-  treasury_account_code?: '101000';
+  treasury_account_code?: '101000' | '102000';
   payment_id?: string;
   notes?: string;
 }

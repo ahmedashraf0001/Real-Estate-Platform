@@ -1392,8 +1392,8 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             width: targetRect.width + 12,
             height: targetRect.height + 8,
             borderRadius: '10px',
-            border: '2.5px solid #946F23',
-            boxShadow: '0 0 24px rgba(148, 111, 35, 0.65), inset 0 0 10px rgba(197, 160, 89, 0.35)',
+            border: '2.5px solid var(--erp-accent)',
+            boxShadow: '0 0 24px color-mix(in srgb, var(--erp-accent) 65%, transparent), inset 0 0 10px color-mix(in srgb, var(--erp-accent) 35%, transparent)',
             pointerEvents: 'none',
             transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             zIndex: 1000000
@@ -1429,7 +1429,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #946F23 0%, #C5A059 100%)',
+              background: 'linear-gradient(135deg, var(--erp-accent) 0%, var(--erp-accent) 100%)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
@@ -1456,9 +1456,9 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             type="button"
             onClick={() => setIsAutoPlay(p => !p)}
             style={{
-              background: isAutoPlay ? 'rgba(4, 120, 87, 0.12)' : 'rgba(148, 111, 35, 0.1)',
-              border: `1px solid ${isAutoPlay ? 'rgba(4, 120, 87, 0.3)' : 'rgba(148, 111, 35, 0.3)'}`,
-              color: isAutoPlay ? '#047857' : '#946F23',
+              background: isAutoPlay ? 'rgba(4, 120, 87, 0.12)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
+              border: `1px solid ${isAutoPlay ? 'rgba(4, 120, 87, 0.3)' : 'color-mix(in srgb, var(--erp-accent) 30%, transparent)'}`,
+              color: isAutoPlay ? '#047857' : 'var(--erp-accent)',
               borderRadius: '8px',
               padding: '0.35rem 0.65rem',
               fontSize: '0.72rem',
@@ -1498,7 +1498,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
               type="button"
               onClick={handleNext}
               style={{
-                background: 'linear-gradient(135deg, #946F23 0%, #78581C 100%)',
+                background: 'linear-gradient(135deg, var(--erp-accent) 0%, #78581C 100%)',
                 border: 'none',
                 color: '#FFFFFF',
                 borderRadius: '8px',
@@ -1570,7 +1570,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             backdropFilter: 'blur(24px) saturate(180%)',
             border: '1.5px solid #D8D2C4',
             borderRadius: '20px',
-            boxShadow: '0 24px 64px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(216, 210, 196, 0.8), 0 12px 32px -4px rgba(148, 111, 35, 0.12)',
+            boxShadow: '0 24px 64px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(216, 210, 196, 0.8), 0 12px 32px -4px color-mix(in srgb, var(--erp-accent) 12%, transparent)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -1584,7 +1584,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
           <div style={{
             height: '4px',
             width: '100%',
-            background: 'linear-gradient(90deg, #946F23 0%, #C5A059 50%, #946F23 100%)',
+            background: 'linear-gradient(90deg, var(--erp-accent) 0%, var(--erp-accent) 50%, var(--erp-accent) 100%)',
             flexShrink: 0
           }} />
 
@@ -1604,12 +1604,12 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                   width: '34px',
                   height: '34px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #946F23 0%, #C5A059 100%)',
+                  background: 'linear-gradient(135deg, var(--erp-accent) 0%, var(--erp-accent) 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#FFFFFF',
-                  boxShadow: '0 4px 12px rgba(148, 111, 35, 0.28)',
+                  boxShadow: '0 4px 12px color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                   flexShrink: 0
                 }}>
                   <Compass size={18} />
@@ -1624,9 +1624,9 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                       fontWeight: 800,
                       padding: '0.12rem 0.5rem',
                       borderRadius: '999px',
-                      background: 'rgba(148, 111, 35, 0.12)',
-                      border: '1px solid rgba(148, 111, 35, 0.3)',
-                      color: '#946F23'
+                      background: 'color-mix(in srgb, var(--erp-accent) 12%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--erp-accent) 30%, transparent)',
+                      color: 'var(--erp-accent)'
                     }}>
                       {isAr ? '9 شاشات أساسية + ملحق الإقالات' : '9 Core Modules + Rescissions'}
                     </span>
@@ -1645,9 +1645,9 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                   onClick={() => setIsAutoPlay(p => !p)}
                   title={isAr ? 'تشغيل الانتقال التلقائي بين الشاشات' : 'Toggle auto-transition between pages'}
                   style={{
-                    background: isAutoPlay ? 'rgba(4, 120, 87, 0.12)' : 'rgba(148, 111, 35, 0.08)',
-                    border: `1px solid ${isAutoPlay ? 'rgba(4, 120, 87, 0.3)' : 'rgba(148, 111, 35, 0.25)'}`,
-                    color: isAutoPlay ? '#047857' : '#946F23',
+                    background: isAutoPlay ? 'rgba(4, 120, 87, 0.12)' : 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+                    border: `1px solid ${isAutoPlay ? 'rgba(4, 120, 87, 0.3)' : 'color-mix(in srgb, var(--erp-accent) 25%, transparent)'}`,
+                    color: isAutoPlay ? '#047857' : 'var(--erp-accent)',
                     borderRadius: '8px',
                     padding: '0.35rem 0.65rem',
                     fontSize: '0.72rem',
@@ -1797,9 +1797,9 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
                 <span style={{
-                  background: 'rgba(148, 111, 35, 0.1)',
-                  border: '1px solid rgba(148, 111, 35, 0.28)',
-                  color: '#946F23',
+                  background: 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
+                  color: 'var(--erp-accent)',
                   fontSize: '0.68rem',
                   fontWeight: 800,
                   padding: '0.15rem 0.55rem',
@@ -1817,12 +1817,12 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                   width: '36px',
                   height: '36px',
                   borderRadius: '10px',
-                  background: 'rgba(148, 111, 35, 0.12)',
-                  border: '1px solid rgba(148, 111, 35, 0.3)',
+                  background: 'color-mix(in srgb, var(--erp-accent) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--erp-accent) 30%, transparent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#946F23',
+                  color: 'var(--erp-accent)',
                   flexShrink: 0
                 }}>
                   <Icon size={18} />
@@ -1847,7 +1847,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                 marginBottom: '0.35rem',
                 fontSize: '0.76rem',
                 fontWeight: 800,
-                color: '#946F23'
+                color: 'var(--erp-accent)'
               }}>
                 <Info size={14} />
                 <span>{isAr ? 'وظيفة هذه الشاشة وما تقدمه لك:' : 'What this page shows & does:'}</span>
@@ -1976,7 +1976,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    background: '#946F23',
+                    background: 'var(--erp-accent)',
                     display: 'inline-block'
                   }} />
                   <span>{isAr ? 'أهم الأزرار والإجراءات وماذا تتيح لك:' : 'Key Buttons & What They Allow You To Do:'}</span>
@@ -2001,9 +2001,9 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                     }}
                   >
                     <span style={{
-                      background: 'linear-gradient(135deg, rgba(148, 111, 35, 0.15) 0%, rgba(197, 160, 89, 0.08) 100%)',
-                      border: '1px solid rgba(148, 111, 35, 0.3)',
-                      color: '#946F23',
+                      background: 'linear-gradient(135deg, color-mix(in srgb, var(--erp-accent) 15%, transparent) 0%, color-mix(in srgb, var(--erp-accent) 8%, transparent) 100%)',
+                      border: '1px solid color-mix(in srgb, var(--erp-accent) 30%, transparent)',
+                      color: 'var(--erp-accent)',
                       fontSize: '0.72rem',
                       fontWeight: 800,
                       padding: '0.2rem 0.55rem',
@@ -2028,17 +2028,17 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
 
             {/* SECTION 3: STATUTORY & ACCOUNTING IMPACT (الأثر المحاسبي والرقابي) */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(148, 111, 35, 0.08) 0%, rgba(197, 160, 89, 0.03) 100%)',
-              border: '1px solid rgba(148, 111, 35, 0.25)',
+              background: 'linear-gradient(135deg, color-mix(in srgb, var(--erp-accent) 8%, transparent) 0%, color-mix(in srgb, var(--erp-accent) 3%, transparent) 100%)',
+              border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
               borderRadius: '12px',
               padding: '0.85rem 1.1rem',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.7rem'
             }}>
-              <ShieldCheck size={18} color="#946F23" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <ShieldCheck size={18} color="var(--erp-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#946F23', marginBottom: '0.2rem' }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--erp-accent)', marginBottom: '0.2rem' }}>
                   {isAr ? 'الأثر المحاسبي وقواعد الرقابة المالية:' : 'Statutory & Accounting Impact:'}
                 </div>
                 <div style={{ fontSize: '0.75rem', lineHeight: 1.55, color: '#1E293B' }}>
@@ -2100,7 +2100,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = '#F8F7F4';
-                    e.currentTarget.style.borderColor = '#946F23';
+                    e.currentTarget.style.borderColor = 'var(--erp-accent)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = '#FFFFFF';
@@ -2117,7 +2117,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                 type="button"
                 onClick={handleNext}
                 style={{
-                  background: 'linear-gradient(135deg, #946F23 0%, #78581C 100%)',
+                  background: 'linear-gradient(135deg, var(--erp-accent) 0%, #78581C 100%)',
                   border: 'none',
                   color: '#FFFFFF',
                   borderRadius: '10px',
@@ -2128,7 +2128,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  boxShadow: '0 4px 14px rgba(148, 111, 35, 0.35)',
+                  boxShadow: '0 4px 14px color-mix(in srgb, var(--erp-accent) 35%, transparent)',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}

@@ -147,7 +147,7 @@ export const HIERARCHY_STRUCTURE: TreeNodeCategory[] = [
         code: '55',
         titleAr: 'مصروفات المشروعات وموقع العمل',
         titleEn: 'Site & Project Expenses',
-        accountCodes: ['603000']
+        accountCodes: ['603000', '604000']
       }
     ]
   }

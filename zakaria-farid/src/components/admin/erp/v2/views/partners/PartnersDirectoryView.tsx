@@ -128,8 +128,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
-        padding: '0.75rem 1rem',
-        boxShadow: 'none'
+        padding: '0.75rem 1rem'
       }}>
         {/* Role Tabs */}
         <div style={{
@@ -168,7 +167,6 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                   fontWeight: isActive ? 800 : 600,
                   fontSize: '0.76rem',
                   cursor: 'pointer',
-                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.15s ease'
                 }}
@@ -179,8 +177,8 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                   borderRadius: '12px',
                   fontSize: '0.68rem',
                   fontWeight: 700,
-                  background: isActive ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.12))' : '#e2e8f0',
-                  color: isActive ? 'var(--erp-accent, #2563eb)' : '#64748b'
+                  background: isActive ? 'var(--erp-accent-tint, color-mix(in srgb, var(--erp-accent) 12%, transparent))' : '#e2e8f0',
+                  color: isActive ? 'var(--erp-accent)' : '#64748b'
                 }}>
                   {tab.count}
                 </span>
@@ -253,8 +251,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                 color: viewMode === 'table' ? '#0f172a' : '#64748b',
                 padding: '0.35rem 0.5rem',
                 borderRadius: '6px',
-                cursor: 'pointer',
-                boxShadow: viewMode === 'table' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                cursor: 'pointer'
               }}
               title={isAr ? 'عرض جدول' : 'Table View'}
             >
@@ -269,8 +266,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                 color: viewMode === 'cards' ? '#0f172a' : '#64748b',
                 padding: '0.35rem 0.5rem',
                 borderRadius: '6px',
-                cursor: 'pointer',
-                boxShadow: viewMode === 'cards' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                cursor: 'pointer'
               }}
               title={isAr ? 'عرض بطاقات' : 'Cards View'}
             >
@@ -286,8 +282,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
           background: '#ffffff',
           border: '1px solid #cbd5e1',
           borderRadius: '12px',
-          overflowX: 'auto',
-          boxShadow: 'none'
+          overflowX: 'auto'
         }}>
           <table style={{
             width: '100%',
@@ -345,7 +340,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                             width: '32px',
                             height: '32px',
                             borderRadius: '8px',
-                            background: isFounder ? 'rgba(217, 119, 6, 0.12)' : 'rgba(37, 99, 235, 0.1)',
+                            background: isFounder ? 'rgba(217, 119, 6, 0.12)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
                             color: isFounder ? '#d97706' : 'var(--erp-accent, #2563eb)',
                             display: 'flex',
                             alignItems: 'center',
@@ -452,7 +447,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                         <span style={{
                           padding: '0.2rem 0.5rem',
                           borderRadius: '6px',
-                          background: partner.preferred_payout_method === 'INSTAPAY' ? 'rgba(37, 99, 235, 0.1)' : '#f1f5f9',
+                          background: partner.preferred_payout_method === 'INSTAPAY' ? 'color-mix(in srgb, var(--erp-accent) 10%, transparent)' : '#f1f5f9',
                           color: partner.preferred_payout_method === 'INSTAPAY' ? 'var(--erp-accent, #2563eb)' : '#475569',
                           fontSize: '0.72rem',
                           fontWeight: 700,
@@ -472,25 +467,13 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
                         <button
                           type="button"
+                          className={styles.btnSecondary}
                           onClick={(e) => {
                             e.stopPropagation();
                             onOpenDossier(partner);
                           }}
-                          style={{
-                            padding: '0.3rem 0.65rem',
-                            borderRadius: '6px',
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            color: '#0f172a',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem'
-                          }}
                         >
-                          <Eye size={12} color="var(--erp-accent, #2563eb)" />
+                          <Eye size={12} />
                           <span>{isAr ? 'عرض الملف' : 'View'}</span>
                         </button>
                       </td>
@@ -522,7 +505,6 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                   border: '1px solid #cbd5e1',
                   borderRadius: '12px',
                   padding: '1.15rem',
-                  boxShadow: 'none',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.85rem'
@@ -535,7 +517,7 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                       width: '36px',
                       height: '36px',
                       borderRadius: '9px',
-                      background: isFounder ? 'rgba(217, 119, 6, 0.12)' : 'rgba(37, 99, 235, 0.1)',
+                      background: isFounder ? 'rgba(217, 119, 6, 0.12)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
                       color: isFounder ? '#d97706' : 'var(--erp-accent, #2563eb)',
                       display: 'flex',
                       alignItems: 'center',
@@ -654,24 +636,11 @@ export const PartnersDirectoryView: React.FC<PartnersDirectoryViewProps> = ({
                 <div style={{ marginTop: 'auto' }}>
                   <button
                     type="button"
+                    className={styles.btnSecondary}
                     onClick={() => onOpenDossier(partner)}
-                    style={{
-                      width: '100%',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      padding: '0.45rem',
-                      borderRadius: '6px',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
-                      color: '#0f172a',
-                      cursor: 'pointer'
-                    }}
+                    style={{ width: '100%' }}
                   >
-                    <Eye size={13} color="var(--erp-accent, #2563eb)" />
+                    <Eye size={13} />
                     <span>{isAr ? 'عرض الملف' : 'View Dossier'}</span>
                   </button>
                 </div>

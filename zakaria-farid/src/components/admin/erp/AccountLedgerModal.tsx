@@ -2,13 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  X, 
   BookOpen, 
-  TrendingUp, 
-  TrendingDown, 
-  CheckCircle2, 
-  AlertCircle, 
-  Landmark, 
   FileText, 
   Search, 
   ArrowUpDown, 
@@ -19,19 +13,20 @@ import {
   Coins,
   Key,
   Hammer,
-  FileSpreadsheet,
-  Printer
+  FileSpreadsheet
 } from 'lucide-react';
 import { ERPAccount, ERPJournalEntry, ERPContract } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
-import { D } from '@/lib/erp/math';
+import { D, Decimal } from '@/lib/erp/math';
 import { toast } from 'sonner';
 import { localizeJournalDescription, localizeJournalMemo, localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { exportAccountLedgerExcel } from '@/lib/erp/excelExporter';
 import { ZFPrintDocumentLayout } from './v2/common/ZFPrintDocumentLayout';
 import { ZFPagination } from './v2/ZFPagination';
-import { ZFKpiCard } from './v2/ZFKpiCard';
-import styles from './v2/ZFWorkstationShell.module.css';
+import { ZFModalShell } from './v2/common/ZFModalShell';
+import { ZFFacts, ZFEffect, ZFFormFooter, zfForm } from './v2/common/ZFForm';
+import shellStyles from './v2/ZFWorkstationShell.module.css';
+import styles from './AccountLedgerModal.module.css';
 
 interface AccountLedgerModalProps {
   account: ERPAccount;
@@ -42,11 +37,10 @@ interface AccountLedgerModalProps {
   isAr: boolean;
 }
 
-// Business Purpose & Educational Real Estate Guide for Egyptian Merchant Operations
 const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whenDebitedAr: string; whenCreditedAr: string }> = {
   '101000': {
     roleAr: 'الخزينة النقدية الرئيسية: الكاش الحاضر باليد في خزنة مقر الشركة بمنيا القمح لحركات القبض والصرف الفوري ونثريات الموقع.',
-    roleEn: 'Physical cash safe in the corporate headquarters for immediate receipts and petty operations.',
+    roleEn: 'Physical cash safe in corporate headquarters for immediate receipts and petty operations.',
     whenDebitedAr: 'بيزيد ويدخل فيه كاش لما بنحصل دفعة مقدم أو قسط من مشتري نقداً باليد، أو بنسحب كاش من البنك للخزنة.',
     whenCreditedAr: 'بينقص ويخرج منه كاش لما بنسدد مصاريف ونثريات، أو بنورد الكاش لحساب الشركة في البنك.'
   },
@@ -205,9 +199,6 @@ const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whe
 export interface ParsedTransaction {
   actionBadge: {
     label: string;
-    bg: string;
-    text: string;
-    border: string;
     icon: string;
   };
   headline: string;
@@ -221,15 +212,14 @@ export interface ParsedTransaction {
 
 const renderBadgeIcon = (icon: string) => {
   switch (icon) {
-    case 'instapay': return <Zap size={11} />;
-    case 'down_payment': return <CheckCircle2 size={11} />;
-    case 'installment': return <Coins size={11} />;
-    case 'handover': return <Key size={11} />;
-    case 'rescission': return <AlertCircle size={11} />;
-    case 'supplement': return <FileText size={11} />;
-    case 'expense': return <Hammer size={11} />;
-    case 'transfer': return <RotateCcw size={11} />;
-    default: return <BookOpen size={11} />;
+    case 'instapay': return <Zap size={11} aria-hidden="true" />;
+    case 'down_payment': return <Coins size={11} aria-hidden="true" />;
+    case 'installment': return <Coins size={11} aria-hidden="true" />;
+    case 'handover': return <Key size={11} aria-hidden="true" />;
+    case 'supplement': return <FileText size={11} aria-hidden="true" />;
+    case 'expense': return <Hammer size={11} aria-hidden="true" />;
+    case 'transfer': return <RotateCcw size={11} aria-hidden="true" />;
+    default: return <BookOpen size={11} aria-hidden="true" />;
   }
 };
 
@@ -241,8 +231,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   onClose,
   isAr
 }) => {
-
-  // 1. Fast Lookup Indexes for Contracts and Properties
   const contractLookup = useMemo(() => {
     const byId = new Map<string, ERPContract>();
     const byNumber = new Map<string, ERPContract>();
@@ -279,7 +267,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     return { byId, byUnitId };
   }, [properties]);
 
-  // Match contract by ID or by scanning string text (e.g. ZF-2026-XXXX)
   const resolveContract = useCallback((
     contractId?: string,
     description?: string,
@@ -318,35 +305,29 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     return undefined;
   }, [contractLookup, contracts]);
 
-  // Resolve property title and building unit label
   const resolvePropertyAndUnit = useCallback((ct: ERPContract): { propTitle: string; unitInfo: string } => {
     let prop: Property | undefined;
     let unitInfo = ct.building_unit_number || '';
 
-    // A. Direct property_id
     if (ct.property_id && propertyLookup.byId.has(ct.property_id)) {
       prop = propertyLookup.byId.get(ct.property_id);
     }
 
-    // B. Unit ID in propertyLookup
     if (ct.unit_id && propertyLookup.byUnitId.has(ct.unit_id)) {
       const match = propertyLookup.byUnitId.get(ct.unit_id)!;
       if (!prop) prop = match.prop;
       if (!unitInfo && match.unitNumber) unitInfo = match.unitNumber;
     }
 
-    // C. Unit ID is property ID
     if (!prop && ct.unit_id && propertyLookup.byId.has(ct.unit_id)) {
       prop = propertyLookup.byId.get(ct.unit_id);
     }
 
-    // D. In prop.building_units
     if (prop && !unitInfo && prop.building_units && ct.unit_id) {
       const matchedUnit = prop.building_units.find(u => u.unit_id === ct.unit_id);
       if (matchedUnit) unitInfo = matchedUnit.unit_number;
     }
 
-    // E. Fallback unit_id
     if (!unitInfo && ct.unit_id) {
       unitInfo = ct.unit_id;
     }
@@ -367,7 +348,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     return { propTitle, unitInfo };
   }, [propertyLookup, isAr]);
 
-  // Enrich description for crystal-clear merchant legibility matching Row 1 standard
   const enrichDescription = useCallback((line: {
     description: string;
     entry_number: string;
@@ -377,12 +357,10 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     const origDesc = line.description || '';
     if (!isAr) return origDesc;
 
-    // Row 1 pattern: If already contains rich buyer & transaction references (e.g. InstaPay row), keep intact
     if (origDesc.includes('من العميل:') && (origDesc.includes('مرجع') || origDesc.includes('إنستاباي') || origDesc.includes('تحويل'))) {
       return origDesc;
     }
 
-    // Try finding linked contract
     const ct = resolveContract(line.contract_id, origDesc, line.entry_number, line.memo);
 
     if (ct) {
@@ -396,7 +374,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
       const text = `${origDesc} ${line.memo || ''} ${line.entry_number || ''}`;
 
-      // 1. Tranche check (Down payment is tranche 0)
       const trancheMatch = text.match(/(?:Installment\s*#|القسط\s*رقم\s*|قسط\s*رقم\s*)(\d+)/i);
       if (trancheMatch) {
         const trancheNum = parseInt(trancheMatch[1], 10);
@@ -406,28 +383,23 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         return `تحصيل القسط رقم ${trancheNum} بموجب عقد رقم ${ct.contract_number} من العميل: ${buyerName}${detailsBadge}`;
       }
 
-      // 2. Down payment / Advance collection
       const isDownPayment = /(?:Advance Collection|الدفعة المقدمة|دفعة مقدم|مقدم الحجز|Customer advance|JE-PAY)/i.test(text);
       if (isDownPayment) {
         return `تحصيل دفعة مقدم التعاقد بموجب عقد رقم ${ct.contract_number} من العميل: ${buyerName}${detailsBadge}`;
       }
 
-      // 3. Physical Handover
-      if (/(?:Handover|تسليم|استلام)/i.test(text)) {
+      if (/(?:Handover|محضر تسليم|تسليم الوحدة|تسليم الشقة)/i.test(text)) {
         return `محضر تسليم الشقة النهائي واعتراف بإيراد المبيعات للعقد رقم ${ct.contract_number} من العميل: ${buyerName}${detailsBadge}`;
       }
 
-      // 4. Contract Rescission
       if (/(?:Rescission|فسخ)/i.test(text)) {
         const hasForfeiture = /(?:Forfeiture|استقطاع)/i.test(text);
         return `فسخ وإلغاء التعاقد ${hasForfeiture ? '(مع استقطاع نسبة الفسخ) ' : ''}للعقد رقم ${ct.contract_number} من العميل: ${buyerName}${detailsBadge}`;
       }
 
-      // 5. Default contract movement
       return `تحصيل دفعة تعاقدية بموجب عقد رقم ${ct.contract_number} من العميل: ${buyerName}${detailsBadge}`;
     }
 
-    // Fallback: If contract not found in array, but description has contract number & buyer
     const advMatch = origDesc.match(/(?:Advance Collection for Contract|تحصيل الدفعة المقدمة لعقد البيع رقم)\s*([A-Za-z0-9_-]+)(?:\s*\((.*?)\))?/i);
     if (advMatch) {
       const contractNum = advMatch[1];
@@ -438,11 +410,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       }
     }
 
-    // Fallback: Use standard journal description localizer
     return localizeJournalDescription(origDesc, isAr);
   }, [isAr, resolveContract, resolvePropertyAndUnit]);
 
-  // Enrich memo / subtext
   const enrichMemo = useCallback((line: {
     memo?: string;
     description: string;
@@ -453,7 +423,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
     const rawMemo = (line.memo || '').trim();
 
-    // 1. If memo is already InstaPay or specific voucher reference:
     if (rawMemo.includes('إنستاباي') || rawMemo.includes('مرجع') || rawMemo.includes('IP-')) {
       return localizeJournalMemo(rawMemo, isAr);
     }
@@ -461,21 +430,18 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     const textToScan = `${rawMemo} ${line.description || ''} ${line.entry_number || ''}`;
     const isDownPayment = /(?:Advance Collection|الدفعة المقدمة|دفعة مقدم|مقدم الحجز|قسط رقم 0|Installment\s*#0|Customer advance|JE-PAY)/i.test(textToScan);
 
-    // Account 102000 (Corporate Operating Bank & InstaPay)
     if (account.account_code === '102000') {
       if (isDownPayment || rawMemo.includes('Operating Bank') || rawMemo.includes('Customer advance') || rawMemo.includes('إيداع')) {
         return 'إيداع بنكي مباشر بحساب الشركة التشغيلي (102000) • إثبات دفعة التعاقد';
       }
     }
 
-    // Account 101000 (Treasury Cash Safe)
     if (account.account_code === '101000') {
       if (isDownPayment || rawMemo.includes('Treasury Safe') || rawMemo.includes('Safe') || rawMemo.includes('خزينة')) {
         return 'توريد كاش باليد لخزينة الشركة الرئيسية (101000) • إثبات دفعة التعاقد';
       }
     }
 
-    // Account 203000 (Deferred Contract Revenue)
     if (account.account_code === '203000') {
       if (isDownPayment || rawMemo.includes('Deferred Contract Revenue') || rawMemo.includes('إثبات دفعة الحجز')) {
         return 'قيد التزام تعاقدي مؤجل حتى الاستلام (203000) • إثبات دفعة التعاقد';
@@ -493,37 +459,33 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     return undefined;
   }, [isAr, account.account_code]);
 
-  // 2. Structured transaction parser for clear, highlighted metadata separation
   const parseTransaction = useCallback((line: {
     description: string;
     entry_number: string;
     memo?: string;
     contract_id?: string;
+    counter_codes?: string[];
   }): ParsedTransaction => {
     const rawDesc = line.description || '';
     const rawMemo = (line.memo || '').trim();
     const entryNum = line.entry_number || '';
     const combinedText = `${rawDesc} ${rawMemo} ${entryNum}`;
 
-    // 1. Check if linked to a contract
     const ct = resolveContract(line.contract_id, rawDesc, entryNum, rawMemo);
     const resolvedBuyer = ct ? localizeBuyerName(ct.buyer_name || '') : '';
     const { propTitle: resolvedProp, unitInfo: resolvedUnit } = ct 
       ? resolvePropertyAndUnit(ct) 
       : { propTitle: '', unitInfo: '' };
 
-    // 2. Extract references (e.g. IP-2026-6001 or SUP-...)
     const refMatch = combinedText.match(/(?:مرجع\s*رقم|مرجع\s*#|مرجع|Ref\s*#?)\s*[:#]?\s*([A-Za-z0-9_-]+)/i) ||
                      combinedText.match(/\b(IP-\d{4}-\d+)\b/i) ||
                      combinedText.match(/\b(SUP-[A-Za-z0-9_-]+)\b/i);
     const referenceNumber = refMatch ? (refMatch[1] || refMatch[0]).trim() : undefined;
 
-    // 3. Extract contract number (from ct or from text)
     const ctMatch = combinedText.match(/\b((?:ZF|CONT|CT)-\d{4}-\d+)\b/i) ||
                     combinedText.match(/(?:عقد\s*رقم|عقد|Contract\s*#?)\s*[:#]?\s*([A-Za-z0-9_-]+)/i);
     const contractNumber = ct?.contract_number || (ctMatch ? (ctMatch[1] || ctMatch[0]).trim() : undefined);
 
-    // 4. Extract client name (from ct or from text)
     let clientName = resolvedBuyer;
     if (!clientName) {
       const clientMatch = combinedText.match(/(?:من العميل|العميل|المشتري|Client)\s*[:#]?\s*([^-\[\(,\n\r]+)/i);
@@ -532,7 +494,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       }
     }
 
-    // 5. Extract unit / property (from ct or from brackets `[...]`)
     let unitInfo = resolvedUnit;
     let propertyTitle = resolvedProp;
     if (!unitInfo && !propertyTitle) {
@@ -552,18 +513,45 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       }
     }
 
-    // 6. Format memo / subtext
     const localizedMemo = enrichMemo(line);
 
-    // 7. Determine Action Type, Badge & Headline
-    // A. InstaPay / Quick Bank Transfer
+    // Label from the accounts on the entry first; memo-text guessing below is only a fallback
+    // (it labelled a cash down payment as a handover because the memo said "استلام").
+    const counters = line.counter_codes || [];
+    const isTreasury = (code: string) => code === '101000' || code === '102000';
+    const own = account.account_code;
+    const base = { contractNumber, referenceNumber, clientName, unitInfo, propertyTitle, memo: localizedMemo };
+    if (isTreasury(own) && counters.some(isTreasury)) {
+      return { ...base, actionBadge: { label: isAr ? 'تحويل' : 'Transfer', icon: 'transfer' },
+        headline: isAr ? 'تحويل بين الخزينة وإنستاباي' : 'Transfer between Safe and InstaPay' };
+    }
+    if (isTreasury(own) && counters.some(c => c.startsWith('203'))) {
+      const tranche = combinedText.match(/(?:Installment\s*#|القسط\s*رقم\s*|قسط\s*رقم\s*)(\d+)/i);
+      const n = tranche ? parseInt(tranche[1], 10) : null;
+      const isDown = n === 0 || /(?:الدفعة المقدمة|دفعة مقدم|مقدم|Advance|Down payment)/i.test(combinedText);
+      return { ...base,
+        actionBadge: { label: own === '102000' ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'نقدي' : 'Cash'), icon: own === '102000' ? 'instapay' : 'down_payment' },
+        headline: isDown ? (isAr ? 'تحصيل دفعة المقدم من العميل' : 'Down payment collected')
+          : n ? (isAr ? `تحصيل القسط رقم ${n}` : `Installment #${n} collected`)
+          : (isAr ? 'تحصيل من عميل' : 'Client collection') };
+    }
+    if (isTreasury(own) && counters.some(c => c.startsWith('2062'))) {
+      return { ...base, actionBadge: { label: isAr ? 'فسخ' : 'Refund', icon: 'expense' },
+        headline: isAr ? 'رد مبلغ لعميل بعد فسخ العقد' : 'Refund to client after rescission' };
+    }
+    if (isTreasury(own) && counters.some(c => c.startsWith('303'))) {
+      return { ...base, actionBadge: { label: isAr ? 'صرف للشريك' : 'Payout', icon: 'expense' },
+        headline: isAr ? 'صرف أرباح لشريك' : 'Partner payout' };
+    }
+    if (isTreasury(own) && counters.some(c => c.startsWith('301') || c.startsWith('302'))) {
+      return { ...base, actionBadge: { label: isAr ? 'تمويل شريك' : 'Funding', icon: 'transfer' },
+        headline: isAr ? 'تمويل من شريك' : 'Partner funding' };
+    }
+
     if (combinedText.includes('إنستاباي') || combinedText.includes('IP-') || combinedText.includes('InstaPay')) {
       return {
         actionBadge: {
-          label: isAr ? 'إنستاباي فوري' : 'InstaPay',
-          bg: 'rgba(37, 99, 235, 0.08)',
-          text: '#1d4ed8',
-          border: 'rgba(37, 99, 235, 0.25)',
+          label: isAr ? 'إنستاباي' : 'InstaPay',
           icon: 'instapay'
         },
         headline: isAr ? 'تحصيل قسط بنكي فوري عبر إنستاباي' : 'Instant InstaPay Tranche Collection',
@@ -576,7 +564,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // B. Tranche Check (Down payment is tranche 0)
     const trancheMatch = combinedText.match(/(?:Installment\s*#|القسط\s*رقم\s*|قسط\s*رقم\s*)(\d+)/i);
     if (trancheMatch) {
       const trancheNum = parseInt(trancheMatch[1], 10);
@@ -584,9 +571,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         return {
           actionBadge: {
             label: isAr ? 'مقدم تعاقد' : 'Advance',
-            bg: 'rgba(21, 128, 61, 0.08)',
-            text: '#15803d',
-            border: 'rgba(21, 128, 61, 0.25)',
             icon: 'down_payment'
           },
           headline: isAr ? 'تحصيل دفعة مقدم التعاقد وحجز الوحدة' : 'Contract Booking Advance Collection',
@@ -600,10 +584,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       }
       return {
         actionBadge: {
-          label: isAr ? `قسط دوري #${trancheNum}` : `Tranche #${trancheNum}`,
-          bg: '#fffbeb',
-          text: '#92400e',
-          border: 'rgba(217, 119, 6, 0.2)',
+          label: isAr ? `قسط #${trancheNum}` : `Tranche #${trancheNum}`,
           icon: 'installment'
         },
         headline: isAr ? `تحصيل القسط رقم ${trancheNum} من جدول السداد` : `Collection of Scheduled Tranche #${trancheNum}`,
@@ -616,14 +597,10 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // C. Down payment without explicit tranche number
     if (/(?:Advance Collection|الدفعة المقدمة|دفعة مقدم|مقدم الحجز|Customer advance|JE-PAY)/i.test(combinedText)) {
       return {
         actionBadge: {
           label: isAr ? 'مقدم تعاقد' : 'Advance',
-          bg: 'rgba(21, 128, 61, 0.08)',
-          text: '#15803d',
-          border: 'rgba(21, 128, 61, 0.25)',
           icon: 'down_payment'
         },
         headline: isAr ? 'تحصيل دفعة مقدم التعاقد وحجز الوحدة' : 'Contract Booking Advance Collection',
@@ -636,14 +613,10 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // D. Handover
-    if (/(?:Handover|تسليم|استلام)/i.test(combinedText)) {
+    if (/(?:Handover|محضر تسليم|تسليم الوحدة|تسليم الشقة)/i.test(combinedText)) {
       return {
         actionBadge: {
-          label: isAr ? 'تسليم ومحضر' : 'Handover',
-          bg: 'rgba(67, 56, 202, 0.08)',
-          text: '#4338ca',
-          border: 'rgba(67, 56, 202, 0.25)',
+          label: isAr ? 'تسليم' : 'Handover',
           icon: 'handover'
         },
         headline: isAr ? 'محضر تسليم الشقة النهائي واعتراف بإيراد المبيعات' : 'Final Handover Protocol & Revenue Recognition',
@@ -656,37 +629,10 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // E. Rescission
-    if (/(?:Rescission|فسخ)/i.test(combinedText)) {
-      const hasForfeiture = /(?:Forfeiture|استقطاع)/i.test(combinedText);
-      return {
-        actionBadge: {
-          label: isAr ? 'فسخ تعاقد' : 'Rescission',
-          bg: 'rgba(190, 18, 60, 0.08)',
-          text: '#be123c',
-          border: 'rgba(190, 18, 60, 0.25)',
-          icon: 'rescission'
-        },
-        headline: isAr 
-          ? `فسخ وإلغاء التعاقد ${hasForfeiture ? '(مع استقطاع نسبة الفسخ القانونية)' : ''}` 
-          : 'Contract Rescission & Settlement',
-        contractNumber,
-        referenceNumber,
-        clientName,
-        unitInfo,
-        propertyTitle,
-        memo: localizedMemo
-      };
-    }
-
-    // F. Contract Supplement / Addendum
     if (/(?:SUP-|ملحق|تشطيبات|تعديلات|Supplement)/i.test(combinedText)) {
       return {
         actionBadge: {
           label: isAr ? 'ملحق تعاقدي' : 'Supplement',
-          bg: 'rgba(133, 77, 14, 0.08)',
-          text: '#854d0e',
-          border: 'rgba(133, 77, 14, 0.25)',
           icon: 'supplement'
         },
         headline: isAr ? 'إثبات ملحق أو دفعة أعمال إضافية للعقد' : 'Contract Addendum & Supplement Tranche',
@@ -699,14 +645,10 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // G. WIP Construction / Materials Expense
     if (account.account_code === '105000' || /(?:خرسانات|حديد|أسمنت|تشطيبات|مقاول|موقع|WIP|construction|materials)/i.test(combinedText)) {
       return {
         actionBadge: {
           label: isAr ? 'خامات ومباني' : 'WIP Costs',
-          bg: 'rgba(194, 65, 12, 0.08)',
-          text: '#c2410c',
-          border: 'rgba(194, 65, 12, 0.25)',
           icon: 'expense'
         },
         headline: localizeJournalDescription(rawDesc, isAr),
@@ -719,14 +661,10 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // H. Internal Transfer between Safe & Bank
     if (/(?:تحويل|نقل نقدية|Internal Transfer|Transfer)/i.test(combinedText)) {
       return {
         actionBadge: {
           label: isAr ? 'تحويل داخلي' : 'Transfer',
-          bg: 'rgba(2, 132, 199, 0.08)',
-          text: '#0284c7',
-          border: 'rgba(2, 132, 199, 0.25)',
           icon: 'transfer'
         },
         headline: isAr ? 'تحويل نقدي داخلي بين الخزينة والبنك' : 'Internal Treasury Cash Transfer',
@@ -739,13 +677,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       };
     }
 
-    // I. Fallback General Entry
     return {
       actionBadge: {
         label: isAr ? 'قيد يومية' : 'Journal',
-        bg: '#f1f5f9',
-        text: '#475569',
-        border: '#e2e8f0',
         icon: 'default'
       },
       headline: localizeJournalDescription(rawDesc, isAr),
@@ -758,9 +692,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     };
   }, [resolveContract, resolvePropertyAndUnit, enrichMemo, isAr, account.account_code]);
 
-  // 3. Gather all journal lines touching this account
   const { accountLines, totalDebits, totalCredits, netBalance } = useMemo(() => {
-    const accountLines: {
+    const lines: {
       entry_id: string;
       entry_number: string;
       entry_date: string;
@@ -770,18 +703,19 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       memo?: string;
       contract_id?: string;
       unit_id?: string;
+      counter_codes?: string[];
     }[] = [];
-    let totalDebits = D(0);
-    let totalCredits = D(0);
+    let debits = D(0);
+    let credits = D(0);
 
     journalEntries.forEach(entry => {
       (entry.lines || []).forEach(line => {
         const isExact = line.account_code === account.account_code;
         const isChild = account.account_code.endsWith('000') && line.account_code.startsWith(account.account_code.slice(0, 3));
         if (!isExact && !isChild) return;
-        totalDebits = totalDebits.plus(D(line.debit_amount));
-        totalCredits = totalCredits.plus(D(line.credit_amount));
-        accountLines.push({
+        debits = debits.plus(D(line.debit_amount));
+        credits = credits.plus(D(line.credit_amount));
+        lines.push({
           entry_id: entry.entry_id,
           entry_number: entry.entry_number,
           entry_date: entry.entry_date,
@@ -790,18 +724,17 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           credit_amount: line.credit_amount,
           memo: line.memo,
           contract_id: line.contract_id || (entry.source_module === 'SALES' ? entry.source_entity_id : undefined),
-          unit_id: line.unit_id
+          unit_id: line.unit_id,
+          counter_codes: (entry.lines || []).filter(other => other !== line).map(other => other.account_code)
         });
       });
     });
-    const netBalance = account.normal_balance === 'DEBIT'
-      ? totalDebits.minus(totalCredits)
-      : totalCredits.minus(totalDebits);
-    return { accountLines, totalDebits, totalCredits, netBalance };
+    const net = account.normal_balance === 'DEBIT'
+      ? debits.minus(credits)
+      : credits.minus(debits);
+    return { accountLines: lines, totalDebits: debits, totalCredits: credits, netBalance: net };
   }, [journalEntries, account.account_code, account.normal_balance]);
 
-
-  // Search, Sort, and Pagination for Account Transactions with enriched text & parsed tags
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc'>('date_desc');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -882,106 +815,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const generatedAt = new Date();
-  const voucherCode = `STM-${account.account_code}-${generatedAt.toISOString().slice(0, 10)}`;
-  const statementDate = generatedAt.toLocaleDateString(isAr ? 'ar-EG' : 'en-US');
-
-  const printableLedgerBody = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', direction: isAr ? 'rtl' : 'ltr' }}>
-      {/* 1. Account Summary KPI Bar */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '0.75rem',
-        border: '1px solid #cbd5e1',
-        borderRadius: '10px',
-        padding: '1rem',
-        background: '#ffffff'
-      }}>
-        <div>
-          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-            {isAr ? 'كود الحساب' : 'Account Code'}
-          </span>
-          <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{account.account_code}</strong>
-        </div>
-        <div>
-          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-            {isAr ? 'طبيعة الحساب' : 'Normal Balance'}
-          </span>
-          <strong style={{ fontSize: '0.95rem', color: '#334155' }}>
-            {isAr ? (account.normal_balance === 'DEBIT' ? 'مدين' : 'دائن') : account.normal_balance}
-          </strong>
-        </div>
-        <div>
-          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-            {isAr ? 'إجمالي الحركات' : 'Transactions'}
-          </span>
-          <strong style={{ fontSize: '1.1rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{enrichedLines.length}</strong>
-        </div>
-        <div>
-          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-            {isAr ? 'الرصيد الصافي الحالي' : 'Net Balance'}
-          </span>
-          <strong style={{ fontSize: '1.2rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-            {netBalance.formatEGP(isAr)}
-          </strong>
-        </div>
-      </div>
-
-      {/* 2. Statements Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.76rem' }}>
-        <thead>
-          <tr style={{ background: '#fafbfc', color: '#64748b', borderBottom: '1px solid #cbd5e1' }}>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '5%' }}>#</th>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '12%' }}>{isAr ? 'التاريخ' : 'Date'}</th>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '14%' }}>{isAr ? 'رقم القيد' : 'Entry #'}</th>
-            <th style={{ padding: '0.6rem 0.75rem', textAlign: isAr ? 'right' : 'left', width: '37%' }}>{isAr ? 'البيان وشرح الحركة' : 'Description'}</th>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right', width: '16%' }}>{isAr ? 'مدين' : 'Debit'}</th>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right', width: '16%' }}>{isAr ? 'دائن' : 'Credit'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {enrichedLines.map((line, idx) => (
-            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
-              <td style={{ padding: '0.5rem', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
-              <td style={{ padding: '0.5rem', textAlign: 'center', color: '#334155' }}>{line.entry_date}</td>
-              <td style={{ padding: '0.5rem', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>{line.entry_number}</td>
-              <td style={{ padding: '0.5rem 0.75rem', color: '#0f172a' }}>
-                <div style={{ fontWeight: 700 }}>{line.parsed.headline}</div>
-                {line.parsed.memo && <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{line.parsed.memo}</div>}
-              </td>
-              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: D(line.debit_amount).isZero() ? '#94a3b8' : '#0f172a' }}>
-                {D(line.debit_amount).isZero() ? '—' : D(line.debit_amount).formatEGP(isAr)}
-              </td>
-              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: D(line.credit_amount).isZero() ? '#94a3b8' : '#0f172a' }}>
-                {D(line.credit_amount).isZero() ? '—' : D(line.credit_amount).formatEGP(isAr)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr style={{ background: '#ffffff', borderTop: '1px solid #cbd5e1', fontWeight: 800 }}>
-            <td colSpan={4} style={{ padding: '0.65rem 1rem', textAlign: isAr ? 'left' : 'right' }}>
-              {isAr ? 'إجمالي طرفي الحركة:' : 'Debit and credit totals:'}
-            </td>
-            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#0f172a' }}>
-              {totalDebits.formatEGP(isAr)}
-            </td>
-            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#0f172a' }}>
-              {totalCredits.formatEGP(isAr)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  );
-
-  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_desc' ? 1 : 0);
-
   const handleResetFilters = () => {
     setSortBy('date_desc');
     setSearchQuery('');
@@ -990,280 +823,165 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
   const explanation = ACCOUNT_EXPLANATIONS[account.account_code] || {
     roleAr: `حساب ${account.account_name_ar} ضمن شجرة الحسابات المالية المعتمدة للشركة.`,
-    roleEn: `${account.account_name_en} account within the standard chart of accounts.`,
+    roleEn: `${account.account_name_en} account within standard chart of accounts.`,
     whenDebitedAr: account.normal_balance === 'DEBIT' ? 'بيزيد لما بتدخل فيه فلوس أو أصول أو مصاريف للشركة.' : 'بينقص لما بنسدد التزام أو بنسوي الرصيد.',
     whenCreditedAr: account.normal_balance === 'CREDIT' ? 'بيزيد لما بتثبت التزامات أو إيرادات جديدة.' : 'بينقص لما بيخرج كاش أو بيتم استهلاك الأصل.'
   };
 
-  const typeColorMap: Record<string, { bg: string; text: string; border: string }> = {
-    ASSET: { bg: 'var(--erp-accent-subtle)', text: 'var(--erp-accent)', border: 'var(--erp-accent-tint)' },
-    LIABILITY: { bg: '#fffbeb', text: '#92400e', border: 'rgba(217, 119, 6, 0.2)' },
-    CONTRA_LIABILITY: { bg: '#fef2f2', text: '#b91c1c', border: 'rgba(220, 38, 38, 0.2)' },
-    EQUITY: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' },
-    REVENUE: { bg: '#ecfdf5', text: '#166534', border: 'rgba(22, 163, 74, 0.2)' },
-    EXPENSE: { bg: '#fffbeb', text: '#92400e', border: 'rgba(217, 119, 6, 0.2)' }
+  const fmtMoney = (val: string | number | Decimal) => {
+    const n = Number(D(val).toNumber());
+    return `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`;
   };
 
-  const getCategoryLabel = (type: string, isArLang: boolean) => {
-    if (!isArLang) return type;
-    switch (type) {
-      case 'ASSET': return 'الأصول';
-      case 'LIABILITY': return 'الالتزامات';
-      case 'CONTRA_LIABILITY': return 'حساب مقابل للالتزامات';
-      case 'EQUITY': return 'حقوق الملكية';
-      case 'REVENUE': return 'الإيرادات';
-      case 'EXPENSE': return 'المصروفات';
-      default: return type;
-    }
-  };
+  const generatedAt = new Date();
+  const voucherCode = `STM-${account.account_code}-${generatedAt.toISOString().slice(0, 10)}`;
+  const statementDate = generatedAt.toLocaleDateString(isAr ? 'ar-EG' : 'en-US');
 
-  const colors = typeColorMap[account.account_type] || typeColorMap.ASSET;
+  const printableLedgerBody = (
+    <div className={styles.printableStack} dir={isAr ? 'rtl' : 'ltr'}>
+      <div className={styles.printKpiGrid}>
+        <div>
+          <span className={styles.printKpiLabel}>{isAr ? 'كود الحساب' : 'Account Code'}</span>
+          <strong className={styles.printKpiValue}>{account.account_code}</strong>
+        </div>
+        <div>
+          <span className={styles.printKpiLabel}>{isAr ? 'طبيعة الحساب' : 'Normal Balance'}</span>
+          <strong className={styles.printKpiValue}>
+            {isAr ? (account.normal_balance === 'DEBIT' ? 'مدين' : 'دائن') : account.normal_balance}
+          </strong>
+        </div>
+        <div>
+          <span className={styles.printKpiLabel}>{isAr ? 'إجمالي الحركات' : 'Transactions'}</span>
+          <strong className={styles.printKpiValue}>{enrichedLines.length}</strong>
+        </div>
+        <div>
+          <span className={styles.printKpiLabel}>{isAr ? 'الرصيد الصافي الحالي' : 'Net Balance'}</span>
+          <strong className={styles.printKpiValue}>{fmtMoney(netBalance)}</strong>
+        </div>
+      </div>
+
+      <table className={styles.printTable}>
+        <thead>
+          <tr>
+            <th className={styles.printThCenter}>#</th>
+            <th className={styles.printThCenter}>{isAr ? 'التاريخ' : 'Date'}</th>
+            <th className={styles.printThCenter}>{isAr ? 'رقم القيد' : 'Entry #'}</th>
+            <th className={styles.printTh}>{isAr ? 'البيان وشرح الحركة' : 'Description'}</th>
+            <th className={styles.printThNum}>{isAr ? 'مدين' : 'Debit'}</th>
+            <th className={styles.printThNum}>{isAr ? 'دائن' : 'Credit'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {enrichedLines.map((line, idx) => (
+            <tr key={idx} className={styles.printTr}>
+              <td className={styles.printTdCenter}>{idx + 1}</td>
+              <td className={styles.printTdCenter}>{line.entry_date}</td>
+              <td className={styles.printTdCenter}>{line.entry_number}</td>
+              <td className={styles.printTd}>
+                <div>{line.parsed.headline}</div>
+                {line.parsed.memo && <div className={styles.memoRow}>{line.parsed.memo}</div>}
+              </td>
+              <td className={styles.printTdNum}>
+                {D(line.debit_amount).isZero() ? '—' : fmtMoney(line.debit_amount)}
+              </td>
+              <td className={styles.printTdNum}>
+                {D(line.credit_amount).isZero() ? '—' : fmtMoney(line.credit_amount)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className={styles.printTfoot}>
+          <tr>
+            <td colSpan={4} className={styles.printTd}>
+              {isAr ? 'إجمالي طرفي الحركة:' : 'Debit and credit totals:'}
+            </td>
+            <td className={styles.printTdNum}>{fmtMoney(totalDebits)}</td>
+            <td className={styles.printTdNum}>{fmtMoney(totalCredits)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+
+  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_desc' ? 1 : 0);
+
+  const footer = (
+    <ZFFormFooter aside={<span className={styles.footerCount}>{isAr ? `${accountLines.length} حركة مسجلة` : `${accountLines.length} recorded movements`}</span>}>
+      <button
+        type="button"
+        className={shellStyles.btnSecondary}
+        onClick={handleExportExcel}
+        disabled={isExportingExcel}
+      >
+        <FileSpreadsheet size={14} aria-hidden="true" />
+        <span>{isExportingExcel ? (isAr ? 'جاري التصدير…' : 'Exporting…') : (isAr ? 'تصدير Excel' : 'Export Excel')}</span>
+      </button>
+
+      <button
+        type="button"
+        className={shellStyles.btnSecondary}
+        onClick={() => setShowPrintPreview(true)}
+      >
+        <FileText size={14} aria-hidden="true" />
+        <span>{isAr ? 'معاينة للطباعة' : 'Print preview'}</span>
+      </button>
+
+      <button
+        type="button"
+        className={shellStyles.btnPrimary}
+        onClick={onClose}
+      >
+        {isAr ? 'إغلاق' : 'Close'}
+      </button>
+    </ZFFormFooter>
+  );
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'rgba(15, 23, 42, 0.35)',
-        backdropFilter: 'blur(2px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-        direction: isAr ? 'rtl' : 'ltr',
-        animation: 'fadeIn 0.2s ease-out'
-      }}
-      onClick={onClose}
-      onKeyDown={event => {
-        if (event.key === 'Escape') { event.stopPropagation(); onClose(); return; }
-        if (event.key !== 'Tab' || showPrintPreview) return;
-        const dialog = event.currentTarget.querySelector<HTMLElement>('[role="dialog"]');
-        const controls = dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), summary, [tabindex]:not([tabindex="-1"])');
-        if (!controls?.length) return;
-        const first = controls[0], last = controls[controls.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      }}
-    >
-      <div 
-        style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '12px',
-          width: '100%',
-          maxWidth: '960px',
-          maxHeight: '92vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 10px 25px rgba(15, 23, 42, 0.12)',
-          overflow: 'hidden'
-        }}
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={isAr ? `كشف حساب ${account.account_name_ar}` : `Account statement for ${account.account_name_en}`}
+    <>
+      <ZFModalShell
+        isOpen={true}
+        onClose={onClose}
+        isAr={isAr}
+        maxWidth="min(1100px, 94vw)"
+        title={isAr ? account.account_name_ar : account.account_name_en}
+        subtitle={
+          isAr
+            ? `حركات ورصيد الحساب بدفتر الأستاذ العام.`
+            : `Movements and balance for ${account.account_name_en}.`
+        }
+        icon={<BookOpen size={18} aria-hidden="true" />}
+        footer={footer}
       >
-        {/* Modal Header */}
-        <div style={{
-          padding: '1rem 1.25rem',
-          borderBottom: '1px solid #cbd5e1',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '0.75rem',
-          flexWrap: 'wrap',
-          background: '#ffffff'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{
-              background: 'var(--erp-accent-subtle)',
-              border: '1px solid var(--erp-accent-tint)',
-              color: 'var(--erp-accent)',
-              width: '28px',
-              height: '28px',
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: '7px'
-            }}>
-              <Landmark size={16} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <span style={{
-                  fontVariantNumeric: 'tabular-nums',
-                  fontSize: '0.9rem',
-                  fontWeight: 800,
-                  color: 'var(--erp-accent)',
-                  background: 'var(--erp-accent-subtle)',
-                  border: '1px solid var(--erp-accent-tint)',
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '6px'
-                }}>
-                  {account.account_code}
-                </span>
-                <span style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  color: colors.text,
-                  background: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '6px'
-                }}>
-                  {getCategoryLabel(account.account_type, isAr)}
-                </span>
-                <span style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  color: '#475569',
-                  background: '#f1f5f9',
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '6px'
-                }}>
-                  {isAr ? (account.normal_balance === 'DEBIT' ? 'طبيعة مدينة' : 'طبيعة دائنة') : account.normal_balance}
-                </span>
-              </div>
-              <h2 style={{ margin: '0.35rem 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? account.account_name_ar : account.account_name_en}
-              </h2>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                {isAr ? account.account_name_en : account.account_name_ar}
-              </span>
-            </div>
-          </div>
+        <div className={zfForm.form}>
+          {/* 1. Account Facts */}
+          <ZFFacts
+            items={[
+              { label: isAr ? 'كود الحساب' : 'Account code', value: account.account_code },
+              {
+                label: isAr ? 'طبيعة الحساب' : 'Normal balance',
+                value: isAr ? (account.normal_balance === 'DEBIT' ? 'مدين' : 'دائن') : account.normal_balance
+              },
+              { label: isAr ? 'إجمالي المدين' : 'Total debits', value: fmtMoney(totalDebits) },
+              { label: isAr ? 'إجمالي الدائن' : 'Total credits', value: fmtMoney(totalCredits) },
+              {
+                label: isAr ? 'الرصيد الصافي' : 'Net balance',
+                value: fmtMoney(netBalance),
+                tone: netBalance.lt(0) ? 'neg' : netBalance.gt(0) ? 'pos' : undefined
+              }
+            ]}
+          />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              disabled={isExportingExcel}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#047857',
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: isExportingExcel ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                transition: 'all 0.15s ease'
-              }}
-              title={isAr ? 'تصدير كشف حساب كامل إلى Excel مع المخططات' : 'Export Statement to Excel'}
-            >
-              <FileSpreadsheet size={14} />
-              <span>{isExportingExcel ? (isAr ? 'جاري التصدير...' : 'Exporting...') : (isAr ? 'تصدير Excel' : 'Export Excel')}</span>
-            </button>
+          {/* 2. Transactions Section */}
+          <div className={zfForm.section}>
+            <div className={styles.tableHeaderRow}>
+              <h4 className={zfForm.sectionTitle}>
+                {isAr ? 'حركات وقيود الحساب' : 'Account movements'}
+              </h4>
 
-            <button
-              type="button"
-              onClick={handlePrint}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                transition: 'all 0.15s ease'
-              }}
-              title={isAr ? 'طباعة كشف الحساب' : 'Print statement'}
-            >
-              <Printer size={14} />
-              <span>{isAr ? 'طباعة الكشف' : 'Print'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowPrintPreview(true)}
-              style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-accent)',
-                color: 'var(--erp-accent)',
-                borderRadius: '8px',
-                padding: '0.45rem 0.75rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                transition: 'all 0.15s ease'
-              }}
-              title={isAr ? 'معاينة كشف الحساب للطباعة' : 'Preview statement'}
-            >
-              <FileText size={14} />
-              <span>{isAr ? 'معاينة' : 'Preview'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={isAr ? 'إغلاق كشف الحساب' : 'Close account statement'}
-              autoFocus
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#64748b',
-                borderRadius: '8px',
-                padding: '0.45rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Modal Content */}
-        <div style={{ padding: '1.1rem 1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {/* Top Analytics Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(205px, 1fr))', gap: '0.75rem' }}>
-            <ZFKpiCard title={isAr ? 'الرصيد الصافي' : 'Net balance'} value={<span>{netBalance.formatEGP(isAr)}</span>}
-              icon={<Landmark size={16} />} accentColor="accent"
-              subtitleLabel={isAr ? 'طبيعة الحساب' : 'Normal balance'}
-              subtitleValue={account.normal_balance === 'DEBIT' ? (isAr ? 'مدين' : 'Debit') : (isAr ? 'دائن' : 'Credit')} />
-            <ZFKpiCard title={isAr ? 'إجمالي المدين' : 'Total debits'} value={<span>{totalDebits.formatEGP(isAr)}</span>}
-              icon={<TrendingUp size={16} />} accentColor="accent"
-              subtitleLabel={isAr ? 'حركات الحساب' : 'Account movements'} subtitleValue={isAr ? 'مدين' : 'Debit'} />
-            <ZFKpiCard title={isAr ? 'إجمالي الدائن' : 'Total credits'} value={<span>{totalCredits.formatEGP(isAr)}</span>}
-              icon={<TrendingDown size={16} />} accentColor="accent"
-              subtitleLabel={isAr ? 'حركات الحساب' : 'Account movements'} subtitleValue={isAr ? 'دائن' : 'Credit'} />
-          </div>
-
-          {/* Account Statement (Transactions) */}
-          <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '0.75rem',
-              flexWrap: 'wrap',
-              gap: '0.65rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={16} color="var(--erp-accent)" />
-                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'حركات وقيود الحساب' : 'Account ledger movements'}
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {/* Sort By */}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <ArrowUpDown size={12} color="#94a3b8" />
+              <div className={styles.filterControls}>
+                {/* Sort */}
+                <div className={styles.sortWrap}>
+                  <ArrowUpDown size={12} color="#94a3b8" aria-hidden="true" />
                   <select
                     value={sortBy}
                     onChange={e => {
@@ -1271,108 +989,83 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                       setCurrentPage(1);
                     }}
                     className={styles.sortSelect}
-                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
                     aria-label={isAr ? 'ترتيب الحركات' : 'Sort lines'}
                   >
                     <option value="date_desc">{isAr ? 'الأحدث تاريخاً' : 'Newest First'}</option>
                     <option value="date_asc">{isAr ? 'الأقدم تاريخاً' : 'Oldest First'}</option>
-                    <option value="amount_desc">{isAr ? 'أعلى قيمة للحركة' : 'Highest Value'}</option>
+                    <option value="amount_desc">{isAr ? 'أعلى قيمة' : 'Highest Value'}</option>
                   </select>
                 </div>
 
                 {/* Reset Filters */}
                 {activeFiltersCount > 0 && (
                   <button
+                    type="button"
                     onClick={handleResetFilters}
-                    className={styles.resetFilterBtn}
-                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
+                    className={styles.resetBtn}
                     title={isAr ? 'إعادة ضبط' : 'Reset'}
                   >
-                    <RotateCcw size={11} />
+                    <RotateCcw size={11} aria-hidden="true" />
                     <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
                   </button>
                 )}
 
                 {/* Search Box */}
-                <div className={styles.searchBox} style={{ minWidth: '150px', height: '30px', padding: '0 0.5rem' }}>
-                  <Search size={12} color="#94a3b8" />
+                <div className={styles.searchWrap}>
+                  <Search size={12} className={styles.searchIcon} aria-hidden="true" />
                   <input
                     type="text"
-                    placeholder={isAr ? 'بحث بالقيد أو الوصف...' : 'Search entry or memo...'}
+                    placeholder={isAr ? 'بحث بالقيد أو البيان…' : 'Search entry or memo…'}
                     value={searchQuery}
                     onChange={e => {
                       setSearchQuery(e.target.value);
                       setCurrentPage(1);
                     }}
                     className={styles.searchInput}
-                    style={{ fontSize: '0.72rem' }}
                   />
                   {searchQuery && (
                     <button
+                      type="button"
                       onClick={() => {
                         setSearchQuery('');
                         setCurrentPage(1);
                       }}
-                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem' }}
+                      className={styles.clearSearchBtn}
+                      aria-label={isAr ? 'مسح البحث' : 'Clear search'}
                     >
                       ✕
                     </button>
                   )}
                 </div>
 
-                <span style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--erp-accent)',
-                  background: 'var(--erp-accent-subtle)',
-                  border: '1px solid var(--erp-accent-tint)',
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: '6px',
-                  fontWeight: 700
-                }}>
-                  {isAr ? `${sortedLines.length} حركة` : `${sortedLines.length} Entries`}
+                <span className={styles.countPill}>
+                  {isAr ? `${sortedLines.length} حركة` : `${sortedLines.length} entries`}
                 </span>
               </div>
             </div>
 
             {sortedLines.length === 0 ? (
-              <div style={{
-                padding: '2.5rem 1.5rem',
-                textAlign: 'center',
-                background: '#ffffff',
-                border: '1px dashed #cbd5e1',
-                borderRadius: '12px',
-                color: '#64748b',
-                fontSize: '0.82rem'
-              }}>
+              <div className={styles.emptyState}>
                 {accountLines.length === 0 
-                  ? (isAr 
-                    ? 'لا توجد حركات مسجلة على هذا الحساب حتى الآن.'
-                    : 'No journal movements recorded for this account yet.')
-                  : (isAr
-                    ? 'لا توجد حركات تطابق نص البحث المحدد.'
-                    : 'No transactions match the specified search term.')}
+                  ? (isAr ? 'لا توجد حركات مسجلة على هذا الحساب حتى الآن.' : 'No movements recorded for this account yet.')
+                  : (isAr ? 'لا توجد حركات تطابق نص البحث المحدد.' : 'No movements match the search criteria.')}
               </div>
             ) : (
               <>
-                <div style={{
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '12px',
-                  overflowX: 'auto',
-                  background: '#ffffff'
-                }}>
-                  <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
                     <thead>
-                      <tr style={{ background: '#fafbfc', borderBottom: '1px solid #cbd5e1' }}>
-                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
+                      <tr>
+                        <th className={styles.th}>
                           {isAr ? 'التاريخ ورقم القيد' : 'Date & Entry #'}
                         </th>
-                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b', minWidth: '360px' }}>
-                          {isAr ? 'بيان وشرح الحركة' : 'Description & Memo'}
+                        <th className={styles.th}>
+                          {isAr ? 'البيان وشرح الحركة' : 'Description & Memo'}
                         </th>
-                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#64748b' }}>
+                        <th className={styles.thNum}>
                           {isAr ? 'مدين' : 'Debit'}
                         </th>
-                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#64748b' }}>
+                        <th className={styles.thNum}>
                           {isAr ? 'دائن' : 'Credit'}
                         </th>
                       </tr>
@@ -1383,123 +1076,52 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                         const hasCredit = D(line.credit_amount).isPositive();
 
                         return (
-                          <tr 
-                            key={`${line.entry_id}-${idx}`}
-                            style={{
-                              borderBottom: '1px solid #f1f5f9',
-                              background: '#ffffff'
-                            }}
-                          >
-                            <td style={{ padding: '0.75rem 0.85rem', verticalAlign: 'top' }}>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{line.entry_date}</div>
-                              <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--erp-accent)', fontSize: '0.76rem', marginTop: '2px' }}>
-                                {line.entry_number}
-                              </div>
+                          <tr key={`${line.entry_id}-${idx}`} className={styles.tr}>
+                            <td className={styles.tdDate}>
+                              <div className={styles.dateText}>{line.entry_date}</div>
+                              <div className={styles.entryNum}>{line.entry_number}</div>
                             </td>
-                            <td style={{ padding: '0.85rem 0.95rem', verticalAlign: 'top', minWidth: '360px' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
-                                {/* Line 1: Action Badge + Main Headline */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                  <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.3rem',
-                                    fontSize: '0.68rem',
-                                    fontWeight: 800,
-                                    padding: '0.15rem 0.55rem',
-                                    borderRadius: '6px',
-                                    background: line.parsed.actionBadge.bg,
-                                    color: line.parsed.actionBadge.text,
-                                    border: `1px solid ${line.parsed.actionBadge.border}`,
-                                    flexShrink: 0
-                                  }}>
+                            <td className={styles.tdDesc}>
+                              <div className={styles.descStack}>
+                                {/* Headline and Action Badge */}
+                                <div className={styles.headlineRow}>
+                                  <span className={styles.actionBadge}>
                                     {renderBadgeIcon(line.parsed.actionBadge.icon)}
                                     <span>{line.parsed.actionBadge.label}</span>
                                   </span>
 
-                                  <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.84rem' }}>
+                                  <span className={styles.headline}>
                                     {line.parsed.headline}
                                   </span>
                                 </div>
 
-                                {/* Line 2: Entity Badges (Contract #, Reference #, Client, Unit/Property) */}
+                                {/* Tags */}
                                 {(line.parsed.contractNumber || line.parsed.referenceNumber || line.parsed.clientName || line.parsed.unitInfo || line.parsed.propertyTitle) && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                    
-                                    {/* Contract Code */}
+                                  <div className={styles.tagsRow}>
                                     {line.parsed.contractNumber && (
-                                      <span style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '0.25rem',
-                                        fontSize: '0.7rem',
-                                        fontWeight: 800,
-                                        color: 'var(--erp-accent)',
-                                        background: 'var(--erp-accent-subtle)',
-                                        border: '1px solid var(--erp-accent-tint)',
-                                        padding: '0.12rem 0.45rem',
-                                        borderRadius: '6px',
-                                        fontFamily: 'monospace, tabular-nums'
-                                      }}>
-                                        <FileText size={11} />
+                                      <span className={styles.tagPill}>
+                                        <FileText size={11} aria-hidden="true" />
                                         <span>#{line.parsed.contractNumber.replace(/^#/, '')}</span>
                                       </span>
                                     )}
 
-                                    {/* Reference Code (e.g. InstaPay #IP-2026-6001) */}
                                     {line.parsed.referenceNumber && (
-                                      <span style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '0.25rem',
-                                        fontSize: '0.7rem',
-                                        fontWeight: 800,
-                                        color: '#2563eb',
-                                        background: 'rgba(37, 99, 235, 0.08)',
-                                        border: '1px solid rgba(37, 99, 235, 0.22)',
-                                        padding: '0.12rem 0.45rem',
-                                        borderRadius: '6px',
-                                        fontFamily: 'monospace, tabular-nums'
-                                      }}>
-                                        <Zap size={11} />
+                                      <span className={styles.tagPill}>
+                                        <Zap size={11} aria-hidden="true" />
                                         <span>#{line.parsed.referenceNumber.replace(/^#/, '')}</span>
                                       </span>
                                     )}
 
-                                    {/* Client Name */}
                                     {line.parsed.clientName && (
-                                      <span style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '0.3rem',
-                                        fontSize: '0.71rem',
-                                        fontWeight: 700,
-                                        color: '#1e3a8a',
-                                        background: '#eff6ff',
-                                        border: '1px solid #dbeafe',
-                                        padding: '0.12rem 0.5rem',
-                                        borderRadius: '6px'
-                                      }}>
-                                        <User size={11} style={{ flexShrink: 0 }} />
+                                      <span className={styles.tagPill}>
+                                        <User size={11} aria-hidden="true" />
                                         <span>{line.parsed.clientName}</span>
                                       </span>
                                     )}
 
-                                    {/* Unit and/or Property */}
                                     {(line.parsed.unitInfo || line.parsed.propertyTitle) && (
-                                      <span style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '0.3rem',
-                                        fontSize: '0.71rem',
-                                        fontWeight: 700,
-                                        color: '#334155',
-                                        background: '#f8fafc',
-                                        border: '1px solid #cbd5e1',
-                                        padding: '0.12rem 0.5rem',
-                                        borderRadius: '6px'
-                                      }}>
-                                        <Building2 size={11} style={{ flexShrink: 0 }} />
+                                      <span className={styles.tagPill}>
+                                        <Building2 size={11} aria-hidden="true" />
                                         <span>
                                           {line.parsed.unitInfo ? `${line.parsed.unitInfo}` : ''}
                                           {line.parsed.unitInfo && line.parsed.propertyTitle ? ' • ' : ''}
@@ -1510,28 +1132,20 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                                   </div>
                                 )}
 
-                                {/* Line 3: Banking / Accounting Memo */}
+                                {/* Memo */}
                                 {line.parsed.memo && (
-                                  <div style={{
-                                    fontSize: '0.71rem',
-                                    color: '#64748b',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.35rem',
-                                    marginTop: '0.05rem',
-                                    lineHeight: 1.4
-                                  }}>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.75rem', transform: isAr ? 'scaleX(-1)' : 'none', display: 'inline-block' }}>↳</span>
+                                  <div className={styles.memoRow}>
+                                    <span className={styles.memoArrow} aria-hidden="true">↳</span>
                                     <span>{line.parsed.memo.replace(/^↳\s*/, '')}</span>
                                   </div>
                                 )}
                               </div>
                             </td>
-                            <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasDebit ? '#0f172a' : '#94a3b8' }}>
-                              {hasDebit ? D(line.debit_amount).formatEGP(isAr) : '—'}
+                            <td className={styles.tdDebit}>
+                              {hasDebit ? fmtMoney(line.debit_amount) : <span className={styles.emptyAmount}>—</span>}
                             </td>
-                            <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasCredit ? '#15803d' : '#94a3b8' }}>
-                              {hasCredit ? D(line.credit_amount).formatEGP(isAr) : '—'}
+                            <td className={styles.tdCredit}>
+                              {hasCredit ? fmtMoney(line.credit_amount) : <span className={styles.emptyAmount}>—</span>}
                             </td>
                           </tr>
                         );
@@ -1540,8 +1154,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                   </table>
                 </div>
 
-                {/* Pagination for Modal Transactions */}
-                <div style={{ marginTop: '0.75rem' }}>
+                <div className={styles.paginationWrap}>
                   <ZFPagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -1560,80 +1173,37 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               </>
             )}
           </div>
-          <details style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '0.75rem 1rem', background: '#ffffff' }}>
-            <summary style={{ cursor: 'pointer', color: '#0f172a', fontSize: '0.8rem', fontWeight: 700 }}>
-              {isAr ? 'دليل استخدام هذا الحساب' : 'How this account works'}
+
+          {/* 3. Account Guide Section */}
+          <details className={styles.guideDetails}>
+            <summary className={styles.guideSummary}>
+              {isAr ? 'دليل استخدام الحساب' : 'How this account works'}
             </summary>
-            <div style={{ paddingTop: '0.75rem', color: '#475569', fontSize: '0.78rem', lineHeight: 1.6 }}>
-              <p style={{ margin: '0 0 0.6rem' }}>{isAr ? explanation.roleAr : explanation.roleEn}</p>
-              <p style={{ margin: '0 0 0.35rem' }}><strong>{isAr ? 'عند المدين: ' : 'When debited: '}</strong>
-                {isAr ? explanation.whenDebitedAr : 'Debit postings increase the debit side.'}</p>
-              <p style={{ margin: 0 }}><strong>{isAr ? 'عند الدائن: ' : 'When credited: '}</strong>
-                {isAr ? explanation.whenCreditedAr : 'Credit postings increase the credit side.'}</p>
+            <div className={styles.guideContent}>
+              <ZFEffect>
+                <p>{isAr ? explanation.roleAr : explanation.roleEn}</p>
+                <p>
+                  <strong>{isAr ? 'عند المدين: ' : 'When debited: '}</strong>
+                  {isAr ? explanation.whenDebitedAr : 'Debit postings increase the debit side.'}
+                </p>
+                <p>
+                  <strong>{isAr ? 'عند الدائن: ' : 'When credited: '}</strong>
+                  {isAr ? explanation.whenCreditedAr : 'Credit postings increase the credit side.'}
+                </p>
+              </ZFEffect>
             </div>
           </details>
         </div>
-
-        {/* Modal Footer */}
-        <div style={{
-          padding: '0.85rem 1.25rem',
-          borderTop: '1px solid #cbd5e1',
-          background: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
-          flexWrap: 'wrap'
-        }}>
-          <span style={{ color: '#64748b', fontSize: '0.74rem', fontVariantNumeric: 'tabular-nums' }}>
-            {isAr ? `${accountLines.length} حركة مسجلة` : `${accountLines.length} recorded movements`}
-          </span>
-
-          <button
-            onClick={onClose}
-            style={{
-              background: 'var(--erp-accent)',
-              color: '#ffffff',
-              border: '1px solid var(--erp-accent)',
-              borderRadius: '8px',
-              padding: '0.5rem 1.25rem',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {isAr ? 'إغلاق النافذة' : 'Close'}
-          </button>
-        </div>
-      </div>
+      </ZFModalShell>
 
       {/* Screen Preview Modal */}
       {showPrintPreview && (
         <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100000,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1.5rem',
-            overflowY: 'auto'
-          }}
+          className={styles.printOverlay}
           onClick={() => setShowPrintPreview(false)}
         >
           <div 
-            style={{ 
-              maxWidth: '900px', 
-              width: '100%', 
-              maxHeight: '94vh', 
-              overflowY: 'auto',
-              borderRadius: '12px',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
-            }} 
+            className={styles.printCard}
             onClick={e => e.stopPropagation()}
           >
             <ZFPrintDocumentLayout
@@ -1664,6 +1234,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           {printableLedgerBody}
         </ZFPrintDocumentLayout>
       </div>
-    </div>
+    </>
   );
 };

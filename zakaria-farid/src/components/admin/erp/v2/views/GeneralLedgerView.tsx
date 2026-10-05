@@ -54,6 +54,8 @@ import { GeneralLedgerSideWidgets } from './GeneralLedgerSideWidgets';
 import { BalanceSheetAnalyticsView } from './ledger/BalanceSheetAnalyticsView';
 import { IncomeStatementAnalyticsView } from './ledger/IncomeStatementAnalyticsView';
 import css from './GeneralLedgerView.module.css';
+import { ZFPageHeader } from '../common/ZFPageHeader';
+import shellStyles from '../ZFWorkstationShell.module.css';
 
 import { ERPLedgerAmount, ERPLedgerAmountProps } from '../common/ERPLedgerAmount';
 
@@ -73,6 +75,7 @@ export interface GeneralLedgerViewProps {
   onExportExcel?: () => void | Promise<void>;
   onOpenProjectExpense: () => void;
   onTogglePeriodStatus: (periodId: string, newStatus: 'OPEN' | 'LOCKED') => void | Promise<void>;
+  onCloseFiscalYear?: (year: number) => void | Promise<void>;
 }
 
 type LedgerMainTab = 
@@ -112,7 +115,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
   dataset,
   onExportExcel,
   onOpenProjectExpense,
-  onTogglePeriodStatus
+  onTogglePeriodStatus,
+  onCloseFiscalYear
 }) => {
   // Available Fiscal Periods
   const availablePeriods = useMemo(() => {
@@ -211,6 +215,21 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       toast.error(isAr ? 'حدث خطأ أثناء تعديل حالة الفترة المالية' : 'Failed to update period status');
     }
   }, [effectiveSelectedPeriod, activePeriod, onTogglePeriodStatus, isAr]);
+
+  const handleCloseFiscalYearSafe = useCallback(async (year: number) => {
+    if (!onCloseFiscalYear) return;
+    const msg = isAr
+      ? `سيتم إغلاق جميع الفترات الـ 12 للسنة المالية ${year} نهائياً ومنع أي قيود جديدة عليها. هل تريد المتابعة؟`
+      : `This will CLOSE all 12 periods of fiscal year ${year} and block any new postings. Continue?`;
+    if (!window.confirm(msg)) return;
+    if (year === new Date().getFullYear()) {
+      const msg2 = isAr
+        ? `تحذير: ${year} هي السنة الحالية. إغلاقها يوقف تسجيل التحصيلات والمصروفات لهذا العام. تأكيد نهائي؟`
+        : `Warning: ${year} is the CURRENT year. Closing it stops recording collections and expenses for this year. Final confirmation?`;
+      if (!window.confirm(msg2)) return;
+    }
+    await Promise.resolve(onCloseFiscalYear(year));
+  }, [onCloseFiscalYear, isAr]);
 
   const handleFilterPeriodInJournal = useCallback((period: ERPAccountingPeriod) => {
     if (period.start_date) {
@@ -325,6 +344,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
     let totalDebits = D(0);
     let totalCredits = D(0);
     let totalNetBalance = D(0);
+    let totalDebitNatureBalance = D(0);
+    let totalCreditNatureBalance = D(0);
     let totalAccountsWithActivity = 0;
     let mainAccountsCount = 0;
     let subAccountsCount = 0;
@@ -350,16 +371,23 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       }
       if (acc.normal_balance === 'DEBIT') {
         debitNatureCount++;
+        totalDebitNatureBalance = totalDebitNatureBalance.plus(net);
       } else {
         creditNatureCount++;
+        totalCreditNatureBalance = totalCreditNatureBalance.plus(net);
       }
     });
+
+    const balanceDelta = totalDebitNatureBalance.minus(totalCreditNatureBalance);
 
     return {
       count: filteredCoaAccounts.length,
       totalDebits,
       totalCredits,
       totalNetBalance,
+      totalDebitNatureBalance,
+      totalCreditNatureBalance,
+      balanceDelta,
       totalAccountsWithActivity,
       mainAccountsCount,
       subAccountsCount,
@@ -657,15 +685,26 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       const desc = (entry.description || '').toLowerCase();
       const codes = (entry.lines || []).map(l => l.account_code);
       const mod = (entry.source_module as string) || '';
-      const isSales = mod === 'SALES' || mod === 'COLLECTION' || codes.some(c => c.startsWith('4') || c === '103000') || /مبيع|إيراد|بيع|دفعة|تعاقد|حجز|قسط|تحصيل/.test(desc);
+      const num = (entry.entry_number || '').toUpperCase();
+
+      const isCollectionReceipt = 
+        num.startsWith('JE-RCP-') || 
+        num.startsWith('JE-IP-') || 
+        num.startsWith('JE-COL-') || 
+        mod === 'PDC' || 
+        mod === 'COLLECTION' || 
+        codes.some(c => c === '203000' || c === '103200') || 
+        /تحصيل|إيصال|إنستاباي|انستاباي|مقدم|مقدمة|receipt|collection|instapay/i.test(desc);
+
+      const isSales = isCollectionReceipt || mod === 'SALES' || codes.some(c => c.startsWith('4') || c === '103000') || /مبيع|إيراد|بيع|دفعة|تعاقد|حجز|قسط/.test(desc);
       const isExpenses = codes.some(c => c.startsWith('5') || c.startsWith('6')) || /مصروف|رواتب|أجور|صيانة|إيجار|كهرباء|تشغيل|إدارية/.test(desc);
-      const isPurchases = mod === 'PAYABLES' || codes.some(c => c.startsWith('201') || c.startsWith('202') || c.startsWith('204')) || /شراء|مشتريات|توريد|خامات|أصناف|مقاول/.test(desc);
+      const isPurchases = !isCollectionReceipt && (mod === 'PAYABLES' || codes.some(c => c.startsWith('201') || c.startsWith('202') || c.startsWith('204')) || /شراء|مشتريات|توريد|خامات|أصناف|مقاول/.test(desc));
       const isInvestment = mod === 'CAPITAL_CALL' || mod === 'PARTNER_EQUITY' || codes.some(c => c.startsWith('3') || c.startsWith('105')) || /رأس المال|استثمار|حصة|أرباح|تمويل|شريك/.test(desc);
 
-      if (isPurchases) {
-        purchasesCount++;
-      } else if (isSales) {
+      if (isSales) {
         salesCount++;
+      } else if (isPurchases) {
+        purchasesCount++;
       } else if (isExpenses) {
         expensesCount++;
       } else if (isInvestment) {
@@ -1338,7 +1377,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 <ERPLedgerAmount value={row.creditMovements} isAr={isAr} zeroAsDash />
               </td>
               <td style={{ padding: '0.55rem 0.65rem', textAlign: isAr ? 'left' : 'right' }}>
-                <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="#1e3a8a" />
+                <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="var(--erp-accent-hover)" />
               </td>
               <td style={{ padding: '0.55rem 0.65rem', textAlign: isAr ? 'left' : 'right' }}>
                 <ERPLedgerAmount value={row.endingCredit} isAr={isAr} zeroAsDash color="#b45309" />
@@ -1358,7 +1397,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               <ERPLedgerAmount value={trialBalanceReport.sumCredits} isAr={isAr} />
             </td>
             <td style={{ padding: '0.65rem', textAlign: isAr ? 'left' : 'right' }}>
-              <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="#1e3a8a" />
+              <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="var(--erp-accent-hover)" />
             </td>
             <td style={{ padding: '0.65rem', textAlign: isAr ? 'left' : 'right' }}>
               <ERPLedgerAmount value={trialBalanceReport.sumEndingCreditBalances} isAr={isAr} color="#b45309" />
@@ -1486,6 +1525,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         lastMovementDate={selectedAccountForInspector ? accountLastMovementMap[selectedAccountForInspector.account_code] : undefined}
         onCloseInspector={() => setSelectedAccountForInspector(null)}
         onTogglePeriodStatus={handleTogglePeriodStatusSafe}
+        onCloseFiscalYear={onCloseFiscalYear ? handleCloseFiscalYearSafe : undefined}
         onFilterPeriodInJournal={handleFilterPeriodInJournal}
         onExportExcel={handleExportExcelClick}
         isExportingExcel={isExportingExcel}
@@ -1510,33 +1550,16 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       />
 
       {/* ─── 1. TOP HEADER & BREADCRUMB ─── */}
-      <div className={css.headerRow}>
-        <div className={css.headerLeading}>
-          <div className={css.titleGroup}>
-            <h1 className={css.pageTitle}>
-              {isAr ? 'حسابات الشركة ودفتر اليومية' : 'General Ledger & Journal Entries'}
-            </h1>
-          </div>
-          <p className={css.pageSubtitle}>
-            {isAr
-              ? 'راجع القيود، افتح حسابات الأستاذ، واستخرج القوائم من دفتر واحد.'
-              : 'Review entries, inspect accounts, and prepare statements from one ledger.'}
-          </p>
-        </div>
-        <div className={css.headerActions}>
-          {activeTab === 'journal' && (
-            <button
-              type="button"
-              className={css.primaryBtn}
-              onClick={handleOpenExpense}
-              disabled={isMutating || activePeriod.status === 'LOCKED'}
-            >
-              <Plus size={14} />
-              <span>{isAr ? '+ قيد جديد' : '+ New Entry'}</span>
-            </button>
-          )}
-        </div>
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'الحسابات ودفتر اليومية' : 'Accounts & journal'}
+        subtitle={isAr ? 'راجع القيود، افتح حسابات الأستاذ، واستخرج القوائم المالية من دفتر واحد.' : 'Review entries, open ledger accounts, and prepare statements from one ledger.'}
+        actions={activeTab === 'journal' ? (
+          <button type="button" className={shellStyles.btnPrimary} onClick={handleOpenExpense} disabled={isMutating || activePeriod.status === 'LOCKED'}>
+            <Plus size={14} />
+            <span>{isAr ? 'قيد جديد' : 'New entry'}</span>
+          </button>
+        ) : undefined}
+      />
 
       {/* ─── 2. 4 BALANCED DISCRETE STAT CARDS GRID (FIN-OS Invariant Spec) ─── */}
       <ZFKpiGrid className={css.ledger5Kpis}>
@@ -1869,12 +1892,12 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           customActions: (
                             <button
                               type="button"
-                              className={css.primaryBtn}
+                              className={shellStyles.btnPrimary}
                               onClick={handleOpenExpense}
                               disabled={isMutating || activePeriod.status === 'LOCKED'}
                             >
                               <Plus size={13} />
-                              <span>{isAr ? '+ قيد جديد' : '+ New Entry'}</span>
+                              <span>{isAr ? 'قيد جديد' : 'New entry'}</span>
                             </button>
                           )
                         }
@@ -2307,8 +2330,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
                           {/* 7. Status pill */}
                           <td className={css.canonicalTd} style={{ textAlign: 'center' }}>
-                            <span className={`${css.statusPill} ${css.statusPillGreen}`}>
-                              {isAr ? 'نشط' : 'Active'}
+                            <span className={`${css.statusPill} ${acc.is_active !== false ? css.statusPillGreen : css.statusPillNeutral}`}>
+                              {acc.is_active !== false ? (isAr ? 'نشط' : 'Active') : (isAr ? 'معطّل' : 'Inactive')}
                             </span>
                           </td>
 
@@ -2355,7 +2378,28 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                       {isAr ? `${coaFilteredTotals.debitNatureCount} مدين / ${coaFilteredTotals.creditNatureCount} دائن` : `${coaFilteredTotals.debitNatureCount} Dr / ${coaFilteredTotals.creditNatureCount} Cr`}
                     </td>
                     <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
-                      <ERPLedgerAmount value={coaFilteredTotals.totalNetBalance} isAr={isAr} style={{ fontWeight: 800 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.74rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', color: 'var(--erp-accent-hover)' }}>
+                          <span style={{ fontWeight: 600 }}>{isAr ? 'مدين:' : 'Dr:'}</span>
+                          <ERPLedgerAmount value={coaFilteredTotals.totalDebitNatureBalance} isAr={isAr} style={{ fontWeight: 700 }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', color: '#b45309' }}>
+                          <span style={{ fontWeight: 600 }}>{isAr ? 'دائن:' : 'Cr:'}</span>
+                          <ERPLedgerAmount value={coaFilteredTotals.totalCreditNatureBalance} isAr={isAr} style={{ fontWeight: 700 }} />
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          borderTop: '1px dashed #cbd5e1',
+                          paddingTop: '0.15rem',
+                          color: coaFilteredTotals.balanceDelta.isZero() ? '#15803d' : '#b91c1c',
+                          fontWeight: 800
+                        }}>
+                          <span>{isAr ? 'الفارق (Δ):' : 'Δ Check:'}</span>
+                          <span>{coaFilteredTotals.balanceDelta.isZero() ? (isAr ? '٠.٠٠ (متزن ✓)' : '0.00 (Balanced ✓)') : coaFilteredTotals.balanceDelta.formatEGP(isAr)}</span>
+                        </div>
+                      </div>
                     </td>
                     <td className={css.canonicalTd} style={{ textAlign: 'center', fontSize: '0.70rem', color: '#16a34a' }}>
                       {isAr ? `${coaFilteredTotals.totalAccountsWithActivity} بحركة` : `${coaFilteredTotals.totalAccountsWithActivity} active`}
@@ -2418,8 +2462,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         border: 'none',
                         cursor: 'pointer',
                         background: trialBalanceViewMode === 'detailed' ? '#ffffff' : 'transparent',
-                        color: trialBalanceViewMode === 'detailed' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        boxShadow: trialBalanceViewMode === 'detailed' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                        color: trialBalanceViewMode === 'detailed' ? 'var(--erp-accent)' : '#64748b'
                       }}
                       onClick={() => setTrialBalanceViewMode('detailed')}
                     >
@@ -2436,8 +2479,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         border: 'none',
                         cursor: 'pointer',
                         background: trialBalanceViewMode === 'printable' ? '#ffffff' : 'transparent',
-                        color: trialBalanceViewMode === 'printable' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        boxShadow: trialBalanceViewMode === 'printable' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                        color: trialBalanceViewMode === 'printable' ? 'var(--erp-accent)' : '#64748b'
                       }}
                       onClick={() => setTrialBalanceViewMode('printable')}
                     >
@@ -2447,7 +2489,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   </div>
                   <button
                     type="button"
-                    className={css.secondaryBtn}
+                    className={shellStyles.btnSecondary}
                     onClick={() => setShowPrintPreview(true)}
                     title={isAr ? 'طباعة ميزان المراجعة' : 'Print Trial Balance'}
                   >
@@ -2456,7 +2498,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    className={css.secondaryBtn}
+                    className={shellStyles.btnSecondary}
                     onClick={handleExportExcelClick}
                     disabled={isExportingExcel}
                     title={isAr ? 'تصدير ميزان المراجعة إلى Excel' : 'Export to Excel'}
@@ -2517,7 +2559,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           <ERPLedgerAmount value={row.creditMovements} isAr={isAr} zeroAsDash />
                         </td>
                         <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
-                          <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="#1e40af" />
+                          <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="var(--erp-accent-hover)" />
                         </td>
                         <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
                           <ERPLedgerAmount value={row.endingCredit} isAr={isAr} zeroAsDash color="#b45309" />
@@ -2535,7 +2577,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         <ERPLedgerAmount value={trialBalanceReport.sumCredits} isAr={isAr} />
                       </td>
                       <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
-                        <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="#1e40af" />
+                        <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="var(--erp-accent-hover)" />
                       </td>
                       <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
                         <ERPLedgerAmount value={trialBalanceReport.sumEndingCreditBalances} isAr={isAr} color="#b45309" />

@@ -9,11 +9,10 @@ import {
   Sun, 
   Moon, 
   ExternalLink, 
-  Languages, 
-  LayoutDashboard,
-  Building2
+  Languages
 } from 'lucide-react';
 import styles from './AdminUniversalHeader.module.css';
+import { AdminPaletteMenu } from './AdminPaletteMenu';
 
 export interface AdminUniversalHeaderProps {
   adminLocale: string;
@@ -42,6 +41,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
       return 'light';
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(resolveTheme());
 
     if (typeof document !== 'undefined') {
@@ -217,6 +217,8 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
           <Plus size={14} strokeWidth={2.5} />
           <span>{isAr ? '+ صرح جديد' : '+ New Property'}</span>
         </Link>
+
+        <AdminPaletteMenu isAr={isAr} />
 
         <button
           type="button"

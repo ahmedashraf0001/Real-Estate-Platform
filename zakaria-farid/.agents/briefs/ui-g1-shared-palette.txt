@@ -1,0 +1,142 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign, no extra features.
+
+<execution_rules>
+- FOREGROUND commands only; never background or wait on jobs. Edits first, gates once at the end.
+- Always finish with the report. `caveman` skill for prose. Do NOT git add/commit/stash/checkout/restore.
+- Touch ONLY files listed. Targeted edits; keep UTF-8 Arabic; do not delete unrelated lines.
+- Do NOT touch anything under src/components/admin/erp/v2/views/ (another task is editing those).
+</execution_rules>
+
+<goal>
+The admin dashboard (/admin/*) must use the SAME accent palette the user picks in FIN-OS (/fin-os/*), and must
+offer the same palette picker. One stored choice drives both. Admin has light AND dark mode, so every preset
+gets dark-mode values. FIN-OS stays light-only.
+</goal>
+
+<files>
+src/lib/erp/erpPalettePresets.ts
+src/lib/theme/accentPalette.ts                       (NEW)
+src/components/admin/erp/context/ERPWorkstationContext.tsx   (only the palette block ~lines 459-510)
+src/components/admin/AdminAccentBridge.tsx           (NEW)
+src/components/admin/AdminPaletteMenu.tsx            (NEW)
+src/components/admin/AdminPaletteMenu.module.css     (NEW)
+src/components/admin/AdminUniversalHeader.tsx        (mount the menu only)
+src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/layout.tsx
+src/app/admin/admin.module.css                       (add --admin-on-accent only)
+src/lib/erp/__tests__/erpPalettePresets.test.ts      (append tests)
+src/lib/theme/__tests__/accentPalette.test.ts        (NEW)
+</files>
+
+<steps>
+1. erpPalettePresets.ts
+   a. Extend the interface:
+        border: string;        // accent at 25% alpha, light mode
+        onAccent: string;      // text color on a solid accent background, light mode
+        dark: { accent: string; hover: string; subtle: string; tint: string; border: string; onAccent: string };
+   b. Fill every preset EXACTLY (light border / light onAccent / dark block):
+      royal_blue:        border 'rgba(37, 99, 235, 0.25)'   onAccent '#ffffff'
+                         dark { accent '#3b82f6', hover '#60a5fa', subtle 'rgba(59, 130, 246, 0.18)', tint 'rgba(59, 130, 246, 0.10)', border 'rgba(59, 130, 246, 0.35)', onAccent '#ffffff' }
+      executive_gold:    border 'rgba(148, 111, 35, 0.25)'  onAccent '#ffffff'
+                         dark { accent '#c9a24a', hover '#ddb965', subtle 'rgba(201, 162, 74, 0.18)', tint 'rgba(201, 162, 74, 0.10)', border 'rgba(201, 162, 74, 0.35)', onAccent '#1a1405' }
+      midnight_navy:     border 'rgba(30, 58, 138, 0.25)'   onAccent '#ffffff'
+                         dark { accent '#6d8fd8', hover '#8eaae6', subtle 'rgba(109, 143, 216, 0.18)', tint 'rgba(109, 143, 216, 0.10)', border 'rgba(109, 143, 216, 0.35)', onAccent '#0b1220' }
+      steel_slate:       border 'rgba(51, 65, 85, 0.25)'    onAccent '#ffffff'
+                         dark { accent '#94a3b8', hover '#cbd5e1', subtle 'rgba(148, 163, 184, 0.18)', tint 'rgba(148, 163, 184, 0.10)', border 'rgba(148, 163, 184, 0.35)', onAccent '#0f172a' }
+      deep_emerald:      border 'rgba(15, 118, 110, 0.25)'  onAccent '#ffffff'
+                         dark { accent '#2dd4bf', hover '#5eead4', subtle 'rgba(45, 212, 191, 0.16)', tint 'rgba(45, 212, 191, 0.10)', border 'rgba(45, 212, 191, 0.35)', onAccent '#042f2e' }
+      sovereign_indigo:  border 'rgba(67, 56, 202, 0.25)'   onAccent '#ffffff'
+                         dark { accent '#818cf8', hover '#a5b4fc', subtle 'rgba(129, 140, 248, 0.18)', tint 'rgba(129, 140, 248, 0.10)', border 'rgba(129, 140, 248, 0.35)', onAccent '#1e1b4b' }
+      deep_bordeaux:     border 'rgba(153, 27, 27, 0.25)'   onAccent '#ffffff'
+                         dark { accent '#e0707a', hover '#ec959c', subtle 'rgba(224, 112, 122, 0.18)', tint 'rgba(224, 112, 122, 0.10)', border 'rgba(224, 112, 122, 0.35)', onAccent '#2a0a0d' }
+      obsidian_charcoal: border 'rgba(24, 24, 27, 0.25)'    onAccent '#ffffff'
+                         dark { accent '#e4e4e7', hover '#ffffff', subtle 'rgba(228, 228, 231, 0.14)', tint 'rgba(228, 228, 231, 0.08)', border 'rgba(228, 228, 231, 0.30)', onAccent '#18181b' }
+      If the file has a preset id not listed here, report it in OPEN and give it the royal_blue values.
+
+2. NEW src/lib/theme/accentPalette.ts ('use client' NOT needed; no JSX):
+   export const ACCENT_CHANGE_EVENT = 'zf:accent-change';
+   export type AccentMode = 'light' | 'dark';
+   export interface AccentTokens { accent: string; hover: string; subtle: string; tint: string; border: string; onAccent: string }
+   export function accentTokens(preset: ERPPalettePreset, mode: AccentMode): AccentTokens
+       light -> { accent: preset.accent, hover: preset.hover, subtle: preset.subtle, tint: preset.tint, border: preset.border, onAccent: preset.onAccent }
+       dark  -> preset.dark
+   export function readStoredPresetId(): string | null        // try { return window.localStorage.getItem(FIN_OS_PALETTE_STORAGE_KEY) } catch { return null }; null on server
+   export function storePresetId(id: string): void            // try localStorage.setItem; then window.dispatchEvent(new CustomEvent(ACCENT_CHANGE_EVENT, { detail: id })); swallow storage errors
+   export function useAccentPreset(): [ERPPalettePreset, (id: string) => void]
+       - useState(DEFAULT_PALETTE_PRESET)
+       - useEffect on mount: const id = readStoredPresetId(); if (id) set(getPresetById(id));
+         subscribe to window ACCENT_CHANGE_EVENT (detail id) and window 'storage' (when e.key === FIN_OS_PALETTE_STORAGE_KEY && e.newValue) -> set(getPresetById(..)); cleanup both.
+       - select = useCallback((id) => { const p = getPresetById(id); set(p); storePresetId(p.id); }, [])
+   Import React hooks from 'react'. Keep it framework-free otherwise.
+
+3. ERPWorkstationContext.tsx palette block: replace the local useState + "Read persisted preset on mount" effect
+   + selectPresetById with:
+       const [activePreset, selectAccentPreset] = useAccentPreset();
+       const selectPresetById = useCallback((id: string) => { selectAccentPreset(id); applyPaletteTokens(getPresetById(id)); }, [selectAccentPreset, applyPaletteTokens]);
+   Keep applyPaletteTokens and the effect that applies tokens on activePreset change exactly as they are.
+   Remove imports that become unused. The context value keys (activePreset, palettePresets, selectPresetById) stay identical.
+
+4. admin.module.css: add `--admin-on-accent: #ffffff;` right after `--admin-accent-border` in BOTH the dark
+   `.adminWrapper` block and the light `[data-theme="light"] .adminWrapper` block. Nothing else.
+
+5. NEW src/components/admin/AdminAccentBridge.tsx ('use client'): renders null. Effect:
+     const [preset] = useAccentPreset();
+     apply = () => {
+       const el = document.querySelector<HTMLElement>('[data-admin-wrapper="true"]'); if (!el) return;
+       const mode = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+       const t = accentTokens(preset, mode);
+       el.style.setProperty('--admin-accent', t.accent); '--admin-accent-hover' t.hover; '--admin-accent-subtle' t.subtle;
+       '--admin-accent-tint' t.tint; '--admin-accent-border' t.border; '--admin-on-accent' t.onAccent;
+     };
+     apply(); a MutationObserver on document.documentElement (attributeFilter ['data-theme']) calls apply; disconnect on cleanup.
+   Effect deps: [preset].
+
+6. layout.tsx (dashboard-pages): add data-admin-wrapper="true" to the `<div className={styles.adminWrapper} ...>`
+   and render <AdminAccentBridge /> as its first child. Layout stays a server component (the bridge is the client part).
+
+7. NEW AdminPaletteMenu.tsx ('use client') + AdminPaletteMenu.module.css — a port of
+   src/components/admin/erp/v2/common/ZFPaletteCustomizer.tsx (read it; reproduce its structure, texts, keyboard and
+   outside-click behaviour) with these differences:
+     - data: `const [activePreset, select] = useAccentPreset();` and ERP_PALETTE_PRESETS; prop `isAr: boolean`.
+     - all styling in the CSS module (no inline style objects), using ONLY admin tokens:
+       trigger: same size/shape as `.iconBtn` in AdminUniversalHeader.module.css (copy its box metrics), color
+         var(--admin-text-body), hover/open background var(--admin-accent-tint), open color var(--admin-accent).
+       popover: background var(--admin-card-bg), border 1px solid var(--admin-card-border), radius 12px,
+         shadow 0 12px 32px rgba(15, 23, 42, 0.18), width 264px, padding 0.5rem, z-index 60, positioned under the
+         trigger at inset-inline-end: 0.
+       each option row: 36px tall, radius 8px, gap 0.6rem; swatch 18px circle with background = that preset's accent
+         for the CURRENT mode (pass via inline CSS variable only: style={{ ['--swatch' as string]: color }} and
+         `.swatch { background: var(--swatch) }` — this is the only inline style allowed); name text
+         var(--admin-text-title) 0.8rem/600; active row background var(--admin-accent-subtle) with a Check icon in
+         var(--admin-accent); hover background var(--admin-card-bg-subtle).
+       header line in popover: 'لون النظام' / 'Accent color', 0.72rem/700 var(--admin-text-muted); footer note:
+         'يُطبّق على لوحة الإدارة ومنظومة FIN-OS' / 'Applies to Admin and FIN-OS', 0.7rem var(--admin-text-dim).
+     - current mode for swatches: read document.documentElement data-theme ('light' else 'dark') in state, kept in
+       sync with a MutationObserver like step 5; swatch color = accentTokens(preset, mode).accent.
+     - no reset button needed if ZFPaletteCustomizer has none; if it has one, keep it (selects 'royal_blue').
+
+8. AdminUniversalHeader.tsx: import AdminPaletteMenu and render `<AdminPaletteMenu isAr={isAr} />` immediately
+   BEFORE the theme toggle button inside `.quickControls`. Use the variable the file already uses for Arabic
+   (grep `isAr`); if none exists, derive `const isAr = adminLocale === 'ar'` the same way the file does elsewhere.
+</steps>
+
+<tests>
+Append to src/lib/erp/__tests__/erpPalettePresets.test.ts (describe 'dark mode tokens'):
+  - every preset has border, onAccent and dark.{accent,hover,subtle,tint,border,onAccent} as non-empty strings
+  - every preset.dark.accent is a 6-digit hex and has contrast >= 3.0 against '#1a2232' (use getContrastRatio in the file)
+  - every preset: contrast(dark.onAccent, dark.accent) >= 3.0 and contrast(onAccent, accent) >= 4.5
+NEW src/lib/theme/__tests__/accentPalette.test.ts:
+  - accentTokens(royal_blue,'light').accent === '#2563eb'; accentTokens(royal_blue,'dark').accent === '#3b82f6'
+  - accentTokens(obsidian_charcoal,'dark').onAccent === '#18181b'
+  - readStoredPresetId() returns null when window is undefined (node test env)
+</tests>
+
+<gates>
+npx tsc --noEmit
+npx tsx --test src/lib/erp/__tests__/erpPalettePresets.test.ts src/lib/theme/__tests__/accentPalette.test.ts
+npx eslint src/lib/theme src/components/admin/AdminAccentBridge.tsx src/components/admin/AdminPaletteMenu.tsx src/components/admin/AdminUniversalHeader.tsx src/lib/erp/erpPalettePresets.ts
+</gates>
+
+<structured_output_contract>
+STATUS | per step: done/skipped + file:line | any contrast test that failed and the preset | GATES pass/fail + first
+failing line | OPEN. Caveman, <=25 lines.
+</structured_output_contract>

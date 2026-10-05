@@ -1,0 +1,4 @@
+ROLE: LEAF — implementer. cwd = zakaria-farid.
+Your complete brief is .agents/briefs/fix-e-collect-and-triggers.body.txt. Read it IN FULL first, then execute it
+exactly (deterministic: strings, classes, CSS and tests are given). Run its gates in the FOREGROUND and return its
+report. Use the `caveman` skill. Do NOT git add/commit/stash/checkout/restore. Touch only its <files>.

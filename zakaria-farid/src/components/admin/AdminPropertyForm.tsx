@@ -12,7 +12,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, Film, Play, Plus, Users } from 'lucide-react';
+import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, Film, Play, Plus, Users, AlertCircle, AlertTriangle } from 'lucide-react';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -27,7 +27,6 @@ import {
   PartnerShareItem,
   SystemPartner,
   PRIMARY_DEVELOPER_NAME,
-  INITIAL_REGISTERED_PARTNERS,
   getRegisteredPartners,
   saveRegisteredPartner,
   normalizePartnerSplits,
@@ -153,9 +152,9 @@ function ReviewZoneCard({ zone, levelLabel, isAr }: { zone: ZoneInstance; levelL
 
   const badgeCfg = {
     red_brick:      { en: 'Red Brick',   ar: 'طوب أحمر',   color: '#D97706', bg: 'rgba(217, 119, 6, 0.12)',   border: 'rgba(217, 119, 6, 0.3)' },
-    semi_finished:  { en: 'Semi',        ar: 'نص تشطيب',   color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)',  border: 'rgba(59, 130, 246, 0.3)' },
+    semi_finished:  { en: 'Semi',        ar: 'نص تشطيب',   color: 'var(--admin-accent)', bg: 'rgba(59, 130, 246, 0.12)',  border: 'color-mix(in srgb, var(--admin-accent) 30%, transparent)' },
     fully_finished: { en: 'Finished',    ar: 'تشطيب كامل', color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)' },
-    mixed:          { en: 'Mixed',       ar: 'مختلط',      color: '#C5A059', bg: 'rgba(197, 160, 89, 0.12)', border: 'rgba(197, 160, 89, 0.3)' },
+    mixed:          { en: 'Mixed',       ar: 'مختلط',      color: 'var(--admin-accent)', bg: 'var(--admin-accent-tint)', border: 'var(--admin-accent-border)' },
     unknown:        null,
   }[badge];
 
@@ -265,7 +264,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
   const [registeredPartners, setRegisteredPartners] = useState<SystemPartner[]>(() => {
-    return typeof window !== 'undefined' ? getRegisteredPartners() : INITIAL_REGISTERED_PARTNERS;
+    return typeof window !== 'undefined' ? getRegisteredPartners() : [];
   });
 
   useEffect(() => {
@@ -280,6 +279,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         const parsed = Number(s);
         if (parsed >= 1 && parsed <= 4) {
           setCurrentStep(parsed);
+        } else if (parsed === 5) {
+          setCurrentStep(4);
+          setIsSaved(true);
         }
       }
       if (sp.get('saved') === 'true') {
@@ -500,6 +502,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const selectedSubtype = watch('subtype');
   const totalFloorsRaw = watch('total_floors');
   const unitsPerFloorRaw = watch('units_per_floor');
+  const currentLat = watch('latitude');
+  const currentLng = watch('longitude');
+  const hasMapPin = typeof currentLat === 'number' && !isNaN(currentLat) && typeof currentLng === 'number' && !isNaN(currentLng) && currentLat !== 0 && currentLng !== 0;
+  const photoCount = previewUrls.length;
 
   const steps = [
     { 
@@ -643,19 +649,19 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
             body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 32px; color: #1E293B; background: #FFFFFF; line-height: 1.5; }
-            .header { border-bottom: 2px solid #946F23; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
-            .brand { font-size: 11px; font-weight: 800; color: #946F23; text-transform: uppercase; letter-spacing: 1px; }
-            .title { font-size: 24px; font-weight: 800; color: #0A0E18; margin: 4px 0 0; }
+            .header { border-bottom: 2px solid var(--admin-accent); padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .brand { font-size: 11px; font-weight: 800; color: var(--admin-accent); text-transform: uppercase; letter-spacing: 1px; }
+            .title { font-size: 24px; font-weight: 800; color: #0F172A; margin: 4px 0 0; }
             .kpiGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
-            .kpiVal { font-size: 20px; font-weight: 800; color: #946F23; display: block; }
+            .kpiVal { font-size: 20px; font-weight: 800; color: var(--admin-accent); display: block; }
             .kpiLabel { font-size: 11px; color: #64748B; font-weight: 600; }
             .catCard { border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
-            .catHeader { font-size: 15px; font-weight: 800; color: #0A0E18; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+            .catHeader { font-size: 15px; font-weight: 800; color: #0F172A; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
             .zoneGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
             .zoneCard { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; }
             .zoneName { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 4px; display: block; }
             .tradeChip { font-size: 10px; background: #FFFFFF; border: 1px solid #CBD5E1; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 2px 0 0; color: #475569; }
-            .footer { margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 16px; font-size: 11px; color: #946F23; text-align: center; }
+            .footer { margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 16px; font-size: 11px; color: var(--admin-accent); text-align: center; }
           </style>
         </head>
         <body>
@@ -666,7 +672,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div style="font-size: 12px; color: #64748B; margin-top: 4px;">${location} • ${selectedType}</div>
             </div>
             <div style="text-align: right;">
-              <span style="font-size: 20px; font-weight: 800; color: #946F23;">${price} EGP</span>
+              <span style="font-size: 20px; font-weight: 800; color: var(--admin-accent);">${price} EGP</span>
               <div style="font-size: 11px; color: #64748B;">${area} sqm</div>
             </div>
           </div>
@@ -678,7 +684,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             <div><span class="kpiVal">100%</span><span class="kpiLabel">${isAr ? 'جاهز للنشر' : 'Ready Status'}</span></div>
           </div>
 
-          <h3 style="font-size: 16px; font-weight: 800; color: #0A0E18; margin-bottom: 12px;">${isAr ? 'المواصفات المعمارية والتشطيبات' : 'Architectural & Finishing Specifications'}</h3>
+          <h3 style="font-size: 16px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">${isAr ? 'المواصفات المعمارية والتشطيبات' : 'Architectural & Finishing Specifications'}</h3>
 
           ${(() => {
             const leaves = flattenLeafZones(zoneInstances);
@@ -724,6 +730,13 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   };
 
   async function onSubmit(data: FormValues) {
+    if (isSaved) {
+      return;
+    }
+    if (!hasMapPin) {
+      toast.error(isAr ? 'يرجى تحديد موقع العقار على الخريطة في الخطوة 2 قبل النشر' : 'Map pin coordinates (latitude & longitude) are required before publishing.');
+      return;
+    }
     setSaving(true);
     try {
       const payloadBase = {
@@ -1012,9 +1025,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       fontWeight: 800,
                       fontSize: 13,
                       cursor: 'pointer',
-                      background: priceDraft.trim().toLowerCase().endsWith(sfx) ? 'rgba(148, 111, 35, 0.15)' : 'var(--admin-card-bg-subtle, #F8FAFC)',
-                      border: `1.5px solid ${priceDraft.trim().toLowerCase().endsWith(sfx) ? 'var(--admin-gold-primary, #946F23)' : 'var(--admin-card-border, #D8D2C4)'}`,
-                      color: priceDraft.trim().toLowerCase().endsWith(sfx) ? 'var(--admin-gold-primary, #946F23)' : 'var(--admin-text-secondary, #475569)',
+                      background: priceDraft.trim().toLowerCase().endsWith(sfx) ? 'var(--admin-accent-tint)' : 'var(--admin-card-bg-subtle)',
+                      border: `1.5px solid ${priceDraft.trim().toLowerCase().endsWith(sfx) ? 'var(--admin-accent)' : 'var(--admin-card-border)'}`,
+                      color: priceDraft.trim().toLowerCase().endsWith(sfx) ? 'var(--admin-accent)' : 'var(--admin-text-muted)',
                     }}
                   >
                     {sfx.toUpperCase()}
@@ -1022,7 +1035,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 ))}
               </div>
               {priceParsed !== null && priceParsed > 0 && (
-                <p style={{ margin: '6px 2px 0', fontSize: 12.5, fontWeight: 700, color: 'var(--admin-gold-primary, #946F23)' }} dir="ltr">
+                <p style={{ margin: '6px 2px 0', fontSize: 12.5, fontWeight: 700, color: 'var(--admin-accent)' }} dir="ltr">
                   = {priceParsed.toLocaleString()} EGP
                 </p>
               )}
@@ -1098,16 +1111,16 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           {selectedType === 'building' ? (
             <div className={styles.section}>
               <div className={styles.sectionHeader}>
-              <div className={styles.sectionHeaderIcon} style={{ color: 'var(--zf-gold, #d4af37)', background: 'rgba(212, 175, 55, 0.12)' }}>
+              <div className={styles.sectionHeaderIcon}>
                 <Users size={20} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
-                    <h2 className={styles.sectionTitle} style={{ color: 'var(--admin-text-title, #0F172A)' }}>
+                    <h2 className={styles.sectionTitle}>
                       {isAr ? 'توزيع حصص الشركاء والممولين في هذا العقار' : 'Property Contributor & Equity Allocation'}
                     </h2>
-                    <span style={{ fontSize: '12px', color: 'var(--admin-text-muted, #64748B)', marginTop: '2px', display: 'block' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)', marginTop: '2px', display: 'block' }}>
                       {isAr 
                         ? 'حدد نسب الشركاء والممولين المساهمين في تشييد هذا العقار (المهندس زكريا فريد هو المطور الدائم والأساسي).' 
                         : 'Specify contributor equity shares for this property. Eng. Zakaria Farid is the permanent anchor developer.'}
@@ -1125,9 +1138,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                           fontWeight: 700,
                           padding: '0.25rem 0.65rem',
                           borderRadius: '6px',
-                          background: isExact100 ? 'rgba(212, 175, 55, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                          color: isExact100 ? 'var(--zf-gold, #d4af37)' : '#f87171',
-                          border: isExact100 ? '1px solid rgba(212, 175, 55, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)'
+                          background: isExact100 ? 'var(--admin-accent-tint)' : 'rgba(239, 68, 68, 0.15)',
+                          color: isExact100 ? 'var(--admin-accent)' : '#f87171',
+                          border: isExact100 ? '1px solid var(--admin-accent-border)' : '1px solid rgba(239, 68, 68, 0.35)'
                         }}>
                           {isExact100 
                             ? (isAr ? 'إجمالي الحصص: 100% ✓' : 'Total Shares: 100% ✓')
@@ -1139,9 +1152,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                             type="button"
                             onClick={() => setPartnerSplits(autoBalanceShares(partnerSplits))}
                             style={{
-                              background: 'rgba(212, 175, 55, 0.15)',
-                              color: 'var(--zf-gold, #d4af37)',
-                              border: '1px solid rgba(212, 175, 55, 0.4)',
+                              background: 'var(--admin-accent-tint)',
+                              color: 'var(--admin-accent)',
+                              border: '1px solid var(--admin-accent-border)',
                               borderRadius: '6px',
                               padding: '0.25rem 0.6rem',
                               fontSize: '0.72rem',
@@ -1183,22 +1196,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       gridTemplateColumns: '1.4fr 0.8fr 1.3fr auto',
                       gap: '0.5rem',
                       alignItems: 'center',
-                      background: 'var(--admin-card-bg, #FFFFFF)',
+                      background: 'var(--admin-card-bg)',
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
-                      border: isZakaria ? '1.5px solid rgba(148, 111, 35, 0.4)' : '1.5px solid var(--admin-card-border, #D8D2C4)',
+                      border: isZakaria ? '1.5px solid var(--admin-accent-border)' : '1px solid var(--admin-card-border)',
                       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
                     }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isZakaria ? 'var(--zf-gold, #946F23)' : 'var(--admin-text-title, #0F172A)' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isZakaria ? 'var(--admin-accent)' : 'var(--admin-text-title)' }}>
                             {partner.partnerName}
                           </span>
                           {isZakaria && (
                             <span style={{
-                              background: 'rgba(148, 111, 35, 0.1)',
-                              color: 'var(--zf-gold, #946F23)',
-                              border: '1px solid rgba(148, 111, 35, 0.3)',
+                              background: 'var(--admin-accent-tint)',
+                              color: 'var(--admin-accent)',
+                              border: '1px solid var(--admin-accent-border)',
                               padding: '0.12rem 0.45rem',
                               borderRadius: '4px',
                               fontSize: '0.65rem',
@@ -1223,10 +1236,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                               fontSize: '0.82rem',
                               fontWeight: 800,
                               textAlign: 'center',
-                              background: 'var(--admin-input-bg, #FFFFFF)',
-                              border: '1.5px solid var(--admin-card-border, #D8D2C4)',
+                              background: 'var(--admin-input-bg)',
+                              border: '1px solid var(--admin-input-border)',
                               borderRadius: '6px',
-                              color: 'var(--admin-text-title, #0F172A)'
+                              color: 'var(--admin-text-title)'
                             }}
                             value={partner.sharePct}
                             onChange={e => {
@@ -1236,12 +1249,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                               setPartnerSplits(next);
                             }}
                           />
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--admin-text-muted, #475569)' }}>%</span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--admin-text-muted)' }}>%</span>
                         </div>
                       </div>
 
                       <div style={{ textAlign: isAr ? 'right' : 'left' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--zf-gold, #946F23)' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--admin-accent)' }}>
                           {propPrice > 0 ? `${Math.round(partnerVal).toLocaleString()} ج.م` : '—'}
                         </span>
                       </div>
@@ -1269,7 +1282,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                             ✕
                           </button>
                         ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted, #64748B)' }}>—</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted)' }}>—</span>
                         )}
                       </div>
                     </div>
@@ -1291,17 +1304,17 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     alignItems: 'center',
                     marginTop: '0.25rem',
                     padding: '0.75rem 0.85rem',
-                    background: 'var(--admin-card-bg, #FFFFFF)',
-                    border: '1.5px dashed var(--admin-card-border, #D8D2C4)',
+                    background: 'var(--admin-card-bg)',
+                    border: '1.5px dashed var(--admin-card-border)',
                     borderRadius: '10px'
                   }}>
                     <select
                       style={{
-                        background: 'var(--admin-input-bg, #FFFFFF)',
-                        border: '1.5px solid var(--admin-card-border, #D8D2C4)',
+                        background: 'var(--admin-input-bg)',
+                        border: '1px solid var(--admin-input-border)',
                         borderRadius: '8px',
                         padding: '0.5rem 0.75rem',
-                        color: 'var(--admin-text-title, #0F172A)',
+                        color: 'var(--admin-text-title)',
                         fontSize: '0.82rem',
                         fontWeight: 700,
                         outline: 'none',
@@ -1310,17 +1323,17 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       value={selectedPartnerToAdd}
                       onChange={e => setSelectedPartnerToAdd(e.target.value)}
                     >
-                      <option value="" style={{ background: '#FFFFFF', color: '#64748B' }}>
+                      <option value="" style={{ background: 'var(--admin-input-bg)', color: 'var(--admin-text-muted)' }}>
                         {availablePartners.length > 0 
                           ? (isAr ? '-- اختر شريكاً مسجلاً للإضافة --' : '-- Choose registered partner --')
                           : (isAr ? '-- جميع الشركاء المسجلين مضافون لهذا العقار --' : '-- All registered partners added --')}
                       </option>
                       {availablePartners.map(ap => (
-                        <option key={ap.name} value={ap.name} style={{ background: '#FFFFFF', color: '#0F172A' }}>
+                        <option key={ap.name} value={ap.name} style={{ background: 'var(--admin-input-bg)', color: 'var(--admin-text-title)' }}>
                           {ap.name} ({ap.role})
                         </option>
                       ))}
-                      <option value="__custom__" style={{ background: '#FFFFFF', color: 'var(--zf-gold, #946F23)', fontWeight: 800 }}>
+                      <option value="__custom__" style={{ background: 'var(--admin-input-bg)', color: 'var(--admin-accent)', fontWeight: 800 }}>
                         {isAr ? '+ إدخال وتوثيق اسم شريك جديد يدوياً...' : '+ Type new custom partner...'}
                       </option>
                     </select>
@@ -1332,11 +1345,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                         value={customPartnerNameInput}
                         onChange={e => setCustomPartnerNameInput(e.target.value)}
                         style={{
-                          background: 'var(--admin-input-bg, #FFFFFF)',
-                          border: '1.5px solid var(--admin-card-border, #D8D2C4)',
+                          background: 'var(--admin-input-bg)',
+                          border: '1px solid var(--admin-input-border)',
                           borderRadius: '8px',
                           padding: '0.5rem 0.75rem',
-                          color: 'var(--admin-text-title, #0F172A)',
+                          color: 'var(--admin-text-title)',
                           fontSize: '0.82rem',
                           fontWeight: 700,
                           outline: 'none'
@@ -1368,10 +1381,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                         borderRadius: '8px',
                         fontSize: '0.8rem',
                         fontWeight: 800,
-                        background: 'linear-gradient(135deg, var(--zf-gold, #946F23) 0%, #B8860B 100%)',
-                        color: '#FFFFFF',
+                        background: 'var(--admin-accent)',
+                        color: 'var(--admin-on-accent)',
                         border: 'none',
-                        boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)',
+                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
                         cursor: 'pointer',
                         opacity: (!selectedPartnerToAdd || (selectedPartnerToAdd === '__custom__' && !customPartnerNameInput.trim())) ? 0.5 : 1,
                         transition: 'all 0.15s ease'
@@ -1386,20 +1399,20 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           </div>
         ) : (
             <div style={{
-              background: 'var(--admin-card-bg-subtle, #F8FAFC)',
-              border: '1px dashed var(--admin-card-border, #CBD5E1)',
+              background: 'var(--admin-card-bg-subtle)',
+              border: '1px dashed var(--admin-card-border)',
               borderRadius: '12px',
               padding: '1rem 1.25rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.85rem',
               fontSize: '0.8rem',
-              color: 'var(--admin-text-muted, #64748B)',
+              color: 'var(--admin-text-muted)',
               margin: '1rem 0'
             }}>
-              <Building2 size={20} color="#946F23" style={{ flexShrink: 0 }} />
+              <Building2 size={20} color="var(--admin-accent)" style={{ flexShrink: 0 }} />
               <div>
-                <strong style={{ color: 'var(--admin-text-title, #0F172A)', display: 'block', marginBottom: '0.2rem' }}>
+                <strong style={{ color: 'var(--admin-text-title)', display: 'block', marginBottom: '0.2rem' }}>
                   {isAr ? 'نطاق الشراكة محصور بالمباني الكاملة' : 'Partnership Restricted to Full Buildings'}
                 </strong>
                 <span>
@@ -1444,32 +1457,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               }
             }
             .step2-card {
-              background: rgba(13, 19, 34, 0.75);
-              backdrop-filter: blur(24px);
-              -webkit-backdrop-filter: blur(24px);
-              border: 1px solid rgba(197, 160, 89, 0.25);
+              background: var(--admin-card-bg);
+              border: 1px solid var(--admin-card-border);
               border-radius: 18px;
               padding: 22px 24px;
               display: flex;
               flex-direction: column;
               gap: 16px;
-              box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
               box-sizing: border-box;
-            }
-            [data-theme="light"] .step2-card {
-              background: #FFFFFF;
-              border: 1.5px solid #D8D2C4;
-              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
             }
             .step2-card-head {
               display: flex;
               align-items: center;
               gap: 10px;
               padding-bottom: 12px;
-              border-bottom: 1px solid rgba(197, 160, 89, 0.15);
-            }
-            [data-theme="light"] .step2-card-head {
-              border-bottom: 1.5px solid #D8D2C4;
+              border-bottom: 1px solid var(--admin-card-border-subtle);
             }
             .step2-card-icon {
               width: 32px;
@@ -1478,28 +1481,20 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              background: rgba(197, 160, 89, 0.12);
-              color: var(--zf-gold, #C5A059);
-              border: 1px solid rgba(197, 160, 89, 0.25);
-            }
-            [data-theme="light"] .step2-card-icon {
-              background: rgba(148, 111, 35, 0.08);
-              color: #946F23;
-              border: 1.5px solid rgba(148, 111, 35, 0.25);
+              background: var(--admin-accent-tint);
+              color: var(--admin-accent);
+              border: 1px solid var(--admin-accent-border);
             }
             .step2-card-title {
               font-size: 0.85rem;
               font-weight: 800;
               letter-spacing: 0.06em;
               text-transform: uppercase;
-              color: var(--zf-gold, #C5A059);
+              color: var(--admin-text-title);
               margin: 0;
             }
-            [data-theme="light"] .step2-card-title {
-              color: #0F172A;
-            }
             .step2-dropzone-compact {
-              border: 1.5px dashed rgba(197, 160, 89, 0.3);
+              border: 1.5px dashed var(--admin-dropzone-border);
               border-radius: 14px;
               padding: 24px 16px;
               display: flex;
@@ -1508,36 +1503,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               justify-content: center;
               gap: 8px;
               cursor: pointer;
-              background: rgba(197, 160, 89, 0.02);
+              background: var(--admin-dropzone-bg);
               transition: all 0.2s ease;
               text-align: center;
             }
             .step2-dropzone-compact:hover {
-              border-color: #C5A059;
-              background: rgba(197, 160, 89, 0.06);
+              border-color: var(--admin-accent);
+              background: var(--admin-accent-tint);
               transform: translateY(-1px);
             }
-            [data-theme="light"] .step2-dropzone-compact {
-              background: #F8FAFC;
-              border: 1.5px dashed #D8D2C4;
-            }
-            [data-theme="light"] .step2-dropzone-compact:hover {
-              border-color: #946F23;
-              background: #F1F5F9;
-            }
             .step2-dropzone-icon {
-              color: #C5A059;
-            }
-            [data-theme="light"] .step2-dropzone-icon {
-              color: #946F23;
+              color: var(--admin-accent);
             }
             .step2-dropzone-text {
               font-size: 0.78rem;
-              color: rgba(237, 232, 221, 0.7);
+              color: var(--admin-text-muted);
               margin: 0;
-            }
-            [data-theme="light"] .step2-dropzone-text {
-              color: #475569;
               font-weight: 600;
             }
 
@@ -1545,14 +1526,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             .step2-lang-switcher {
               display: flex;
               gap: 4px;
-              background: rgba(255, 255, 255, 0.05);
+              background: var(--admin-card-bg-subtle);
               padding: 3px;
               border-radius: 8px;
-              border: 1px solid rgba(255, 255, 255, 0.08);
-            }
-            [data-theme="light"] .step2-lang-switcher {
-              background: #F1F5F9;
-              border: 1.5px solid #D8D2C4;
+              border: 1px solid var(--admin-card-border);
             }
             .step2-lang-btn {
               padding: 4px 10px;
@@ -1562,83 +1539,61 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               border: none;
               cursor: pointer;
               background: transparent;
-              color: rgba(255, 255, 255, 0.7);
+              color: var(--admin-text-muted);
               display: flex;
               align-items: center;
               gap: 4px;
               transition: all 150ms ease;
             }
-            [data-theme="light"] .step2-lang-btn {
-              color: #475569;
-            }
             .step2-lang-btn.active {
-              background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
-              color: #0A0C10;
-            }
-            [data-theme="light"] .step2-lang-btn.active {
-              background: linear-gradient(135deg, #946F23 0%, #B8860B 100%);
-              color: #FFFFFF;
-              box-shadow: 0 1px 3px rgba(148, 111, 35, 0.25);
+              background: var(--admin-accent);
+              color: var(--admin-on-accent);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
 
             /* Step 2 Video Cards */
             .step2-video-card {
-              background: rgba(10, 14, 24, 0.85);
-              border: 1px solid rgba(197, 160, 89, 0.22);
+              background: var(--admin-card-bg-subtle);
+              border: 1px solid var(--admin-card-border);
               border-radius: 12px;
               padding: 12px 14px;
               display: flex;
               flex-direction: column;
               gap: 8px;
             }
-            [data-theme="light"] .step2-video-card {
-              background: #F8FAFC;
-              border: 1.5px solid #D8D2C4;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-            }
             .step2-video-badge {
               font-size: 10.5px;
               font-weight: 800;
               text-transform: uppercase;
               letter-spacing: 0.06em;
-              color: var(--zf-gold, #C5A059);
-              background: rgba(197, 160, 89, 0.12);
+              color: var(--admin-accent);
+              background: var(--admin-accent-tint);
               padding: 2px 6px;
               border-radius: 4px;
-            }
-            [data-theme="light"] .step2-video-badge {
-              color: #946F23;
-              background: rgba(148, 111, 35, 0.1);
             }
             .step2-video-title {
               font-size: 0.85rem;
               font-weight: 700;
-              color: #FFFDF5;
+              color: var(--admin-text-title);
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-            }
-            [data-theme="light"] .step2-video-title {
-              color: #0F172A;
             }
             .step2-video-url {
               font-size: 11px;
-              color: rgba(255, 255, 255, 0.4);
+              color: var(--admin-text-muted);
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-            }
-            [data-theme="light"] .step2-video-url {
-              color: #64748B;
             }
             .step2-video-btn {
               display: inline-flex;
               align-items: center;
               justify-content: center;
               gap: 6px;
-              background: rgba(197, 160, 89, 0.14);
-              border: 1px solid rgba(197, 160, 89, 0.3);
-              color: #C5A059;
+              background: var(--admin-accent-tint);
+              border: 1px solid var(--admin-accent-border);
+              color: var(--admin-accent);
               border-radius: 6px;
               padding: 6px 10px;
               font-size: 0.75rem;
@@ -1646,14 +1601,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               cursor: pointer;
               margin-top: 4px;
             }
-            [data-theme="light"] .step2-video-btn {
-              background: rgba(148, 111, 35, 0.1);
-              border: 1.5px solid rgba(148, 111, 35, 0.3);
-              color: #946F23;
-            }
-            [data-theme="light"] .step2-video-btn:hover {
-              background: rgba(148, 111, 35, 0.18);
-              border-color: #946F23;
+            .step2-video-btn:hover {
+              background: var(--admin-accent-subtle);
+              border-color: var(--admin-accent);
             }
           `}</style>
 
@@ -1673,7 +1623,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div {...getRootProps()} className="step2-dropzone-compact">
                 <input {...getInputProps()} />
                 {uploadingImages ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--zf-gold, #946F23)', fontSize: '0.8rem', fontWeight: 800 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--admin-accent)', fontSize: '0.8rem', fontWeight: 800 }}>
                     <Loader2 size={18} className={styles.spinner} />
                     <span>{isAr ? 'جاري رفع الصور...' : 'Uploading gallery photos…'}</span>
                   </div>
@@ -1785,7 +1735,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 <h2 className="step2-card-title">
                   {isAr ? 'فيديوهات الجولة داخل العقار (Video Tours)' : 'Property Video Tours'}
                 </h2>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--zf-gold, #946F23)', background: 'rgba(148, 111, 35, 0.1)', border: '1px solid rgba(148, 111, 35, 0.25)', padding: '2px 8px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-accent)', background: 'var(--admin-accent-tint)', border: '1px solid var(--admin-accent-border)', padding: '2px 8px', borderRadius: '6px' }}>
                   {videos.length} {isAr ? 'فيديوهات مضافة' : 'Videos Attached'}
                 </span>
               </div>
@@ -1837,15 +1787,15 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      background: 'linear-gradient(135deg, var(--zf-gold, #946F23) 0%, #B8860B 100%)',
-                      color: '#FFFFFF',
+                      background: 'var(--admin-accent)',
+                      color: 'var(--admin-on-accent)',
                       border: 'none',
                       padding: '8px 16px',
                       borderRadius: 8,
                       fontSize: '0.8rem',
                       fontWeight: 800,
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     <Plus size={14} strokeWidth={2.5} />
@@ -1857,9 +1807,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      background: 'var(--admin-card-bg-subtle, #F8FAFC)',
-                      border: '1.5px solid var(--admin-card-border, #D8D2C4)',
-                      color: 'var(--zf-gold, #946F23)',
+                      background: 'var(--admin-card-bg-subtle)',
+                      border: '1px solid var(--admin-card-border)',
+                      color: 'var(--admin-accent)',
                       padding: '8px 14px',
                       borderRadius: 8,
                       fontSize: '0.8rem',
@@ -1879,7 +1829,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   </label>
                 </div>
 
-                <span style={{ fontSize: '11.5px', color: 'var(--admin-text-muted, #475569)' }}>
+                <span style={{ fontSize: '11.5px', color: 'var(--admin-text-muted)' }}>
                   {isAr ? 'يدعم مشغل الفيديو الخاص الإضاءة المحيطية التفاعلية Ambient Mode تلقائياً' : 'Videos feature dynamic real-time ambient lighting projection on the public portal'}
                 </span>
               </div>
@@ -2058,27 +2008,17 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               width: 340px;
               height: calc(100dvh - 72px);
               z-index: 60;
-              background: #0D1220;
-              border-inline-start: 1px solid rgba(197, 160, 89, 0.25);
-              border-bottom: 1px solid rgba(197, 160, 89, 0.25);
-              box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35);
+              background: var(--admin-card-bg);
+              border-inline-start: 1px solid var(--admin-card-border);
+              border-bottom: 1px solid var(--admin-card-border);
+              box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
               display: flex;
               flex-direction: column;
               overflow: hidden;
               transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
             }
             [dir="rtl"].rooms-rail {
-              box-shadow: 12px 0 32px rgba(0, 0, 0, 0.35);
-            }
-            [data-theme="light"] .rooms-rail {
-              background: #FFFFFF !important;
-              border-inline-start: 1.5px solid #D8D2C4 !important;
-              border-bottom: 1.5px solid #D8D2C4 !important;
-              box-shadow: -12px 0 32px rgba(15, 23, 42, 0.08) !important;
-            }
-            [dir="rtl"][data-theme="light"] .rooms-rail,
-            [data-theme="light"] [dir="rtl"].rooms-rail {
-              box-shadow: 12px 0 32px rgba(15, 23, 42, 0.08) !important;
+              box-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
             }
             .rooms-rail.closed { transform: translateX(100%); pointer-events: none; }
             [dir="rtl"].rooms-rail.closed { transform: translateX(-100%); }
@@ -2088,32 +2028,25 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               align-items: center;
               justify-content: space-between;
               padding: 12px 14px;
-              border-block-end: 1px solid rgba(197, 160, 89, 0.2);
+              border-block-end: 1px solid var(--admin-card-border-subtle);
               flex-shrink: 0;
-              background: #0A0E18;
+              background: var(--admin-card-bg-subtle);
               min-height: 48px;
-            }
-            [data-theme="light"] .rooms-rail-head {
-              background: #F8FAFC !important;
-              border-block-end: 1.5px solid #D8D2C4 !important;
             }
             .rooms-rail-title {
               font-family: 'Plus Jakarta Sans', sans-serif;
               font-size: 11px;
               font-weight: 800;
               letter-spacing: 0.12em;
-              color: rgba(237, 232, 221, 0.55);
-            }
-            [data-theme="light"] .rooms-rail-title {
-              color: #0F172A !important;
+              color: var(--admin-text-muted);
             }
             .rooms-rail-back-btn {
               display: inline-flex;
               align-items: center;
               gap: 5px;
-              background: rgba(197, 160, 89, 0.12);
-              border: 1px solid rgba(197, 160, 89, 0.3);
-              color: var(--zf-gold, #C5A059);
+              background: var(--admin-accent-tint);
+              border: 1px solid var(--admin-accent-border);
+              color: var(--admin-accent);
               font-family: 'Plus Jakarta Sans', sans-serif;
               font-size: 0.75rem;
               font-weight: 700;
@@ -2123,17 +2056,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               transition: all 0.15s ease;
             }
             .rooms-rail-back-btn:hover {
-              background: rgba(197, 160, 89, 0.22);
-              border-color: #C5A059;
-            }
-            [data-theme="light"] .rooms-rail-back-btn {
-              background: rgba(148, 111, 35, 0.08) !important;
-              border: 1.5px solid rgba(148, 111, 35, 0.25) !important;
-              color: #946F23 !important;
-            }
-            [data-theme="light"] .rooms-rail-back-btn:hover {
-              background: rgba(148, 111, 35, 0.16) !important;
-              border-color: #946F23 !important;
+              background: var(--admin-accent-subtle);
+              border-color: var(--admin-accent);
             }
             .rooms-rail-toggle, .rooms-rail-reopen {
               display: inline-flex;
@@ -2142,32 +2066,16 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               gap: 6px;
               border-radius: 8px;
               cursor: pointer;
-              background: transparent;
-              border: 1px solid rgba(197, 160, 89, 0.25);
-              color: rgba(237, 232, 221, 0.6);
+              background: var(--admin-card-bg);
+              border: 1px solid var(--admin-card-border);
+              color: var(--admin-text-body);
               transition: color 0.15s, border-color 0.15s;
             }
             .rooms-rail-toggle { width: 26px; height: 26px; }
-            .rooms-rail-toggle:hover, .rooms-rail-reopen:hover { color: #C5A059; border-color: #C5A059; }
-            [data-theme="light"] .rooms-rail-toggle,
-            [data-theme="light"] .rooms-rail-reopen {
-              border-color: #D8D2C4 !important;
-              color: #475569 !important;
+            .rooms-rail-toggle:hover, .rooms-rail-reopen:hover {
+              color: var(--admin-accent);
+              border-color: var(--admin-accent);
             }
-            [data-theme="light"] .rooms-rail-toggle:hover,
-            [data-theme="light"] .rooms-rail-reopen:hover {
-              border-color: #946F23 !important;
-              color: #946F23 !important;
-            }
-            [data-theme="light"] .rooms-rail-reopen {
-              background: #FFFFFF !important;
-              box-shadow: -8px 0 24px rgba(15, 23, 42, 0.1) !important;
-            }
-            [dir="rtl"][data-theme="light"] .rooms-rail-reopen,
-            [data-theme="light"] .rooms-rail-reopen.rtl {
-              box-shadow: 8px 0 24px rgba(15, 23, 42, 0.1) !important;
-            }
-
             .rooms-rail-reopen {
               position: fixed;
               top: 50%;
@@ -2178,8 +2086,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               padding: 12px 7px;
               border-top-right-radius: 0;
               border-bottom-right-radius: 0;
-              background: #0D1220;
-              box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+              background: var(--admin-card-bg);
+              box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
               font-family: 'Plus Jakarta Sans', sans-serif;
               font-size: 11px;
               font-weight: 800;
@@ -2191,7 +2099,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               border-radius: 8px;
               border-top-left-radius: 0;
               border-bottom-left-radius: 0;
-              box-shadow: 8px 0 24px rgba(0, 0, 0, 0.4);
+              box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
             }
 
             .rooms-rail-body {
@@ -2230,7 +2138,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 max-height: 520px;
                 margin-top: 16px;
                 border-radius: 14px;
-                border: 1px solid rgba(221, 167, 82, 0.16);
+                border: 1px solid var(--admin-card-border);
                 box-shadow: none;
               }
               .rooms-rail.closed { transform: none; pointer-events: auto; }
@@ -2263,7 +2171,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   <strong style={{ fontSize: '14px', color: '#10B981', display: 'block', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     {isAr ? 'تم حفظ وتحديث العقار والمخطط الهندسي بنجاح!' : 'Property & CAD Blueprint Saved Successfully!'}
                   </strong>
-                  <span style={{ fontSize: '12px', color: 'var(--admin-text-muted, #475569)' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>
                     {isAr ? 'كافة المواصفات والطبقات المعمارية مسجلة ومتاحة للمعاينة الحية.' : 'All layered specs and floor plans are stored. You can inspect live or return to dashboard.'}
                   </span>
                 </div>
@@ -2283,10 +2191,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       borderRadius: '8px',
                       fontSize: '12px',
                       fontWeight: 800,
-                      background: 'linear-gradient(135deg, var(--zf-gold, #946F23) 0%, #B8860B 100%)',
-                      color: '#FFFFFF',
+                      background: 'var(--admin-accent)',
+                      color: 'var(--admin-on-accent)',
                       textDecoration: 'none',
-                      boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     <Eye size={14} />
@@ -2301,9 +2209,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     borderRadius: '8px',
                     fontSize: '12px',
                     fontWeight: 700,
-                    border: '1.5px solid var(--admin-card-border, #D8D2C4)',
-                    background: 'var(--admin-card-bg-subtle, #F8FAFC)',
-                    color: 'var(--admin-text-title, #0F172A)',
+                    border: '1px solid var(--admin-card-border)',
+                    background: 'var(--admin-card-bg-subtle)',
+                    color: 'var(--admin-text-title)',
                     cursor: 'pointer',
                     minHeight: '44px',
                     display: 'inline-flex',
@@ -2464,9 +2372,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   type="button"
                   onClick={() => goToStep(1)}
                   style={{
-                    background: 'rgba(148, 111, 35, 0.1)',
-                    color: 'var(--zf-gold, #946F23)',
-                    border: '1px solid rgba(148, 111, 35, 0.3)',
+                    background: 'var(--admin-accent-tint)',
+                    color: 'var(--admin-accent)',
+                    border: '1px solid var(--admin-accent-border)',
                     borderRadius: '6px',
                     padding: '0.35rem 0.75rem',
                     fontSize: '0.75rem',
@@ -2487,8 +2395,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     <div
                       key={idx}
                       style={{
-                        background: 'var(--admin-card-bg, #FFFFFF)',
-                        border: isZakaria ? '1.5px solid rgba(148, 111, 35, 0.35)' : '1.5px solid var(--admin-card-border, #D8D2C4)',
+                        background: 'var(--admin-card-bg)',
+                        border: isZakaria ? '1.5px solid var(--admin-accent-border)' : '1px solid var(--admin-card-border)',
                         borderRadius: '10px',
                         padding: '0.85rem',
                         display: 'flex',
@@ -2498,25 +2406,25 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: '0.85rem', fontWeight: 800, color: isZakaria ? 'var(--zf-gold, #946F23)' : 'var(--admin-text-title, #0F172A)' }}>
+                        <strong style={{ fontSize: '0.85rem', fontWeight: 800, color: isZakaria ? 'var(--admin-accent)' : 'var(--admin-text-title)' }}>
                           {partner.partnerName}
                         </strong>
                         <span style={{
                           fontSize: '0.75rem',
                           fontWeight: 800,
-                          color: 'var(--zf-gold, #946F23)',
-                          background: 'rgba(148, 111, 35, 0.1)',
-                          border: '1px solid rgba(148, 111, 35, 0.25)',
+                          color: 'var(--admin-accent)',
+                          background: 'var(--admin-accent-tint)',
+                          border: '1px solid var(--admin-accent-border)',
                           padding: '0.15rem 0.45rem',
                           borderRadius: '4px'
                         }}>
                           {partner.sharePct}%
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--admin-text-muted, #64748B)' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--admin-text-muted)' }}>
                         {isZakaria ? (isAr ? 'المطور الدائم والأساسي' : 'Primary Developer') : (isAr ? 'شريك / ممول مساهم' : 'Contributor / Co-Investor')}
                       </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--zf-gold, #946F23)', marginTop: '0.2rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--admin-accent)', marginTop: '0.2rem' }}>
                         {propPrice > 0 ? `${Math.round(partnerVal).toLocaleString()} ج.م` : '—'}
                       </div>
                     </div>
@@ -2615,6 +2523,74 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           </div>
 
+          {/* Missing Map Pin Blocking Notice */}
+          {!hasMapPin && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <AlertCircle size={20} style={{ color: '#ef4444', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ fontSize: '13.5px', color: '#ef4444', display: 'block' }}>
+                    {isAr ? 'موقع الخريطة مطلوب لنشر العقار' : 'Map Pin Location Required'}
+                  </strong>
+                  <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>
+                    {isAr ? 'يجب تحديد إحداثيات العقار (خط العرض وخط الطول) على الخريطة في الخطوة 2 قبل النشر.' : 'Latitude and longitude coordinates must be pinned on the map in Step 2 before publishing.'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => goToStep(2)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {isAr ? 'العودة للخطوة ٢ (تحديد الموقع) ➔' : 'Go to Step 2 (Set Map Pin) ➔'}
+              </button>
+            </div>
+          )}
+
+          {/* Zero Photos Non-Blocking Warning */}
+          {photoCount === 0 && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '13px', color: '#f59e0b', display: 'block' }}>
+                  {isAr ? 'تنبيه: لم يتم رفع أي صور للعقار' : 'Notice: 0 photos uploaded'}
+                </strong>
+                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>
+                  {isAr ? 'يمكنك النشر بدون صور، لكن يُنصح بإضافة صور لتعزيز جاذبية العرض.' : 'You can publish without photos, but uploading imagery is strongly recommended.'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Verification Callout Note */}
           <div className={styles.reviewVerifyNotice}>
             <div className={styles.reviewVerifyNoticeIcon}>
@@ -2674,45 +2650,67 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
 
         <div className={styles.saveBarControls}>
-          <button type="button" className={styles.btnPrev} onClick={() => router.back()}>
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-
-          {currentStep > 1 && (
-            <button type="button" className={styles.btnPrev} onClick={handlePrevStep}>
-              {isAr ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-              <span>{isAr ? 'الخطوة السابقة' : 'Previous'}</span>
-            </button>
-          )}
-
-          {currentStep < 4 ? (
-            <button type="button" className={styles.btnNext} onClick={handleNextStep}>
-              <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
-              {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={styles.btnPublish}
-              disabled={saving}
-              id="admin-property-save"
-              onClick={handleSubmit(onSubmit)}
-            >
-              {saving ? (
-                <Loader2 size={16} className={styles.spinner} />
-              ) : isSaved ? (
-                <Check size={16} strokeWidth={2.5} />
-              ) : (
-                <Save size={16} strokeWidth={1.5} />
+          {isSaved ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {savedSlug && (
+                <a
+                  href={`/${isAr ? 'ar' : 'en'}/properties/${savedSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.btnNext}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Eye size={16} />
+                  <span>{isAr ? 'معاينة العقار' : 'View live'}</span>
+                </a>
               )}
-              <span>
-                {isSaved
-                  ? (isAr ? 'تم النشر بنجاح ✓' : 'Published Successfully ✓')
-                  : isEditing 
-                    ? (isAr ? 'تأكيد وحفظ التعديلات ➔' : 'Confirm & Save Changes ➔') 
-                    : (isAr ? 'تأكيد ونشر العقار ➔' : 'Confirm & Publish Property ➔')}
-              </span>
-            </button>
+              <button
+                type="button"
+                className={styles.btnPrev}
+                onClick={() => router.push(`/admin/${isAr ? 'ar' : 'en'}/properties`)}
+              >
+                <span>{isAr ? 'العودة للقائمة' : 'Back to list'}</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              <button type="button" className={styles.btnPrev} onClick={() => router.back()}>
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+
+              {currentStep > 1 && (
+                <button type="button" className={styles.btnPrev} onClick={handlePrevStep}>
+                  {isAr ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                  <span>{isAr ? 'الخطوة السابقة' : 'Previous'}</span>
+                </button>
+              )}
+
+              {currentStep < 4 ? (
+                <button type="button" className={styles.btnNext} onClick={handleNextStep}>
+                  <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
+                  {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.btnPublish}
+                  disabled={saving || !hasMapPin}
+                  id="admin-property-save"
+                  onClick={handleSubmit(onSubmit)}
+                >
+                  {saving ? (
+                    <Loader2 size={16} className={styles.spinner} />
+                  ) : (
+                    <Save size={16} strokeWidth={1.5} />
+                  )}
+                  <span>
+                    {isEditing 
+                      ? (isAr ? 'تأكيد وحفظ التعديلات ➔' : 'Confirm & Save Changes ➔') 
+                      : (isAr ? 'تأكيد ونشر العقار ➔' : 'Confirm & Publish Property ➔')}
+                  </span>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -2813,7 +2811,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Film size={18} color="#C5A059" />
+                <Film size={18} color="var(--admin-accent)" />
                 <span style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFDF5' }}>
                   {isAr ? (activeVideoPreview.title_ar || activeVideoPreview.title_en) : (activeVideoPreview.title_en || activeVideoPreview.title_ar)}
                 </span>
@@ -2824,7 +2822,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 onClick={() => setActiveVideoPreview(null)}
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(221, 167, 82, 0.25)',
+                  border: '1px solid var(--admin-card-border)',
                   color: '#FFFDF5',
                   width: 34,
                   height: 34,

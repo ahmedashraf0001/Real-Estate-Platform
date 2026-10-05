@@ -36,7 +36,7 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
     assert.strictEqual(creditLine.credit_amount, '500000.00');
   });
 
-  it('INV-4.1: Partner Capital Injection creates a balanced journal entry (Dr 101000 / Cr 301000)', () => {
+  it('INV-4.1: Partner Capital Injection creates a balanced journal entry (Dr 102000 / Cr 301000)', () => {
     const injectionJe = PartnersEngine.createCapitalInjectionJournalEntry({
       partnerName: 'د. هاني المنياوي',
       amount: '2000000.00',
@@ -51,11 +51,11 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
     const balanceCheck = InvariantsValidator.verifyDoubleEntryBalance([injectionJe]);
     assert.strictEqual(balanceCheck.passed, true, 'Capital injection JE must be strictly balanced');
 
-    // Check accounts: Debit 101000 (Unified Treasury Safe for InstaPay), Credit 301000
-    const debitLine = injectionJe.lines.find(l => l.account_code === '101000');
+    // Check accounts: Debit 102000 (Unified Treasury Safe for InstaPay), Credit 301000
+    const debitLine = injectionJe.lines.find(l => l.account_code === '102000');
     const creditLine = injectionJe.lines.find(l => l.account_code === '301000');
 
-    assert.ok(debitLine, 'Must debit account 101000 (Operating Treasury Safe / InstaPay channel)');
+    assert.ok(debitLine, 'Must debit account 102000 (Operating Treasury Safe / InstaPay channel)');
     assert.strictEqual(debitLine.debit_amount, '2000000.00');
     assert.strictEqual(debitLine.credit_amount, '0.00');
 

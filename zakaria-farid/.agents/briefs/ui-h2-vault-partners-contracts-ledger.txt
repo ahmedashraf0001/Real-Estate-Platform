@@ -1,0 +1,75 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first, gates once at the end. Always finish with the report (`caveman` skill).
+- Do NOT git add/commit/stash/checkout/restore. Touch ONLY the files below. Keep UTF-8 Arabic byte-exact.
+- FIRST read .agents/briefs/ui-rules.body.txt fully. Apply RULES H, B, G, S, R, F, C, K to every file below.
+</execution_rules>
+
+<files>
+src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx   (shell CSS imported as `styles`)
+src/components/admin/erp/v2/views/PartnersManagementView.tsx      (shell CSS imported as `styles`)
+src/components/admin/erp/v2/views/partners/PartnersDirectoryView.tsx
+src/components/admin/erp/v2/views/partners/PartnersProjectsView.tsx
+src/components/admin/erp/v2/views/partners/PartnersTransactionsView.tsx
+src/components/admin/erp/v2/views/ContractsRegistryView.tsx       (shell CSS imported as `shellStyles`)
+src/components/admin/erp/v2/views/GeneralLedgerView.tsx           (shell CSS NOT imported: add `import shellStyles from '../ZFWorkstationShell.module.css';`)
+</files>
+
+<headers>
+1. HandInstallmentsVaultView — replace from `{/* 1. STAGE HEADER & ACTIONS */}` up to (not including)
+   `{/* 2. THE 4 DISCRETE FLOATING VAULT METRICS` with:
+     <ZFPageHeader
+       title={isAr ? 'أجندة المستحقات' : 'Dues agenda'}
+       subtitle={isAr ? 'الأقساط المستحقة من العملاء والمبالغ المستحقة للمقاولين، كاش أو إنستاباي.' : 'Installments due from clients and amounts due to contractors, cash or InstaPay.'}
+     />
+2. PartnersManagementView — replace from `{/* 1. TOP HEADER (NO BREADCRUMB) */}` through the end of that header
+   <div> (it ends right after the `+ إضافة شريك جديد` button's conditional) with:
+     <ZFPageHeader
+       title={isAr ? 'الشركاء ورؤوس الأموال' : 'Partners & capital'}
+       subtitle={isAr ? 'مساهمات الشركاء في كل مشروع، حصصهم، والتوزيعات المصروفة لهم.' : 'Partner contributions per project, their shares, and payouts made.'}
+       actions={onOpenNewPartnerModal ? (
+         <button type="button" className={styles.btnPrimary} onClick={onOpenNewPartnerModal} disabled={isMutating}>
+           <Plus size={14} />
+           <span>{isAr ? 'إضافة شريك' : 'New partner'}</span>
+         </button>
+       ) : undefined}
+     />
+   The page root uses styles.workstationBody; if the root has no vertical gap between sections, give the root
+   element inline style { display: 'flex', flexDirection: 'column', gap: '0.85rem' } (merge with existing style).
+   The three partners/*.tsx sub-views have no page header: apply only RULES B, G, S, R, F, C to them.
+3. ContractsRegistryView — replace the `{/* ─── 1. TOP HEADER ─── */}` block (the `<div className={css.headerRow}>…</div>`) with:
+     <ZFPageHeader
+       title={isAr ? 'عقود البيع' : 'Sales contracts'}
+       subtitle={isAr ? 'كل عقود البيع، الأقساط المستحقة، وموقف تحصيل كل عميل.' : "All sales contracts, installments due, and each client's collection status."}
+     />
+4. GeneralLedgerView — replace the `{/* ─── 1. TOP HEADER & BREADCRUMB ─── */}` block (`<div className={css.headerRow}>…</div>`) with:
+     <ZFPageHeader
+       title={isAr ? 'الحسابات ودفتر اليومية' : 'Accounts & journal'}
+       subtitle={isAr ? 'راجع القيود، افتح حسابات الأستاذ، واستخرج القوائم المالية من دفتر واحد.' : 'Review entries, open ledger accounts, and prepare statements from one ledger.'}
+       actions={activeTab === 'journal' ? (
+         <button type="button" className={shellStyles.btnPrimary} onClick={handleOpenExpense} disabled={isMutating || activePeriod.status === 'LOCKED'}>
+           <Plus size={14} />
+           <span>{isAr ? 'قيد جديد' : 'New entry'}</span>
+         </button>
+       ) : undefined}
+     />
+   GeneralLedgerView: ALSO for RULE B, buttons using `css.primaryBtn` -> `shellStyles.btnPrimary`, `css.secondaryBtn`
+   (if such a class exists) -> `shellStyles.btnSecondary`. Do not edit GeneralLedgerView.module.css.
+</headers>
+
+<verify>
+grep -cE "linear-gradient|radial-gradient|fontWeight: 900" per file -> report.
+grep -cE "#2563eb|#946f23|#d4af37|rgba\(37, 99, 235|rgba\(212, 175, 55" per file excluding `var(--erp-` fallbacks -> report remaining lines + reason.
+</verify>
+
+<gates>
+npx tsc --noEmit
+npx eslint <the 7 files>   (list only errors; say which pre-existed if you can tell from untouched lines)
+npx tsx --test src/lib/erp/__tests__/*.test.ts 2>&1 | tail -5   (8 failures pre-exist; report any NEW failing test names)
+</gates>
+
+<structured_output_contract>
+STATUS | per file: header done, #buttons converted, #gradients, #shadows, #colors | verify results | GATES +
+first failing line | new failing tests | OPEN. Caveman, <=25 lines.
+</structured_output_contract>

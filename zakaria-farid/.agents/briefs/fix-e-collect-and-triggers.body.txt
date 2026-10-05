@@ -1,0 +1,190 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI (+ wiring). cwd = zakaria-farid. Execute exactly; no redesign,
+no extra features, no new colors (use var(--erp-*) tokens and shellStyles classes only).
+
+<execution_rules>
+- FOREGROUND commands only; never background or wait on jobs. Edits first, gates once at the end.
+- Always finish with the report. `caveman` skill. Do NOT git add/commit/stash/checkout/restore.
+- Touch ONLY files listed. Targeted edits; keep UTF-8 Arabic; do not delete unrelated lines.
+- To drop an optional callback, omit it — never pass a no-op function.
+- Hooks never after an early return.
+</execution_rules>
+
+<why>
+No cheques exist (user-confirmed). Customer dues live in installment schedules. Today:
+- "تحصيل قسط" buttons auto-pick the FIRST pending PDC/contract, or open the construction-expense popup.
+- Two collection popups exist: CashCollectionReceiptModal (fixed contract+schedule, no picker) and
+  HandCollectionModal (picker lists only cheque rows -> empty for new contracts).
+- "سداد مستخلص مقاول" auto-picks the earliest installment or opens the expense popup.
+- Cockpit menu items: "تحصيل قسط عميل" only navigates; "سند صرف / شيك" uses cheque wording;
+  "قيد يومية يدوي" does nothing.
+- Several triggers silently fall back to contracts[0] / properties[0].
+Goal: ONE collection popup with a contract -> installment picker; every trigger opens the right popup
+with no silent auto-pick.
+</why>
+
+<files>
+CREATE src/components/admin/erp/v2/modals/ZFCollectInstallmentModal.tsx
+CREATE src/components/admin/erp/v2/modals/ZFCollectInstallmentModal.module.css
+EDIT   src/components/admin/erp/context/ERPWorkstationContext.tsx  (state + interface + value only; and the handleOpenAuditForProperty fallback)
+EDIT   src/components/admin/erp/ERPWorkstationShell.tsx
+EDIT   src/components/admin/erp/views/DailyOperationsRouteView.tsx
+EDIT   src/components/admin/erp/views/CockpitRouteView.tsx
+EDIT   src/components/admin/erp/views/ContractsRegistryRouteView.tsx
+EDIT   src/components/admin/erp/views/HandInstallmentsVaultRouteView.tsx
+EDIT   src/components/admin/erp/v2/views/DailyOperationsView.tsx
+EDIT   src/components/admin/erp/v2/views/CockpitView.tsx   (new-action menu only)
+CREATE src/lib/erp/__tests__/collectInstallmentModal.test.ts
+DO NOT touch HandCollectionModal.tsx / CashCollectionReceiptModal.tsx files (they stay on disk, unmounted).
+</files>
+
+<step_1 name="Context">
+Add state + setter, expose both in the context interface and value:
+  export interface CollectRequest { contractId?: string; scheduleId?: string }
+  const [collectRequest, setCollectRequest] = useState<CollectRequest | null>(null);
+  const openCollect = useCallback((req: CollectRequest = {}) => setCollectRequest(req), []);
+Expose: collectRequest, setCollectRequest, openCollect.
+handleOpenAuditForProperty: replace `prop || data.properties[0] || null` with `prop || null`.
+</step_1>
+
+<step_2 name="ZFCollectInstallmentModal">
+Props:
+  isOpen: boolean; onClose: () => void; isAr: boolean; isMutating: boolean;
+  contracts: ERPContract[]; schedules: ERPInstallmentSchedule[]; properties: Property[];
+  initialContractId?: string; initialScheduleId?: string;
+  onConfirm: (item: ERPPDCRecord, receiptNo: string, date: string, amount: string, notes: string, method: 'CASH' | 'INSTAPAY') => Promise<void>;
+Render with ZFModalShell (from '../common/ZFModalShell'): title AR 'تحصيل قسط من عميل' EN 'Collect customer installment',
+  subtitle AR 'اختر العقد ثم القسط. يُسجل المبلغ فور استلامه نقداً أو بإنستاباي.' EN 'Pick the contract, then the installment. Money is recorded when received, by cash or InstaPay.',
+  icon <Coins size={16} />, maxWidth '560px', isAr.
+Data (useMemo):
+  outstanding(s) = ['Pending','Partially Paid','Defaulted'].includes(s.status) && D(s.nominal_value||0).minus(D(s.amount_paid||0)).gt(0)
+  eligibleContracts = contracts.filter(c => c.status === 'Active' && schedules.some(s => s.contract_id === c.contract_id && outstanding(s)))
+     sorted by contract_number asc.
+  contractLabel(c) = `${c.contract_number} — ${c.buyer_name}` + (property title ? ` — ${title}` : '') where
+     property = properties.find(p => p.id === c.property_id); title = isAr ? p.title_ar : (p.title_en || p.title_ar)
+  dues(contractId) = schedules.filter(s => s.contract_id === contractId && outstanding(s)) sorted by due_date asc.
+State: contractId, scheduleId, amount, method ('CASH'), date (today local YYYY-MM-DD), receiptNo (''), notes (''), search ('').
+Reset on open (useEffect on isOpen true; set values INSIDE the effect body, no ref guard):
+  contractId = initialContractId if eligible else (eligibleContracts.length === 1 ? that id : '');
+  scheduleId = initialScheduleId if it belongs to dues(contractId) else (first of dues(contractId)?.schedule_id ?? '');
+  amount = remaining of chosen schedule (toFixed(2)) or ''.
+On contract change: scheduleId = first due's id; amount = its remaining. On schedule change: amount = its remaining.
+Layout (class names from the module CSS below):
+  1. Field "العقد / Contract": <input className={css.search} placeholder AR 'بحث برقم العقد أو اسم العميل' EN 'Search contract # or customer'>
+     then <select className={css.select} value={contractId}> with first option value="" AR '— اختر العقد —' EN '— Select contract —',
+     options = eligibleContracts filtered by search (case-insensitive on contractLabel).
+     If eligibleContracts.length === 0: replace both with <div className={css.empty}>AR 'لا توجد عقود نشطة عليها أقساط مستحقة.' EN 'No active contracts have installments due.'</div>
+  2. Field "القسط / Installment" (only when contractId): a list <div role="radiogroup" className={css.dueList}> of
+     <label className={`${css.dueRow} ${selected ? css.dueRowActive : ''}`}><input type="radio" name="due" .../>
+       <span className={css.dueMain}>{tranche 0 ? (AR 'دفعة المقدم' / EN 'Down payment') : (AR `القسط ${n}` / EN `Installment ${n}`)}</span>
+       <span className={css.dueMeta}>{due_date as DD/MM/YYYY}{overdue ? pill shellStyles.statusPill + statusPillRed AR 'متأخر' EN 'Overdue' : null}</span>
+       <span className={css.dueAmt}>{formatNumberWithCommas(remaining)} {AR 'ج.م' EN 'EGP'}</span></label>
+     overdue = due_date < today. Partially paid: add muted text AR `مدفوع ${paid}` EN `paid ${paid}` in dueMeta.
+  3. Row of two fields: "المبلغ المحصل / Amount received" <input inputMode="decimal" className={css.input}> and
+     "تاريخ الاستلام / Date received" <input type="date" className={css.input}>.
+  4. Field "طريقة الاستلام / Method": two buttons (segmented) className={`${css.seg} ${active ? css.segActive : ''}`}:
+     CASH: AR 'نقدي — الخزينة (101000)' EN 'Cash — Safe (101000)'; INSTAPAY: AR 'إنستاباي (102000)' EN 'InstaPay (102000)'. aria-pressed.
+  5. Row: "رقم الإيصال (اختياري) / Receipt # (optional)" input; "ملاحظات / Notes" input.
+  6. Inline error <p className={css.error}> when invalid (see validation), only after the user tried to submit.
+Footer: secondary button (shellStyles.btnSecondary) AR 'إلغاء' EN 'Cancel' -> onClose;
+  primary (shellStyles.btnPrimary) AR 'تسجيل التحصيل' EN 'Record collection', disabled when isMutating or submitting.
+Validation (on submit): contractId and scheduleId required (AR 'اختر العقد والقسط' EN 'Select a contract and installment');
+  amount > 0 and <= remaining (AR 'المبلغ يجب أن يكون أكبر من صفر ولا يتجاوز المتبقي' EN 'Amount must be > 0 and not exceed the remaining balance');
+  date required.
+Submit: receipt = receiptNo.trim() || `RC-${date.replace(/-/g,'')}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  item: ERPPDCRecord = { cheque_id: `SCH-${s.schedule_id}`, contract_id: c.contract_id, schedule_id: s.schedule_id,
+    cheque_number: '', bank_name: '', drawer_name: c.buyer_name, nominal_value: remaining.toFixed(2), due_date: s.due_date,
+    status: 'In Safe' } (fill any other REQUIRED ERPPDCRecord fields with ''/undefined-safe values; report them);
+  await onConfirm(item, receipt, date, D(amount).toFixed(2), notes.trim(), method); then onClose(). If onConfirm throws, keep open.
+Numbers: use formatNumberWithCommas from '@/lib/erp/operationsStreamFilters' and D from '@/lib/erp/math'.
+CSS module (exact):
+.form { display: flex; flex-direction: column; gap: 0.9rem; }
+.field { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.label { font-size: 0.74rem; font-weight: 700; color: var(--erp-text-body); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; }
+.input, .select, .search { height: 36px; padding: 0 0.7rem; border: 1px solid var(--erp-border); border-radius: 8px; background: var(--erp-bg-panel); color: var(--erp-text-title); font: inherit; font-size: 0.82rem; }
+.input:focus-visible, .select:focus-visible, .search:focus-visible, .seg:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: 1px; }
+.search { height: 32px; font-size: 0.76rem; }
+.dueList { display: flex; flex-direction: column; border: 1px solid var(--erp-card-border); border-radius: 10px; overflow: hidden; max-height: 240px; overflow-y: auto; }
+.dueRow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "radio main amt" "radio meta amt"; column-gap: 0.6rem; row-gap: 2px; align-items: center; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--erp-border-subtle); cursor: pointer; }
+.dueRow:last-child { border-bottom: 0; }
+.dueRow input { grid-area: radio; accent-color: var(--erp-accent); }
+.dueRow:hover { background: var(--erp-border-subtle); }
+.dueRowActive, .dueRowActive:hover { background: var(--erp-accent-tint); }
+.dueMain { grid-area: main; font-size: 0.8rem; font-weight: 700; color: var(--erp-text-title); }
+.dueMeta { grid-area: meta; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--erp-text-muted); }
+.dueAmt { grid-area: amt; direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--erp-text-title); font-size: 0.8rem; }
+.segGroup { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.seg { height: 38px; border: 1px solid var(--erp-border); border-radius: 8px; background: var(--erp-bg-panel); color: var(--erp-text-body); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+.segActive { border-color: var(--erp-accent); color: var(--erp-accent); background: var(--erp-accent-subtle); }
+.empty { padding: 1rem; border: 1px dashed var(--erp-border); border-radius: 10px; text-align: center; font-size: 0.8rem; color: var(--erp-text-muted); }
+.error { margin: 0; font-size: 0.75rem; font-weight: 700; color: var(--erp-danger); }
+@media (max-width: 560px) { .row { grid-template-columns: minmax(0, 1fr); } }
+</step_2>
+
+<step_3 name="Shell">
+- Mount <ZFCollectInstallmentModal isOpen={!!erp.collectRequest} onClose={() => erp.setCollectRequest(null)} isAr={erp.isAr}
+  isMutating={erp.isMutating} contracts={erp.data.contracts} schedules={erp.data.schedules} properties={erp.data.properties}
+  initialContractId={erp.collectRequest?.contractId} initialScheduleId={erp.collectRequest?.scheduleId}
+  onConfirm={erp.handleConfirmHandCollection} />
+- REMOVE the <CashCollectionReceiptModal .../> and <HandCollectionModal .../> elements and their imports.
+- Every place in the shell that calls erp.setShowPayModal({ contract: c, schedule: sch }) -> erp.openCollect({ contractId: c.contract_id, scheduleId: sch.schedule_id }).
+- Add a useEffect in the shell (top level, before any return): when erp.collectingPDCItem becomes non-null,
+  call erp.openCollect({ contractId: item.contract_id, scheduleId: strip 'SCH-' prefix from (item.schedule_id || (item.cheque_id.startsWith('SCH-') ? item.cheque_id : undefined)) })
+  then erp.setCollectingPDCItem(null). (Keeps all onCollectItem callers working.)
+</step_3>
+
+<step_4 name="Route views">
+- DailyOperationsRouteView: `action === 'receipt'` -> erp.openCollect({}); onOpenCashReceipt={() => erp.openCollect({})}
+  (delete the first-PDC / first-contract / expense fallback logic entirely).
+- CockpitRouteView: `action === 'receipt'` -> erp.openCollect({}). Pass a new prop onOpenCollect={() => erp.openCollect({})} to CockpitView.
+- ContractsRegistryRouteView line ~89: setShowPayModal({contract, schedule}) -> erp.openCollect({ contractId: contract.contract_id, scheduleId: schedule.schedule_id }).
+- HandInstallmentsVaultRouteView onOpenNewSupplement: `contractId || erp.data.contracts[0]?.contract_id || null` -> `contractId || null`.
+</step_4>
+
+<step_5 name="DailyOperationsView pay_contractor">
+- Add state `isPayablePickerOpen` (boolean). handleQuickAction 'pay_contractor':
+    const open = propertyCosts.filter(c => c.linked_account_code === '201000' && D(calculateCostItemEffectiveTotals(c).remainingAmount).gt(0));
+    if (open.length === 0) { toast.info(isAr ? 'لا توجد مستحقات مقاولين مفتوحة للسداد' : 'No open contractor payables'); return; }
+    setIsPayablePickerOpen(true);
+  (import calculateCostItemEffectiveTotals from '@/lib/erp/propertyCostEngine', toast from 'sonner').
+- Render <CostPayableSettlementModal isOpen={isPayablePickerOpen} onClose={() => setIsPayablePickerOpen(false)}
+    costItem={null} installment={null} availableCosts={propertyCosts} properties={properties} isAr={isAr}
+    onConfirmPayment={async (updated, instId, amt, method) => { await onRecordPayablePayment?.(updated, instId, amt, method); setIsPayablePickerOpen(false); }} />
+  only when onRecordPayablePayment is provided.
+- In CostPayableSettlementModal behavior: it auto-selects pendingCosts[0] when costItem is null. That is acceptable
+  ONLY if it shows a visible contractor/item select (it does: selects=3). Do not modify that modal.
+- cash_receipt quick action: if (onOpenCashReceipt) onOpenCashReceipt(); — remove the PDC/expense fallback branch.
+</step_5>
+
+<step_6 name="CockpitView new-action menu">
+- Add optional prop `onOpenCollect?: () => void`. handleOpenInstallmentCollection: if (onOpenCollect) onOpenCollect(); else if (onNavigateTab) onNavigateTab('pdc'). Remove the contracts[0] inspect fallback.
+- Rename the item 'سند صرف / شيك' -> AR 'مصروف أو فاتورة' EN 'Expense or bill'; its onClick opens onOpenProjectExpense (keep existing fallback order but never call onOpenNewCheque).
+- Delete the 'قيد يومية يدوي' menu item entirely (manual journal entries are not implemented).
+</step_6>
+
+<step_7 name="tests (collectInstallmentModal.test.ts)">
+Source-level assertions with fs (path.join(process.cwd(), ...)):
+ 1. ERPWorkstationShell.tsx does not contain '<CashCollectionReceiptModal' nor '<HandCollectionModal'; contains '<ZFCollectInstallmentModal'.
+ 2. DailyOperationsRouteView.tsx and CockpitRouteView.tsx do not contain 'pdcRecords.find(' ; both contain 'openCollect('.
+ 3. CockpitView.tsx does not contain 'قيد يومية يدوي' nor 'سند صرف / شيك'.
+ 4. HandInstallmentsVaultRouteView.tsx does not contain 'contracts[0]'.
+ 5. ERPWorkstationContext.tsx does not contain 'data.properties[0] || null'.
+ 6. ZFCollectInstallmentModal.module.css has no hex color, no 'gradient', no 'box-shadow'.
+ Plus a render test: renderToStaticMarkup of ZFCollectInstallmentModal with isOpen true, one Active contract
+ {contract_id:'c1',contract_number:'ZF-1',buyer_name:'A',status:'Active',property_id:'p1'} and schedules
+ [{schedule_id:'s0',contract_id:'c1',tranche_number:0,due_date:'2026-01-01',nominal_value:'1000',amount_paid:'0',status:'Pending'}],
+ initialContractId 'c1' -> markup contains 'ZF-1' and 'دفعة المقدم'. (Register .css handlers like dailyOperationsRevamp.test.ts does.
+ If ZFModalShell uses a portal that breaks SSR, skip this render case and say so.)
+</step_7>
+
+<gates>
+npx tsc --noEmit
+npx tsx --test src/lib/erp/__tests__/collectInstallmentModal.test.ts src/lib/erp/__tests__/dailyOperationsView.test.ts src/lib/erp/__tests__/treasuryLedger.test.ts
+npx eslint src/components/admin/erp/v2/modals/ZFCollectInstallmentModal.tsx   (0 errors)
+grep -rn "setShowPayModal(" src --include=*.tsx   -> list remaining hits (only the state declaration/close should remain)
+</gates>
+
+<structured_output_contract>
+STATUS | per step done/skipped + file:line | extra ERPPDCRecord fields filled | GATES pass/fail + first failing line |
+grep results | OPEN. Caveman, ≤25 lines.
+</structured_output_contract>

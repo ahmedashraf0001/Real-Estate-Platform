@@ -296,7 +296,7 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
       const totalSales = '100000000.00';
       const alloc = RSVEngine.calculateAllocation('برج النخيل الفاخر', totalWip, totalSales);
 
-      assert.strictEqual(alloc.rsv_factor, '0.4500');
+      assert.strictEqual(alloc.rsv_factor, '0.450000');
 
       // Unit with 8,000,000 contract value gets 8M * 0.45 = 3.6M COGS
       const unitCogs = RSVEngine.computeUnitCOGS('8000000.00', alloc.rsv_factor);
@@ -432,18 +432,19 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
       assert.notStrictEqual(invalidSum, 100, 'Invalid splits must not equal 100%');
     });
 
-    it('Should create balanced partner capital injection entry via InstaPay into Treasury (Dr 101000 / Cr 301000)', () => {
+    it('Should create balanced partner capital injection entry via InstaPay into Treasury (Dr 102000 / Cr 301000)', () => {
       const entry = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: 'م. أحمد الشريف',
         amount: '10000000.00',
         paymentMethod: 'INSTAPAY_102000',
         propertyTitle: 'برج الأوركيد',
         receiptRef: 'REC-CAP-001',
-        currentPeriod: TEST_PERIOD
+        currentPeriod: TEST_PERIOD,
+        date: '2026-09-15'
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);
-      assert.strictEqual(entry.lines[0].account_code, '101000');
+      assert.strictEqual(entry.lines[0].account_code, '102000');
       assert.strictEqual(entry.lines[1].account_code, '301000');
     });
 
@@ -454,7 +455,8 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
         paymentMethod: 'BANK_102000',
         propertyTitle: 'برج الأوركيد',
         receiptRef: 'REC-CAP-001-BANK',
-        currentPeriod: TEST_PERIOD
+        currentPeriod: TEST_PERIOD,
+        date: '2026-09-15'
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);
@@ -469,7 +471,8 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
         paymentMethod: 'CASH_101000',
         propertyTitle: 'برج الأوركيد',
         receiptRef: 'PAY-DIST-001',
-        currentPeriod: TEST_PERIOD
+        currentPeriod: TEST_PERIOD,
+        date: '2026-09-15'
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);

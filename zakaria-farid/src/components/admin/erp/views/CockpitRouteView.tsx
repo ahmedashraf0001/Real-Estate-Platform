@@ -27,28 +27,15 @@ export function CockpitRouteView() {
       const contract = erp.data.contracts.find(c => c.contract_id === inspect || c.contract_number === inspect);
       if (contract) {
         erp.handleInspectContract(contract);
-      } else {
-        const cheque = erp.data.pdcRecords.find(p => p.cheque_id === inspect || p.cheque_number === inspect);
-        if (cheque) {
-          erp.handleInspectCheque(cheque);
-        }
       }
     }
 
     if (action === 'tx') {
       erp.setShowProjectExpenseModal(true);
     } else if (action === 'receipt') {
-      const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
-      if (target) {
-        erp.setCollectingPDCItem(target);
-      } else {
-        erp.setShowProjectExpenseModal(true);
-      }
+      erp.openCollect({});
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();
-    } else if (action === 'new_cheque') {
-      erp.setSupplementInitialContractId(null);
-      erp.setShowNewPDCModal(true);
     }
   }, [searchParams, erp]);
 
@@ -61,7 +48,6 @@ export function CockpitRouteView() {
       totalWipIncurred={erp.totalWipIncurred}
       totalSafePDCs={erp.totalSafePDCs}
       totalInjectedCapital={erp.totalInjectedCapital}
-      wipAccounts={erp.wipAccounts}
       contracts={erp.data.contracts}
       pdcRecords={erp.data.pdcRecords}
       schedules={erp.data.schedules}
@@ -73,12 +59,8 @@ export function CockpitRouteView() {
       partnerCalls={erp.data.partnerCalls}
       onOpenProjectExpense={() => erp.setShowProjectExpenseModal(true)}
       onInspectContract={erp.handleInspectContract}
-      onInspectCheque={erp.handleInspectCheque}
       onCollectItem={erp.setCollectingPDCItem}
-      onOpenNewCheque={() => {
-        erp.setSupplementInitialContractId(null);
-        erp.setShowNewPDCModal(true);
-      }}
+      onOpenCollect={() => erp.openCollect({})}
       onOpenNewContract={erp.handleOpenGenericNewContract}
       onNavigateTab={(tab) => erp.navigateToTab(tab)}
     />

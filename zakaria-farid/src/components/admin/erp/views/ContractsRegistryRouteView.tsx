@@ -86,7 +86,7 @@ export function ContractsRegistryRouteView() {
       onOpenHandoverModal={(c) => erp.setShowHandoverModal(c)}
       onOpenCollectionModal={(contract, schedule) => {
         if (schedule) {
-          erp.setShowPayModal({ contract, schedule });
+          erp.openCollect({ contractId: contract.contract_id, scheduleId: schedule.schedule_id });
         } else {
           setInspectedContract(contract);
         }

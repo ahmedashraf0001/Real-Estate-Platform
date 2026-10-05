@@ -318,6 +318,15 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
     normal_balance: 'DEBIT',
     is_active: true,
     notes: 'Site utilities, corporate overhead bills and running expenses'
+  },
+  '604000': {
+    account_code: '604000',
+    account_name_en: 'Real Estate Disposition Tax Expense',
+    account_name_ar: 'مصروف ضريبة التصرفات العقارية',
+    account_type: 'EXPENSE',
+    normal_balance: 'DEBIT',
+    is_active: true,
+    notes: 'Manually recorded disposition / transaction taxes; accrued to 204000'
   }
 };
 
@@ -332,19 +341,13 @@ export function resolvePeriodForDate(
   fallbackPeriod?: ERPAccountingPeriod
 ): ERPAccountingPeriod {
   if (!dateStr || !periods || periods.length === 0) {
-    return fallbackPeriod || {
-      period_id: 'prd-2026-09',
-      fiscal_year: 2026,
-      period_number: 9,
-      start_date: '2026-09-01',
-      end_date: '2026-09-30',
-      status: 'OPEN'
-    };
+    return fallbackPeriod || buildCalendarMonthPeriod(dateStr);
   }
   const cleanDate = dateStr.slice(0, 10);
   const matched = periods.find(p => p.start_date <= cleanDate && cleanDate <= p.end_date);
   if (matched) return matched;
-  return fallbackPeriod || periods.find(p => p.status === 'OPEN') || periods[periods.length - 1];
+  // Never fall back to another month: the date's own calendar month (created on demand by the caller).
+  return buildCalendarMonthPeriod(cleanDate);
 }
 
 /**
@@ -416,6 +419,15 @@ export class GeneralLedgerEngine {
     if (params.period.status !== 'OPEN') {
       throw new Error(
         `ERP Invariant 0.9 Violation: Cannot post journal entry into ${params.period.status} fiscal period (Period ${params.period.period_number}/${params.period.fiscal_year}).`
+      );
+    }
+
+    // Period Date Invariant (user-confirmed 2026-10-05): an entry belongs to the period containing its date.
+    const entryDay = (params.entry_date || '').slice(0, 10);
+    if (entryDay && params.period.start_date && params.period.end_date &&
+        (entryDay < params.period.start_date || entryDay > params.period.end_date)) {
+      throw new Error(
+        `ERP Invariant 0.9 Violation: Entry date ${entryDay} is outside period ${params.period.fiscal_year}-${params.period.period_number} (${params.period.start_date} to ${params.period.end_date}).`
       );
     }
 
@@ -557,4 +569,23 @@ export class GeneralLedgerEngine {
 
     return result;
   }
+}
+
+/** Builds an OPEN calendar-month period for the given date (defaults to today). Used only when no DB periods exist. */
+export function buildCalendarMonthPeriod(dateStr?: string): ERPAccountingPeriod {
+  // Parse YYYY-MM-DD as text so the month never shifts with the local time zone.
+  const today = new Date();
+  const parts = (dateStr || '').slice(0, 10).split('-').map(Number);
+  const y = parts[0] > 0 ? parts[0] : today.getFullYear();
+  const m = parts[1] >= 1 && parts[1] <= 12 ? parts[1] : today.getMonth() + 1;
+  const mm = String(m).padStart(2, '0');
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return {
+    period_id: `prd-${y}-${mm}`,
+    fiscal_year: y,
+    period_number: m,
+    start_date: `${y}-${mm}-01`,
+    end_date: `${y}-${mm}-${String(lastDay).padStart(2, '0')}`,
+    status: 'OPEN'
+  };
 }

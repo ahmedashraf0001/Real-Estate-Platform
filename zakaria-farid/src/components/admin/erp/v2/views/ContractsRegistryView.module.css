@@ -258,7 +258,7 @@
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--erp-accent) 20%, transparent);
 }
 
 .btnNewContract:hover {
@@ -291,7 +291,7 @@
 .donutToggleBtnActive {
   background: var(--erp-accent-subtle, #eff6ff) !important;
   color: var(--erp-accent, #2563eb) !important;
-  border-color: rgba(37, 99, 235, 0.4) !important;
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent) !important;
   font-weight: 750 !important;
 }
 
@@ -355,7 +355,7 @@
 
 .searchInput:focus {
   border-color: var(--erp-accent, #2563eb);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--erp-accent) 10%, transparent);
 }
 
 .searchClearBtn {
@@ -568,7 +568,7 @@
 
 .contractsTable tbody tr:hover .contractNumberBadge {
   color: var(--erp-accent, #2563eb);
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: color-mix(in srgb, var(--erp-accent) 30%, transparent);
 }
 
 /* ─── 6. EMPTY STATE ─── */

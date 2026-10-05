@@ -91,9 +91,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           return {
             label: isAr ? 'أصل سيادي نادر' : 'Trophy Sovereign Asset',
             icon: Crown,
-            color: '#946F23',
-            bg: 'rgba(148, 111, 35, 0.08)',
-            border: 'rgba(148, 111, 35, 0.25)',
+            color: 'var(--admin-accent)',
+            bg: 'rgba(37, 99, 235, 0.08)',
+            border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
           };
         case 'under_engaged':
         default:
@@ -129,9 +129,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         return {
           label: isAr ? 'أصل سيادي نادر' : 'Trophy Sovereign Asset',
           icon: Crown,
-          color: '#E5B869',
-          bg: 'rgba(229, 184, 105, 0.12)',
-          border: 'rgba(229, 184, 105, 0.25)',
+          color: 'var(--admin-accent)',
+          bg: 'rgba(59, 130, 246, 0.12)',
+          border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
         };
       case 'under_engaged':
       default:
@@ -153,9 +153,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
     if (isLightMode) {
       if (rankIndex === 0) {
         return {
-          color: '#946F23',
-          bg: 'rgba(148, 111, 35, 0.12)',
-          border: 'rgba(148, 111, 35, 0.35)',
+          color: 'var(--admin-accent)',
+          bg: 'rgba(37, 99, 235, 0.12)',
+          border: 'color-mix(in srgb, var(--admin-accent) 35%, transparent)',
           label: formatted,
         };
       }
@@ -178,7 +178,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
       return {
         color: '#64748B',
         bg: '#F1F5F9',
-        border: '#D8D2C4',
+        border: '#E2E8F0',
         label: formatted,
       };
     }
@@ -186,9 +186,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
     // Dark mode
     if (rankIndex === 0) {
       return {
-        color: '#E5B869',
-        bg: 'rgba(229, 184, 105, 0.15)',
-        border: 'rgba(229, 184, 105, 0.35)',
+        color: 'var(--admin-accent)',
+        bg: 'rgba(59, 130, 246, 0.15)',
+        border: 'color-mix(in srgb, var(--admin-accent) 35%, transparent)',
         label: formatted,
       };
     }
@@ -571,7 +571,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light {
           background: #FFFFFF;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
         }
 
@@ -594,19 +594,19 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           width: 40px;
           height: 40px;
           border-radius: 12px;
-          background: rgba(229, 184, 105, 0.12);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #E5B869;
+          color: var(--admin-accent);
           flex-shrink: 0;
-          border: 1px solid rgba(229, 184, 105, 0.25);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         .leaderboard-card.is-light .leaderboard-icon-box {
-          background: rgba(148, 111, 35, 0.1);
-          border-color: rgba(148, 111, 35, 0.25);
-          color: #946F23;
+          background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
         }
 
         .leaderboard-title {
@@ -646,7 +646,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .summary-ribbon {
           background: #F8FAFC;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
         }
 
         .ribbon-item {
@@ -676,11 +676,11 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .ribbon-value.gold {
-          color: #E5B869;
+          color: var(--admin-accent);
         }
 
         .leaderboard-card.is-light .ribbon-value.gold {
-          color: #946F23;
+          color: var(--admin-accent);
         }
 
         .ribbon-value.emerald {
@@ -698,7 +698,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .ribbon-divider {
-          background: #D8D2C4;
+          background: #E2E8F0;
         }
 
         /* ─── Toolbar (Filters, Search & Sort) ─── */
@@ -739,15 +739,15 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .tier-pill-btn.active {
-          background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
-          color: #0A0C10;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
           border-color: transparent;
-          box-shadow: 0 2px 10px rgba(229, 184, 105, 0.25);
+          box-shadow: none;
         }
 
         .leaderboard-card.is-light .tier-pill-btn {
           background: #F1F5F9;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #334155;
         }
 
@@ -757,10 +757,10 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .tier-pill-btn.active {
-          background: linear-gradient(135deg, #946F23 0%, #78581C 100%);
-          color: #FFFFFF;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
           border-color: transparent;
-          box-shadow: 0 2px 8px rgba(148, 111, 35, 0.25);
+          box-shadow: none;
         }
 
         .toolbar-actions-group {
@@ -807,13 +807,13 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .search-input:focus {
-          border-color: #E5B869;
-          box-shadow: 0 0 0 3px rgba(229, 184, 105, 0.15);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 15%, transparent);
         }
 
         .leaderboard-card.is-light .search-input {
           background: #FFFFFF;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #0F172A;
         }
 
@@ -822,8 +822,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .search-input:focus {
-          border-color: #946F23;
-          box-shadow: 0 0 0 3px rgba(148, 111, 35, 0.12);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 12%, transparent);
         }
 
         .search-clear-btn {
@@ -889,19 +889,19 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .sort-dropdown:focus {
-          border-color: #E5B869;
-          box-shadow: 0 0 0 3px rgba(229, 184, 105, 0.15);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 15%, transparent);
         }
 
         .leaderboard-card.is-light .sort-dropdown {
           background: #FFFFFF;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #0F172A;
         }
 
         .leaderboard-card.is-light .sort-dropdown:focus {
-          border-color: #946F23;
-          box-shadow: 0 0 0 3px rgba(148, 111, 35, 0.12);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 12%, transparent);
         }
 
         .leaderboard-card.is-light .sort-dropdown option {
@@ -919,7 +919,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           width: 100%;
           overflow-x: auto;
           scrollbar-width: thin;
-          scrollbar-color: rgba(148, 111, 35, 0.3) transparent;
+          scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
         }
 
         .leaderboard-table-inner {
@@ -943,7 +943,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .table-header-row {
           background: #F8FAFC;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
         }
 
         .th-col {
@@ -980,22 +980,22 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-row:hover {
           background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(229, 184, 105, 0.3);
-          border-inline-start-color: #E5B869;
+          border-color: color-mix(in srgb, var(--admin-accent) 30%, transparent);
+          border-inline-start-color: var(--admin-accent);
           transform: translateY(-1px);
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
 
         .leaderboard-card.is-light .leaderboard-row {
           background: #FFFFFF;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           border-inline-start: 4px solid transparent;
         }
 
         .leaderboard-card.is-light .leaderboard-row:hover {
           background: #F8FAFC;
-          border-color: #C5A059;
-          border-inline-start-color: #946F23;
+          border-color: color-mix(in srgb, var(--admin-accent) 30%, transparent);
+          border-inline-start-color: var(--admin-accent);
           box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
         }
 
@@ -1027,13 +1027,13 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           height: 52px;
           border-radius: 10px;
           overflow: hidden;
-          background: #000;
+          background: #0F172A;
           flex-shrink: 0;
           border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .leaderboard-card.is-light .prop-thumb-wrap {
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           background: #F1F5F9;
         }
 
@@ -1197,7 +1197,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .inquiry-stat-chip {
           background: #F1F5F9;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #0F172A;
         }
 
@@ -1226,17 +1226,17 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           gap: 4px;
           font-size: 10.5px;
           font-weight: 700;
-          color: #E5B869;
-          background: rgba(229, 184, 105, 0.12);
-          border: 1px solid rgba(229, 184, 105, 0.25);
+          color: var(--admin-accent);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
           padding: 2px 7px;
           border-radius: 5px;
         }
 
         .leaderboard-card.is-light .won-stat-chip {
-          color: #946F23;
-          background: rgba(148, 111, 35, 0.08);
-          border-color: rgba(148, 111, 35, 0.25);
+          color: var(--admin-accent);
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         /* Column 4: Listing Value */
@@ -1263,11 +1263,11 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         .price-curr {
           font-size: 12px;
           font-weight: 800;
-          color: #E5B869;
+          color: var(--admin-accent);
         }
 
         .leaderboard-card.is-light .price-curr {
-          color: #946F23;
+          color: var(--admin-accent);
         }
 
         /* Column 5: Actions */
@@ -1295,21 +1295,21 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .action-btn:hover {
-          background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
-          color: #0A0C10;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
           border-color: transparent;
           transform: translateY(-1px);
         }
 
         .leaderboard-card.is-light .action-btn {
           background: #F8FAFC;
-          border: 1px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           color: #475569;
         }
 
         .leaderboard-card.is-light .action-btn:hover {
-          background: linear-gradient(135deg, #946F23 0%, #78581C 100%);
-          color: #FFFFFF;
+          background: var(--admin-accent);
+          color: var(--admin-on-accent);
           border-color: transparent;
         }
 
@@ -1329,23 +1329,23 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .leaderboard-empty {
           background: #F8FAFC;
-          border: 1px dashed #D8D2C4;
+          border: 1px dashed #E2E8F0;
         }
 
         .empty-icon-circle {
           width: 52px;
           height: 52px;
           border-radius: 50%;
-          background: rgba(229, 184, 105, 0.1);
-          color: #E5B869;
+          background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+          color: var(--admin-accent);
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .leaderboard-card.is-light .empty-icon-circle {
-          background: rgba(148, 111, 35, 0.1);
-          color: #946F23;
+          background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+          color: var(--admin-accent);
         }
 
         .empty-title {
@@ -1394,8 +1394,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .empty-reset-btn:hover {
-          background: #946F23;
-          border-color: #946F23;
+          background: var(--admin-accent);
+          border-color: var(--admin-accent);
         }
 
         /* ─── Responsive Media Queries ─── */

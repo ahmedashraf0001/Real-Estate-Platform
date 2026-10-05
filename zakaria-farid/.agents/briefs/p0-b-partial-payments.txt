@@ -1,0 +1,43 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md. This is FINANCIAL_CORE: never change GL posting rules or debit/credit logic; only fix installment status/amount bookkeeping.
+
+DEFECT (browser + DB verified): collecting 300,000 of a 637,500 installment marked the tranche `Paid` (amount_paid=300000), its cheque `Cleared`, and the remaining 337,500 vanished from all receivables. The journal entry (Dr 101000 300k / Cr 203000 300k) was CORRECT — keep it.
+
+Root cause: `handleConfirmHandCollection` in src/components/admin/erp/context/ERPWorkstationContext.tsx (~line 2732, status logic ~2795-2840) always sets schedule `status: 'Paid'`, OVERWRITES `amount_paid` with the current amount, and calls `persistPDCStatus(..., 'Cleared')` — both in the DB update and in the local setData.
+
+REQUIRED BEHAVIOR:
+1. newPaid = previous amount_paid + collected amount (Decimal via existing `D()` helpers, 2dp).
+2. Schedule status: `Paid` only when newPaid >= nominal_value; otherwise `Partially Paid` (allowed by DB check and by `InstallmentStatus` in src/lib/erp/types.ts). paid_date = date of the payment that completes it (set on partial too is fine, report choice).
+3. The linked PDC/due record: `Cleared` only when fully paid; on partial leave it in its current status (e.g. 'In Safe').
+4. Reject collected amount <= 0 or > remaining (nominal - previous amount_paid) with a toast; no DB writes in that case.
+5. Contract `total_cash_collected` += amount (already done — keep).
+6. Same rules for the InstaPay branch of the same handler.
+7. src/components/admin/erp/HandCollectionModal.tsx: default "Amount Received" = remaining (nominal - amount_paid), not nominal; show "Remaining after this payment: X" (EN/AR) when amount < remaining; label a Partially Paid installment clearly in the list.
+8. Outstanding/due figures must use remaining = nominal - amount_paid for `Partially Paid` tranches. Check the canonical metric(s) and views that compute "Due Collections"/outstanding from schedules (start with src/lib/erp/canonicalMetrics.ts; grep for `status !== 'Paid'` / `status === 'Pending'` in src/lib/erp and src/components/admin/erp) and fix the ones that sum full nominal for partially paid tranches. List each file:line you change. Keep the change minimal; do NOT refactor.
+9. Make sure Partially Paid tranches still appear in the collection agenda/lists that filter for open dues (grep filters like `status === 'Pending'`).
+
+Files you may touch: ERPWorkstationContext.tsx, HandCollectionModal.tsx, src/lib/erp/canonicalMetrics.ts, and the minimal set of view/engine files needed for item 8-9 (list them). Do NOT touch: src/components/admin/erp/v2/modals/* (another agent), CockpitView.tsx, CockpitDualCharts.tsx, src/lib/services/* (another agent).
+Expected after fix for the test case: tranche 1 = Partially Paid, amount_paid 300000, remaining 337,500; Due Collections = 3,525,000 for a contract with 4.5M gross and 975k collected.
+</task>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Other agents edit other files in this tree concurrently. Touch only files allowed above. Report unrelated tsc errors, don't fix them.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit
+  npx eslint <files you touched>   (no new errors vs HEAD)
+  git diff --stat -- <files you touched>
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access.</action_safety>
+
+<structured_output_contract>
+1. Changes per item 1-9 (file:line)
+2. Every metric/view changed for remaining-amount logic
+3. Gates
+4. Open questions / anything ambiguous you did NOT decide
+</structured_output_contract>

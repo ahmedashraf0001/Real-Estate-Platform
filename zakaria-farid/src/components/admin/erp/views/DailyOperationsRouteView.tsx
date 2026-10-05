@@ -23,17 +23,9 @@ export function DailyOperationsRouteView() {
     if (action === 'tx') {
       erp.setShowProjectExpenseModal(true);
     } else if (action === 'receipt') {
-      const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
-      if (target) {
-        erp.setCollectingPDCItem(target);
-      } else {
-        erp.setShowProjectExpenseModal(true);
-      }
+      erp.openCollect({});
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();
-    } else if (action === 'new_cheque') {
-      erp.setSupplementInitialContractId(null);
-      erp.setShowNewPDCModal(true);
     }
   }, [searchParams, erp]);
 
@@ -57,29 +49,10 @@ export function DailyOperationsRouteView() {
       partnerSummaries={erp.partnerSummaries}
       onOpenProjectExpense={() => erp.setShowProjectExpenseModal(true)}
       onOpenNewContract={erp.handleOpenGenericNewContract}
-      onOpenNewCheque={() => {
-        erp.setSupplementInitialContractId(null);
-        erp.setShowNewPDCModal(true);
-      }}
       onCollectItem={erp.setCollectingPDCItem}
-      onOpenCashReceipt={() => {
-        const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
-        if (target) {
-          erp.setCollectingPDCItem(target);
-        } else if (erp.data.contracts.length > 0) {
-          const ct = erp.data.contracts.find(c => c.status === 'Active') || erp.data.contracts[0];
-          const sc = erp.data.schedules.find(s => s.contract_id === ct.contract_id && s.status === 'Pending') || erp.data.schedules.find(s => s.contract_id === ct.contract_id);
-          if (sc) {
-            erp.setShowPayModal({ contract: ct, schedule: sc });
-          } else {
-            erp.setShowProjectExpenseModal(true);
-          }
-        } else {
-          erp.setShowProjectExpenseModal(true);
-        }
-      }}
+      onOpenCashReceipt={() => erp.openCollect({})}
+      onOpenCashTransfer={() => erp.setShowCashTransferModal(true)}
       onInspectContract={erp.handleInspectContract}
-      onInspectCheque={erp.handleInspectCheque}
       onInspectTransaction={(payload) => erp.setInspectorPayload(payload)}
       onOpenContractForProperty={erp.handleOpenContractForProperty}
       onOpenAuditForProperty={erp.handleOpenAuditForProperty}
@@ -92,7 +65,6 @@ export function DailyOperationsRouteView() {
       onAddCostAdjustment={erp.handleAddCostAdjustment}
       onRecordPayablePayment={erp.handleRecordCostPayablePayment}
       onSaveExpenseEntry={erp.handleSaveProjectExpense}
-      onOpenPartnerOperations={() => erp.setShowPartnerOperationsModal(true)}
       onOpenPartnerPayout={() => erp.setShowPartnerPayoutModal(true)}
       onOpenPartnerInjection={() => erp.setShowPartnerInjectionModal(true)}
       onExportExcel={erp.handleExportExcel}

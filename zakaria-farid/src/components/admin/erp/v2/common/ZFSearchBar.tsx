@@ -63,8 +63,8 @@ export const ZFSearchBar: React.FC<ZFSearchBarProps> = ({
       onClick={() => inputRef.current?.focus()}
       onFocus={(e) => {
         if (!disabled) {
-          e.currentTarget.style.borderColor = '#2563eb';
-          e.currentTarget.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.12)';
+          e.currentTarget.style.borderColor = 'var(--erp-accent)';
+          e.currentTarget.style.boxShadow = '0 0 0 2px color-mix(in srgb, var(--erp-accent) 12%, transparent)';
         }
       }}
       onBlur={(e) => {

@@ -1,0 +1,248 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign, no extra features.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first, gates once at the end. Always finish with the report (`caveman` skill).
+- Do NOT git add/commit/stash/checkout/restore. Keep UTF-8 Arabic byte-exact.
+- Touch ONLY the files in <files>. The CSS module and the math library ALREADY EXIST: do not edit them; use only
+  class names that exist in the CSS file (read it first). No inline style objects except the 4 allowed below.
+</execution_rules>
+
+<context>
+Rebuild the FIN-OS calculator page (/fin-os/ar/calculator). The old component
+src/components/admin/erp/ConstructionCostCalculator.tsx (1971 lines) is replaced by a new, small one.
+User decisions (PROJECT_SPEC.md, 2026-10-05):
+ - Mode 1 "تسعير عقار مبني": cost floor vs market. The user picks a price per m² between the break-even (actual
+   recorded cost per m²) and the market price per m². Saving writes the WHOLE property price to the catalog.
+ - Mode 2 "دراسة جدوى": land + construction (finish-tier presets) + extras % vs expected sale price.
+Math is in src/lib/erp/pricingCalculator.ts (read it): priceBuiltProperty, pricePerSqmForMarkup, priceUnitsAtRate,
+priceSliderBounds, estimateFeasibility. Every money value it returns is a 2-decimal string.
+</context>
+
+<files>
+NEW  src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx
+USE  src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css   (exists, read-only)
+EDIT src/components/admin/erp/v2/views/ConstructionFeasibilityView.tsx  (render the new component instead of the old)
+DELETE src/components/admin/erp/ConstructionCostCalculator.tsx
+DELETE src/components/admin/erp/ConstructionCostCalculator.module.css
+DELETE src/components/admin/erp/v2/views/CalculatorSideWidgets.tsx
+DELETE src/components/admin/erp/v2/views/CalculatorSideWidgets.module.css
+  (before deleting, grep the repo: if anything other than these files imports them, report it in OPEN and do not delete that file)
+</files>
+
+<component>
+'use client'. Export `CostPricingCalculator` with props:
+  properties: Property[]; propertyCosts?: ERPPropertyCostItem[]; initialPropertyId?: string;
+  onOpenAuditForProperty?: (p: Property) => void;
+  onUpdateSellingPrice?: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  onNavigateToTab?: (tab: string) => void; isAr: boolean;
+Imports: React hooks; lucide icons used below; Property from '@/lib/supabase/types'; ERPPropertyCostItem and
+PropertyCostCategory from '@/lib/erp/types'; calculatePropertyAuditMetrics from '@/lib/erp/propertyCostEngine';
+the pricing functions; { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
+{ ZFWorkstationSideWidgets } from '../../common/ZFWorkstationSideWidgets'; shellStyles from
+'../../ZFWorkstationShell.module.css'; s from './CostPricingCalculator.module.css'.
+
+Helpers inside the file:
+  const n = (v: string | number) => Number(v) || 0;
+  const fmt = (v: string | number) => Math.round(n(v)).toLocaleString('en-US');          // money, no decimals
+  const cur = isAr ? 'ج.م' : 'EGP';  const perSqm = isAr ? 'ج.م/م²' : 'EGP/m²';
+  const signed = (v) => (n(v) > 0 ? '+' : '') + fmt(v);
+  const pctText = (v: string | null) => v === null ? '—' : `${n(v) > 0 ? '+' : ''}${v}%`   // for change/vs-market
+  const pctPlain = (v: string | null) => v === null ? '—' : `${v}%`                          // for margin/return
+  A tiny <Money value unit /> render: `<span className={s.rowValue}>{fmt(value)} <span className={s.muted}>{unit}</span></span>`.
+
+State:
+  mode: 'built' | 'feasibility' (default 'built')
+  propertyId: string = initialPropertyId if it exists in properties, else properties[0]?.id ?? ''
+    (sync with a useEffect when initialPropertyId changes and exists)
+  marketPerSqm: string; chosenPerSqm: string  — reset ONLY when propertyId changes (keep a ref of the last
+    propertyId; see lesson: do not key resets on derived data). On reset:
+      list = property.price_egp || 0, area = property.area_sqm || 0
+      market = area > 0 && list > 0 ? Math.round(list / area) : 0
+      marketPerSqm = String(market); chosenPerSqm = String(market > 0 ? market : Math.round(n(audit.costPerSqm) * 1.3))
+  isSaving: boolean
+  Feasibility state (strings for inputs): landCost '0', builtArea '1000', tier 'lux', costPerSqm '7500',
+    extrasPct '10', salePerSqm '15000'.
+
+Derived:
+  property = properties.find(id) ?? null; area = property?.area_sqm || 0; list = property?.price_egp || 0
+  audit = calculatePropertyAuditMetrics(property.id, area, propertyCosts ?? [])   (useMemo; when no property: zeros)
+  result = priceBuiltProperty({ totalCost: audit.totalLoggedCost, areaSqm: area, marketPricePerSqm: marketPerSqm,
+           chosenPricePerSqm: chosenPerSqm, currentListPrice: list })
+  bounds = priceSliderBounds(result.costPerSqm, marketPerSqm)
+  listPerSqm = area > 0 ? Math.round(list / area) : 0
+  units = property?.building_units ?? [] ; unitRows = priceUnitsAtRate(units, chosenPerSqm)
+  feas = estimateFeasibility({ landCost, builtAreaSqm: n(builtArea), constructionCostPerSqm: costPerSqm,
+         extraCostsPct: extrasPct, salePricePerSqm: salePerSqm })
+
+TIERS constant (in file):
+  [{ id: 'core_and_shell', ar: 'عظم وطوب', en: 'Core & shell', cost: 2800 },
+   { id: 'semi_finished', ar: 'نصف تشطيب', en: 'Semi-finished', cost: 4500 },
+   { id: 'lux', ar: 'لوكس', en: 'Lux', cost: 7500 },
+   { id: 'super_lux', ar: 'سوبر لوكس', en: 'Super lux', cost: 10500 }]
+  Picking a tier sets tier and costPerSqm = String(cost). Typing in costPerSqm sets tier = 'custom'.
+
+CATEGORY_LABELS (in file) for PropertyCostCategory: civil_structure 'خرسانات وهيكل'/'Structure',
+  mep_infrastructure 'كهروميكانيك'/'MEP', finishing_interior 'تشطيبات'/'Finishing', site_facade 'واجهات ومداخل'/'Facade & site',
+  permits_engineering 'تراخيص وإشراف'/'Permits & engineering', taxes_fees 'ضرائب ورسوم'/'Taxes & fees',
+  land_allocation 'حصة الأرض'/'Land share', labor_subcontractor 'مصنعيات'/'Labour'.
+</component>
+
+<layout>
+Root: <div className={s.page} dir={isAr ? 'rtl' : 'ltr'}>
+
+1. <ZFPageHeader
+     title={isAr ? 'حاسبة التكاليف والتسعير' : 'Cost & pricing calculator'}
+     subtitle={mode === 'built'
+       ? (isAr ? 'اختر سعر بيع العقار بين تكلفته الفعلية وسعر السوق، وشاهد الربح قبل الحفظ.' : 'Pick a selling price between actual cost and market price, and see the profit before saving.')
+       : (isAr ? 'تقدير تكلفة وربح مشروع قبل البناء.' : 'Estimate cost and profit of a project before building.')}
+     actions={<ZFSegmented ariaLabel={isAr ? 'وضع الحاسبة' : 'Calculator mode'} value={mode} onChange={setMode}
+       options={[{ id: 'built', label: isAr ? 'تسعير عقار مبني' : 'Price a built property', icon: <Building2 size={14} /> },
+                 { id: 'feasibility', label: isAr ? 'دراسة جدوى' : 'Feasibility', icon: <Calculator size={14} /> }]} />} />
+
+2. mode === 'built' and properties.length === 0:
+   <ZFPanel><div className={s.empty}>{isAr ? 'لا توجد عقارات بعد.' : 'No properties yet.'}</div></ZFPanel>
+
+3. mode === 'built' with a property:
+ 3a. <div className={s.pickerBar}>
+       <label className={s.pickerField}><span className={s.label}>{isAr ? 'العقار' : 'Property'}</span>
+         <select className={s.select} value={propertyId} onChange=…>{properties.map(p => <option key value={p.id}>{isAr ? p.title_ar : (p.title_en || p.title_ar)}</option>)}</select></label>
+       <div className={s.facts}>
+         fact: 'المساحة'/'Area' -> `${area} م²` (`m²` in EN)
+         fact: 'السعر الحالي'/'Current price' -> `${fmt(list)} ${cur}`
+         fact: 'التكاليف المسجلة'/'Recorded costs' -> `${fmt(audit.totalLoggedCost)} ${cur}`
+         {onOpenAuditForProperty && <button type="button" className={s.linkBtn} onClick={() => onOpenAuditForProperty(property)}>
+            <ReceiptText size={13} />{isAr ? `عرض البنود (${audit.itemsCount})` : `View items (${audit.itemsCount})`}</button>}
+       </div></div>
+     (fact markup: <div className={s.fact}><span className={s.factLabel}>…</span><span className={s.factValue}>…</span></div>)
+
+ 3b. <div className={s.grid}>
+   LEFT <ZFPanel icon={<SlidersHorizontal size={15} />} title={isAr ? 'اختيار سعر المتر' : 'Choose price per m²'}
+          hint={isAr ? 'حرّك المؤشر أو اكتب السعر مباشرة' : 'Drag the slider or type a price'}>
+     ladder: <div className={s.ladder}><div className={s.track}>
+        lossZone width: only when result.hasCost: `${clamp((n(result.costPerSqm) - bounds.min) / (bounds.max - bounds.min) * 100)}%`
+          -> allowed inline style #1: style={{ width: `${x}%` }}
+        3 markers (skip a marker whose value is 0): cost (s.markerCost, label 'التعادل'/'Break-even', value result.costPerSqm),
+          current (s.markerList, 'السعر الحالي'/'Current', listPerSqm, add s.markerLabelLow to its label so labels do not collide),
+          market (s.markerMarket, 'السوق'/'Market', marketPerSqm).
+          Each: <span className={`${s.marker} ${variant}`} style={{ insetInlineStart: `${pos}%` }} />   (allowed inline style #2)
+                <span className={`${s.markerLabel} ${low?s.markerLabelLow:''}`} style={{ insetInlineStart: `${pos}%` }}>  (allowed #3)
+                   {label}<span className={s.markerValue}>{fmt(value)}</span></span>
+          pos = clamp((value - min) / (max - min) * 100) with clamp to [0,100].
+        <input type="range" className={s.range} min={bounds.min} max={bounds.max} step={bounds.step}
+           value={clamp-to-bounds(n(chosenPerSqm))} onChange={e => setChosenPerSqm(e.target.value)}
+           aria-label={isAr ? 'سعر المتر' : 'Price per m²'} />
+        </div></div>
+     <div className={s.fields}>
+       field: label 'سعر المتر المختار'/'Chosen price per m²'; <div className={s.inputWrap}><input className={s.input}
+          type="number" min={0} step="any" inputMode="decimal" value={chosenPerSqm} onChange…/><span className={s.inputUnit}>{perSqm}</span></div>
+       field: label 'سعر المتر في السوق'/'Market price per m²'; same input bound to marketPerSqm;
+          hint (<span className={s.hint}>): 'افتراضياً: السعر الحالي ÷ المساحة. عدّله حسب أسعار المنطقة.' / 'Defaults to current price ÷ area. Adjust to local prices.'
+       field fieldWide: label 'اختيارات سريعة'/'Quick picks'; <div className={s.chips}> buttons (s.chip, + s.chipActive when
+          Math.round(n(chosenPerSqm)) === Math.round(n(value))):
+            'التعادل'/'Break-even' -> result.costPerSqm (only if result.hasCost)
+            'تكلفة +15%'/'Cost +15%' -> pricePerSqmForMarkup(result.costPerSqm, 15) (only if hasCost)
+            'تكلفة +30%'/'Cost +30%' -> pricePerSqmForMarkup(result.costPerSqm, 30) (only if hasCost)
+            'السعر الحالي'/'Current price' -> listPerSqm (only if > 0)
+            'سعر السوق'/'Market' -> marketPerSqm (only if > 0)
+          each chip: {label} <span className={s.chipSub}>{fmt(value)}</span>; onClick sets chosenPerSqm = String(Math.round(n(value)))
+     </div>
+   </ZFPanel>
+
+   RIGHT <ZFPanel icon={<BadgeDollarSign size={15} />} title={isAr ? 'النتيجة' : 'Result'}>
+     <div className={s.result}>
+       <div className={s.hero}><span className={s.heroLabel}>{isAr ? 'سعر البيع للعقار كاملاً' : 'Whole-property price'}</span>
+          <span className={s.heroValue}>{fmt(result.totalPrice)}<span className={s.heroUnit}>{cur}</span></span>
+          <span className={s.heroSub}>{fmt(chosenPerSqm)} {perSqm} × {area} {isAr ? 'م²' : 'm²'}</span></div>
+       <div className={s.rows}>
+         row 'التكلفة الفعلية'/'Actual cost' -> fmt(audit.totalLoggedCost) cur
+         row 'الربح'/'Profit' -> signed(result.profit) cur, value class s.pos if >0, s.neg if <0
+         row 'هامش الربح من السعر'/'Margin on price' -> pctPlain(result.marginPct)
+         row 'العائد على التكلفة'/'Return on cost' -> pctPlain(result.returnOnCostPct)
+         row 'الفرق عن السعر الحالي'/'Change vs current price' -> `${signed(result.changeVsList)} ${cur}` + ` (${pctText(result.changeVsListPct)})` when pct not null
+         row 'مقارنة بسعر السوق'/'Vs market' -> pctText(result.vsMarketPct)
+         (row markup: <div className={s.row}><span className={s.rowLabel}>…</span><span className={`${s.rowValue} …`}>…</span></div>)
+       </div>
+       notices (each <div className={`${s.notice} ${variant}`}><Icon size={14} /><span>…</span></div>):
+         !result.hasCost -> s.noticeWarn, AlertTriangle: 'لا توجد تكاليف مسجلة لهذا العقار، فالربح المعروض غير دقيق. سجّل المصاريف أولاً.' / 'No costs are recorded for this property, so the profit shown is not reliable. Record costs first.'
+         result.belowCost -> s.noticeDanger, AlertOctagon: 'السعر المختار أقل من التكلفة الفعلية: البيع به خسارة.' / 'The chosen price is below actual cost: selling at it loses money.'
+       <div className={s.actions}>
+         {onUpdateSellingPrice && <button type="button" className={`${shellStyles.btnPrimary} ${s.saveBtn}`}
+             disabled={isSaving || n(result.totalPrice) <= 0 || Math.round(n(result.totalPrice)) === Math.round(list)}
+             onClick={async () => { if (!property) return; setIsSaving(true); try { await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice))); } finally { setIsSaving(false); } }}>
+             <Save size={14} /><span>{isSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? `حفظ ${fmt(result.totalPrice)} ${cur} كسعر للعقار` : `Save ${fmt(result.totalPrice)} ${cur} as price`)}</span></button>}
+         <span className={s.hint}>{isAr ? 'يحدّث سعر العقار في الكتالوج والموقع.' : 'Updates the property price in the catalog and website.'}</span>
+       </div>
+     </div>
+   </ZFPanel>
+   </div>
+
+ 3c. units.length > 0: <ZFPanel flush icon={<LayoutGrid size={15} />} title={isAr ? 'الوحدات بنفس سعر المتر' : 'Units at this price per m²'}
+        hint={isAr ? `${units.length} وحدة` : `${units.length} units`}>
+       <div className={s.tableScroll}><table className={s.table}><thead><tr>
+         th: 'الوحدة'/'Unit', 'الدور'/'Floor', 'المساحة'/'Area', 'الحالة'/'Status', 'السعر الحالي'/'Current' (s.num), 'السعر الجديد'/'New' (s.num), 'الفرق'/'Change' (s.num)
+       </tr></thead><tbody> one row per unit (match unitRows by index):
+         unit_number | floor | `${area_sqm} م²` | status pill: <span className={`${shellStyles.statusPill} ${cls}`}>
+            available -> shellStyles.statusPillGreen 'متاحة'/'Available'; reserved -> shellStyles.statusPillAmber (if that class
+            does not exist use statusPillNeutral) 'محجوزة'/'Reserved'; contracted -> shellStyles.statusPillNeutral 'مباعة'/'Sold'
+         | fmt(currentPrice) | fmt(newPrice) | signed(change) with s.pos/s.neg
+       </tbody></table></div>
+       <div className={s.tableNote}>{isAr ? 'للعرض فقط: الحفظ يحدّث سعر العقار ككل. أسعار الوحدات تُعدّل من صفحة العقارات.' : 'Preview only: saving updates the whole-property price. Unit prices are edited on the Properties page.'}</div>
+     </ZFPanel>
+
+4. mode === 'feasibility': <div className={s.grid}>
+   LEFT <ZFPanel icon={<SlidersHorizontal size={15} />} title={isAr ? 'بيانات المشروع' : 'Project inputs'}>
+     <div className={s.fields}>
+       field 'تكلفة الأرض'/'Land cost' (unit cur) -> landCost
+       field 'مساحة البناء'/'Built area' (unit 'م²'/'m²') -> builtArea
+       field fieldWide 'مستوى التشطيب'/'Finish level': chips from TIERS (active when tier === id): `{ar|en}` + chipSub `${fmt(cost)}`;
+         then below the chips the input 'تكلفة بناء المتر'/'Construction cost per m²' (unit perSqm) -> costPerSqm (typing sets tier 'custom')
+       field 'مصاريف إضافية'/'Extra costs' (unit '%') -> extrasPct; hint 'تراخيص، تصميم، إشراف، توصيل مرافق — كنسبة من تكلفة البناء.' / 'Permits, design, supervision, utilities — as % of construction cost.'
+       field 'سعر البيع المتوقع للمتر'/'Expected sale price per m²' (unit perSqm) -> salePerSqm
+     </div></ZFPanel>
+   RIGHT <ZFPanel icon={<BadgeDollarSign size={15} />} title={isAr ? 'النتيجة' : 'Result'}>
+     <div className={s.result}>
+       hero: label 'صافي الربح المتوقع'/'Expected profit'; value signed(feas.profit) with cur; heroValue gets s.neg when profit < 0;
+         heroSub: `${isAr ? 'هامش' : 'Margin'} ${pctPlain(feas.marginPct)} • ${isAr ? 'عائد على التكلفة' : 'Return on cost'} ${pctPlain(feas.returnOnCostPct)}`
+       cost stack: <div className={s.stack}> three spans s.stackLand / s.stackBuild / s.stackExtra, each
+         style={{ width: `${share}%` }} (allowed inline style #4), share = part / totalCost * 100 (0 when total 0);
+         <div className={s.legend}> 3 items: <span className={s.legendItem}><span className={`${s.dot} ${s.stackLand}`} />{isAr ? 'الأرض' : 'Land'}</span> … 'البناء'/'Construction', 'إضافية'/'Extras'
+       rows: 'تكلفة الأرض'/'Land' fmt(landCost); 'تكلفة البناء'/'Construction' fmt(feas.constructionCost);
+             'مصاريف إضافية'/'Extras' fmt(feas.extraCosts); 'إجمالي التكلفة'/'Total cost' fmt(feas.totalCost);
+             'الإيرادات المتوقعة'/'Expected revenue' fmt(feas.revenue);
+             'سعر التعادل للمتر'/'Break-even per m²' `${fmt(feas.breakEvenPricePerSqm)} ${perSqm}`
+       notice when n(feas.profit) < 0: s.noticeDanger 'سعر البيع المتوقع أقل من سعر التعادل: المشروع خاسر بهذه الأرقام.' / 'Expected sale price is below break-even: the project loses money at these numbers.'
+     </div></ZFPanel>
+   </div>
+
+5. Side widgets (only mode === 'built' && property): <ZFWorkstationSideWidgets>
+     <ZFPanel icon={<PieChart size={15} />} title={isAr ? 'توزيع التكاليف' : 'Cost breakdown'} hint={property title}>
+       if audit.itemsCount === 0: <div className={s.empty}>{isAr ? 'لا توجد تكاليف مسجلة.' : 'No costs recorded.'}</div>
+       else <div className={s.breakdown}> one .bdRow per category in audit.byCategory sorted by total desc:
+         <div className={s.bdHead}><span className={s.bdName}>{label}</span><span className={s.bdValue}>{fmt(total)}</span></div>
+         <div className={s.bdTrack}><span className={s.bdFill} style={{ width: `${share}%` }} /></div>   (same allowed style as #4)
+       </div>
+       {onNavigateToTab && <button type="button" className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`} onClick={() => onNavigateToTab('construction')}>
+          {isAr ? 'دفتر مصاريف البناء' : 'Construction cost book'}</button>}
+     </ZFPanel>
+   </ZFWorkstationSideWidgets>
+</layout>
+
+<wiring>
+ConstructionFeasibilityView.tsx: import { CostPricingCalculator } from './calculator/CostPricingCalculator' and render
+  <CostPricingCalculator properties propertyCosts initialPropertyId onOpenAuditForProperty onUpdateSellingPrice onNavigateToTab isAr />
+  inside the existing stageContainer div. Drop onOpenContractForProperty from the JSX passed down (keep it in the view's
+  props interface so the route view still compiles). Remove the old import.
+</wiring>
+
+<gates>
+npx tsc --noEmit
+npx eslint src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx src/components/admin/erp/v2/views/ConstructionFeasibilityView.tsx
+npx tsx --test src/lib/erp/__tests__/pricingCalculator.test.ts
+grep -rn "ConstructionCostCalculator\|CalculatorSideWidgets" src -> only comments allowed; list hits
+grep -c "style={{" src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx -> report (only the 4 allowed kinds)
+</gates>
+
+<structured_output_contract>
+STATUS | files created/edited/deleted | any spec item you could not follow + why | GATES pass/fail + first failing
+line | grep results | OPEN. Caveman, <=25 lines.
+</structured_output_contract>

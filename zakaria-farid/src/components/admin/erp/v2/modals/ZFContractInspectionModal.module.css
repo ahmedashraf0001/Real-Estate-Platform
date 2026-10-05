@@ -1,3 +1,7 @@
+.modalWrapper {
+  overflow: hidden;
+}
+
 .dualLayout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -5,7 +9,7 @@
   padding: 0.75rem;
   height: min(80vh, 830px);
   min-height: 0;
-  background: #f1f5f9;
+  background: var(--erp-bg-canvas, #f1f5f9);
   box-sizing: border-box;
 }
 
@@ -27,17 +31,10 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  flex: 0 0 52px;
+  flex: 0 0 48px;
   padding-inline: 1rem;
   border-bottom: 1px solid var(--erp-border, #cbd5e1);
   color: var(--erp-accent, #2563eb);
-}
-
-.paneHeader h4 {
-  margin: 0;
-  color: var(--erp-text-title, #0f172a);
-  font-size: 0.9rem;
-  font-weight: 750;
 }
 
 .paneBody {
@@ -52,7 +49,7 @@
   box-sizing: border-box;
 }
 
-.propertyCard, .clientCard, .scheduleIdentity, .factsGrid, .attachments, .tableCard, .metrics > div {
+.propertyCard, .clientCard, .scheduleIdentity, .tableCard {
   background: #ffffff;
   border: 1px solid var(--erp-card-border, #e2e8f0);
   border-radius: 8px;
@@ -62,21 +59,21 @@
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  min-height: 136px;
+  min-height: 120px;
   padding: 0.6rem;
 }
 
 .propertyImage, .propertyImageEmpty {
   position: relative;
-  width: 200px;
-  height: 122px;
-  flex: 0 0 200px;
+  width: 180px;
+  height: 110px;
+  flex: 0 0 180px;
   border-radius: 7px;
   overflow: hidden;
 }
 
 .propertyImage img, .scheduleThumb img { object-fit: cover; }
-.propertyImageEmpty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: #f8fafc; color: var(--erp-text-muted, #64748b); font-size: 0.7rem; }
+.propertyImageEmpty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: var(--erp-bg-canvas, #f8fafc); color: var(--erp-text-muted, #64748b); font-size: 0.7rem; }
 .propertyInfo { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
 .propertyInfo strong { color: var(--erp-text-title, #0f172a); font-size: 0.91rem; line-height: 1.35; }
 .propertyInfo > span { color: var(--erp-text-muted, #64748b); font-size: 0.73rem; }
@@ -95,36 +92,18 @@
 .tabActive { border-bottom-color: var(--erp-accent, #2563eb); color: var(--erp-accent, #2563eb); font-weight: 700; }
 .tab:hover, .tab:focus-visible { color: var(--erp-accent, #2563eb); }
 
-.factsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; padding: 0.6rem 0.85rem; }
-.factsGrid > div { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: center; gap: 0 0.45rem; min-height: 52px; border-bottom: 1px solid var(--erp-border-subtle, #f1f5f9); }
-.factsGrid svg { grid-row: span 2; color: var(--erp-accent, #2563eb); }
-.factsGrid span { color: var(--erp-text-muted, #64748b); font-size: 0.69rem; }
-.factsGrid strong { color: var(--erp-text-title, #0f172a); font-size: 0.78rem; overflow-wrap: anywhere; }
-.emptyNote { padding: 0.9rem; border: 1px solid var(--erp-card-border, #e2e8f0); border-radius: 8px; color: var(--erp-text-muted, #64748b); font-size: 0.75rem; }
-.attachments { padding: 0.7rem 0.9rem; }
-.attachments h5, .tableHeading h5 { margin: 0; color: var(--erp-text-title, #0f172a); font-size: 0.8rem; }
-.attachments p { margin: 0.5rem 0 0; color: var(--erp-text-muted, #64748b); font-size: 0.74rem; }
-.paneFooter { display: flex; align-items: center; justify-content: flex-end; gap: 0.55rem; margin-top: auto; padding-top: 0.4rem; }
-.secondaryButton, .primaryButton { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 34px; padding: 0.35rem 0.7rem; border-radius: 7px; font: inherit; font-size: 0.74rem; font-weight: 700; cursor: pointer; }
-.secondaryButton { border: 1px solid var(--erp-border, #cbd5e1); background: #ffffff; color: var(--erp-text-body, #334155); }
-.primaryButton { border: 1px solid var(--erp-accent, #2563eb); background: var(--erp-accent, #2563eb); color: #ffffff; }
-.secondaryButton:hover { border-color: var(--erp-accent, #2563eb); color: var(--erp-accent, #2563eb); }
-.primaryButton:hover { background: var(--erp-accent-hover, #1d4ed8); }
+.attachmentsText { margin: 0; color: var(--erp-text-muted, #64748b); font-size: 0.74rem; }
 
-.scheduleIdentity { display: flex; align-items: center; gap: 0.65rem; min-height: 72px; padding: 0.5rem 0.7rem; }
+.paneFooter { display: flex; align-items: center; justify-content: flex-end; gap: 0.55rem; margin-top: auto; padding-top: 0.4rem; }
+
+.scheduleIdentity { display: flex; align-items: center; gap: 0.65rem; min-height: 64px; padding: 0.5rem 0.7rem; }
 .scheduleIdentity > svg { color: var(--erp-accent, #2563eb); flex-shrink: 0; }
-.scheduleThumb { position: relative; width: 90px; height: 55px; flex: 0 0 90px; border-radius: 6px; overflow: hidden; }
+.scheduleThumb { position: relative; width: 80px; height: 50px; flex: 0 0 80px; border-radius: 6px; overflow: hidden; }
 .scheduleIdentity > div:not(.scheduleThumb) { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
 .scheduleIdentity strong { color: var(--erp-text-title, #0f172a); font-size: 0.77rem; overflow-wrap: anywhere; }
 .scheduleIdentity span { color: var(--erp-text-muted, #64748b); font-size: 0.69rem; }
 .scheduleClient { margin-inline-start: auto; }
 
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.45rem; }
-.metrics > div { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; padding: 0.65rem; }
-.metrics svg { color: var(--erp-accent, #2563eb); }
-.metrics span { color: var(--erp-text-muted, #64748b); font-size: 0.67rem; }
-.metrics strong { color: var(--erp-text-title, #0f172a); font-size: 0.8rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.metrics small { color: var(--erp-accent, #2563eb); font-size: 0.66rem; font-variant-numeric: tabular-nums; }
 .tabular { font-variant-numeric: tabular-nums; }
 
 .tableCard { min-width: 0; }
@@ -146,6 +125,5 @@
   .propertyCard { flex-direction: column; align-items: stretch; }
   .propertyImage, .propertyImageEmpty { width: 100%; flex-basis: auto; }
   .clientCard { flex-wrap: wrap; }
-  .factsGrid, .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .scheduleClient { display: none !important; }
 }

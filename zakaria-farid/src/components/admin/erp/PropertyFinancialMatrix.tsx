@@ -245,7 +245,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
 
     const totalRemaining = totalGross.minus(totalCollected);
     const avgCollectionPct = totalGross.gt(0) 
-      ? Math.round(totalCollected.dividedBy(totalGross).times(100).toNumber()) 
+      ? Math.round(totalCollected.times(100).dividedBy(totalGross).toNumber()) 
       : 0;
 
     return {
@@ -351,9 +351,9 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               </span>
             ) : (
               <span style={{
-                background: '#eff6ff',
+                background: 'var(--erp-accent-subtle)',
                 color: 'var(--erp-accent, #2563eb)',
-                border: '1px solid rgba(37, 99, 235, 0.25)',
+                border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                 padding: '0.2rem 0.6rem',
                 borderRadius: '6px',
                 fontSize: '0.72rem',
@@ -450,7 +450,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               alignItems: 'center',
               justifyContent: 'space-between',
               background: isWholeBuildingSold ? '#f0fdf4' : 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
-              border: isWholeBuildingSold ? '1px solid #bbf7d0' : '1px solid rgba(37, 99, 235, 0.25)',
+              border: isWholeBuildingSold ? '1px solid #bbf7d0' : '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
               borderRadius: '8px',
               padding: '0.45rem 0.65rem',
               fontSize: '0.72rem'
@@ -519,7 +519,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontWeight: 600 }}>
                 <span>{isAr ? 'سعر المتر المسطح:' : 'Price / m²:'}</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#1e40af' }}>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--erp-accent-hover)' }}>
                   {D(pricePerSqm).formatEGP(isAr)} / م²
                 </span>
               </div>
@@ -962,7 +962,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                         fontWeight: 800,
                         background: isUnitSold ? '#f0fdf4' : 'var(--erp-accent-subtle, #eff6ff)',
                         color: isUnitSold ? '#16a34a' : 'var(--erp-accent, #2563eb)',
-                        border: isUnitSold ? '1px solid #bbf7d0' : '1px solid rgba(37, 99, 235, 0.25)'
+                        border: isUnitSold ? '1px solid #bbf7d0' : '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)'
                       }}>
                         {isWholeBuildingSold 
                           ? (isAr ? 'مباعة (ضمن العمارة بالكامل)' : 'Sold with Building') 
@@ -1150,21 +1150,21 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                       const tax25 = Math.round(editingTaxUnit.basePrice * 0.025);
                       setEditingTaxUnit({ ...editingTaxUnit, taxAmount: tax25.toString() });
                     }}
-                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid rgba(37, 99, 235, 0.25)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
                   >
                     {isAr ? `٢.٥٪ استرشادية (${Math.round(editingTaxUnit.basePrice * 0.025).toLocaleString()} ج.م)` : '2.5% Guideline'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: '50000' })}
-                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid rgba(37, 99, 235, 0.25)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
                   >
                     +50,000 ج.م
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: '100000' })}
-                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid rgba(37, 99, 235, 0.25)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
                   >
                     +100,000 ج.م
                   </button>

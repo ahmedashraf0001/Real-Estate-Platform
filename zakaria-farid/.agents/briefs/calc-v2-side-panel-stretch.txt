@@ -1,0 +1,56 @@
+ROLE: LEAF
+TRACK: SURFACE_UI
+TASK: calc-v2-side-panel-stretch — make the calculator's side "cost breakdown" panel content fill its width.
+
+<files>
+ALLOWED:
+- src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx
+- src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css
+DENIED: every other file. Do NOT edit ZFWorkstationShell.module.css or ZFPageHeader.tsx/.css.
+</files>
+
+<cause>
+Global rule in src/components/admin/erp/v2/ZFWorkstationShell.module.css:7744
+  :global([class*="sideWidgetsContent"]) :global([class*="Header" i]) { display:flex; align-items:center; ... }
+matches the ZFPanel <section> and its body div, because their CSS-module class names contain "ZFPageHeader".
+Result: panel (852px) centers its body; body shrinks to 165px; breakdown bars render short. Specificity of that rule = (0,2,0).
+</cause>
+
+<fix>
+1. TSX: on the ZFPanel inside <ZFWorkstationSideWidgets> (title 'توزيع التكاليف' / 'Cost breakdown') add
+     className={s.sidePanel}
+     bodyClassName={s.sidePanelBody}
+   ZFPanel already supports both props. Change nothing else.
+2. CSS: append near the "Side widget: cost breakdown" section:
+     /* Beats the shell's [class*="Header"] side-widget rule (0,2,0), which matches ZFPanel's module class names. */
+     .sidePanel.sidePanel.sidePanel,
+     .sidePanelBody.sidePanelBody.sidePanelBody { align-items: stretch; }
+   Also remove the now-redundant `align-self: stretch; width: 100%;` from `.breakdown` and `align-self: stretch;` from `.empty`
+   (added in the previous task); keep the rest of those rules.
+3. The "دفتر مصاريف البناء" ghost button will now stretch full width. Keep it at natural width aligned to inline-start:
+     .sidePanelBody > button { align-self: flex-start; }
+</fix>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+1. npx tsc --noEmit (clean)
+2. grep -n "sidePanel" src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css (both files hit)
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths + line counts changed
+3. FIX: steps 1-3 each done/skipped + reason
+4. GATES: each command + result
+5. NOTES: out-of-scope observations (do not fix)
+</structured_output_contract>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { usePropertyCosts } from '../../context/ERPWorkstationContext';
 import { Users, Coins, Receipt, Wallet, Building2, Plus } from 'lucide-react';
 import { 
   ERPPartnerProfile, 
@@ -12,9 +13,7 @@ import {
 import { Property } from '@/lib/supabase/types';
 import { 
   PartnersEngine, 
-  PartnerFinancialSummary, 
-  INITIAL_PARTNER_PROFILES,
-  INITIAL_PARTNER_TRANSACTIONS
+  PartnerFinancialSummary 
 } from '@/lib/erp/partnersEngine';
 import { D } from '@/lib/erp/math';
 import { getPartnerFinancing, getPartnerDrawings } from '@/lib/erp/canonicalMetrics';
@@ -23,6 +22,7 @@ import { toast } from 'sonner';
 
 // Shell & Tokens
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import styles from '../ZFWorkstationShell.module.css';
 
 // Modular Child Views
@@ -55,8 +55,8 @@ export interface PartnersManagementViewProps {
 }
 
 export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
-  partnerProfiles = INITIAL_PARTNER_PROFILES,
-  partnerTransactions = INITIAL_PARTNER_TRANSACTIONS,
+  partnerProfiles = [],
+  partnerTransactions = [],
   properties = [],
   contracts = [],
   partnerCalls = [],
@@ -66,11 +66,11 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   onOpenNewPartnerModal,
   onOpenPayout,
   onOpenInjection,
-  onOpenDossier: externalOnOpenDossier,
   onOpenReallocation: externalOnOpenReallocation,
   onConfirmCommitment,
   onSaveProperty
 }) => {
+  const propertyCosts = usePropertyCosts();
   // Master Workstation Tab Mode: 1: projects (مشاريع الشراكة), 2: directory (دليل الشركاء), 3: transactions (سجل الحركات)
   const [activeTab, setActiveTab] = useState<'projects' | 'directory' | 'transactions'>('projects');
 
@@ -113,9 +113,10 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       properties,
       contracts,
       partnerTransactions,
-      partnerCalls
+      partnerCalls,
+      propertyCosts
     );
-  }, [partnerProfiles, properties, contracts, partnerTransactions, partnerCalls]);
+  }, [partnerProfiles, properties, contracts, partnerTransactions, partnerCalls, propertyCosts]);
 
   // 4 Discrete KPI Cards derived strictly from canonicalMetrics.ts
   const kpis = useMemo(() => {
@@ -147,31 +148,17 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
     const injections = sortedTx.filter(t => t.type === 'CAPITAL_INJECTION');
     const distributions = sortedTx.filter(t => t.type === 'PROFIT_DISTRIBUTION');
 
-    const capPoints = injections.length >= 2
-      ? injections.slice(-6).map(t => Number(t.amount) || 0)
-      : [1000000, 1500000, 2000000, 2800000, 3500000, Number(kpis.totalCapital) || 4000000];
+    // Real data only: running totals of actual transactions; a flat line when there is no history.
+    const runningTotals = (txs: typeof sortedTx, finalValue: number) => {
+      if (txs.length < 2) return [finalValue, finalValue];
+      let acc = 0;
+      return txs.map(t => (acc += Number(t.amount) || 0)).slice(-6);
+    };
 
-    const distPoints = distributions.length >= 2
-      ? distributions.slice(-6).map(t => Number(t.amount) || 0)
-      : [0, 200000, 450000, 600000, 900000, Number(kpis.totalPayouts) || 1200000];
-
-    const duePoints = [
-      Math.max(0, Number(kpis.totalNetDue) * 0.4),
-      Math.max(0, Number(kpis.totalNetDue) * 0.55),
-      Math.max(0, Number(kpis.totalNetDue) * 0.7),
-      Math.max(0, Number(kpis.totalNetDue) * 0.8),
-      Math.max(0, Number(kpis.totalNetDue) * 0.9),
-      Number(kpis.totalNetDue)
-    ];
-
-    const countPoints = [
-      Math.max(1, kpis.activeCount - 3),
-      Math.max(1, kpis.activeCount - 2),
-      Math.max(1, kpis.activeCount - 2),
-      Math.max(1, kpis.activeCount - 1),
-      kpis.activeCount,
-      kpis.activeCount
-    ];
+    const capPoints = runningTotals(injections, Number(kpis.totalCapital) || 0);
+    const distPoints = runningTotals(distributions, Number(kpis.totalPayouts) || 0);
+    const duePoints = [Number(kpis.totalNetDue) || 0, Number(kpis.totalNetDue) || 0];
+    const countPoints = [kpis.activeCount, kpis.activeCount];
 
     return { capPoints, distPoints, duePoints, countPoints };
   }, [partnerTransactions, kpis]);
@@ -180,7 +167,6 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   const handleOpenDossier = (partner: PartnerFinancialSummary) => {
     setDossierPartner(partner);
     setIsDossierOpen(true);
-    if (externalOnOpenDossier) externalOnOpenDossier(partner);
   };
 
   const handleOpenDossierByName = (partnerName: string) => {
@@ -207,47 +193,20 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   };
 
   return (
-    <div className={styles.workstationBody} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. TOP HEADER (NO BREADCRUMB) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: '#0f172a' }}>
-            {isAr ? 'إدارة الشركاء ورؤوس أموال المشاريع' : 'Partners & Project Equity Management'}
-          </h1>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-            {isAr ? 'متابعة مساهمات الشركاء، أرباح المشاريع، وتوزيعات الحصص الرأسمالية' : 'Track partner capital, distributions, and project equity shares'}
-          </p>
-        </div>
-
-        {/* Global Header Actions: Single Primary CTA */}
-        {onOpenNewPartnerModal && (
-          <button
-            type="button"
-            onClick={onOpenNewPartnerModal}
-            disabled={isMutating}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: 'var(--erp-accent, #2563eb)',
-              border: 'none',
-              color: '#ffffff',
-              boxShadow: 'none'
-            }}
-          >
+    <div className={styles.workstationBody} dir={isAr ? 'rtl' : 'ltr'} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <ZFPageHeader
+        title={isAr ? 'الشركاء ورؤوس الأموال' : 'Partners & capital'}
+        subtitle={isAr ? 'مساهمات الشركاء في كل مشروع، حصصهم، والتوزيعات المصروفة لهم.' : 'Partner contributions per project, their shares, and payouts made.'}
+        actions={onOpenNewPartnerModal ? (
+          <button type="button" className={styles.btnPrimary} onClick={onOpenNewPartnerModal} disabled={isMutating}>
             <Plus size={14} />
-            <span>{isAr ? '+ إضافة شريك جديد' : '+ New Partner'}</span>
+            <span>{isAr ? 'إضافة شريك' : 'New partner'}</span>
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* 2. TOP 4 DISCRETE FLOATING KPI CARDS WITH SQUIRCLES AND SPARKLINES */}
-      <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
+      <ZFKpiGrid>
         <ZFKpiCard
           title={isAr ? 'إجمالي رأس المال المودع (المساهمات)' : 'Total Contributed Capital'}
           value={D(kpis.totalCapital).formatEGP(isAr)}
@@ -298,7 +257,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       </ZFKpiGrid>
 
       {/* 3. UNDERLINE NAVIGATION TABS */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #cbd5e1', marginBottom: '1.25rem', paddingBottom: '0.1rem', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #cbd5e1', paddingBottom: '0.1rem', overflowX: 'auto' }}>
         {[
           { id: 'projects', label: isAr ? 'مشاريع الشراكة وحصص العماير' : 'Project Equity & Capital', icon: <Building2 size={16} /> },
           { id: 'directory', label: isAr ? 'دليل وأرصدة الشركاء والممولين' : 'Partner Directory & Balances', icon: <Users size={16} /> },
@@ -314,8 +273,8 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                 padding: '0.5rem 0.25rem',
                 background: 'none',
                 border: 'none',
-                borderBottom: isActive ? '2.5px solid var(--erp-accent, #2563eb)' : '2.5px solid transparent',
-                color: isActive ? 'var(--erp-accent, #2563eb)' : '#64748b',
+                borderBottom: isActive ? '2.5px solid var(--erp-accent)' : '2.5px solid transparent',
+                color: isActive ? 'var(--erp-accent)' : '#64748b',
                 fontWeight: isActive ? 800 : 600,
                 fontSize: '0.875rem',
                 cursor: 'pointer',

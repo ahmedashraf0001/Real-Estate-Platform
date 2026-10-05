@@ -6,23 +6,23 @@ import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { ERPSupabaseService, LiveERPDataset, isAuthError } from '@/lib/erp/supabaseService';
-import { GeneralLedgerEngine, resolvePeriodForDate } from '@/lib/erp/ledger';
-import { ContractsEngine } from '@/lib/erp/contracts';
+import { GeneralLedgerEngine, resolvePeriodForDate, buildCalendarMonthPeriod } from '@/lib/erp/ledger';
+import { ContractsEngine, generateContractNumber } from '@/lib/erp/contracts';
 import { EscalationEngine } from '@/lib/erp/escalation';
-import { RescissionEngine } from '@/lib/erp/rescission';
+import { RescissionEngine, resolveRescissionCost } from '@/lib/erp/rescission';
 import { RSVEngine } from '@/lib/erp/rsv';
-import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
+import { getAvailableCash, getConstructionWIP, glBalanceSheetKpis } from '@/lib/erp/canonicalMetrics';
 import { D, Decimal, generateUUID, isUUID, ensureUUID } from '@/lib/erp/math';
 import { 
   ERPContract, 
   ERPInstallmentSchedule, 
+  InstallmentStatus,
   ERPJournalEntry,
   ERPPDCRecord,
   ERPRescissionRecord,
   ERPTaxRecord,
   ERPCostAllocation,
   ERPPropertyCostItem,
-  ERPConstructionPurchaseOrder,
   ERPPartnerProfile,
   ERPPartnerTransaction,
   ERPAccountingPeriod,
@@ -39,9 +39,7 @@ import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { 
   PartnersEngine, 
-  PartnerFinancialSummary, 
-  INITIAL_PARTNER_PROFILES, 
-  INITIAL_PARTNER_TRANSACTIONS 
+  PartnerFinancialSummary 
 } from '@/lib/erp/partnersEngine';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
@@ -59,16 +57,13 @@ import {
 } from '@/lib/erp/notificationEngine';
 import { TAB_REDIRECT_MAP, TABS_WITH_SIDE_WIDGETS, isSideWidgetsTab } from '@/lib/erp/routing/tabRedirectMap';
 export { TABS_WITH_SIDE_WIDGETS, isSideWidgetsTab };
-import { createInitialERPState } from '@/lib/erp/store';
 import { prepareConstructionSettlement } from '@/lib/erp/constructionSettlement';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { 
   ERPPalettePreset, 
   ERP_PALETTE_PRESETS,
-  DEFAULT_PALETTE_PRESET, 
-  getPresetById, 
-  FIN_OS_PALETTE_STORAGE_KEY 
+  getPresetById 
 } from '@/lib/erp/erpPalettePresets';
+import { useAccentPreset } from '@/lib/theme/accentPalette';
 
 export type ERPWorkspaceTab = 
   | 'dashboard' 
@@ -119,6 +114,8 @@ export const TAB_TITLES_EN: Record<ERPWorkspaceTab, string> = {
 
 
 
+export interface CollectRequest { contractId?: string; scheduleId?: string }
+
 export interface ERPWorkstationContextValue {
   // Locale & Base
   locale: string;
@@ -159,7 +156,6 @@ export interface ERPWorkstationContextValue {
   totalWipIncurred: string;
   totalSafePDCs: string;
   totalInjectedCapital: string;
-  wipAccounts: { land: string; civil: string; mep: string; finishing: string; financing: string };
   kpis: { cashBank: string; totalWip: string; accountsReceivable: string; deferredRevenue: string; realizedRevenue: string };
   deferredRevenue: string;
   realizedRevenue: string;
@@ -211,7 +207,6 @@ export interface ERPWorkstationContextValue {
   inspectorPayload: InspectorPayload | null;
   setInspectorPayload: React.Dispatch<React.SetStateAction<InspectorPayload | null>>;
   handleInspectContract: (contract: ERPContract) => void;
-  handleInspectCheque: (cheque: ERPPDCRecord) => void;
   handleInspectTax: (tax: ERPTaxRecord) => void;
   handleInspectRSV: (allocation: ERPCostAllocation) => void;
   handleInspectRescission: (rescission: ERPRescissionRecord) => void;
@@ -273,6 +268,10 @@ export interface ERPWorkstationContextValue {
   contractWizardStep: 1 | 2 | 3;
   setContractWizardStep: (step: 1 | 2 | 3) => void;
 
+  collectRequest: CollectRequest | null;
+  setCollectRequest: (req: CollectRequest | null) => void;
+  openCollect: (req?: CollectRequest) => void;
+
   showPayModal: { contract: ERPContract; schedule: ERPInstallmentSchedule } | null;
   setShowPayModal: (val: { contract: ERPContract; schedule: ERPInstallmentSchedule } | null) => void;
   showEscalationModal: ERPContract | null;
@@ -289,6 +288,8 @@ export interface ERPWorkstationContextValue {
   setRescissionStep: (step: 0 | 1) => void;
   rescissionDate: string;
   setRescissionDate: (val: string) => void;
+  rescissionPenaltyRate: number;
+  setRescissionPenaltyRate: (rate: number) => void;
 
   showRSVModal: boolean;
   setShowRSVModal: (val: boolean) => void;
@@ -324,6 +325,8 @@ export interface ERPWorkstationContextValue {
 
   showProjectExpenseModal: boolean;
   setShowProjectExpenseModal: (val: boolean) => void;
+  showCashTransferModal: boolean;
+  setShowCashTransferModal: (val: boolean) => void;
   projectExpensePropertyId: string | undefined;
   setProjectExpensePropertyId: (id: string | undefined) => void;
 
@@ -351,16 +354,20 @@ export interface ERPWorkstationContextValue {
   setInjectionInitialCommitmentId: (id: string | undefined) => void;
   showNewPartnerModal: boolean;
   setShowNewPartnerModal: (val: boolean) => void;
-  showPartnerOperationsModal: boolean;
-  setShowPartnerOperationsModal: (val: boolean) => void;
   dossierTargetPartner: PartnerFinancialSummary | null;
   setDossierTargetPartner: (partner: PartnerFinancialSummary | null) => void;
 
   // Mutation Handlers
   handleCreateRealContract: (e?: React.FormEvent, overridePayload?: NewContractWizardPayload) => Promise<void>;
   handleExecuteEscalation: (overrideContract?: ERPContract, deltaParam?: string, reasonParam?: string) => Promise<void>;
-  handleExecuteRescission: (overrideContract?: ERPContract) => Promise<void>;
-  handleCollectPayment: (details?: { receiptDate?: string; destinationTreasury?: 'SAFE_101000' | 'BANK_102000'; paymentMethod?: 'CASH' | 'INSTAPAY'; notes?: string }) => Promise<void>;
+  handleExecuteRescission: (overrideContract?: ERPContract, penaltyRateOverride?: number | string) => Promise<void>;
+  handlePayRefund: (params: {
+    rescission: ERPRescissionRecord;
+    amount: string;
+    sourceAccount: '101000' | '102000';
+    paymentDate: string;
+    notes?: string;
+  }) => Promise<void>;
   handleConfirmHandover: (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => Promise<void>;
   handleToggleContractHandover: (contract: ERPContract) => Promise<void>;
   handlePDCStatusChange: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => Promise<void>;
@@ -370,9 +377,19 @@ export interface ERPWorkstationContextValue {
   handleConfirmHandCollection: (item: ERPPDCRecord, receiptNo: string, date: string, amount: string, notes: string, method?: 'CASH' | 'INSTAPAY') => Promise<void>;
   handleConfirmBounceCheque: (item: ERPPDCRecord) => Promise<void>;
   handleTogglePeriodStatus: (periodId: string, newStatus: 'OPEN' | 'LOCKED' | 'CLOSED') => Promise<void>;
+  handleCloseFiscalYear: (year: number) => Promise<void>;
   handlePostMonthlyEntries: (periodId: string) => Promise<number>;
   handleCreateRSVAllocation: (e?: React.FormEvent, overrideData?: { projectName: string; salesValue: string; wipAmount: string }) => Promise<void>;
-  handleRemitTax: (taxId: string) => Promise<void>;
+  handleRemitTax: (taxId: string, paymentMethod?: '101000' | '102000') => Promise<void>;
+  handleRecordTax: (params: {
+    contract_id: string;
+    tax_type: string;
+    taxable_base: string | number;
+    tax_rate?: string | number;
+    tax_amount: string | number;
+    date?: string;
+    notes?: string;
+  }) => Promise<ERPTaxRecord | null>;
   handleConfirmPartnerPayout: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; payoutDate: string; receiptRef: string; memo: string }) => Promise<void>;
   handleConfirmPartnerInjection: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; commitmentId?: string; injectionDate: string; receiptRef: string; memo: string; role?: 'equity_partner' | 'land_partner' | 'silent_financier'; phone?: string; nationalId?: string; projectSharePct?: number }) => Promise<void>;
   handleCreatePartnerCommitment: (payload: { propertyId: string; partnerName: string; milestoneName: string; milestonePhase?: string; committedAmount: string; dueDate: string; notes?: string }) => Promise<void>;
@@ -389,9 +406,15 @@ export interface ERPWorkstationContextValue {
   handleDeletePropertyCostItem: (itemId: string) => Promise<void>;
   handleUpdatePropertyCostItem: (item: ERPPropertyCostItem) => Promise<void>;
   handleAddCostAdjustment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
-  handleCreateConstructionPurchaseOrder: (order: ERPConstructionPurchaseOrder) => Promise<void>;
   handleRecordCostPayablePayment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
   handleUpdatePropertySellingPrice: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  handleInternalTransfer: (details: {
+    from: '101000' | '102000';
+    to: '101000' | '102000';
+    amount: string;
+    date: string;
+    notes: string;
+  }) => Promise<void>;
 }
 
 const ERPWorkstationContext = createContext<ERPWorkstationContextValue | null>(null);
@@ -402,6 +425,17 @@ export function useERPWorkstation(): ERPWorkstationContextValue {
     throw new Error('useERPWorkstation must be used within an <ERPWorkstationProvider>');
   }
   return ctx;
+}
+
+export function useERPWorkstationContext(): ERPWorkstationContextValue | null {
+  return useContext(ERPWorkstationContext);
+}
+
+const NO_PROPERTY_COSTS: ERPPropertyCostItem[] = [];
+
+/** Recorded property costs from the workstation (empty outside the provider). */
+export function usePropertyCosts(): ERPPropertyCostItem[] {
+  return useContext(ERPWorkstationContext)?.data.propertyCosts ?? NO_PROPERTY_COSTS;
 }
 
 export function ERPWorkstationProvider({
@@ -417,20 +451,12 @@ export function ERPWorkstationProvider({
   const supabase = useMemo(() => createClient(), []);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  // Read inside loadLiveData without making it re-create on every auth event
+  const currentUserRef = useRef<any>(null);
+  currentUserRef.current = currentUser;
 
   // Accent Palette Customization State & Runtime Injection
-  const [activePreset, setActivePreset] = useState<ERPPalettePreset>(DEFAULT_PALETTE_PRESET);
-
-  // Read persisted preset on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedId = localStorage.getItem(FIN_OS_PALETTE_STORAGE_KEY);
-      if (savedId) {
-        const found = getPresetById(savedId);
-        setActivePreset(found);
-      }
-    }
-  }, []);
+  const [activePreset, selectAccentPreset] = useAccentPreset();
 
   // Helper to inject all theme tokens and legacy aliases onto document root (scoped to /fin-os)
   const applyPaletteTokens = useCallback((preset: ERPPalettePreset) => {
@@ -463,13 +489,9 @@ export function ERPWorkstationProvider({
   }, [activePreset, applyPaletteTokens]);
 
   const selectPresetById = useCallback((id: string) => {
-    const next = getPresetById(id);
-    setActivePreset(next);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(FIN_OS_PALETTE_STORAGE_KEY, next.id);
-      applyPaletteTokens(next);
-    }
-  }, [applyPaletteTokens]);
+    selectAccentPreset(id);
+    applyPaletteTokens(getPresetById(id));
+  }, [selectAccentPreset, applyPaletteTokens]);
 
   // Authentication check & session refresh
   useEffect(() => {
@@ -542,7 +564,9 @@ export function ERPWorkstationProvider({
           window.location.href = '/admin/login';
         }
       } else if (session?.user) {
-        setCurrentUser(session.user);
+        // Supabase re-emits SIGNED_IN / TOKEN_REFRESHED on tab focus; only update when the user actually changes,
+        // otherwise loadLiveData re-runs non-silently and the loading screen unmounts open modals.
+        setCurrentUser((prev: any) => (prev?.id === session.user.id ? prev : session.user));
       }
     });
 
@@ -563,48 +587,24 @@ export function ERPWorkstationProvider({
   }, [supabase]);
 
   // Master Live Database State
-  const [data, setData] = useState<LiveERPDataset>(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const init = createInitialERPState();
-      const fallbackProps = FALLBACK_PROPERTIES as Property[];
-      return {
-        periods: init.periods,
-        contracts: init.contracts,
-        schedules: init.schedules,
-        journalEntries: init.journalEntries,
-        pdcRecords: init.pdcRecords,
-        rescissions: init.rescissions,
-        amendments: init.amendments,
-        costAllocations: init.costAllocations,
-        taxRecords: init.taxRecords,
-        partnerCalls: init.partnerCalls,
-        partnerCommitments: init.partnerCommitments || [],
-        makerCheckerRequests: init.makerCheckerRequests,
-        properties: fallbackProps,
-        leads: [],
-        propertyCosts: [],
-        isSchemaMigrated: true
-      };
-    }
-    return {
-      periods: [],
-      contracts: [],
-      schedules: [],
-      journalEntries: [],
-      pdcRecords: [],
-      rescissions: [],
-      amendments: [],
-      costAllocations: [],
-      taxRecords: [],
-      partnerCalls: [],
-      partnerCommitments: [],
-      makerCheckerRequests: [],
-      properties: [],
-      leads: [],
-      propertyCosts: [],
-      isSchemaMigrated: true
-    };
-  });
+  const [data, setData] = useState<LiveERPDataset>(() => ({
+    periods: [],
+    contracts: [],
+    schedules: [],
+    journalEntries: [],
+    pdcRecords: [],
+    rescissions: [],
+    amendments: [],
+    costAllocations: [],
+    taxRecords: [],
+    partnerCalls: [],
+    partnerCommitments: [],
+    makerCheckerRequests: [],
+    properties: [],
+    leads: [],
+    propertyCosts: [],
+    isSchemaMigrated: true
+  }));
 
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
@@ -726,8 +726,8 @@ export function ERPWorkstationProvider({
   }, []);
 
   // Partner Profiles & Transactions State
-  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>(INITIAL_PARTNER_PROFILES);
-  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>(INITIAL_PARTNER_TRANSACTIONS);
+  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>([]);
+  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>([]);
 
   // Live Data Fetcher
   const loadLiveData = useCallback(async (isSilent = false) => {
@@ -738,19 +738,38 @@ export function ERPWorkstationProvider({
         ERPSupabaseService.loadPartnerProfiles(supabase),
         ERPSupabaseService.loadPartnerTransactions(supabase)
       ]);
-      if (!currentUser && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+
+      // Requirement 2(a): Ensure current month period exists; if not, auto-insert all 12 periods of the year
+      const todayStr = new Date().toISOString().split('T')[0];
+      const hasCurrentPeriod = dataset.periods && dataset.periods.some(p => p.start_date <= todayStr && todayStr <= p.end_date);
+      if (!hasCurrentPeriod) {
         try {
-          const saved = JSON.parse(window.localStorage.getItem('fin_os_local_purchase_orders') || '[]');
-          dataset.purchaseOrders = Array.isArray(saved) ? saved.filter(order => order.order_id && order.property_id && order.status === 'DRAFT') : [];
-        } catch { dataset.purchaseOrders = []; }
+          await ERPSupabaseService.ensurePeriodsForDate(supabase, todayStr);
+          const year = parseInt(todayStr.slice(0, 4), 10);
+          const generatedPeriods: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+            const m = i + 1;
+            const mPad = String(m).padStart(2, '0');
+            const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+            return {
+              period_id: `prd-${year}-${mPad}`,
+              fiscal_year: year,
+              period_number: m,
+              start_date: `${year}-${mPad}-01`,
+              end_date: `${year}-${mPad}-${String(lastDay).padStart(2, '0')}`,
+              status: 'OPEN' as const
+            };
+          });
+          const existingIds = new Set((dataset.periods || []).map(p => p.period_id));
+          const missing = generatedPeriods.filter(p => !existingIds.has(p.period_id));
+          dataset.periods = [...(dataset.periods || []), ...missing].sort((a, b) => a.period_id.localeCompare(b.period_id));
+        } catch (periodErr) {
+          console.warn('Could not auto-ensure current month period in loadLiveData:', periodErr);
+        }
       }
+
       setData(dataset);
-      if (liveProfiles && liveProfiles.length > 0) {
-        setPartnerProfiles(liveProfiles);
-      }
-      if (liveTransactions && liveTransactions.length > 0) {
-        setPartnerTransactions(liveTransactions);
-      }
+      setPartnerProfiles(liveProfiles ?? []);
+      setPartnerTransactions(liveTransactions ?? []);
       return dataset;
     } catch (err: any) {
       console.error('Failed to load ERP dataset from Supabase:', err);
@@ -763,13 +782,35 @@ export function ERPWorkstationProvider({
               ERPSupabaseService.loadPartnerProfiles(supabase),
               ERPSupabaseService.loadPartnerTransactions(supabase)
             ]);
+            const todayStr = new Date().toISOString().split('T')[0];
+            const hasRetryPeriod = retryDataset.periods && retryDataset.periods.some(p => p.start_date <= todayStr && todayStr <= p.end_date);
+            if (!hasRetryPeriod) {
+              try {
+                await ERPSupabaseService.ensurePeriodsForDate(supabase, todayStr);
+                const year = parseInt(todayStr.slice(0, 4), 10);
+                const generatedPeriods: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+                  const m = i + 1;
+                  const mPad = String(m).padStart(2, '0');
+                  const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+                  return {
+                    period_id: `prd-${year}-${mPad}`,
+                    fiscal_year: year,
+                    period_number: m,
+                    start_date: `${year}-${mPad}-01`,
+                    end_date: `${year}-${mPad}-${String(lastDay).padStart(2, '0')}`,
+                    status: 'OPEN' as const
+                  };
+                });
+                const existingIds = new Set((retryDataset.periods || []).map(p => p.period_id));
+                const missing = generatedPeriods.filter(p => !existingIds.has(p.period_id));
+                retryDataset.periods = [...(retryDataset.periods || []), ...missing].sort((a, b) => a.period_id.localeCompare(b.period_id));
+              } catch (retryPeriodErr) {
+                console.warn('Could not auto-ensure period on retry:', retryPeriodErr);
+              }
+            }
             setData(retryDataset);
-            if (retryProfiles && retryProfiles.length > 0) {
-              setPartnerProfiles(retryProfiles);
-            }
-            if (retryTransactions && retryTransactions.length > 0) {
-              setPartnerTransactions(retryTransactions);
-            }
+            setPartnerProfiles(retryProfiles ?? []);
+            setPartnerTransactions(retryTransactions ?? []);
             return retryDataset;
           }
         } catch (refreshErr) {
@@ -786,7 +827,40 @@ export function ERPWorkstationProvider({
     } finally {
       if (!isSilent) setIsLoading(false);
     }
-  }, [supabase, currentUser]);
+  }, [supabase]);
+
+
+  // ERP Invariant 4.5 (generalised): cash accounts (Safe 101000 / Bank 102000) can never go negative.
+  // Checked against the GL before any entry that nets a credit to a cash account is persisted.
+  const journalEntriesRef = useRef<ERPJournalEntry[]>([]);
+  journalEntriesRef.current = data.journalEntries;
+  const assertCashOutflowAllowed = useCallback((lines: { account_code: string; debit_amount?: string; credit_amount?: string }[]) => {
+    for (const code of ['101000', '102000']) {
+      const outflow = lines
+        .filter(l => l.account_code === code)
+        .reduce((acc, l) => acc.plus(l.credit_amount || '0').minus(l.debit_amount || '0'), D(0));
+      if (outflow.lte(0)) continue;
+      let balance = D(0);
+      for (const je of journalEntriesRef.current) {
+        for (const l of je.lines || []) {
+          if (l.account_code === code) balance = balance.plus(l.debit_amount || '0').minus(l.credit_amount || '0');
+        }
+      }
+      if (balance.lt(outflow)) {
+        const nameAr = code === '101000' ? 'الخزينة الرئيسية (101000)' : 'الحساب البنكي (102000)';
+        const nameEn = code === '101000' ? 'Main Safe (101000)' : 'Bank (102000)';
+        const msg = isAr
+          ? `رصيد ${nameAr} غير كافٍ. المتاح: ${balance.formatEGP(true)}، المطلوب: ${outflow.formatEGP(true)}.`
+          : `Insufficient balance in ${nameEn}. Available: ${balance.formatEGP(false)}, required: ${outflow.formatEGP(false)}.`;
+        throw new Error(msg);
+      }
+    }
+  }, [isAr]);
+
+  const persistJournalEntryGuarded = useCallback(async (entry: ERPJournalEntry) => {
+    assertCashOutflowAllowed(entry.lines || []);
+    return ERPSupabaseService.persistJournalEntry(supabase, entry, true);
+  }, [assertCashOutflowAllowed, supabase]);
 
   // Real-Time WebSocket Sync Hook
   const {
@@ -821,21 +895,15 @@ export function ERPWorkstationProvider({
     if (todayPeriod) return todayPeriod;
 
     // 4. Fallback to last period in list
-    return data.periods[data.periods.length - 1] || {
-      period_id: 'prd-2026-09',
-      fiscal_year: 2026,
-      period_number: 9,
-      start_date: '2026-09-01',
-      end_date: '2026-09-30',
-      status: 'OPEN'
-    };
+    return data.periods[data.periods.length - 1] || buildCalendarMonthPeriod();
   }, [data.periods]);
 
   // Handler: Toggle Accounting Period Status
   const handleTogglePeriodStatus = useCallback(async (periodId: string, newStatus: 'OPEN' | 'LOCKED' | 'CLOSED') => {
     setIsMutating(true);
+    const actor = currentUser?.email || currentUser?.id || 'system';
     try {
-      await ERPSupabaseService.persistPeriodStatus(supabase, periodId, newStatus, 'CFO_FARID');
+      await ERPSupabaseService.persistPeriodStatus(supabase, periodId, newStatus, actor);
       
       setData(prev => ({
         ...prev,
@@ -843,7 +911,7 @@ export function ERPWorkstationProvider({
           ...p,
           status: newStatus,
           locked_at: newStatus !== 'OPEN' ? new Date().toISOString() : undefined,
-          locked_by: newStatus !== 'OPEN' ? 'CFO_FARID' : undefined
+          locked_by: newStatus !== 'OPEN' ? actor : undefined
         } : p)
       }));
 
@@ -852,7 +920,9 @@ export function ERPWorkstationProvider({
       toast.success(
         newStatus === 'OPEN'
           ? (isAr ? 'تم فتح الفترة المحاسبية لتسجيل القيود' : 'Accounting period opened')
-          : (isAr ? 'تم قفل الفترة المحاسبية وحمايتها بموجب Invariant 0.9' : 'Accounting period locked'),
+          : newStatus === 'CLOSED'
+            ? (isAr ? 'تم إغلاق الفترة المحاسبية نهائياً' : 'Accounting period closed')
+            : (isAr ? 'تم قفل الفترة المحاسبية وحمايتها بموجب Invariant 0.9' : 'Accounting period locked'),
         { duration: 4000 }
       );
     } catch (err: unknown) {
@@ -861,7 +931,43 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, loadLiveData, isAr]);
+  }, [supabase, loadLiveData, isAr, currentUser]);
+
+  // Handler: Manual Fiscal-Year Close
+  const handleCloseFiscalYear = useCallback(async (year: number) => {
+    const actor = currentUser?.email || currentUser?.id || 'system';
+    const periodsToClose = data.periods.filter(p => p.fiscal_year === year);
+    if (periodsToClose.length === 0) {
+      toast.error(isAr ? `لا توجد فترات مالية مسجلة للسنة ${year}` : `No accounting periods found for fiscal year ${year}`);
+      return;
+    }
+    setIsMutating(true);
+    try {
+      const nowIso = new Date().toISOString();
+      for (const p of periodsToClose) {
+        await ERPSupabaseService.persistPeriodStatus(supabase, p.period_id, 'CLOSED', actor);
+      }
+      setData(prev => ({
+        ...prev,
+        periods: prev.periods.map(p => p.fiscal_year === year ? {
+          ...p,
+          status: 'CLOSED' as const,
+          locked_at: nowIso,
+          locked_by: actor
+        } : p)
+      }));
+      await loadLiveData(true);
+      toast.success(
+        isAr ? `تم إغلاق السنة المالية ${year} بنجاح وإقفال كافة فتراتها الـ 12` : `Fiscal year ${year} closed successfully (all 12 periods closed)`,
+        { duration: 5000 }
+      );
+    } catch (err: unknown) {
+      console.warn('Close fiscal year error:', err);
+      toast.error(isAr ? 'فشل إغلاق السنة المالية' : 'Failed to close fiscal year');
+    } finally {
+      setIsMutating(false);
+    }
+  }, [data.periods, currentUser, supabase, isAr, loadLiveData]);
 
   // Handler: Post Monthly Journal Entries for a Fiscal Period
   const handlePostMonthlyEntries = useCallback(async (periodId: string): Promise<number> => {
@@ -910,12 +1016,48 @@ export function ERPWorkstationProvider({
     return true;
   }, [activePeriod, isAr, handleTogglePeriodStatus]);
 
+  // Central Helper: Resolve or auto-generate periods for a date if not covered
+  const resolveAndEnsurePeriodForDate = useCallback(async (dateStr: string | undefined): Promise<ERPAccountingPeriod> => {
+    const cleanDate = (dateStr || new Date().toISOString().split('T')[0]).slice(0, 10);
+    const matched = data.periods.find(p => p.start_date <= cleanDate && cleanDate <= p.end_date);
+    if (matched) return matched;
+
+    // No matching period found -> auto-insert 12 periods in DB and update local data.periods
+    const targetPeriod = await ERPSupabaseService.ensurePeriodsForDate(supabase, cleanDate);
+    const year = parseInt(cleanDate.slice(0, 4), 10);
+    if (!isNaN(year)) {
+      const fullYearPeriods: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+        const m = i + 1;
+        const mStr = String(m).padStart(2, '0');
+        const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+        return {
+          period_id: `prd-${year}-${mStr}`,
+          fiscal_year: year,
+          period_number: m,
+          start_date: `${year}-${mStr}-01`,
+          end_date: `${year}-${mStr}-${String(lastDay).padStart(2, '0')}`,
+          status: 'OPEN' as const
+        };
+      });
+      setData(prev => {
+        const existingIds = new Set(prev.periods.map(p => p.period_id));
+        const missing = fullYearPeriods.filter(p => !existingIds.has(p.period_id));
+        if (missing.length === 0) return prev;
+        return {
+          ...prev,
+          periods: [...prev.periods, ...missing].sort((a, b) => a.period_id.localeCompare(b.period_id))
+        };
+      });
+    }
+    return targetPeriod;
+  }, [data.periods, supabase]);
+
   // Urgent Dues Count for Dock Badge
   const urgentDuesCount = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const pdcDues = data.pdcRecords.filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date <= todayStr);
     const orphanSchedDues = data.schedules.filter(s => 
-      s.status === 'Pending' && 
+      (s.status === 'Pending' || s.status === 'Partially Paid') && 
       s.due_date <= todayStr && 
       !data.pdcRecords.some(p => p.schedule_id === s.schedule_id)
     );
@@ -956,22 +1098,6 @@ export function ERPWorkstationProvider({
       allJournalEntries: linkedEntries
     });
   }, [data.schedules, data.amendments, data.journalEntries]);
-
-  const handleInspectCheque = useCallback((cheque: ERPPDCRecord) => {
-    const linkedContract = data.contracts.find(c => c.contract_id === cheque.contract_id);
-    const linkedSchedule = data.schedules.find(s => s.schedule_id === cheque.schedule_id);
-    const clearingJournalEntry = data.journalEntries.find(j => 
-      j.source_entity_id === cheque.cheque_id || 
-      (cheque.cheque_number && j.description && j.description.includes(cheque.cheque_number))
-    );
-    setInspectorPayload({
-      type: 'cheque',
-      cheque,
-      linkedContract,
-      linkedSchedule,
-      clearingJournalEntry
-    });
-  }, [data.contracts, data.schedules, data.journalEntries]);
 
   const handleInspectTax = useCallback((tax: ERPTaxRecord) => {
     const linkedContract = data.contracts.find(c => c.contract_id === tax.contract_id);
@@ -1124,6 +1250,9 @@ export function ERPWorkstationProvider({
   const [selectedLeadId, setSelectedLeadId] = useState<string>('');
   const [contractWizardStep, setContractWizardStep] = useState<1 | 2 | 3>(1);
 
+  const [collectRequest, setCollectRequest] = useState<CollectRequest | null>(null);
+  const openCollect = useCallback((req: CollectRequest = {}) => setCollectRequest(req), []);
+
   const [showPayModal, setShowPayModal] = useState<{ contract: ERPContract; schedule: ERPInstallmentSchedule } | null>(null);
   const [showEscalationModal, setShowEscalationModal] = useState<ERPContract | null>(null);
   const [escalationDelta, setEscalationDelta] = useState('1500000.00');
@@ -1132,6 +1261,7 @@ export function ERPWorkstationProvider({
   const [selectedBranch, setSelectedBranch] = useState<'Branch1_PreDelivery' | 'Branch2_PostDelivery'>('Branch1_PreDelivery');
   const [rescissionStep, setRescissionStep] = useState<0 | 1>(0);
   const [rescissionDate, setRescissionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [rescissionPenaltyRate, setRescissionPenaltyRate] = useState<number>(0.10);
 
   const [showRSVModal, setShowRSVModal] = useState<boolean>(false);
   const [rsvProjectName, setRsvProjectName] = useState<string>('مشروع بالاشيال فيلاز & نايل هورايزونز');
@@ -1151,6 +1281,7 @@ export function ERPWorkstationProvider({
 
   const [collectingPDCItem, setCollectingPDCItem] = useState<ERPPDCRecord | null>(null);
   const [showProjectExpenseModal, setShowProjectExpenseModal] = useState<boolean>(false);
+  const [showCashTransferModal, setShowCashTransferModal] = useState(false);
   const [projectExpensePropertyId, setProjectExpensePropertyId] = useState<string | undefined>(undefined);
 
   const [auditModalProperty, setAuditModalProperty] = useState<Property | null>(null);
@@ -1159,7 +1290,7 @@ export function ERPWorkstationProvider({
 
   useEffect(() => {
     if (showCostModal) {
-      const p = (selectedAuditPropertyId ? data.properties.find(prop => prop.id === selectedAuditPropertyId) : null) || data.properties[0] || null;
+      const p = (selectedAuditPropertyId ? data.properties.find(prop => prop.id === selectedAuditPropertyId) : null) || null;
       setAuditModalProperty(p);
       setShowCostModal(false);
     }
@@ -1174,16 +1305,15 @@ export function ERPWorkstationProvider({
   const [injectionInitialPropertyId, setInjectionInitialPropertyId] = useState<string | undefined>(undefined);
   const [injectionInitialCommitmentId, setInjectionInitialCommitmentId] = useState<string | undefined>(undefined);
   const [showNewPartnerModal, setShowNewPartnerModal] = useState<boolean>(false);
-  const [showPartnerOperationsModal, setShowPartnerOperationsModal] = useState<boolean>(false);
   const [dossierTargetPartner, setDossierTargetPartner] = useState<PartnerFinancialSummary | null>(null);
 
   // Financial Telemetry Derivations
   const totalGrossContractValue = useMemo(() => {
-    return data.contracts.reduce((acc, c) => acc.plus(c.gross_contract_value), D(0)).toFixed(2);
+    return data.contracts.filter(c => c.status !== 'Rescinded').reduce((acc, c) => acc.plus(c.gross_contract_value), D(0)).toFixed(2);
   }, [data.contracts]);
 
   const totalCollectedCash = useMemo(() => {
-    return data.contracts.reduce((acc, c) => acc.plus(c.total_cash_collected), D(0)).toFixed(2);
+    return data.contracts.filter(c => c.status !== 'Rescinded').reduce((acc, c) => acc.plus(c.total_cash_collected), D(0)).toFixed(2);
   }, [data.contracts]);
 
   const totalWipIncurred = useMemo(() => {
@@ -1195,11 +1325,21 @@ export function ERPWorkstationProvider({
   }, [data.costAllocations, data.propertyCosts, data.journalEntries]);
 
   const totalSafePDCs = useMemo(() => {
-    return data.pdcRecords
-      .filter(p => p.status === 'In Safe')
-      .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
+    const rescindedIds = new Set(
+      data.contracts.filter(c => c.status === 'Rescinded').map(c => c.contract_id)
+    );
+    return data.schedules
+      .filter(s => 
+        (s.status === 'Pending' || s.status === 'Partially Paid') &&
+        !rescindedIds.has(s.contract_id)
+      )
+      .reduce((acc, s) => {
+        const nominal = D(s.nominal_value || '0');
+        const paid = D(s.amount_paid || '0');
+        return acc.plus(Decimal.max(0, nominal.minus(paid)));
+      }, D(0))
       .toFixed(2);
-  }, [data.pdcRecords]);
+  }, [data.schedules, data.contracts]);
 
   const totalInjectedCapital = useMemo(() => {
     return data.partnerCalls
@@ -1207,19 +1347,10 @@ export function ERPWorkstationProvider({
       .toFixed(2);
   }, [data.partnerCalls]);
 
-  const deferredRevenue = useMemo(() => {
-    return data.contracts
-      .filter(c => c.handover_status !== 'Delivered')
-      .reduce((acc, c) => acc.plus(c.total_cash_collected), D(0))
-      .toFixed(2);
-  }, [data.contracts]);
-
-  const realizedRevenue = useMemo(() => {
-    return data.contracts
-      .filter(c => c.handover_status === 'Delivered')
-      .reduce((acc, c) => acc.plus(c.gross_contract_value), D(0))
-      .toFixed(2);
-  }, [data.contracts]);
+  // Balance figures come from the GL (user-confirmed single source of truth); rescissions are unwound there.
+  const glKpis = useMemo(() => glBalanceSheetKpis(data.journalEntries), [data.journalEntries]);
+  const deferredRevenue = glKpis.deferredRevenue;
+  const realizedRevenue = glKpis.realizedRevenue;
 
   const trancheStats = useMemo(() => {
     let pending = 0;
@@ -1227,7 +1358,7 @@ export function ERPWorkstationProvider({
     let superseded = 0;
     let voidCount = 0;
     data.schedules.forEach(s => {
-      if (s.status === 'Pending') pending++;
+      if (s.status === 'Pending' || s.status === 'Partially Paid') pending++;
       else if (s.status === 'Paid') paid++;
       else if (s.status === 'SUPERSEDED') superseded++;
       else if (s.status === 'Void') voidCount++;
@@ -1240,22 +1371,11 @@ export function ERPWorkstationProvider({
     return {
       cashBank: trueLiquidCash,
       totalWip: totalWipIncurred,
-      accountsReceivable: D(totalGrossContractValue).minus(totalCollectedCash).toFixed(2),
+      accountsReceivable: glKpis.accountsReceivable,
       deferredRevenue: deferredRevenue,
       realizedRevenue: realizedRevenue
     };
-  }, [data.journalEntries, totalWipIncurred, totalGrossContractValue, totalCollectedCash, deferredRevenue, realizedRevenue]);
-
-  const wipAccounts = useMemo(() => {
-    const total = D(totalWipIncurred);
-    return {
-      land: total.times('0.40').toFixed(2),
-      civil: total.times('0.30').toFixed(2),
-      mep: total.times('0.15').toFixed(2),
-      finishing: total.times('0.10').toFixed(2),
-      financing: total.times('0.05').toFixed(2)
-    };
-  }, [totalWipIncurred]);
+  }, [data.journalEntries, totalWipIncurred, glKpis, deferredRevenue, realizedRevenue]);
 
   const totalTaxLiabilities = useMemo(() => {
     return data.taxRecords
@@ -1282,9 +1402,10 @@ export function ERPWorkstationProvider({
       data.properties,
       data.contracts,
       partnerTransactions,
-      data.partnerCalls
+      data.partnerCalls,
+      data.propertyCosts
     );
-  }, [partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls]);
+  }, [partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls, data.propertyCosts]);
 
   const contractPortfolioKPIs = useMemo(() => {
     let totalGross = D(0);
@@ -1311,7 +1432,7 @@ export function ERPWorkstationProvider({
       : totalGross.minus(totalCollected).toFixed(2);
     const overallProgress = totalGross.isZero() 
       ? 0 
-      : Math.min(100, Math.max(0, totalCollected.div(totalGross).times(100).toNumber()));
+      : Math.min(100, Math.max(0, totalCollected.times(100).div(totalGross).toNumber()));
 
     return {
       totalGross: totalGross.toFixed(2),
@@ -1424,19 +1545,22 @@ export function ERPWorkstationProvider({
       }
     }
 
-    const targetPeriod = resolvePeriodForDate(targetFirstPaymentDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(targetFirstPaymentDate);
     if (!ensureActivePeriodOpen(isAr ? 'تحرير عقد بيع جديد' : 'New Contract', targetPeriod)) return;
 
     setIsMutating(true);
     try {
       const contractValue = targetTotalNominalValue ? D(targetTotalNominalValue).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : '0.00');
-      const contractNumber = `ZF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const contractNumber = generateContractNumber(
+        data.contracts.map(c => c.contract_number),
+        new Date().getFullYear()
+      );
 
-      const dpDec = D(targetDpAmount ?? 0);
-      let effectiveDpPct: Decimal | string = downPaymentPct;
-      if (D(contractValue).gt(0) && dpDec.gte(0)) {
-        effectiveDpPct = dpDec.div(D(contractValue));
-      }
+      // Exact down payment amount when the user typed one; a percent would round it.
+      const hasDpAmount = targetDpAmount !== undefined && targetDpAmount !== null && String(targetDpAmount).trim() !== '';
+      let effectiveDpPct: string | { amount: string } = hasDpAmount
+        ? { amount: D(targetDpAmount).toFixed(2) }
+        : String(downPaymentPct);
       let effectiveNumInstallments = parseInt(targetNumInstallments, 10);
       if (isNaN(effectiveNumInstallments) || effectiveNumInstallments < 0) {
         effectiveNumInstallments = 0;
@@ -1465,33 +1589,28 @@ export function ERPWorkstationProvider({
       const dpSchedule = schedules[0];
       const dpAmount = dpSchedule ? dpSchedule.nominal_value : '0.00';
 
-      if (dpSchedule && D(dpAmount).gt(0)) {
-        dpSchedule.status = 'Paid';
-        dpSchedule.amount_paid = dpAmount;
-        dpSchedule.paid_date = targetFirstPaymentDate;
+      // Tranche 0 (down payment) stays pending with amount_paid 0 until actually collected (user-confirmed 2026-10-04)
+      if (dpSchedule) {
+        dpSchedule.status = 'Pending';
+        dpSchedule.amount_paid = '0.00';
+        dpSchedule.paid_date = null as any;
       }
 
       let cumulativeSplitShare = D(0);
-      let cumulativeCashShare = D(0);
       const calculatedSplits = targetPartnerSplits.map((p, idx) => {
         const isLast = idx === targetPartnerSplits.length - 1;
-        const pct = D(p.sharePct || 0).div(100);
         let sAmount: Decimal;
-        let cAmount: Decimal;
         if (isLast && targetPartnerSplits.length > 1) {
           sAmount = D(contractValue).minus(cumulativeSplitShare);
-          cAmount = D(dpAmount).minus(cumulativeCashShare);
         } else {
-          sAmount = D(contractValue).times(pct);
-          cAmount = D(dpAmount).times(pct);
+          sAmount = D(contractValue).timesRatio(p.sharePct || 0, 100);
           cumulativeSplitShare = cumulativeSplitShare.plus(sAmount);
-          cumulativeCashShare = cumulativeCashShare.plus(cAmount);
         }
         return {
           partner_name: p.partnerName,
           share_percentage: `${p.sharePct}%`,
           share_amount: sAmount.toFixed(2),
-          cash_share: cAmount.toFixed(2)
+          cash_share: '0.00'
         };
       });
 
@@ -1512,8 +1631,6 @@ export function ERPWorkstationProvider({
         finalUnitId = `${finalUnitId} - ${targetBuildingUnitNumber}`;
       }
 
-      const isVaultCash = (targetDestinationTreasury === '101000' || targetDestinationTreasury === 'SAFE_101000');
-
       const contract: ERPContract = {
         contract_id: contractId,
         contract_number: contractNumber,
@@ -1531,7 +1648,7 @@ export function ERPWorkstationProvider({
         exchange_rate: '1.0000',
         contract_date: targetFirstPaymentDate,
         handover_status: (targetPaymentPlanType === 'FULL_CASH' && prop?.completion_status === 'ready') ? 'Delivered' : 'Pending',
-        total_cash_collected: D(dpAmount).gt(0) ? dpAmount : '0.00',
+        total_cash_collected: '0.00',
         status: 'Active',
         payment_plan_type: targetPaymentPlanType,
         partner_splits: calculatedSplits,
@@ -1540,17 +1657,8 @@ export function ERPWorkstationProvider({
         building_unit_number: isBuilding && !targetIsWholeBuildingContract ? targetBuildingUnitNumber : undefined
       };
 
-      const dpEntry = D(dpAmount).gt(0)
-        ? ContractsEngine.createAdvancePaymentEntry(
-            contract,
-            dpAmount,
-            targetPeriod,
-            targetFirstPaymentDate,
-            isVaultCash
-          )
-        : undefined;
-
-      await ERPSupabaseService.persistNewContract(supabase, contract, schedules, dpEntry);
+      // Contract creation: schedules only, total_cash_collected = 0, NO advance-payment JE, NO PDC rows
+      await ERPSupabaseService.persistNewContract(supabase, contract, schedules);
 
       if (isBuilding && !targetIsWholeBuildingContract && targetBuildingUnitId && prop?.id) {
         await ERPSupabaseService.updateBuildingUnitStatus(
@@ -1598,7 +1706,7 @@ export function ERPWorkstationProvider({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                 <span style={{
                   background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23',
+                  color: 'var(--erp-accent)',
                   border: '1px solid rgba(184, 144, 62, 0.22)',
                   padding: '0.12rem 0.55rem',
                   borderRadius: '6px',
@@ -1625,7 +1733,7 @@ export function ERPWorkstationProvider({
                 <span>{isAr ? 'العميل:' : 'Client:'}</span>
                 <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
                 <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{isAr ? 'تم توليد جدول الأقساط وقيد اليومية' : 'Schedules & GL generated'}</span>
+                <span>{isAr ? 'تم توليد جدول الأقساط — لا قيد حتى استلام المقدم' : 'Schedule created — no entry until the down payment is received'}</span>
               </div>
             </div>
           ),
@@ -1680,7 +1788,7 @@ export function ERPWorkstationProvider({
     const reason = reasonParam ?? escalationReason;
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
 
     if (contract.handover_status === 'Delivered' && !ensureActivePeriodOpen(isAr ? 'تعديل أسعار العقد' : 'Price Escalation', targetPeriod)) {
       return;
@@ -1702,15 +1810,8 @@ export function ERPWorkstationProvider({
       const supersededIds = contractSchedules.filter(s => s.status === 'Pending').map(s => s.schedule_id);
       const newSchedules = result.allSchedules.filter(s => s.status === 'Pending');
 
-      await ERPSupabaseService.persistEscalation(
-        supabase,
-        contract.contract_id,
-        result.amendment,
-        result.updatedContract.gross_contract_value,
-        supersededIds,
-        newSchedules
-      );
-
+      // Build (and validate) the post-handover entry BEFORE saving anything, so a closed period or bad
+      // date leaves the contract untouched.
       let adjustingEntry: ERPJournalEntry | undefined;
       if (contract.handover_status === 'Delivered') {
         const deltaD = D(delta);
@@ -1741,7 +1842,19 @@ export function ERPWorkstationProvider({
             }
           ]
         });
-        await ERPSupabaseService.persistJournalEntry(supabase, adjustingEntry);
+      }
+
+      await ERPSupabaseService.persistEscalation(
+        supabase,
+        contract.contract_id,
+        result.amendment,
+        result.updatedContract.gross_contract_value,
+        supersededIds,
+        newSchedules
+      );
+
+      if (adjustingEntry) {
+        await persistJournalEntryGuarded(adjustingEntry);
       }
 
       setData(prev => ({
@@ -1803,12 +1916,35 @@ export function ERPWorkstationProvider({
   }, [showEscalationModal, escalationDelta, escalationReason, data.schedules, data.periods, supabase, activePeriod, loadLiveData, inspectorPayload, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
 
   // Handler: Execute Rescission
-  const handleExecuteRescission = useCallback(async (overrideContract?: ERPContract) => {
+  const handleExecuteRescission = useCallback(async (overrideContract?: ERPContract, penaltyRateOverride?: number | string) => {
     const contract = overrideContract || showRescissionModal;
     if (!contract) return;
+    // Guard: never rescind twice (stale modal, double click, or re-submit)
+    const latestContract = data.contracts.find(c => c.contract_id === contract.contract_id);
+    if ((latestContract?.status || contract.status) === 'Rescinded') {
+      toast.error(isAr ? 'هذا العقد مفسوخ بالفعل' : 'This contract is already rescinded');
+      setShowRescissionModal(null);
+      return;
+    }
 
-    const targetPeriod = resolvePeriodForDate(rescissionDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(rescissionDate);
     if (!ensureActivePeriodOpen(isAr ? 'فسخ العقد' : 'Contract Rescission', targetPeriod)) {
+      return;
+    }
+
+    const effectiveRate = penaltyRateOverride !== undefined ? Number(penaltyRateOverride) : rescissionPenaltyRate;
+
+    // Unit cost comes from recorded data only; a delivered contract without it cannot be rescinded (user-confirmed).
+    const costResolution = resolveRescissionCost({
+      contract,
+      journalEntries: data.journalEntries,
+      costAllocations: data.costAllocations,
+      properties: data.properties,
+    });
+    if (costResolution.needed && costResolution.amount === null) {
+      toast.error(isAr
+        ? 'تكلفة الوحدة غير مسجلة. سجّل التكاليف ووزّعها قبل فسخ عقد تم تسليمه.'
+        : 'Unit cost is not recorded. Record and allocate costs before rescinding a delivered contract.');
       return;
     }
 
@@ -1816,21 +1952,17 @@ export function ERPWorkstationProvider({
     try {
       const contractSchedules = data.schedules.filter(s => s.contract_id === contract.contract_id);
 
-      const handoverEntry = data.journalEntries.find(j => 
-        j.entry_number === `JE-HANDOVER-${contract.contract_number}` ||
-        (j.source_module === 'SALES' && j.source_entity_id === contract.contract_id && j.entry_number.startsWith('JE-HANDOVER'))
-      );
-
       const result = RescissionEngine.processRescission(
         contract,
         contractSchedules,
         targetPeriod,
         rescissionDate,
-        handoverEntry ? undefined : D(contract.gross_contract_value).times('0.45').toFixed(),
+        costResolution.amount ?? '0.00',
         '501000',
         '151000',
         'CFO_FARID',
-        handoverEntry
+        costResolution.handoverEntry,
+        effectiveRate
       );
 
       const voidIds = contractSchedules
@@ -1845,11 +1977,31 @@ export function ERPWorkstationProvider({
         voidIds
       );
 
+      // On successful rescission, set buyer's CRM lead stage to 'closed_lost' (skip silently if no lead_id)
+      if (contract.lead_id) {
+        try {
+          await supabase
+            .from('leads')
+            .update({
+              stage: 'closed_lost',
+              stage_updated_at: new Date().toISOString(),
+              notes: `تم فسخ العقد رقم ${contract.contract_number} وإلغاء المعاملة بالمنظومة`
+            })
+            .eq('id', contract.lead_id);
+        } catch (leadErr) {
+          console.warn('Notice while updating CRM lead stage to closed_lost on rescission:', leadErr);
+        }
+      }
+
+      setShowRescissionModal(null);
       setData(prev => ({
         ...prev,
         contracts: prev.contracts.map(c => 
           c.contract_id === contract.contract_id ? { ...c, status: 'Rescinded' as const } : c
         ),
+        leads: contract.lead_id
+          ? prev.leads.map(l => l.id === contract.lead_id ? { ...l, stage: 'closed_lost' as const } : l)
+          : prev.leads,
         schedules: prev.schedules.map(s => {
           if (s.contract_id === contract.contract_id && (s.status === 'Pending' || s.status === 'SUPERSEDED')) {
             return { ...s, status: 'Void' as const };
@@ -1902,163 +2054,102 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [showRescissionModal, data.schedules, data.journalEntries, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
+  }, [showRescissionModal, rescissionPenaltyRate, data.contracts, data.schedules, data.journalEntries, data.costAllocations, data.properties, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
 
-
-  // Handler: Collect Payment
-  const handleCollectPayment = useCallback(async (details?: {
-    receiptDate?: string;
-    destinationTreasury?: 'SAFE_101000' | 'BANK_102000';
-    paymentMethod?: 'CASH' | 'INSTAPAY';
+  // Handler: Pay Rescission Refund
+  const handlePayRefund = useCallback(async (params: {
+    rescission: ERPRescissionRecord;
+    amount: string;
+    sourceAccount: '101000' | '102000';
+    paymentDate: string;
     notes?: string;
   }) => {
-    if (!showPayModal) return;
-    const payDate = details?.receiptDate || new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(payDate, data.periods, activePeriod);
-    if (!ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod)) return;
+    const { rescission, amount, sourceAccount, paymentDate, notes } = params;
+    const targetPeriod = await resolveAndEnsurePeriodForDate(paymentDate);
+    if (!ensureActivePeriodOpen(isAr ? 'سداد المسترد للعميل' : 'Customer Refund Payout', targetPeriod)) {
+      return;
+    }
+
+    const payAmount = D(amount);
+    if (payAmount.lte(0)) {
+      toast.error(isAr ? 'المبلغ المطلوب سداده يجب أن يكون أكبر من صفر' : 'Payout amount must be greater than zero');
+      return;
+    }
+
+    const contract = data.contracts.find(c => c.contract_id === rescission.contract_id);
+    const contractNo = contract?.contract_number || rescission.contract_id.slice(0, 8);
+    const buyerName = contract?.buyer_name || (isAr ? 'العميل المتعاقد' : 'Contracted Client');
 
     setIsMutating(true);
     try {
-      const { contract, schedule } = showPayModal;
-      const amount = schedule.nominal_value;
-      const isInstaPay = details?.paymentMethod === 'INSTAPAY' || details?.destinationTreasury === 'BANK_102000';
-      // UNIFIED OPERATING TREASURY DESTINATION: Both Cash and InstaPay deposit into Account 101000
-      const targetAccount = '101000';
-      const notes = details?.notes || '';
+      const entryNumber = `JE-REFUND-PAY-${contractNo}-${Date.now().toString(36).toUpperCase()}`;
+      const sourceNameAr = sourceAccount === '101000' ? 'الخزينة الرئيسية (101000)' : 'الحساب البنكي (102000)';
+      const sourceNameEn = sourceAccount === '101000' ? 'Main Safe (101000)' : 'Bank (102000)';
 
-      const isDelivered = contract.handover_status === 'Delivered';
-      const creditAccount = isDelivered ? '103000' : '203000';
-
-      const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const uniqueTime = Date.now().toString(36).toUpperCase().slice(-4);
-      const prefix = isInstaPay ? 'JE-IP' : 'JE-RCP';
-      const entryNumber = `${prefix}-${contract.contract_number}-T${schedule.tranche_number}-${uniqueTime}${randSuffix}`;
-
-      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+      const journalEntry = GeneralLedgerEngine.validateAndCreateEntry({
         entry_number: entryNumber,
-        entry_date: payDate,
+        entry_date: paymentDate,
         period: targetPeriod,
-        description: isAr 
-          ? (isInstaPay
-              ? (schedule.tranche_number === 0
-                  ? `تحصيل دفعة مقدم التعاقد (قسط 0) عبر إنستاباي بالخزينة الرئيسية - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`
-                  : `تحصيل القسط رقم ${schedule.tranche_number} عبر إنستاباي بالخزينة الرئيسية - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`)
-              : (schedule.tranche_number === 0
-                  ? `تحصيل دفعة مقدم التعاقد (قسط 0) نقداً بالخزينة - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`
-                  : `تحصيل القسط رقم ${schedule.tranche_number} نقداً بالخزينة - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`))
-          : `Installment #${schedule.tranche_number} collected via ${isInstaPay ? 'InstaPay' : 'Cash'} into Treasury - Contract ${contract.contract_number}`,
-        source_module: 'SALES',
-        source_entity_id: contract.contract_id,
+        description: isAr
+          ? `سداد مسترد مالي للعميل: ${buyerName} عن العقد المفسوخ رقم ${contractNo} من ${sourceNameAr}${notes ? ` - ${notes}` : ''}`
+          : `Refund payout to customer ${buyerName} for rescinded contract ${contractNo} from ${sourceNameEn}${notes ? ` - ${notes}` : ''}`,
+        source_module: 'RESCISSION',
+        source_entity_id: rescission.contract_id,
         created_by: 'CFO_FARID',
         lines: [
           {
-            account_code: targetAccount,
-            debit_amount: amount,
+            account_code: '206200',
+            debit_amount: payAmount.toFixed(2),
             credit_amount: '0.00',
-            memo: isAr 
-              ? (isInstaPay 
-                  ? `تحصيل إلكتروني فوري (إنستاباي) بالخزينة الرئيسية للعقد ${contract.contract_number}`
-                  : `توريد نقدي لخزينة الشركة الرئيسية للعقد ${contract.contract_number}`)
-              : `Collection into Treasury Safe (${isInstaPay ? 'InstaPay' : 'Cash'}) for Contract ${contract.contract_number}`
+            contract_id: rescission.contract_id,
+            memo: isAr ? `تسوية التزام الرد للعميل - عقد ${contractNo}` : `Clear refund liability for contract ${contractNo}`
           },
           {
-            account_code: creditAccount,
+            account_code: sourceAccount,
             debit_amount: '0.00',
-            credit_amount: amount,
-            memo: isDelivered 
-              ? (isAr ? 'تسوية مديونية باقي ثمن الشقة على العميل' : 'Settlement of Customer Accounts Receivable') 
-              : (isAr ? 'إثبات إيراد تعاقدي مؤجل لحين التسليم' : 'Credit to Deferred Contract Revenue')
+            credit_amount: payAmount.toFixed(2),
+            contract_id: rescission.contract_id,
+            memo: isAr ? `صرف نقدي من ${sourceNameAr}` : `Disbursement from ${sourceNameEn}`
           }
         ]
       });
 
-      await ERPSupabaseService.persistTranchePayment(supabase, contract.contract_id, schedule.schedule_id, amount, entry);
+      await persistJournalEntryGuarded(journalEntry);
 
-      const updatedDataset = await loadLiveData(true);
+      setData(prev => ({
+        ...prev,
+        journalEntries: [journalEntry, ...prev.journalEntries]
+      }));
 
-      if (updatedDataset && inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
-        const updatedContract = updatedDataset.contracts.find(c => c.contract_id === contract.contract_id) || contract;
-        const updatedSchedules = updatedDataset.schedules.filter(s => s.contract_id === contract.contract_id);
-        const updatedEntries = updatedDataset.journalEntries.filter(e => 
-          e.lines.some(l => l.contract_id === contract.contract_id)
-        );
-        const updatedAmendments = updatedDataset.amendments?.filter(a => a.contract_id === contract.contract_id) || [];
-        setInspectorPayload({
-          type: 'contract',
-          contract: updatedContract,
-          schedules: updatedSchedules,
-          amendments: updatedAmendments,
-          latestJournalEntry: updatedEntries[0],
-          allJournalEntries: updatedEntries
-        });
-      }
-
-      const localizedBuyer = isAr ? localizeBuyerName(contract.buyer_name || 'عميل مباشر') : (contract.buyer_name || 'Direct Client');
+      await loadLiveData();
 
       toast.success(
-        isInstaPay
-          ? (isAr ? `تم تحصيل القسط #${schedule.tranche_number} عبر إنستاباي` : `Installment #${schedule.tranche_number} via InstaPay`)
-          : (isAr ? `تم توريد القسط #${schedule.tranche_number} للخزينة` : `Installment #${schedule.tranche_number} into Safe`),
+        isAr ? `تم تسجيل قيد سداد المسترد بقيمة ${payAmount.formatEGP(true)} بنجاح` : `Refund payout of ${payAmount.formatEGP(false)} posted successfully`,
         {
-          description: (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                <span style={{
-                  background: 'rgba(5, 150, 105, 0.1)',
-                  color: '#047857',
-                  border: '1px solid rgba(5, 150, 105, 0.22)',
-                  padding: '0.12rem 0.55rem',
-                  borderRadius: '6px',
-                  fontWeight: 900,
-                  fontSize: '0.84rem',
-                  fontVariantNumeric: 'tabular-nums'
-                }}>
-                  +{D(amount).formatEGP(isAr)}
-                </span>
-                <span style={{
-                  background: '#f8fafc',
-                  color: '#475569',
-                  border: '1px solid #e2e8f0',
-                  padding: '0.12rem 0.5rem',
-                  borderRadius: '6px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  fontFamily: 'monospace'
-                }}>
-                  #{contract.contract_number}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                <span>{isAr ? 'العميل:' : 'Client:'}</span>
-                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
-                <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{isAr ? 'تم ترحيل القيد لليومية بنجاح' : 'Posted to GL'}</span>
-              </div>
-            </div>
-          ),
+          description: isAr 
+            ? `قيد رقم: ${journalEntry.entry_number} • تم خصم المبلغ من ${sourceNameAr}`
+            : `Entry #${journalEntry.entry_number} posted`,
           duration: 5000
         }
       );
     } catch (err: unknown) {
-      const msg = (err as Error).message;
-      if (msg.includes('Invariant 0.9')) {
-        const payDate = details?.receiptDate || new Date().toISOString().split('T')[0];
-        const targetPeriod = resolvePeriodForDate(payDate, data.periods, activePeriod);
-        ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod);
-      } else {
-        toast.error(isAr ? 'فشل تحصيل القسط' : 'Failed to collect installment', { description: msg });
-      }
+      console.error('Failed to post refund payout:', err);
+      const msg = (err as Error).message || String(err);
+      toast.error(isAr ? 'فشل تسجيل قيد سداد المسترد' : 'Failed to post refund payout', { description: msg });
     } finally {
       setIsMutating(false);
     }
-  }, [showPayModal, data.periods, activePeriod, isAr, supabase, loadLiveData, inspectorPayload, ensureActivePeriodOpen]);
+  }, [data.contracts, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen, loadLiveData, resolveAndEnsurePeriodForDate]);
+
+
 
   // Handler: Confirm Handover
   const handleConfirmHandover = useCallback(async (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => {
-    const targetPeriod = resolvePeriodForDate(handoverDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(handoverDate);
     if (!ensureActivePeriodOpen(isAr ? 'تسليم الوحدة' : 'Unit Handover', targetPeriod)) return;
     setIsMutating(true);
     try {
+      const actor = currentUser?.email || currentUser?.id || 'system';
       const entry = ContractsEngine.createHandoverModelBEntry(
         contract,
         targetPeriod,
@@ -2066,10 +2157,10 @@ export function ERPWorkstationProvider({
         rsvWipCost,
         '501000',
         '151000',
-        'CFO_FARID'
+        actor
       );
 
-      await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      await persistJournalEntryGuarded(entry);
       await ERPSupabaseService.updateContractHandoverStatus(supabase, contract.contract_id, 'Delivered', handoverDate);
 
       const updatedDataset = await loadLiveData(true);
@@ -2157,7 +2248,7 @@ export function ERPWorkstationProvider({
       return;
     }
     const today = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(today, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(today);
     if (!ensureActivePeriodOpen(isAr ? 'إثبات ارتداد الشيك' : 'Bounce Cheque', targetPeriod)) return;
     setIsMutating(true);
     try {
@@ -2238,10 +2329,11 @@ export function ERPWorkstationProvider({
         });
       }
 
-      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Bounced');
+      // Ledger first, then the status.
       if (bounceEntry) {
-        await ERPSupabaseService.persistJournalEntry(supabase, bounceEntry);
+        await persistJournalEntryGuarded(bounceEntry);
       }
+      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Bounced');
 
       if (schedule) {
         const schUpdatePayload: Record<string, unknown> = {
@@ -2311,7 +2403,7 @@ export function ERPWorkstationProvider({
   // Handler: PDC Status Change
   const handlePDCStatusChange = useCallback(async (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
     if (newStatus !== 'In Safe' && !ensureActivePeriodOpen(isAr ? 'تحديث حالة ورقة القبض' : 'PDC Status Change', targetPeriod)) return;
     setIsMutating(true);
     try {
@@ -2352,8 +2444,8 @@ export function ERPWorkstationProvider({
           ]
         });
 
+        await persistJournalEntryGuarded(entry);
         await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
 
         setData(prev => ({
           ...prev,
@@ -2424,8 +2516,8 @@ export function ERPWorkstationProvider({
           );
           await ERPSupabaseService.persistPDCStatus(supabase, chequeId, 'Cleared');
         } else {
+          await persistJournalEntryGuarded(entry);
           await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
-          await ERPSupabaseService.persistJournalEntry(supabase, entry);
         }
 
         setData(prev => ({
@@ -2447,25 +2539,7 @@ export function ERPWorkstationProvider({
         }));
       }
 
-      const updatedDataset = await loadLiveData(true);
-      if (updatedDataset && inspectorPayload?.type === 'cheque' && inspectorPayload.cheque.cheque_id === chequeId) {
-        const updatedCheque = updatedDataset.pdcRecords.find(p => p.cheque_id === chequeId);
-        if (updatedCheque) {
-          const linkedContract = updatedDataset.contracts.find(c => c.contract_id === updatedCheque.contract_id);
-          const linkedSchedule = updatedDataset.schedules.find(s => s.schedule_id === updatedCheque.schedule_id);
-          const clearingJournalEntry = updatedDataset.journalEntries.find(j => 
-            j.source_entity_id === updatedCheque.cheque_id || 
-            (updatedCheque.cheque_number && j.description && j.description.includes(updatedCheque.cheque_number))
-          );
-          setInspectorPayload({
-            type: 'cheque',
-            cheque: updatedCheque,
-            linkedContract,
-            linkedSchedule,
-            clearingJournalEntry
-          });
-        }
-      }
+      await loadLiveData(true);
 
       const statusLabelsAr: Record<string, string> = {
         'Cleared': 'تم تحصيل القسط وتوريد قيمته بنجاح',
@@ -2500,7 +2574,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.pdcRecords, data.schedules, data.contracts, data.periods, activePeriod, isAr, supabase, loadLiveData, inspectorPayload, ensureActivePeriodOpen, handleConfirmBounceCheque]);
+  }, [data.pdcRecords, data.schedules, data.contracts, data.periods, activePeriod, isAr, supabase, loadLiveData, ensureActivePeriodOpen, handleConfirmBounceCheque]);
 
   // Handler: Contract Supplement
   const handleSaveContractSupplement = useCallback(async (supplementData: SupplementData) => {
@@ -2532,24 +2606,11 @@ export function ERPWorkstationProvider({
         schedule_version: 1
       };
 
-      const newChequeId = generateUUID();
-      const newPdc: ERPPDCRecord = {
-        cheque_id: newChequeId,
-        contract_id: targetContract.contract_id,
-        schedule_id: newScheduleId,
-        cheque_number: supplementData.receiptNumber,
-        bank_name: isAr ? 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)' : 'Main Safe (Cash by Hand - 101000)',
-        drawer_name: targetContract.buyer_name,
-        nominal_value: D(supplementData.amount).toFixed(2),
-        due_date: supplementData.dueDate,
-        status: 'In Safe'
-      };
-
+      // Supplements create schedule tranche only, NO PDC row (user-confirmed 2026-10-04)
       await ERPSupabaseService.addContractSupplement(supabase, {
         contractId: targetContract.contract_id,
         newGrossValue,
-        newSchedule,
-        newPdc
+        newSchedule
       });
 
       await loadLiveData();
@@ -2646,7 +2707,7 @@ export function ERPWorkstationProvider({
       return;
     }
 
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
     if (!ensureActivePeriodOpen(isAr ? 'التحصيل الجماعي للأقساط' : 'Bulk Collection', targetPeriod)) return;
 
     setIsMutating(true);
@@ -2714,8 +2775,8 @@ export function ERPWorkstationProvider({
           );
           await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
         } else {
+          await persistJournalEntryGuarded(entry);
           await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
-          await ERPSupabaseService.persistJournalEntry(supabase, entry);
         }
         newEntries.push(entry);
       }
@@ -2778,23 +2839,63 @@ export function ERPWorkstationProvider({
       toast.error(msg);
       return;
     }
-    const targetPeriod = resolvePeriodForDate(date, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(date);
     if (!ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod)) return;
+
+    // Reject collected amount <= 0
+    const collected = D(amount || '0');
+    if (collected.lte(0)) {
+      const msg = isAr ? 'يجب أن يكون المبلغ المحصل أكبر من صفر' : 'Collected amount must be greater than zero';
+      toast.error(msg);
+      return;
+    }
+
+    const contract = data.contracts.find(c => 
+      c.contract_id === item.contract_id || 
+      c.contract_number === item.contract_id
+    );
+    const rawSchedId = (item as any).scheduleId || item.schedule_id;
+    const cleanSchedId = rawSchedId && String(rawSchedId).startsWith('SCH-')
+      ? String(rawSchedId).slice(4)
+      : rawSchedId;
+
+    const schedule = data.schedules.find(s =>
+      (cleanSchedId && s.schedule_id === cleanSchedId) ||
+      (item.schedule_id && s.schedule_id === item.schedule_id) ||
+      (s.contract_id === item.contract_id && s.due_date === item.due_date && (s.status === 'Pending' || s.status === 'Partially Paid'))
+    );
+    // Never apply money to "any pending tranche": the installment must be identified exactly.
+    if (contract && !schedule) {
+      toast.error(isAr
+        ? 'تعذر تحديد القسط المطلوب تحصيله. افتح القسط من جدول العقد وحاول مرة أخرى.'
+        : 'Could not identify which installment to collect. Open it from the contract schedule and try again.');
+      return;
+    }
+
+    const isRealPDC = Boolean(
+      item.cheque_id && 
+      !String(item.cheque_id).startsWith('SCH-') && 
+      data.pdcRecords.some(p => p.cheque_id === item.cheque_id)
+    );
+
+    const nominal = schedule ? D(schedule.nominal_value || '0') : D(item.nominal_value || '0');
+    const prevPaid = schedule ? D(schedule.amount_paid || '0') : D(0);
+    const remaining = Decimal.max(0, nominal.minus(prevPaid));
+
+    // Reject collected amount > remaining
+    if (collected.gt(remaining)) {
+      const msg = isAr 
+        ? `المبلغ المدخل (${collected.toFixed(2)}) يتجاوز المتبقي من القسط (${remaining.toFixed(2)})`
+        : `Entered amount (${collected.toFixed(2)}) exceeds remaining installment balance (${remaining.toFixed(2)})`;
+      toast.error(msg);
+      return;
+    }
+
     setIsMutating(true);
     try {
       const isInstaPay = method === 'INSTAPAY';
-      // UNIFIED OPERATING TREASURY DESTINATION: Both Cash and InstaPay deposit into Account 101000
-      const targetAccount = '101000';
-
-      const contract = data.contracts.find(c => 
-        c.contract_id === item.contract_id || 
-        c.contract_number === item.contract_id
-      );
-      const schedule = data.schedules.find(s => 
-        (item.schedule_id && s.schedule_id === item.schedule_id) ||
-        (s.contract_id === item.contract_id && s.due_date === item.due_date && s.status === 'Pending') ||
-        (s.contract_id === item.contract_id && s.status === 'Pending')
-      );
+      // User-confirmed 2026-10-04: Direct cash -> Main Safe (101000), InstaPay -> Bank (102000)
+      const targetAccount = isInstaPay ? '102000' : '101000';
 
       const isDelivered = contract?.handover_status === 'Delivered';
       const isPreHandoverInstallment = !isDelivered && Boolean(schedule || item.schedule_id || contract);
@@ -2806,11 +2907,11 @@ export function ERPWorkstationProvider({
         period: targetPeriod,
         description: isAr 
           ? (isInstaPay
-              ? `تحصيل قسط عبر إنستاباي بالخزينة بموجب مرجع رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`
-              : `تحصيل قسط نقداً بالخزينة بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`)
-          : `Installment collected via ${isInstaPay ? 'InstaPay' : 'Cash'} into Treasury - Ref #${receiptNo} - Client: ${item.drawer_name}`,
-        source_module: 'PDC',
-        source_entity_id: item.cheque_id,
+              ? `تحصيل قسط عبر إنستاباي بموجب مرجع رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`
+              : `تحصيل قسط نقداً بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`)
+          : `Installment collected via ${isInstaPay ? 'InstaPay' : 'Cash'} - Ref #${receiptNo} - Client: ${item.drawer_name}`,
+        source_module: isRealPDC ? 'PDC' : 'SALES',
+        source_entity_id: schedule?.schedule_id || contract?.contract_id || item.cheque_id,
         created_by: 'CFO_FARID',
         lines: [
           {
@@ -2818,8 +2919,8 @@ export function ERPWorkstationProvider({
             debit_amount: D(amount).toFixed(2),
             credit_amount: '0.00',
             memo: isInstaPay
-              ? (isAr ? `تحويل فوري إنستاباي بالخزينة - مرجع #${receiptNo}` : `InstaPay transfer into Treasury - Ref #${receiptNo}`)
-              : (isAr ? `استلام نقدي بالخزينة - إيصال #${receiptNo}` : `Hand cash collection into Treasury - Receipt #${receiptNo}`)
+              ? (isAr ? `تحويل فوري إنستاباي - مرجع #${receiptNo}` : `InstaPay transfer - Ref #${receiptNo}`)
+              : (isAr ? `استلام نقدي بالخزينة - إيصال #${receiptNo}` : `Hand cash collection into Safe - Receipt #${receiptNo}`)
           },
           {
             account_code: creditAccount,
@@ -2832,42 +2933,63 @@ export function ERPWorkstationProvider({
         ]
       });
 
-      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+      const newPaid = prevPaid.plus(collected);
+      const isFullyPaid = newPaid.gte(nominal);
+      const newScheduleStatus: InstallmentStatus = isFullyPaid ? 'Paid' : 'Partially Paid';
+      const newPaidDate = isFullyPaid ? date : (schedule?.paid_date || null);
+
+      // Ledger first: if the entry cannot be saved, nothing is marked paid.
+      await persistJournalEntryGuarded(entry);
 
       if (schedule) {
         await supabase
           .from('erp_installment_schedules')
           .update({
-            status: 'Paid',
-            amount_paid: D(amount).toFixed(2),
-            paid_date: date
+            status: newScheduleStatus,
+            amount_paid: newPaid.toFixed(2),
+            paid_date: newPaidDate
           })
           .eq('schedule_id', schedule.schedule_id);
       }
 
       if (contract) {
-        const newTotalCash = D(contract.total_cash_collected || '0').plus(amount).toFixed(2);
+        // Add to the stored total (not the in-memory copy, which may be stale).
+        const { data: freshRow } = await supabase
+          .from('erp_contracts')
+          .select('total_cash_collected')
+          .eq('contract_id', contract.contract_id)
+          .single();
+        const baseTotal = freshRow?.total_cash_collected ?? contract.total_cash_collected ?? '0';
+        const newTotalCash = D(baseTotal).plus(amount).toFixed(2);
         await supabase
           .from('erp_contracts')
           .update({ total_cash_collected: newTotalCash })
           .eq('contract_id', contract.contract_id);
       }
 
-      await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      if (isFullyPaid && isRealPDC) {
+        await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+      }
 
       setData(prev => ({
         ...prev,
         contracts: prev.contracts.map(c => 
-          c.contract_id === item.contract_id 
+          (contract && c.contract_id === contract.contract_id) || c.contract_id === item.contract_id 
             ? { ...c, total_cash_collected: D(c.total_cash_collected || '0').plus(amount).toFixed(2) }
             : c
         ),
         schedules: prev.schedules.map(s => 
           (schedule && s.schedule_id === schedule.schedule_id)
-            ? { ...s, status: 'Paid', amount_paid: D(amount).toFixed(2), paid_date: date }
+            ? { ...s, status: newScheduleStatus, amount_paid: newPaid.toFixed(2), paid_date: newPaidDate || undefined }
             : s
         ),
-        pdcRecords: prev.pdcRecords.map(p => p.cheque_id === item.cheque_id ? { ...p, status: 'Cleared' as const, cleared_date: date } : p),
+        pdcRecords: isRealPDC
+          ? prev.pdcRecords.map(p => 
+              p.cheque_id === item.cheque_id 
+                ? (isFullyPaid ? { ...p, status: 'Cleared' as const, cleared_date: date } : p)
+                : p
+            )
+          : prev.pdcRecords,
         journalEntries: [entry, ...prev.journalEntries]
       }));
 
@@ -2876,9 +2998,13 @@ export function ERPWorkstationProvider({
       const localizedBuyer = isAr ? localizeBuyerName(item.drawer_name || 'عميل مباشر') : (item.drawer_name || 'Direct Client');
 
       toast.success(
-        isInstaPay
-          ? (isAr ? 'تم تحصيل القسط عبر إنستاباي' : 'Installment Collected via InstaPay')
-          : (isAr ? 'تم توريد القسط إلى الخزينة' : 'Installment Deposited into Safe'),
+        isFullyPaid
+          ? (isInstaPay
+              ? (isAr ? 'تم تحصيل القسط بالكامل عبر إنستاباي' : 'Installment Fully Collected via InstaPay')
+              : (isAr ? 'تم توريد القسط بالكامل إلى الخزينة' : 'Installment Fully Deposited into Safe'))
+          : (isInstaPay
+              ? (isAr ? 'تم تحصيل دفعة جزئية من القسط عبر إنستاباي' : 'Partial Installment Collected via InstaPay')
+              : (isAr ? 'تم توريد دفعة جزئية من القسط إلى الخزينة' : 'Partial Installment Deposited into Safe')),
         {
           description: (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
@@ -2895,6 +3021,20 @@ export function ERPWorkstationProvider({
                 }}>
                   +{D(amount).formatEGP(isAr)}
                 </span>
+                {!isFullyPaid && (
+                  <span style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    color: '#d97706',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums'
+                  }}>
+                    {isAr ? `متبقي: ${nominal.minus(newPaid).formatEGP(isAr)}` : `Remaining: ${nominal.minus(newPaid).formatEGP(isAr)}`}
+                  </span>
+                )}
                 <span style={{
                   background: '#f8fafc',
                   color: '#475569',
@@ -2912,7 +3052,7 @@ export function ERPWorkstationProvider({
                 <span>{isAr ? 'العميل:' : 'Client:'}</span>
                 <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
                 <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{isInstaPay ? (isAr ? 'الخزينة الرئيسية - تحويل إنستاباي (101000)' : 'Treasury - InstaPay (101000)') : (isAr ? 'الخزينة الرئيسية - كاش باليد (101000)' : 'Treasury - Cash (101000)')}</span>
+                <span>{isInstaPay ? (isAr ? 'الحساب البنكي - تحويل إنستاباي (102000)' : 'Bank - InstaPay (102000)') : (isAr ? 'الخزينة الرئيسية - كاش باليد (101000)' : 'Treasury - Cash (101000)')}</span>
               </div>
             </div>
           ),
@@ -2949,7 +3089,8 @@ export function ERPWorkstationProvider({
       try {
         await supabase.from('erp_cost_allocations').insert([newAlloc]);
       } catch (dbErr) {
-        console.warn('Silent database sync for RSV allocation:', dbErr);
+        console.error('Journal entry failed to persist (RSV allocation):', dbErr);
+        throw dbErr;
       }
 
       setData(prev => ({
@@ -2976,44 +3117,54 @@ export function ERPWorkstationProvider({
   }, [rsvProjectName, rsvWipAmount, rsvSalesValue, supabase, handleInspectRSV, isAr]);
 
   // Handler: Settle Tax
-  const handleRemitTax = useCallback(async (taxId: string) => {
+  const handleRemitTax = useCallback(async (taxId: string, paymentMethod: '101000' | '102000' = '101000') => {
     const tax = data.taxRecords.find(t => t.tax_id === taxId);
     if (!tax) return;
     const todayStr = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
     if (!ensureActivePeriodOpen(isAr ? 'سداد ضريبة ورسوم' : 'Remit Tax', targetPeriod)) return;
     setIsMutating(true);
     try {
+      const actor = currentUser?.email || currentUser?.id || 'system';
+      const isBank = paymentMethod === '102000';
+      const creditAccountCode = isBank ? '102000' : '101000';
+      const creditMemo = isBank
+        ? (isAr ? 'سداد / استيفاء ضريبة الوحدة عبر الحساب البنكي' : 'Unit tax remittance settled via Bank account')
+        : (isAr ? 'سداد / استيفاء ضريبة الوحدة نقداً باليد من الخزينة الرئيسية' : 'Unit tax remittance settled in cash from Main Safe');
+
       const entry = GeneralLedgerEngine.validateAndCreateEntry({
         entry_number: `JE-TAX-RMT-${tax.tax_id.slice(0, 8)}`,
         entry_date: todayStr,
         period: targetPeriod,
-        description: `استيفاء / سداد ضريبة ورسوم الوحدة (${tax.tax_type})`,
+        description: isAr
+          ? `استيفاء / سداد ضريبة ورسوم الوحدة (${tax.tax_type})`
+          : `Apartment tax remittance settlement (${tax.tax_type})`,
         source_module: 'TAX',
         source_entity_id: tax.tax_id,
-        created_by: 'CFO_FARID',
+        created_by: actor,
         lines: [
           {
-            account_code: '150000',
+            account_code: '204000',
             debit_amount: tax.tax_amount,
             credit_amount: '0.00',
-            memo: `استيفاء وتسوية رسوم وتراخيص المشروع - ${tax.tax_type}`
+            memo: isAr
+              ? `إقفال وتسوية التزام ضريبة التصرفات العقارية المستحقة - ${tax.tax_type}`
+              : `Clear accrued disposition tax liability - ${tax.tax_type}`
           },
           {
-            account_code: '101000',
+            account_code: creditAccountCode,
             debit_amount: '0.00',
             credit_amount: tax.tax_amount,
-            memo: `سداد / استيفاء ضريبة الوحدة نقداً باليد من الخزينة الرئيسية`
+            memo: creditMemo
           }
         ]
       });
 
-      try {
-        await supabase.from('erp_tax_records').update({ remittance_status: 'Remitted to ETA' }).eq('tax_id', taxId);
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
-      } catch (dbErr) {
-        console.warn('Silent database sync for tax remittance:', dbErr);
-      }
+      // Outside the persistence try: an insufficient balance must abort the whole remittance.
+      assertCashOutflowAllowed(entry.lines || []);
+      // Ledger first: the tax is marked remitted only after its entry is saved.
+      await persistJournalEntryGuarded(entry);
+      await supabase.from('erp_tax_records').update({ remittance_status: 'Remitted to ETA' }).eq('tax_id', taxId);
 
       setData(prev => ({
         ...prev,
@@ -3035,12 +3186,16 @@ export function ERPWorkstationProvider({
         return prev;
       });
 
+      const sourceLabel = isBank
+        ? (isAr ? 'من الحساب البنكي' : 'from Bank')
+        : (isAr ? 'نقداً من الخزينة' : 'from Safe');
+
       toast.success(
-        isAr ? `تم سداد واستيفاء ضريبة الوحدة (${tax.tax_type}) نقداً من الخزينة` : `Apartment tax (${tax.tax_type}) remitted from Safe`,
+        isAr ? `تم سداد واستيفاء ضريبة الوحدة (${tax.tax_type}) ${sourceLabel}` : `Apartment tax (${tax.tax_type}) remitted ${sourceLabel}`,
         {
           description: isAr
-            ? `المبلغ: ${D(tax.tax_amount).formatEGP(true)} • تم إثبات قيد اليومية`
-            : `Amount: ${D(tax.tax_amount).formatEGP(false)} • Journal entry posted`,
+            ? `المبلغ: ${D(tax.tax_amount).formatEGP(true)} • تم إثبات قيد اليومية وتسوية حساب 204000`
+            : `Amount: ${D(tax.tax_amount).formatEGP(false)} • Journal entry posted (204000 cleared)`,
           duration: 5000
         }
       );
@@ -3057,7 +3212,101 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.taxRecords, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen]);
+  }, [data.taxRecords, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, currentUser]);
+
+  // Handler: Manual Tax Recording with Accrual JE (Dr 604000 / Cr 204000)
+  const handleRecordTax = useCallback(async (params: {
+    contract_id: string;
+    tax_type: string;
+    taxable_base: string | number;
+    tax_rate?: string | number;
+    tax_amount: string | number;
+    date?: string;
+    notes?: string;
+  }): Promise<ERPTaxRecord | null> => {
+    setIsMutating(true);
+    try {
+      const recordDate = params.date ? params.date.slice(0, 10) : new Date().toISOString().split('T')[0];
+      const targetPeriod = await resolveAndEnsurePeriodForDate(recordDate);
+      if (!ensureActivePeriodOpen(isAr ? 'تسجيل واستحقاق ضريبة' : 'Accrue Tax', targetPeriod)) {
+        return null;
+      }
+
+      const newRecord = await ERPSupabaseService.recordTaxRecord(supabase, {
+        contract_id: params.contract_id,
+        tax_type: params.tax_type,
+        taxable_base: params.taxable_base,
+        tax_rate: params.tax_rate,
+        tax_amount: params.tax_amount,
+        created_at: params.date ? new Date(params.date).toISOString() : new Date().toISOString(),
+        notes: params.notes
+      });
+
+      const actor = currentUser?.email || currentUser?.id || 'system';
+      const linkedContract = data.contracts.find(c => c.contract_id === params.contract_id);
+      const contractNumber = linkedContract?.contract_number || params.contract_id;
+      const formattedAmount = D(params.tax_amount).toFixed(2);
+
+      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `JE-TAX-ACCR-${newRecord.tax_id.slice(0, 8)}`,
+        entry_date: recordDate,
+        period: targetPeriod,
+        description: isAr
+          ? `استحقاق ضريبة ${params.tax_type} - عقد ${contractNumber}`
+          : `Tax Accrual (${params.tax_type}) - Contract ${contractNumber}`,
+        source_module: 'TAX',
+        source_entity_id: newRecord.tax_id,
+        created_by: actor,
+        lines: [
+          {
+            account_code: '604000',
+            debit_amount: formattedAmount,
+            credit_amount: '0.00',
+            memo: isAr
+              ? `إثبات مصروف ضريبة ${params.tax_type} - عقد ${contractNumber}`
+              : `Real Estate Disposition Tax Expense (${params.tax_type}) - Contract ${contractNumber}`
+          },
+          {
+            account_code: '204000',
+            debit_amount: '0.00',
+            credit_amount: formattedAmount,
+            memo: isAr
+              ? `استحقاق التزام ضريبة التصرفات العقارية - عقد ${contractNumber}`
+              : `Accrued real estate disposition tax liability - Contract ${contractNumber}`
+          }
+        ]
+      });
+
+      try {
+        await persistJournalEntryGuarded(entry);
+      } catch (dbErr) {
+        console.error('Tax accrual journal entry failed to persist:', dbErr);
+        toast.error(isAr ? 'تم حفظ الضريبة لكن فشل ترحيل قيد الاستحقاق — راجع الدفتر العام' : 'Tax saved but the accrual journal entry failed to post — check the ledger');
+      }
+
+      setData(prev => ({
+        ...prev,
+        taxRecords: [newRecord, ...prev.taxRecords],
+        journalEntries: [entry, ...prev.journalEntries]
+      }));
+
+      toast.success(
+        isAr ? `تم تسجيل واستحقاق الضريبة بنجاح (${params.tax_type})` : `Tax record registered and accrued successfully (${params.tax_type})`,
+        {
+          description: isAr
+            ? `المبلغ: ${D(params.tax_amount).formatEGP(true)} • تم إثبات قيد الاستحقاق (حساب 204000)`
+            : `Amount: ${D(params.tax_amount).formatEGP(false)} • Accrued to liability account 204000`
+        }
+      );
+      return newRecord;
+    } catch (err: unknown) {
+      console.warn('Record tax error:', err);
+      toast.error(isAr ? 'فشل تسجيل الضريبة' : 'Failed to record tax');
+      return null;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [supabase, isAr, data.contracts, currentUser, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate]);
 
   // Handler: Confirm Partner Payout
   const handleConfirmPartnerPayout = useCallback(async (details: {
@@ -3070,13 +3319,13 @@ export function ERPWorkstationProvider({
     receiptRef: string;
     memo: string;
   }) => {
-    const targetPeriod = resolvePeriodForDate(details.payoutDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(details.payoutDate);
     if (!ensureActivePeriodOpen(isAr ? 'صرف أرباح الشركاء' : 'Partner Dividend Payout', targetPeriod)) {
       return;
     }
     setIsMutating(true);
     try {
-      const routingAccount = details.paymentMethod === 'BANK_102000' ? '102000' : '101000';
+      const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
       let cashBalance = D(0);
       for (const jEntry of data.journalEntries) {
         for (const line of jEntry.lines) {
@@ -3088,8 +3337,8 @@ export function ERPWorkstationProvider({
 
       const payoutAmt = D(details.amount);
       if (cashBalance.lt(payoutAmt)) {
-        const accNameAr = routingAccount === '101000' ? 'الخزينة الرئيسية (101000)' : 'الحساب البنكي التجاري (102000)';
-        const accNameEn = routingAccount === '101000' ? 'Main Safe (101000)' : 'Commercial Bank Account (102000)';
+        const accNameAr = routingAccount === '101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+        const accNameEn = routingAccount === '101000' ? 'Safe (101000)' : 'InstaPay (102000)';
         throw new Error(
           isAr
             ? `عفواً! رصيد ${accNameAr} غير كافٍ لصرف الأرباح. الرصيد المتاح: ${cashBalance.formatEGP(true)}، والمطلوب صرفه: ${payoutAmt.formatEGP(true)} (معيار INV-4.5).`
@@ -3110,9 +3359,10 @@ export function ERPWorkstationProvider({
       });
 
       try {
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        await persistJournalEntryGuarded(entry);
       } catch (dbErr) {
-        console.warn('Silent database sync for partner payout:', dbErr);
+        console.error('Journal entry failed to persist (partner payout):', dbErr);
+        throw dbErr;
       }
 
       const newTx: ERPPartnerTransaction = {
@@ -3145,7 +3395,8 @@ export function ERPWorkstationProvider({
           notes: newTx.memo
         });
       } catch (ptErr) {
-        console.warn('Silent database sync for partner transaction:', ptErr);
+        console.error('Secondary record failed to persist (partner transaction):', ptErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       setPartnerTransactions(prev => [newTx, ...prev]);
@@ -3197,13 +3448,13 @@ export function ERPWorkstationProvider({
     nationalId?: string;
     projectSharePct?: number;
   }) => {
-    const targetPeriod = resolvePeriodForDate(details.injectionDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(details.injectionDate);
     if (!ensureActivePeriodOpen(isAr ? 'توريد رأس مال الشريك' : 'Partner Capital Injection', targetPeriod)) {
       return;
     }
     setIsMutating(true);
     try {
-      const routingAccount = details.paymentMethod === 'BANK_102000' ? '102000' : '101000';
+      const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
       const entry = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: details.partnerName,
         amount: details.amount,
@@ -3217,9 +3468,10 @@ export function ERPWorkstationProvider({
       });
 
       try {
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        await persistJournalEntryGuarded(entry);
       } catch (dbErr) {
-        console.warn('Silent database sync for partner injection:', dbErr);
+        console.error('Journal entry failed to persist (partner injection):', dbErr);
+        throw dbErr;
       }
       const newTx: ERPPartnerTransaction = {
         id: `pt-tx-${Date.now()}`,
@@ -3253,7 +3505,8 @@ export function ERPWorkstationProvider({
           notes: newTx.memo
         });
       } catch (ptErr) {
-        console.warn('Silent database sync for partner injection transaction:', ptErr);
+        console.error('Secondary record failed to persist (partner injection transaction):', ptErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       const roleArMap: Record<string, string> = {
@@ -3273,7 +3526,8 @@ export function ERPWorkstationProvider({
           joined_date: details.injectionDate
         });
       } catch (profErr) {
-        console.warn('Silent database sync for partner profile:', profErr);
+        console.error('Secondary record failed to persist (partner profile):', profErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       saveRegisteredPartner({
@@ -3454,7 +3708,8 @@ export function ERPWorkstationProvider({
           joined_date: newProfile.joined_date
         });
       } catch (profileErr) {
-        console.warn('Silent database sync for partner profile:', profileErr);
+        console.error('Secondary record failed to persist (partner profile):', profileErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       if (profileData.propertyId && profileData.sharePercentage && profileData.sharePercentage > 0) {
@@ -3489,7 +3744,7 @@ export function ERPWorkstationProvider({
 
       if (profileData.initialDeposit && D(profileData.initialDeposit.amount || 0).gt(0)) {
         const depositDate = profileData.initialDeposit.date || new Date().toISOString().split('T')[0];
-        const targetPeriod = resolvePeriodForDate(depositDate, data.periods, activePeriod);
+        const targetPeriod = await resolveAndEnsurePeriodForDate(depositDate);
         if (!ensureActivePeriodOpen(isAr ? 'توريد رأس مال الشريك' : 'Partner Capital Injection', targetPeriod)) {
           return;
         }
@@ -3506,9 +3761,10 @@ export function ERPWorkstationProvider({
         });
 
         try {
-          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+          await persistJournalEntryGuarded(entry);
         } catch (dbErr) {
-          console.warn('Silent database sync for initial deposit:', dbErr);
+          console.error('Journal entry failed to persist (initial deposit):', dbErr);
+        throw dbErr;
         }
 
         const newTx: ERPPartnerTransaction = {
@@ -3537,7 +3793,8 @@ export function ERPWorkstationProvider({
             notes: newTx.memo
           });
         } catch (txErr) {
-          console.warn('Silent database sync for initial deposit partner transaction:', txErr);
+          console.error('Secondary record failed to persist (initial deposit partner transaction):', txErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
         }
 
         setPartnerTransactions(prev => [newTx, ...prev]);
@@ -3567,10 +3824,12 @@ export function ERPWorkstationProvider({
 
   // Handler: Atomically save the project cost record and balanced journal entry.
   const handleSaveProjectExpense = useCallback(async (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => {
-    const targetPeriod = resolvePeriodForDate(entry.entry_date, data.periods, activePeriod);
+    // The entry's own period must exist in the database before posting (created on demand).
+    const targetPeriod = await resolveAndEnsurePeriodForDate(entry.entry_date);
     if (!ensureActivePeriodOpen(isAr ? 'تسجيل مصروف مشروع' : 'Project Expense', targetPeriod)) return;
     setIsMutating(true);
     try {
+      assertCashOutflowAllowed(entry.lines || []);
       await ERPSupabaseService.persistExpenseWithCostItem(supabase, entry, costItem);
       setData(prev => ({
         ...prev,
@@ -3594,16 +3853,13 @@ export function ERPWorkstationProvider({
       if (msg.includes('Invariant 0.9')) {
         const targetPeriod = resolvePeriodForDate(entry.entry_date, data.periods, activePeriod);
         ensureActivePeriodOpen(isAr ? 'تسجيل مصروف مشروع' : 'Project Expense', targetPeriod);
-      } else {
-        toast.error(
-          isAr ? 'فشل تسجيل وترحيل الحركة وتكلفة المشروع' : 'Failed to post transaction and cost record', 
-          { description: msg }
-        );
       }
+      // Rethrow so the calling modal stays open and reports the failure (it shows the message).
+      throw err;
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, data.periods, activePeriod, loadLiveData, isAr, ensureActivePeriodOpen]);
+  }, [supabase, data.periods, activePeriod, loadLiveData, isAr, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate]);
 
   // Handler: Comprehensive Arabic Excel Export
   const handleExportExcel = useCallback(() => {
@@ -3704,8 +3960,8 @@ export function ERPWorkstationProvider({
   }, [navigateToTab]);
 
   const handleOpenAuditForProperty = useCallback((prop?: Property) => {
-    setAuditModalProperty(prop || data.properties[0] || null);
-  }, [data.properties]);
+    setAuditModalProperty(prop || null);
+  }, []);
 
   const handleAddPropertyCostItem = useCallback(async (item: ERPPropertyCostItem) => {
     setIsMutating(true);
@@ -3800,26 +4056,21 @@ export function ERPWorkstationProvider({
     }
   }, [supabase, isAr]);
 
-  const handleCreateConstructionPurchaseOrder = useCallback(async (order: ERPConstructionPurchaseOrder) => {
-    setIsMutating(true);
-    try {
-      if (!currentUser && process.env.NODE_ENV === 'development') {
-        const orders = [...(data.purchaseOrders || []), order];
-        window.localStorage.setItem('fin_os_local_purchase_orders', JSON.stringify(orders));
-      } else {
-        await ERPSupabaseService.createConstructionPurchaseOrder(supabase, { ...order, created_by: currentUser?.id });
-      }
-      setData(prev => ({ ...prev, purchaseOrders: [order, ...(prev.purchaseOrders || [])] }));
-    } finally { setIsMutating(false); }
-  }, [supabase, currentUser, data.purchaseOrders]);
-
   const handleRecordCostPayablePayment = useCallback(async (updatedItem: ERPPropertyCostItem) => {
     setIsMutating(true);
     try {
       const original = data.propertyCosts.find(item => item.item_id === updatedItem.item_id);
       if (!original) throw new Error('The payable is no longer available. Refresh and try again.');
-      const paymentDate = updatedItem.payable_installments?.find(inst => D(inst.paid_amount_egp).gt(original.payable_installments?.find(prior => prior.installment_id === inst.installment_id)?.paid_amount_egp || 0) && !inst.installment_id.startsWith('inst-prior-'))?.payment_date || new Date().toISOString().slice(0, 10);
-      const period = resolvePeriodForDate(paymentDate, data.periods, activePeriod);
+      const sumPaid = (it: ERPPropertyCostItem) => (it.payable_installments || []).reduce((acc, i) => acc.plus(i.paid_amount_egp || '0'), D(0));
+      const paymentDelta = sumPaid(updatedItem).minus(sumPaid(original));
+      const paidInstallment = updatedItem.payable_installments?.find(inst => D(inst.paid_amount_egp).gt(original.payable_installments?.find(prior => prior.installment_id === inst.installment_id)?.paid_amount_egp || 0) && !inst.installment_id.startsWith('inst-prior-'));
+      const account = paidInstallment?.payment_method === 'CASH_101000' ? '101000' : '102000';
+      // Settlement pays out of the selected treasury account (101000 Safe or 102000 InstaPay): block if the account can't cover the new payment.
+      if (paymentDelta.gt(0)) {
+        assertCashOutflowAllowed([{ account_code: account, debit_amount: '0', credit_amount: paymentDelta.toFixed(2) }]);
+      }
+      const paymentDate = paidInstallment?.payment_date || new Date().toISOString().slice(0, 10);
+      const period = await resolveAndEnsurePeriodForDate(paymentDate);
       let result: { item: ERPPropertyCostItem; journal: ERPJournalEntry };
       if (!currentUser && process.env.NODE_ENV === 'development') {
         const settlement = prepareConstructionSettlement(original, updatedItem, period);
@@ -3836,7 +4087,7 @@ export function ERPWorkstationProvider({
       toast.error(isAr ? 'فشل حفظ سداد مستحقات المقاول' : 'Failed to save contractor settlement', { description: err instanceof Error ? err.message : String(err) });
       throw err;
     } finally { setIsMutating(false); }
-  }, [supabase, isAr, data.propertyCosts, data.periods, activePeriod, currentUser]);
+  }, [supabase, isAr, data.propertyCosts, data.periods, activePeriod, currentUser, resolveAndEnsurePeriodForDate]);
 
   const handleUpdatePropertySellingPrice = useCallback(async (propertyId: string, newPriceEgp: number) => {
     setIsMutating(true);
@@ -3867,6 +4118,52 @@ export function ERPWorkstationProvider({
       setIsMutating(false);
     }
   }, [supabase, isAr]);
+
+  const handleInternalTransfer = useCallback(async (details: {
+    from: '101000' | '102000';
+    to: '101000' | '102000';
+    amount: string;
+    date: string;
+    notes: string;
+  }): Promise<void> => {
+    if (details.from === details.to) throw new Error(isAr ? 'اختر حسابين مختلفين' : 'Choose two different accounts');
+    const amt = D(details.amount || '0');
+    if (!amt.gt(0)) throw new Error(isAr ? 'المبلغ يجب أن يكون أكبر من صفر' : 'Amount must be greater than zero');
+    const targetPeriod = await resolveAndEnsurePeriodForDate(details.date);
+    if (!ensureActivePeriodOpen(isAr ? 'تحويل نقدية' : 'Cash transfer', targetPeriod)) {
+      throw new Error(isAr ? 'الفترة المحاسبية مغلقة' : 'Accounting period is closed');
+    }
+    setIsMutating(true);
+    try {
+      const label = (c: string) => c === '101000' ? 'الخزينة 101000' : 'إنستاباي 102000';
+      const memo = `تحويل من ${label(details.from)} إلى ${label(details.to)}${details.notes.trim() ? ` • ${details.notes.trim()}` : ''}`;
+      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `TRF-${details.date.replace(/-/g, '')}-${generateUUID().slice(0, 6).toUpperCase()}`,
+        entry_date: details.date,
+        period: targetPeriod,
+        description: memo,
+        source_module: 'MANUAL_ADJUSTMENT',
+        created_by: currentUser?.id || 'FIN_OS',
+        lines: [
+          { account_code: details.to, debit_amount: amt.toFixed(2), credit_amount: '0.00', memo },
+          { account_code: details.from, debit_amount: '0.00', credit_amount: amt.toFixed(2), memo },
+        ],
+      });
+      await persistJournalEntryGuarded(entry);
+      setData(prev => ({
+        ...prev,
+        journalEntries: [entry, ...prev.journalEntries]
+      }));
+      toast.success(isAr ? 'تم تسجيل التحويل' : 'Transfer recorded');
+    } catch (err) {
+      toast.error(isAr ? 'تعذر تسجيل التحويل' : 'Transfer failed', {
+        description: err instanceof Error ? err.message : String(err)
+      });
+      throw err;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [isAr, resolveAndEnsurePeriodForDate, ensureActivePeriodOpen, currentUser, persistJournalEntryGuarded]);
 
   const value: ERPWorkstationContextValue = {
     locale,
@@ -3903,7 +4200,6 @@ export function ERPWorkstationProvider({
     totalWipIncurred,
     totalSafePDCs,
     totalInjectedCapital,
-    wipAccounts,
     kpis,
     deferredRevenue,
     realizedRevenue,
@@ -3941,7 +4237,6 @@ export function ERPWorkstationProvider({
     inspectorPayload,
     setInspectorPayload,
     handleInspectContract,
-    handleInspectCheque,
     handleInspectTax,
     handleInspectRSV,
     handleInspectRescission,
@@ -4003,6 +4298,10 @@ export function ERPWorkstationProvider({
     contractWizardStep,
     setContractWizardStep,
 
+    collectRequest,
+    setCollectRequest,
+    openCollect,
+
     showPayModal,
     setShowPayModal,
     showEscalationModal,
@@ -4019,6 +4318,8 @@ export function ERPWorkstationProvider({
     setRescissionStep,
     rescissionDate,
     setRescissionDate,
+    rescissionPenaltyRate,
+    setRescissionPenaltyRate,
 
     showRSVModal,
     setShowRSVModal,
@@ -4053,6 +4354,8 @@ export function ERPWorkstationProvider({
     setCollectingPDCItem,
     showProjectExpenseModal,
     setShowProjectExpenseModal,
+    showCashTransferModal,
+    setShowCashTransferModal,
     projectExpensePropertyId,
     setProjectExpensePropertyId,
 
@@ -4080,15 +4383,13 @@ export function ERPWorkstationProvider({
     setInjectionInitialCommitmentId,
     showNewPartnerModal,
     setShowNewPartnerModal,
-    showPartnerOperationsModal,
-    setShowPartnerOperationsModal,
     dossierTargetPartner,
     setDossierTargetPartner,
 
     handleCreateRealContract,
     handleExecuteEscalation,
     handleExecuteRescission,
-    handleCollectPayment,
+    handlePayRefund,
     handleConfirmHandover,
     handleToggleContractHandover,
     handlePDCStatusChange,
@@ -4098,9 +4399,11 @@ export function ERPWorkstationProvider({
     handleConfirmHandCollection,
     handleConfirmBounceCheque,
     handleTogglePeriodStatus,
+    handleCloseFiscalYear,
     handlePostMonthlyEntries,
     handleCreateRSVAllocation,
     handleRemitTax,
+    handleRecordTax,
     handleConfirmPartnerPayout,
     handleConfirmPartnerInjection,
     handleCreatePartnerCommitment,
@@ -4117,9 +4420,9 @@ export function ERPWorkstationProvider({
     handleDeletePropertyCostItem,
     handleUpdatePropertyCostItem,
     handleAddCostAdjustment,
-    handleCreateConstructionPurchaseOrder,
     handleRecordCostPayablePayment,
     handleUpdatePropertySellingPrice,
+    handleInternalTransfer,
   };
 
   return (

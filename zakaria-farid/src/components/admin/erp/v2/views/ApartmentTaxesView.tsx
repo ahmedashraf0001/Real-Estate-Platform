@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   RotateCcw
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ERPTaxRecord, ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
@@ -27,7 +28,9 @@ import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
-import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
+import { ZFPageHeader, ZFSegmented } from '../common/ZFPageHeader';
+import { ZFModalShell } from '../common/ZFModalShell';
+import { useERPWorkstation } from '../../context/ERPWorkstationContext';
 import styles from '../ZFWorkstationShell.module.css';
 
 export interface ApartmentTaxesViewProps {
@@ -37,9 +40,18 @@ export interface ApartmentTaxesViewProps {
   propertyCosts?: ERPPropertyCostItem[];
   isAr?: boolean;
   isMutating?: boolean;
-  onRemitTax: (taxId: string) => void;
+  onRemitTax: (taxId: string, paymentMethod?: '101000' | '102000') => void | Promise<void>;
   onInspectTax: (tax: ERPTaxRecord) => void;
   onOpenCostModal?: (propertyId?: string) => void;
+  onRecordTax?: (taxData: {
+    contract_id: string;
+    tax_type: string;
+    taxable_base: string | number;
+    tax_rate?: string | number;
+    tax_amount: string | number;
+    date?: string;
+    notes?: string;
+  }) => Promise<any> | void;
 }
 
 export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
@@ -51,7 +63,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
   isMutating = false,
   onRemitTax,
   onInspectTax,
-  onOpenCostModal
+  onOpenCostModal,
+  onRecordTax
 }) => {
   // Master Mode: Tab 1 (Project Statutory Costs) vs Tab 2 (Disposition Tax Archive)
   const [activeMode, setActiveMode] = useState<'capitalized_costs' | 'disposition_archive'>('capitalized_costs');
@@ -77,6 +90,105 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
   const [archiveSearchQuery, setArchiveSearchQuery] = useState<string>('');
   const [archiveCurrentPage, setArchiveCurrentPage] = useState<number>(1);
   const [archivePageSize, setArchivePageSize] = useState<number>(10);
+
+  // Workstation context & manual tax recording state
+  const erpContext = useERPWorkstation();
+  const activeContracts = useMemo(() => {
+    return contracts.length > 0 ? contracts : (erpContext?.data?.contracts || []);
+  }, [contracts, erpContext?.data?.contracts]);
+
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [remitTarget, setRemitTarget] = useState<ERPTaxRecord | null>(null);
+  const [remitSource, setRemitSource] = useState<'101000' | '102000'>('101000');
+  const [recordContractId, setRecordContractId] = useState('');
+  const [recordTaxType, setRecordTaxType] = useState('Real estate disposal tax 2.5%');
+  const [recordTaxableBase, setRecordTaxableBase] = useState('');
+  const [recordTaxRate, setRecordTaxRate] = useState('2.5');
+  const [recordTaxAmount, setRecordTaxAmount] = useState('');
+  const [isAmountManuallyEdited, setIsAmountManuallyEdited] = useState(false);
+  const [recordDate, setRecordDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [recordNotes, setRecordNotes] = useState('');
+  const [isSubmittingRecord, setIsSubmittingRecord] = useState(false);
+
+  const handleContractChange = (contractId: string) => {
+    setRecordContractId(contractId);
+    const selected = activeContracts.find(c => c.contract_id === contractId);
+    if (selected) {
+      const base = selected.base_price || selected.gross_contract_value || '';
+      setRecordTaxableBase(base);
+      if (!isAmountManuallyEdited && base) {
+        const rate = parseFloat(recordTaxRate) || 0;
+        if (rate > 0) {
+          setRecordTaxAmount(D(base).times(rate).div(100).toFixed(2));
+        }
+      }
+    }
+  };
+
+  const handleBaseChange = (val: string) => {
+    setRecordTaxableBase(val);
+    if (!isAmountManuallyEdited && recordTaxRate) {
+      const rate = parseFloat(recordTaxRate) || 0;
+      if (rate > 0 && val) {
+        setRecordTaxAmount(D(val).times(rate).div(100).toFixed(2));
+      }
+    }
+  };
+
+  const handleRateChange = (val: string) => {
+    setRecordTaxRate(val);
+    if (!isAmountManuallyEdited && val && recordTaxableBase) {
+      const rate = parseFloat(val) || 0;
+      setRecordTaxAmount(D(recordTaxableBase).times(rate).div(100).toFixed(2));
+    }
+  };
+
+  const handleAmountChange = (val: string) => {
+    setRecordTaxAmount(val);
+    setIsAmountManuallyEdited(true);
+  };
+
+  const handleSubmitRecordTax = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!recordContractId) {
+      toast.error(isAr ? 'يرجى اختيار العقد' : 'Please select a contract');
+      return;
+    }
+    if (!recordTaxAmount || D(recordTaxAmount).isZero()) {
+      toast.error(isAr ? 'يرجى إدخال قيمة الضريبة أو الرسم' : 'Please enter the tax amount');
+      return;
+    }
+    setIsSubmittingRecord(true);
+    try {
+      const handler = onRecordTax || erpContext?.handleRecordTax;
+      let saved: unknown = null;
+      if (handler) {
+        saved = await handler({
+          contract_id: recordContractId,
+          tax_type: recordTaxType || (isAr ? 'ضريبة يدوية' : 'Manual tax'),
+          taxable_base: recordTaxableBase || 0,
+          tax_rate: recordTaxRate,
+          tax_amount: recordTaxAmount,
+          date: recordDate,
+          notes: recordNotes
+        });
+      }
+      // Keep the form (and the user's input) open if saving failed.
+      if (!saved) return;
+      setActiveMode('disposition_archive');
+      setIsRecordModalOpen(false);
+      setRecordContractId('');
+      setRecordTaxableBase('');
+      setRecordTaxRate('2.5');
+      setRecordTaxAmount('');
+      setIsAmountManuallyEdited(false);
+      setRecordNotes('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingRecord(false);
+    }
+  };
 
   // Properties map for quick lookup
   const propertyMap = useMemo(() => {
@@ -147,19 +259,19 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     if (text.includes('مرافق') || text.includes('مجلس') || text.includes('إشغال') || text.includes('مياه') || text.includes('كهرباء') || text.includes('mun-')) {
       return {
         label: isAr ? 'رسوم جهاز المدينة والمرافق' : 'Municipal & Utility',
-        color: '#1d4ed8',
+        color: 'var(--erp-accent-hover)',
         bg: 'rgba(29, 78, 216, 0.08)',
         border: 'rgba(29, 78, 216, 0.25)',
-        icon: <Landmark size={12} color="#1d4ed8" />
+        icon: <Landmark size={12} color="var(--erp-accent-hover)" />
       };
     }
     if (text.includes('ترخيص') || text.includes('رخصة') || text.includes('lic-')) {
       return {
         label: isAr ? 'ترخيص بناء هندسي معتمد' : 'Building Permit',
-        color: '#946f23',
-        bg: 'rgba(184, 144, 62, 0.08)',
-        border: 'rgba(184, 144, 62, 0.25)',
-        icon: <FileText size={12} color="#946f23" />
+        color: 'var(--erp-accent)',
+        bg: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+        border: 'color-mix(in srgb, var(--erp-accent) 25%, transparent)',
+        icon: <FileText size={12} color="var(--erp-accent)" />
       };
     }
     if (text.includes('جسات') || text.includes('تربة') || text.includes('geo-') || text.includes('استشار')) {
@@ -175,10 +287,10 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
       label: item.category === 'permits_engineering' 
         ? (isAr ? 'تراخيص وهندسة' : 'Permits') 
         : (isAr ? 'ضرائب ورسوم حكومية' : 'Gov Fees'),
-      color: '#946f23',
-      bg: 'rgba(184, 144, 62, 0.08)',
-      border: 'rgba(184, 144, 62, 0.25)',
-      icon: <FileCheck size={12} color="#946f23" />
+      color: 'var(--erp-accent)',
+      bg: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+      border: 'color-mix(in srgb, var(--erp-accent) 25%, transparent)',
+      icon: <FileCheck size={12} color="var(--erp-accent)" />
     };
   };
 
@@ -298,19 +410,19 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     if (norm.includes('disposition') || norm.includes('تصرفات') || norm.includes('2.5')) {
       return {
         label: isAr ? 'ضريبة تصرفات عقارية (٢.٥٪)' : 'Disposition Tax (2.5%)',
-        color: '#946f23',
-        bg: 'rgba(184, 144, 62, 0.08)',
-        border: 'rgba(184, 144, 62, 0.25)',
-        icon: <Receipt size={12} color="#946f23" />
+        color: 'var(--erp-accent)',
+        bg: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+        border: 'color-mix(in srgb, var(--erp-accent) 25%, transparent)',
+        icon: <Receipt size={12} color="var(--erp-accent)" />
       };
     }
     if (norm.includes('municipal') || norm.includes('development') || norm.includes('تنمية')) {
       return {
         label: isAr ? 'رسوم تنمية وتطوير' : 'Development Fee',
-        color: '#1e40af',
+        color: 'var(--erp-accent-hover)',
         bg: 'rgba(30, 64, 175, 0.08)',
         border: 'rgba(30, 64, 175, 0.25)',
-        icon: <Building2 size={12} color="#1e40af" />
+        icon: <Building2 size={12} color="var(--erp-accent-hover)" />
       };
     }
     if (norm.includes('estate') || norm.includes('عقارية') || norm.includes('عوايد')) {
@@ -324,10 +436,10 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     }
     return {
       label: isAr ? (taxType || 'رسوم وضريبة شقة') : (taxType || 'Apartment Fee'),
-      color: '#946f23',
-      bg: 'rgba(184, 144, 62, 0.08)',
-      border: 'rgba(184, 144, 62, 0.25)',
-      icon: <ShieldCheck size={12} color="#946f23" />
+      color: 'var(--erp-accent)',
+      bg: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+      border: 'color-mix(in srgb, var(--erp-accent) 25%, transparent)',
+      icon: <ShieldCheck size={12} color="var(--erp-accent)" />
     };
   };
 
@@ -377,7 +489,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     list.sort((a, b) => {
       if (archiveSortBy === 'amount_desc') return D(b.tax_amount || '0').minus(D(a.tax_amount || '0')).toNumber();
       if (archiveSortBy === 'amount_asc') return D(a.tax_amount || '0').minus(D(b.tax_amount || '0')).toNumber();
-      if (archiveSortBy === 'rate_desc') return D(b.tax_rate || '0').minus(D(a.tax_rate || '0')).toNumber();
+      if (archiveSortBy === 'rate_desc') return Number(b.tax_rate || 0) - Number(a.tax_rate || 0);
       if (archiveSortBy === 'unit_asc') {
         const cA = contracts.find(c => c.contract_id === a.contract_id)?.unit_id || '';
         const cB = contracts.find(c => c.contract_id === b.contract_id)?.unit_id || '';
@@ -411,171 +523,46 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
   return (
     <div className={styles.stageContainer}>
       {/* 1. Header & Stage Breadcrumb */}
-      <div className={styles.stageHeader}>
-        <div className={styles.stageTitleArea}>
-          <ZFErpBreadcrumb sectionTitle={isAr ? 'ضرائب وتراخيص المشاريع' : 'Project Statutory Taxes & Permits'} icon={<Receipt size={13} color="#946f23" />} />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h1 className={styles.stageTitle}>
-              {isAr ? 'سجل ضرائب ورسوم وتراخيص المشاريع الإنشائية' : 'Project Statutory Taxes, Permits & Insurance Registry'}
-            </h1>
-            <span style={{
-              background: 'rgba(184, 144, 62, 0.08)',
-              border: '1px solid rgba(184, 144, 62, 0.25)',
-              color: '#946f23',
-              padding: '0.2rem 0.55rem',
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              {isAr ? 'تكلفة رأسمالية محملة ع المبنى (WIP 150000)' : 'Capitalized WIP (GL 150000)'}
-            </span>
-            <span style={{
-              background: '#f0fdf4',
-              border: '1px solid rgba(22, 163, 74, 0.25)',
-              color: '#15803d',
-              padding: '0.2rem 0.55rem',
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              {isAr ? 'معفى من ضريبة القيمة المضافة (قانون 67 لسنة 2016)' : 'VAT-Exempt Real Estate'}
-            </span>
-          </div>
-
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-            {isAr 
-              ? 'متابعة الضرائب الإنشائية وتراخيص البناء وتأمينات المقاولات المحملة كرأسمال على المباني (حساب 150000 - مشروعات تحت التنفيذ)، واستردادها عبر معامل الرسملة.' 
-              : 'Statutory building permits, municipal utility fees, and contractor insurance capitalized directly into building WIP (Account 150000), recovered via the Realized Sales Value factor.'}
-          </p>
-        </div>
-
-        {/* Action Button */}
-        {onOpenCostModal && (
-          <div className={styles.stageActions}>
-            <button
-              type="button"
-              onClick={() => onOpenCostModal()}
-              disabled={isMutating}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.6rem 1.15rem',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #d4af37 0%, #b8903e 100%)',
-                color: '#ffffff',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                border: 'none',
-                boxShadow: '0 2px 10px rgba(184, 144, 62, 0.25)',
-                cursor: isMutating ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Plus size={16} />
-              <span>{isAr ? '+ تسجيل رسم أو ترخيص حكومي جديد' : '+ New Statutory Fee / Permit'}</span>
-            </button>
-          </div>
-        )}
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'الضرائب والرسوم والتراخيص' : 'Taxes, Fees & Permits'}
+        subtitle={isAr ? 'رسوم التراخيص والتأمينات والضرائب المحمّلة على تكلفة المباني، وأرشيف ضريبة التصرفات العقارية.' : 'Permit fees, insurance and taxes added to building cost, plus the property disposition tax archive.'}
+        actions={onOpenCostModal ? (
+          <button type="button" className={styles.btnPrimary} onClick={() => onOpenCostModal()} disabled={isMutating}>
+            <Plus size={14} />
+            <span>{isAr ? 'تسجيل رسم أو ترخيص' : 'New fee or permit'}</span>
+          </button>
+        ) : undefined}
+      />
 
       {/* 2. DUAL MODE SEGMENTED BAR (Building Statutory WIP vs Real Estate Disposition Archive) */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '0.85rem',
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '16px',
-        padding: '0.75rem 1.15rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
-      }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.35rem',
-          background: '#f1f5f9',
-          padding: '0.25rem',
-          borderRadius: '10px',
-          border: '1px solid #e2e8f0'
-        }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <ZFSegmented
+          ariaLabel={isAr ? 'نوع السجل' : 'Register type'}
+          value={activeMode}
+          onChange={setActiveMode}
+          options={[
+            { id: 'capitalized_costs', label: isAr ? 'ضرائب وتراخيص المباني' : 'Building taxes & permits', count: allStatutoryCosts.length, icon: <HardHat size={14} /> },
+            { id: 'disposition_archive', label: isAr ? 'ضريبة التصرفات العقارية (٢.٥٪)' : 'Disposition tax (2.5%)', count: taxRecords.length, icon: <Receipt size={14} /> },
+          ]}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.74rem', color: 'var(--erp-text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <ShieldCheck size={14} color="#15803d" />
+            <span>
+              {activeMode === 'capitalized_costs' 
+                ? (isAr ? 'كل الرسوم الحكومية تضاف لرأس مال المبنى وتسترد تدريجياً عبر كشف حساب العقار' : 'Government fees capitalized into WIP ledger')
+                : (isAr ? 'أرشيف رسمي تاريخي لموقف ضريبة التصرفات والتحصيل' : 'Historical disposition tax ledger')}
+            </span>
+          </div>
           <button
             type="button"
-            onClick={() => setActiveMode('capitalized_costs')}
-            style={{
-              padding: '0.45rem 1.15rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeMode === 'capitalized_costs' ? '#ffffff' : 'transparent',
-              color: activeMode === 'capitalized_costs' ? '#0f172a' : '#64748b',
-              fontWeight: activeMode === 'capitalized_costs' ? 800 : 700,
-              fontSize: '0.82rem',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              boxShadow: activeMode === 'capitalized_costs' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
+            className={styles.btnSecondary}
+            onClick={() => setIsRecordModalOpen(true)}
           >
-            <HardHat size={15} color={activeMode === 'capitalized_costs' ? '#946f23' : '#64748b'} />
-            <span>{isAr ? 'ضرائب وتراخيص وتأمينات المباني (حساب 150000)' : 'Capitalized Statutory Costs (WIP 150000)'}</span>
-            <span style={{
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              padding: '0.1rem 0.45rem',
-              borderRadius: '999px',
-              background: activeMode === 'capitalized_costs' ? 'rgba(184, 144, 62, 0.12)' : '#e2e8f0',
-              color: activeMode === 'capitalized_costs' ? '#946f23' : '#64748b'
-            }}>
-              {allStatutoryCosts.length}
-            </span>
+            <Plus size={15} />
+            <span>{isAr ? 'تسجيل ضريبة تصرفات' : 'Record disposition tax'}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMode('disposition_archive')}
-            style={{
-              padding: '0.45rem 1.15rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeMode === 'disposition_archive' ? '#ffffff' : 'transparent',
-              color: activeMode === 'disposition_archive' ? '#0f172a' : '#64748b',
-              fontWeight: activeMode === 'disposition_archive' ? 800 : 700,
-              fontSize: '0.82rem',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              boxShadow: activeMode === 'disposition_archive' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Receipt size={15} color={activeMode === 'disposition_archive' ? '#946f23' : '#64748b'} />
-            <span>{isAr ? 'أرشيف ضريبة التصرفات العقارية للوحدات (٢.٥٪)' : 'Disposition Tax Archive (2.5%)'}</span>
-            <span style={{
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              padding: '0.1rem 0.45rem',
-              borderRadius: '999px',
-              background: activeMode === 'disposition_archive' ? 'rgba(184, 144, 62, 0.12)' : '#e2e8f0',
-              color: activeMode === 'disposition_archive' ? '#946f23' : '#64748b'
-            }}>
-              {taxRecords.length}
-            </span>
-          </button>
-        </div>
-
-        <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <ShieldCheck size={14} color="#15803d" />
-          <span>
-            {activeMode === 'capitalized_costs' 
-              ? (isAr ? 'كل الرسوم الحكومية تضاف لرأس مال المبنى وتسترد تدريجياً عبر كشف حساب العقار' : 'Government fees capitalized into WIP ledger')
-              : (isAr ? 'أرشيف رسمي تاريخي لموقف ضريبة التصرفات والتحصيل' : 'Historical disposition tax ledger')}
-          </span>
         </div>
       </div>
 
@@ -667,7 +654,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   setCostCurrentPage(1);
                 },
                 ariaLabel: isAr ? 'المشروع' : 'Project',
-                icon: <Building2 size={13} color="#946f23" />,
+                icon: <Building2 size={13} color="var(--erp-accent)" />,
                 options: [
                   { value: 'all', label: isAr ? 'كل المشاريع والعمارات' : 'All Projects' },
                   ...properties.map(p => ({
@@ -702,13 +689,13 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
             <div style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
-              borderRadius: '16px',
+              borderRadius: '12px',
               padding: '3.5rem 2rem',
               textAlign: 'center',
               color: '#64748b'
             }}>
-              <Landmark size={40} color="#946f23" style={{ margin: '0 auto 0.85rem' }} />
-              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: 800 }}>
+              <Landmark size={40} color="var(--erp-accent)" style={{ margin: '0 auto 0.85rem' }} />
+              <h3 style={{ margin: 0, color: 'var(--erp-text-title)', fontSize: '0.88rem', fontWeight: 700 }}>
                 {isAr ? 'لا توجد تكاليف حكومية أو تراخيص مطابقة للبحث' : 'No matching statutory costs found'}
               </h3>
               <p style={{ margin: '0.4rem 0 1.25rem', fontSize: '0.84rem' }}>
@@ -719,20 +706,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               {onOpenCostModal && (
                 <button
                   type="button"
+                  className={styles.btnPrimary}
                   onClick={() => onOpenCostModal(costPropertyFilter !== 'all' ? costPropertyFilter : undefined)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #d4af37 0%, #b8903e 100%)',
-                    color: '#ffffff',
-                    fontWeight: 800,
-                    fontSize: '0.8rem',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
                 >
                   <Plus size={15} />
                   <span>{isAr ? 'تسجيل ترخيص أو رسم الآن' : 'Record Permit Now'}</span>
@@ -797,7 +772,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: '180px' }}>
                             <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.84rem', lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Building2 size={13} color="#946f23" />
+                              <Building2 size={13} color="var(--erp-accent)" />
                               <span>{propTitle || (isAr ? 'مشروع عقاري' : 'Property')}</span>
                             </span>
                             {prop?.location && (
@@ -852,9 +827,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                             fontFamily: 'monospace',
                             fontSize: '0.75rem',
                             fontWeight: 800,
-                            color: '#946f23',
-                            background: 'rgba(184, 144, 62, 0.08)',
-                            border: '1px solid rgba(184, 144, 62, 0.25)',
+                            color: 'var(--erp-accent)',
+                            background: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                             padding: '0.2rem 0.5rem',
                             borderRadius: '6px',
                             display: 'inline-block'
@@ -880,7 +855,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
 
                         {/* 7. Paid Cost Amount */}
                         <td style={{ whiteSpace: 'nowrap', textAlign: isAr ? 'left' : 'right' }}>
-                          <strong style={{ fontWeight: 900, fontSize: '0.9rem', color: '#0f172a' }}>
+                          <strong style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
                             <MoneyCell amount={amountVal} isAr={isAr} highlight />
                           </strong>
                         </td>
@@ -933,25 +908,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
+                            className={styles.btnSecondary}
                             onClick={() => onOpenCostModal?.(item.property_id)}
-                            style={{
-                              background: '#ffffff',
-                              border: '1px solid #e2e8f0',
-                              color: '#946f23',
-                              borderRadius: '7px',
-                              padding: '0.3rem 0.65rem',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                              cursor: 'pointer',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                              transition: 'all 0.15s ease'
-                            }}
                             title={isAr ? 'عرض وتدقيق تكاليف العقار' : 'Audit Property Costs'}
                           >
-                            <Eye size={12} color="#946f23" />
+                            <Eye size={12} />
                             <span>{isAr ? 'تدقيق' : 'Audit'}</span>
                           </button>
                         </td>
@@ -977,12 +938,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                     style={{
                       background: '#ffffff',
                       border: '1.5px solid #cbd5e1',
-                      borderRadius: '16px',
+                      borderRadius: '12px',
                       padding: '1.35rem',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '1rem',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
                       cursor: onOpenCostModal ? 'pointer' : 'default',
                       transition: 'all 0.15s ease'
                     }}
@@ -1024,8 +984,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
 
                     {/* Building & Item Name */}
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#946f23', fontWeight: 800 }}>
-                        <Building2 size={13} color="#946f23" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
+                        <Building2 size={13} color="var(--erp-accent)" />
                         <span>{propTitle || (isAr ? 'مشروع عقاري' : 'Project')}</span>
                         {prop?.location && (
                           <>
@@ -1034,7 +994,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                           </>
                         )}
                       </div>
-                      <h3 style={{ margin: '0.4rem 0 0', fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                      <h3 style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--erp-text-title)', lineHeight: 1.4 }}>
                         {item.item_name_ar}
                       </h3>
                       {item.supplier_contractor && (
@@ -1059,7 +1019,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                           {isAr ? 'المبلغ المسدد بالدفاتر:' : 'Capitalized Amount:'}
                         </span>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem' }}>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
                           <MoneyCell amount={amountVal} isAr={isAr} highlight />
                         </div>
                       </div>
@@ -1086,9 +1046,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       <span style={{ color: '#64748b', fontFamily: 'monospace' }}>
                         {item.invoice_ref ? `#${item.invoice_ref}` : item.logged_date}
                       </span>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#946f23', fontWeight: 800 }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
                         <span>{isAr ? 'تدقيق تكاليف المبنى' : 'Audit Lifecycle'}</span>
-                        <ArrowUpRight size={13} color="#946f23" />
+                        <ArrowUpRight size={13} color="var(--erp-accent)" />
                       </div>
                     </div>
                   </div>
@@ -1129,11 +1089,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               value={archiveKpis.totalTax.formatEGP(isAr)}
               icon={<Landmark size={20} />}
               accentColor="gold"
-              progress={archiveKpis.totalTax.isZero() ? 0 : archiveKpis.remittedTax.div(archiveKpis.totalTax).times(100).toFixed(1)}
+              progress={archiveKpis.totalTax.isZero() ? 0 : archiveKpis.remittedTax.times(100).div(archiveKpis.totalTax).toFixed(1)}
               progressColor="#10b981"
               badge={{ text: `${archiveKpis.totalCount} ${isAr ? 'شقة وعقد' : 'tax records'}`, variant: 'gold' }}
               subtitleLabel={isAr ? 'المسدد فعلياً' : 'Settlement Ratio'}
-              subtitleValue={`${archiveKpis.totalTax.isZero() ? '0' : archiveKpis.remittedTax.div(archiveKpis.totalTax).times(100).toFixed(1)}% (${archiveKpis.remittedTax.formatEGP(isAr)})`}
+              subtitleValue={`${archiveKpis.totalTax.isZero() ? '0' : archiveKpis.remittedTax.times(100).div(archiveKpis.totalTax).toFixed(1)}% (${archiveKpis.remittedTax.formatEGP(isAr)})`}
             />
 
             <div className={styles.telemetryStack}>
@@ -1212,6 +1172,16 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
             onResetFilters={handleResetArchiveFilters}
             viewMode={archiveViewMode}
             onViewModeChange={(mode) => setArchiveViewMode(mode as any)}
+            customActions={
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                onClick={() => setIsRecordModalOpen(true)}
+              >
+                <Plus size={14} />
+                <span>{isAr ? 'تسجيل ضريبة' : 'Record Tax'}</span>
+              </button>
+            }
             isAr={isAr}
           />
 
@@ -1220,13 +1190,13 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
             <div style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
-              borderRadius: '16px',
+              borderRadius: '12px',
               padding: '3rem 2rem',
               textAlign: 'center',
               color: '#64748b'
             }}>
-              <Landmark size={36} color="#946f23" style={{ margin: '0 auto 0.75rem' }} />
-              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
+              <Landmark size={36} color="var(--erp-accent)" style={{ margin: '0 auto 0.75rem' }} />
+              <h3 style={{ margin: 0, color: 'var(--erp-text-title)', fontSize: '0.88rem', fontWeight: 700 }}>
                 {isAr ? 'مفيش ضرائب أو رسوم مطابقة للبحث أو الفلتر' : 'No matching tax records found'}
               </h3>
               <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
@@ -1355,7 +1325,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis'
                               }}>
-                                <Building2 size={12} color="#946f23" style={{ flexShrink: 0 }} />
+                                <Building2 size={12} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                                 <span 
                                   style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                                   title={displayUnit}
@@ -1375,7 +1345,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 <div style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                   <FileText size={11} color="#94a3b8" />
                                   <span>{isAr ? 'عقد رقم: ' : 'Contract #'}</span>
-                                  <span style={{ fontWeight: 700, color: '#946f23' }}>
+                                  <span style={{ fontWeight: 700, color: 'var(--erp-accent)' }}>
                                     #{linkedContract.contract_number}
                                   </span>
                                 </div>
@@ -1400,20 +1370,20 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 fontVariantNumeric: 'tabular-nums',
                                 fontWeight: 800,
                                 fontSize: '0.68rem',
-                                color: '#946f23',
-                                background: 'rgba(184, 144, 62, 0.08)',
-                                border: '1px solid rgba(184, 144, 62, 0.25)',
+                                color: 'var(--erp-accent)',
+                                background: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+                                border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                                 padding: '0.12rem 0.4rem',
                                 borderRadius: '4px'
                               }}>
-                                {D(t.tax_rate).times(100).toFixed(1)}%
+                                {D(100).times(t.tax_rate || '0').toFixed(1)}%
                               </span>
                             </div>
                           </td>
 
                           {/* 6. Total Price with Tax */}
                           <td style={{ whiteSpace: 'nowrap', textAlign: isAr ? 'left' : 'right' }}>
-                            <strong style={{ fontWeight: 900, color: '#0f172a' }}>
+                            <strong style={{ fontWeight: 800, color: '#0f172a' }}>
                               <MoneyCell amount={totalVal} isAr={isAr} />
                             </strong>
                           </td>
@@ -1443,7 +1413,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                               {!isRemitted && (
                                 <button
                                   type="button"
-                                  onClick={() => onRemitTax(t.tax_id)}
+                                  onClick={() => { setRemitSource('101000'); setRemitTarget(t); }}
                                   disabled={isMutating}
                                   className={styles.settleBtn}
                                   style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}
@@ -1455,25 +1425,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                               )}
                               <button
                                 type="button"
+                                className={styles.btnSecondary}
                                 onClick={() => onInspectTax(t)}
-                                style={{
-                                  background: '#ffffff',
-                                  border: '1px solid #e2e8f0',
-                                  color: '#946f23',
-                                  borderRadius: '7px',
-                                  padding: '0.3rem 0.65rem',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 800,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  cursor: 'pointer',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                                  transition: 'all 0.15s ease'
-                                }}
                                 title={isAr ? 'عرض التفاصيل والإشعار' : 'Inspect Assessment'}
                               >
-                                <Eye size={12} color="#946f23" />
+                                <Eye size={12} />
                                 <span>{isRemitted ? (isAr ? 'عرض الإيصال' : 'Receipt') : (isAr ? 'تفاصيل' : 'Inspect')}</span>
                               </button>
                             </div>
@@ -1520,12 +1476,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   style={{
                     background: '#ffffff',
                     border: '1.5px solid #cbd5e1',
-                    borderRadius: '16px',
+                    borderRadius: '12px',
                     padding: '1.35rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '1rem',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
                   }}
@@ -1565,11 +1520,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   </div>
 
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                    <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--erp-text-title)', lineHeight: 1.4 }}>
                       {buyerDisplayName}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#64748b', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                      <Building2 size={12} color="#946f23" style={{ flexShrink: 0 }} />
+                      <Building2 size={12} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                       <span style={{ fontWeight: 700, color: '#334155' }}>
                         {displayUnit}
                       </span>
@@ -1584,7 +1539,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                           <span>•</span>
                           <span style={{
                             fontVariantNumeric: 'tabular-nums',
-                            color: '#946f23',
+                            color: 'var(--erp-accent)',
                             fontWeight: 700,
                             whiteSpace: 'nowrap',
                             direction: 'ltr',
@@ -1610,7 +1565,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                         {isAr ? 'قيمة الضريبة والرسوم:' : 'Tax Assessment Amount:'}
                       </span>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem' }}>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
                         <MoneyCell amount={t.tax_amount} isAr={isAr} highlight />
                       </div>
                     </div>
@@ -1618,8 +1573,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                         {isAr ? 'النسبة:' : 'Rate:'}
                       </span>
-                      <strong style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
-                        {D(t.tax_rate).times(100).toFixed(1)}%
+                      <strong style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                        {D(100).times(t.tax_rate || '0').toFixed(1)}%
                       </strong>
                     </div>
                   </div>
@@ -1641,7 +1596,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onRemitTax(t.tax_id);
+                          setRemitSource('101000');
+                          setRemitTarget(t);
                         }}
                         disabled={isMutating}
                         className={styles.settleBtn}
@@ -1656,9 +1612,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       </span>
                     )}
 
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#946f23', fontSize: '0.74rem', fontWeight: 800 }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--erp-accent)', fontSize: '0.74rem', fontWeight: 800 }}>
                       <span>{isAr ? 'عرض التفاصيل' : 'Inspect'}</span>
-                      <ArrowUpRight size={13} color="#946f23" />
+                      <ArrowUpRight size={13} color="var(--erp-accent)" />
                     </div>
                   </div>
                 </div>
@@ -1684,6 +1640,289 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
         />
         </>
       )}
+
+      {/* Manual Tax Recording Modal */}
+      <ZFModalShell
+        isOpen={isRecordModalOpen}
+        onClose={() => setIsRecordModalOpen(false)}
+        title={isAr ? 'تسجيل ضريبة أو رسم يدوي' : 'Record Manual Tax / Fee'}
+        subtitle={isAr ? 'إثبات التزام ضريبي على الوحدة واستحقاقه على حساب 204000' : 'Record a unit tax and accrue it to liability 204000'}
+        icon={<Receipt size={18} color="var(--erp-accent)" />}
+        maxWidth="560px"
+        isAr={isAr}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+            <button
+              type="button"
+              className={styles.btnSecondary}
+              onClick={() => setIsRecordModalOpen(false)}
+              disabled={isSubmittingRecord}
+            >
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              onClick={handleSubmitRecordTax}
+              disabled={isSubmittingRecord || !recordContractId || !recordTaxAmount}
+              style={{
+                opacity: isSubmittingRecord || !recordContractId || !recordTaxAmount ? 0.6 : 1
+              }}
+            >
+              <CheckCircle2 size={15} />
+              <span>{isSubmittingRecord ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ الضريبة' : 'Save Tax')}</span>
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmitRecordTax} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+          {/* Contract Selector */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              {isAr ? 'العقد والوحدة *' : 'Contract & Unit *'}
+            </label>
+            <select
+              value={recordContractId}
+              onChange={(e) => handleContractChange(e.target.value)}
+              required
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.85rem',
+                color: '#0f172a'
+              }}
+            >
+              <option value="">{isAr ? '-- اختر العقد --' : '-- Select Contract --'}</option>
+              {activeContracts.map(c => (
+                <option key={c.contract_id} value={c.contract_id}>
+                  {c.contract_number ? `#${c.contract_number} - ` : ''}{c.buyer_name} ({c.unit_id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tax Type with Suggestions */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              {isAr ? 'نوع الضريبة أو الرسم *' : 'Tax / Fee Type *'}
+            </label>
+            <input
+              type="text"
+              list="manual-tax-type-suggestions"
+              value={recordTaxType}
+              onChange={(e) => setRecordTaxType(e.target.value)}
+              placeholder={isAr ? 'مثال: ضريبة تصرفات عقارية ٢.٥٪، دمغة نسبية، أخرى...' : 'e.g. Real estate disposal tax 2.5%, Stamp duty, Other'}
+              required
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.85rem',
+                color: '#0f172a'
+              }}
+            />
+            <datalist id="manual-tax-type-suggestions">
+              <option value={isAr ? 'ضريبة تصرفات عقارية ٢.٥٪' : 'Real estate disposal tax 2.5%'} />
+              <option value={isAr ? 'دمغة نسبية' : 'Stamp duty'} />
+              <option value={isAr ? 'رسوم تنمية وتطوير' : 'Municipal Development Fee'} />
+              <option value={isAr ? 'ضريبة عقارية (عوايد)' : 'Real Estate Property Tax'} />
+              <option value={isAr ? 'رسوم أخرى' : 'Other'} />
+            </datalist>
+          </div>
+
+          {/* Base & Rate in Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'الوعاء الخاضع للضريبة (ج.م)' : 'Taxable Base (EGP)'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={recordTaxableBase}
+                onChange={(e) => handleBaseChange(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  color: '#0f172a',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'نسبة الضريبة (%)' : 'Tax Rate (%)'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={recordTaxRate}
+                onChange={(e) => handleRateChange(e.target.value)}
+                placeholder="2.5"
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  color: '#0f172a',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Amount & Date in Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'قيمة الضريبة المطلوبة (ج.م) *' : 'Tax Amount (EGP) *'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={recordTaxAmount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                placeholder="0.00"
+                required
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'تاريخ الاستحقاق/التسجيل' : 'Date'}
+              </label>
+              <input
+                type="date"
+                value={recordDate}
+                onChange={(e) => setRecordDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  color: '#0f172a'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              {isAr ? 'ملاحظات وتفاصيل' : 'Notes'}
+            </label>
+            <textarea
+              rows={2}
+              value={recordNotes}
+              onChange={(e) => setRecordNotes(e.target.value)}
+              placeholder={isAr ? 'ملاحظات إضافية بخصوص الرسم أو التسجيل...' : 'Additional notes regarding tax assessment...'}
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.85rem',
+                color: '#0f172a',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{
+            fontSize: '0.74rem',
+            color: '#64748b',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '0.6rem 0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <ShieldCheck size={14} color="#15803d" />
+            <span>
+              {isAr 
+                ? 'تسجيل الضريبة ينشئ قيد استحقاق (مدين 604000 / دائن 204000)، ويُقفل الالتزام عند السداد الفعلي من الخزينة أو البنك.'
+                : 'Recording posts an accrual (Dr 604000 / Cr 204000); the liability is cleared when the tax is actually paid from Safe or Bank.'}
+            </span>
+          </div>
+        </form>
+      </ZFModalShell>
+      {/* Tax Remittance Confirmation */}
+      <ZFModalShell
+        isOpen={!!remitTarget}
+        onClose={() => setRemitTarget(null)}
+        title={isAr ? 'تأكيد سداد الضريبة' : 'Confirm Tax Payment'}
+        subtitle={isAr ? 'يقفل التزام 204000 مقابل الخزينة أو البنك' : 'Clears liability 204000 against Safe or Bank'}
+        icon={<Receipt size={18} color="var(--erp-accent)" />}
+        maxWidth="440px"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+            <button
+              type="button"
+              className={styles.btnSecondary}
+              onClick={() => setRemitTarget(null)}
+              disabled={isMutating}
+            >
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              disabled={isMutating || !remitTarget}
+              onClick={async () => { if (!remitTarget) return; await onRemitTax(remitTarget.tax_id, remitSource); setRemitTarget(null); }}
+            >
+              {isAr ? 'تأكيد السداد' : 'Confirm Payment'}
+            </button>
+          </div>
+        }
+      >
+        {remitTarget && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>{isAr ? 'نوع الضريبة' : 'Tax type'}</span>
+              <strong style={{ color: '#0f172a' }}>{remitTarget.tax_type}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>{isAr ? 'المبلغ' : 'Amount'}</span>
+              <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}><MoneyCell amount={remitTarget.tax_amount} isAr={isAr} /></strong>
+            </div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', color: '#334155', fontWeight: 600 }}>
+              {isAr ? 'مصدر السداد' : 'Paid from'}
+              <select value={remitSource} onChange={(e) => setRemitSource(e.target.value as '101000' | '102000')}
+                style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 0.6rem', fontSize: '0.85rem', background: '#ffffff', color: '#0f172a' }}>
+                <option value="101000">{isAr ? 'الخزينة الرئيسية (101000) — نقدي' : 'Main Safe (101000) — Cash'}</option>
+                <option value="102000">{isAr ? 'الحساب البنكي (102000) — إنستاباي/تحويل' : 'Bank (102000) — InstaPay / transfer'}</option>
+              </select>
+            </label>
+          </div>
+        )}
+      </ZFModalShell>
     </div>
   );
 };

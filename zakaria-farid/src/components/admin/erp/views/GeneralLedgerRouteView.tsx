@@ -50,6 +50,7 @@ export function GeneralLedgerRouteView() {
       onExportExcel={erp.handleExportExcel}
       onOpenProjectExpense={() => erp.setShowProjectExpenseModal(true)}
       onTogglePeriodStatus={(periodId, newStatus) => erp.handleTogglePeriodStatus(periodId, newStatus)}
+      onCloseFiscalYear={(year) => erp.handleCloseFiscalYear(year)}
     />
   );
 }

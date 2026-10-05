@@ -38,3 +38,8 @@ zakaria-farid/chrome/
 graphify-out/
 zakaria-farid/graphify-out/
 
+.agents/db-backups/
+
+# Local agent tooling (nested repos, not part of the app)
+.agents/liquid-glass-skill/
+.agents/plugins/

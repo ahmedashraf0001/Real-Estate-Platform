@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'أجندة الشيكات والتحصيلات | FIN-OS' : 'Installment Dues & PDC Vault | FIN-OS',
+    title: isAr ? 'أجندة المستحقات' : 'Dues agenda',
   };
 }
 

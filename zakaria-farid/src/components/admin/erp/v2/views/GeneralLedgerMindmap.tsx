@@ -355,12 +355,12 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               width: '46px',
               height: '46px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
+              background: 'linear-gradient(135deg, var(--erp-accent) 0%, var(--erp-accent) 100%)',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(148, 111, 35, 0.3)',
+              boxShadow: '0 4px 12px color-mix(in srgb, var(--erp-accent) 30%, transparent)',
               marginBottom: '0.45rem'
             }}>
               <Scale size={22} />
@@ -398,15 +398,15 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#946f23' }} />
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#946f23' }}>
+                <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: 'var(--erp-accent)' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent)' }}>
                   {isAr ? 'مصادر الفلوس والالتزامات (الفلوس دي جاية منين ومين له عندنا)' : 'Financing & Liabilities'}
                 </span>
               </div>
               <span style={{
                 fontSize: '0.66rem',
                 fontWeight: 800,
-                color: '#946f23',
+                color: 'var(--erp-accent)',
                 background: 'rgba(184, 144, 62, 0.12)',
                 padding: '0.15rem 0.5rem',
                 borderRadius: '6px'
@@ -419,7 +419,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               <span style={{ fontSize: '1.6rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
                 {formatMoney(balances.totalFinancing)}
               </span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#946f23' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--erp-accent)' }}>
                 {isAr ? 'ج.م' : 'EGP'}
               </span>
             </div>
@@ -591,7 +591,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               borderRadius: '10px',
               background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.14) 0%, rgba(184, 144, 62, 0.04) 100%)',
               border: '1px solid rgba(184, 144, 62, 0.25)',
-              color: '#946f23',
+              color: 'var(--erp-accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -607,7 +607,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 800,
-                  color: '#946f23',
+                  color: 'var(--erp-accent)',
                   background: 'rgba(184, 144, 62, 0.08)',
                   border: '1px solid rgba(184, 144, 62, 0.2)',
                   padding: '0.12rem 0.55rem',
@@ -633,7 +633,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             borderRadius: '8px',
             border: '1px solid #e2e8f0'
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#946f23' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--erp-accent)' }} />
             <span>{isAr ? 'اضغط على أي مرحلة لعرض حساباتها وقيودها بالأسفل' : 'Click any stage to inspect dossier'}</span>
           </div>
         </div>
@@ -701,7 +701,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               amount: balances.recognizedRevenue,
               subtext: isAr ? 'عقود تم تسليم وحداتها للمشترين رسمياً وتحقيق أرباحها' : 'Realized revenue on delivered contracts',
               icon: Key,
-              accentColor: '#946f23',
+              accentColor: 'var(--erp-accent)',
               badgeBg: 'rgba(184, 144, 62, 0.08)',
               badgeText: '#946f23',
               badgeBorder: 'rgba(184, 144, 62, 0.25)'
@@ -742,7 +742,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                       width: '22px',
                       height: '22px',
                       borderRadius: '50%',
-                      background: isSelected ? '#946f23' : '#f1f5f9',
+                      background: isSelected ? 'var(--erp-accent)' : '#f1f5f9',
                       color: isSelected ? '#ffffff' : '#475569',
                       fontSize: '0.68rem',
                       fontWeight: 800,
@@ -756,7 +756,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                     <span style={{
                       fontSize: '0.68rem',
                       fontWeight: 800,
-                      color: isSelected ? '#946f23' : step.badgeText,
+                      color: isSelected ? 'var(--erp-accent)' : step.badgeText,
                       background: isSelected ? 'rgba(184, 144, 62, 0.1)' : step.badgeBg,
                       border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.25)' : step.badgeBorder}`,
                       padding: '0.12rem 0.45rem',
@@ -770,7 +770,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                     fontFamily: 'monospace, tabular-nums',
                     fontSize: '0.66rem',
                     fontWeight: 700,
-                    color: isSelected ? '#946f23' : '#64748b',
+                    color: isSelected ? 'var(--erp-accent)' : '#64748b',
                     background: isSelected ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
                     border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.2)' : '#e2e8f0'}`,
                     padding: '0.1rem 0.4rem',
@@ -790,7 +790,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                     borderRadius: '10px',
                     background: isSelected ? 'rgba(184, 144, 62, 0.12)' : '#f8fafc',
                     border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.25)' : '#e2e8f0'}`,
-                    color: isSelected ? '#946f23' : step.accentColor,
+                    color: isSelected ? 'var(--erp-accent)' : step.accentColor,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -818,7 +818,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                       }}>
                         {formatMoney(step.amount)}
                       </span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isSelected ? '#946f23' : '#64748b' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isSelected ? 'var(--erp-accent)' : '#64748b' }}>
                         {isAr ? 'ج.م' : 'EGP'}
                       </span>
                     </div>
@@ -841,7 +841,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                     <span style={{
                       fontSize: '0.62rem',
                       fontWeight: 800,
-                      color: '#946f23',
+                      color: 'var(--erp-accent)',
                       background: 'rgba(184, 144, 62, 0.12)',
                       padding: '0.1rem 0.35rem',
                       borderRadius: '4px'
@@ -1139,7 +1139,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               onClick={() => setSelectedCode('203000')}
               style={{
                 background: selectedCode === '203000' ? 'rgba(184, 144, 62, 0.04)' : '#ffffff',
-                border: `1.5px solid ${selectedCode === '203000' ? '#946f23' : '#e2e8f0'}`,
+                border: `1.5px solid ${selectedCode === '203000' ? 'var(--erp-accent)' : '#e2e8f0'}`,
                 borderRadius: '14px',
                 padding: '1.1rem 1.25rem',
                 cursor: 'pointer',
@@ -1157,7 +1157,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                     height: '36px',
                     borderRadius: '10px',
                     background: 'rgba(184, 144, 62, 0.1)',
-                    color: '#946f23',
+                    color: 'var(--erp-accent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
@@ -1172,7 +1172,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                       <span style={{
                         fontSize: '0.68rem',
                         fontWeight: 800,
-                        color: '#946f23',
+                        color: 'var(--erp-accent)',
                         background: 'rgba(184, 144, 62, 0.1)',
                         padding: '0.1rem 0.4rem',
                         borderRadius: '4px'
@@ -1190,7 +1190,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                   <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                     {formatMoney(balances.customerAdvances)}
                   </span>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#946f23', marginInlineStart: '0.3rem' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--erp-accent)', marginInlineStart: '0.3rem' }}>
                     {isAr ? 'ج.م' : 'EGP'}
                   </span>
                 </div>
@@ -1203,7 +1203,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 700,
-                  color: '#946f23',
+                  color: 'var(--erp-accent)',
                   background: '#fefdfa',
                   border: '1px solid rgba(184, 144, 62, 0.25)',
                   padding: '0.15rem 0.5rem',
@@ -1339,7 +1339,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                     onClick={() => setSelectedCode(item.code)}
                     style={{
                       background: selectedCode === item.code ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
-                      border: `1px solid ${selectedCode === item.code ? '#946f23' : '#e2e8f0'}`,
+                      border: `1px solid ${selectedCode === item.code ? 'var(--erp-accent)' : '#e2e8f0'}`,
                       borderRadius: '8px',
                       padding: '0.55rem 0.75rem',
                       cursor: 'pointer',
@@ -1389,7 +1389,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                   fontVariantNumeric: 'tabular-nums',
                   fontSize: '0.78rem',
                   fontWeight: 900,
-                  color: '#946f23',
+                  color: 'var(--erp-accent)',
                   background: 'rgba(184, 144, 62, 0.1)',
                   border: '1px solid rgba(184, 144, 62, 0.3)',
                   padding: '0.15rem 0.55rem',
@@ -1400,7 +1400,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 800,
-                  color: selectedInfo.isDebitNormal ? '#15803d' : '#946f23',
+                  color: selectedInfo.isDebitNormal ? '#15803d' : 'var(--erp-accent)',
                   background: selectedInfo.isDebitNormal ? '#f0fdf4' : '#fdfbf7',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '4px'
@@ -1419,7 +1419,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               height: '32px',
               borderRadius: '8px',
               background: 'rgba(184, 144, 62, 0.08)',
-              color: '#946f23',
+              color: 'var(--erp-accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -1444,7 +1444,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               <span style={{ fontSize: '1.7rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
                 {formatMoney(selectedInfo.netBalance)}
               </span>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--erp-accent)' }}>
                 {isAr ? 'ج.م' : 'EGP'}
               </span>
             </div>
@@ -1453,14 +1453,14 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
           {/* Egyptian Real Estate Business Role */}
           <div style={{
             background: 'rgba(184, 144, 62, 0.05)',
-            borderInlineStart: '3px solid #946f23',
+            borderInlineStart: '3px solid var(--erp-accent)',
             padding: '0.75rem 0.9rem',
             borderRadius: '0 8px 8px 0',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.35rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#946f23', fontSize: '0.72rem', fontWeight: 800 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--erp-accent)', fontSize: '0.72rem', fontWeight: 800 }}>
               <Info size={13} />
               <span>{isAr ? 'دوره في شغل وعقارات منيا القمح' : 'Business Role in Minya al-Qamh'}</span>
             </div>
@@ -1488,7 +1488,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', borderInlineStart: '1px solid #f1f5f9', borderInlineEnd: '1px solid #f1f5f9' }}>
               <span style={{ fontSize: '0.66rem', color: '#64748b' }}>{isAr ? 'إجمالي الدائن' : 'Credits'}</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#946f23', direction: 'ltr', marginTop: '2px' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--erp-accent)', direction: 'ltr', marginTop: '2px' }}>
                 {formatMoney(selectedInfo.stats.credits)}
               </span>
             </div>
@@ -1509,7 +1509,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               }}
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
+                background: 'linear-gradient(135deg, var(--erp-accent) 0%, var(--erp-accent) 100%)',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '10px',
@@ -1521,7 +1521,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.45rem',
-                boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)',
+                boxShadow: '0 2px 8px color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                 transition: 'all 0.15s ease'
               }}
             >
@@ -1621,7 +1621,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                           <span style={{
                             fontSize: '0.76rem',
                             fontWeight: 800,
-                            color: isDebit ? '#15803d' : '#946f23'
+                            color: isDebit ? '#15803d' : 'var(--erp-accent)'
                           }}>
                             {isDebit ? '+' : '-'}{formatMoney(amount || '0')}
                           </span>

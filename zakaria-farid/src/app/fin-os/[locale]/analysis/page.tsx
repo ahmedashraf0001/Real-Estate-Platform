@@ -9,9 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr 
-      ? 'تحليل العقارات ودورة الحياة والجدوى | FIN-OS' 
-      : 'Property Lifecycle & Investment Analysis | FIN-OS',
+    title: isAr ? 'تحليل العقارات' : 'Property analysis',
   };
 }
 

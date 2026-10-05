@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Property } from '@/lib/supabase/types';
-import { ERPPartnerTransaction } from '../types';
+import { ERPPartnerTransaction, ERPPropertyCostItem } from '../types';
 import { 
   computeDynamicBuildingCapital,
   executeFullInternalBuyout,
@@ -10,6 +10,23 @@ import {
   normalizePropertySplits
 } from '../partnersEngine';
 import { PRIMARY_DEVELOPER_NAME } from '../partnersDirectory';
+
+/** One recorded cost item: partner capital owed is a share of recorded costs (user-confirmed 2026-10-05). */
+const recordedCosts = (propertyId: string, total: string): ERPPropertyCostItem[] => [{
+  item_id: `cost-${propertyId}`,
+  property_id: propertyId,
+  category: 'civil_structure',
+  phase: 'structural_skeleton',
+  item_name_ar: 'تكلفة مسجلة',
+  item_name_en: 'Recorded cost',
+  quantity: 1,
+  unit: 'lump',
+  unit_cost_egp: total,
+  total_cost_egp: total,
+  logged_date: '2026-01-01',
+  logged_by: 'test',
+  status: 'verified',
+} as ERPPropertyCostItem];
 
 describe('Partnership Management & Reallocation Workflows (§14.C & INV-4.2)', () => {
   
@@ -178,7 +195,7 @@ describe('Partnership Management & Reallocation Workflows (§14.C & INV-4.2)', (
   // 3. DYNAMIC CAPITAL DERIVATION & ARREARS CALCULATION
   // --------------------------------------------------------------------------
   describe('Dynamic Capital Derivation & Matching Arrears', () => {
-    it('should accurately compute implied total capital and proportional arrears based on founder injection', () => {
+    it('should compute total capital from recorded costs and proportional arrears', () => {
       const building = createMockBuilding(); // 50% Founder, 30% Ahmed, 20% Hany
       
       // Founder injected 5,000,000 EGP into this building
@@ -229,7 +246,7 @@ describe('Partnership Management & Reallocation Workflows (§14.C & INV-4.2)', (
         }
       ];
 
-      const capInfo = computeDynamicBuildingCapital(building, transactions);
+      const capInfo = computeDynamicBuildingCapital(building, transactions, recordedCosts(building.id, '10000000.00'));
 
       assert.strictEqual(capInfo.founderInjectedEgp, '5000000.00');
       assert.strictEqual(capInfo.founderSharePct, 50);
@@ -254,7 +271,7 @@ describe('Partnership Management & Reallocation Workflows (§14.C & INV-4.2)', (
       assert.strictEqual(hanyStatus.hasArrears, false);
     });
 
-    it('should dynamically scale implied total capital when founder injects additional capital', () => {
+    it('should scale required capital with recorded costs', () => {
       const building = createMockBuilding();
       const transactions: ERPPartnerTransaction[] = [
         {
@@ -272,7 +289,7 @@ describe('Partnership Management & Reallocation Workflows (§14.C & INV-4.2)', (
         }
       ];
 
-      const capInfo = computeDynamicBuildingCapital(building, transactions);
+      const capInfo = computeDynamicBuildingCapital(building, transactions, recordedCosts(building.id, '20000000.00'));
       assert.strictEqual(capInfo.impliedTotalCapitalEgp, '20000000.00');
 
       const ahmedStatus = capInfo.partnerStatuses.find(p => p.partnerName === 'م. أحمد الشريف');

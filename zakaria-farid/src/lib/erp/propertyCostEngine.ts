@@ -7,7 +7,6 @@ import {
   CostPaymentTerm
 } from './types';
 import { Property } from '@/lib/supabase/types';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { D, Decimal, generateUUID } from './math';
 
 export interface CategoryMeta {
@@ -260,7 +259,7 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
  * for a list of properties, proportional to their actual built-up area and catalog specs.
  */
 export function generateMockPropertyCosts(properties?: Property[]): ERPPropertyCostItem[] {
-  const activeProps = (properties && properties.length > 0) ? properties : (FALLBACK_PROPERTIES as Property[]);
+  const activeProps = properties || [];
   const allCosts: ERPPropertyCostItem[] = [];
 
   activeProps.forEach((prop, propIndex) => {
@@ -980,12 +979,12 @@ export function calculateBuiltPropertySellingPrice({
   const sellingPrice = cost.plus(profit);
   const sellingPricePerM2 = sellingPrice.dividedBy(area);
 
-  const profitMarginOnCost = cost.isZero() ? D(0) : profit.dividedBy(cost).times(100);
-  const grossMargin = sellingPrice.isZero() ? D(0) : profit.dividedBy(sellingPrice).times(100);
+  const profitMarginOnCost = cost.isZero() ? D(0) : profit.times(100).dividedBy(cost);
+  const grossMargin = sellingPrice.isZero() ? D(0) : profit.times(100).dividedBy(sellingPrice);
   
   const marketVariance = marketM2.isZero() 
     ? D(0) 
-    : sellingPricePerM2.minus(marketM2).dividedBy(marketM2).times(100);
+    : sellingPricePerM2.minus(marketM2).times(100).dividedBy(marketM2);
 
   return {
     totalLoggedCost: cost.toFixed(2),

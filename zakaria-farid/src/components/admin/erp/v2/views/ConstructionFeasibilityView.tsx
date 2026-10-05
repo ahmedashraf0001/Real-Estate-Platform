@@ -3,7 +3,7 @@
 import React from 'react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPPropertyCostItem } from '@/lib/erp/types';
-import { ConstructionCostCalculator } from '../../ConstructionCostCalculator';
+import { CostPricingCalculator } from './calculator/CostPricingCalculator';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ConstructionFeasibilityViewProps {
@@ -22,19 +22,17 @@ export const ConstructionFeasibilityView: React.FC<ConstructionFeasibilityViewPr
   propertyCosts,
   initialPropertyId,
   onOpenAuditForProperty,
-  onOpenContractForProperty,
   onUpdateSellingPrice,
   onNavigateToTab,
   isAr = true
 }) => {
   return (
     <div className={styles.stageContainer}>
-      <ConstructionCostCalculator 
+      <CostPricingCalculator 
         properties={properties}
         propertyCosts={propertyCosts}
         initialPropertyId={initialPropertyId}
         onOpenAuditForProperty={onOpenAuditForProperty}
-        onOpenContractForProperty={onOpenContractForProperty}
         onUpdateSellingPrice={onUpdateSellingPrice}
         onNavigateToTab={onNavigateToTab}
         isAr={isAr}

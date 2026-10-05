@@ -1,0 +1,43 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md (Next.js has breaking changes; no Next API needed here).
+Fix 3 browser-verified P0 defects in ERP modals. Files in scope ONLY:
+  src/components/admin/erp/v2/modals/HandoverExecutionModal.tsx
+  src/components/admin/erp/v2/modals/CashCollectionReceiptModal.tsx
+  src/components/admin/erp/v2/modals/CostAdjustmentModal.tsx
+  src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx
+  src/components/admin/erp/v2/modals/NewContractWizardModal.tsx
+
+1. Rules-of-Hooks crashes (confirmed: opening Handover throws "React has detected a change in the order of Hooks"). Each file has an early `return null` BEFORE more hooks:
+   - HandoverExecutionModal.tsx: `if (!isOpen || !contract) return null;` ~line 134, then `useMemo` ~137.
+   - CashCollectionReceiptModal.tsx: early return ~59, `useMemo` ~71.
+   - CostAdjustmentModal.tsx: early return ~53, `useMemo` ~57.
+   Fix: move every hook above the early return (make hook bodies null-safe, e.g. `contract?.x`), keep the early return after the last hook. Do not change behavior otherwise.
+
+2. Wizard resets itself mid-entry (confirmed: expense wizard jumps back to step 1 within seconds and typed values vanish). Cause: the reset-on-open effect in ZFDirectExpenseModal.tsx (~131-141) depends on `underConstructionProperties`, which gets a new array reference on every background/realtime data refresh.
+   Fix: reset only when the modal transitions closed -> open (track previous isOpen with a ref, or key the reset on isOpen alone and read the latest properties via a ref). Same review for NewContractWizardModal.tsx reset effect (~line 226, deps include `applyPropertySelection`): it must not re-run while the modal stays open. Apply the same pattern.
+
+3. Installment-count selector ignored (confirmed: dropdown shows "4 Tranches" (options 4/8/12/16/20/24) but the preview AND the saved contract have 6 tranches). In NewContractWizardModal.tsx find the tranche-count state, its default, and the select options. Make the default one of the options and make the preview + persisted schedule use exactly the selected count. If the default 6 comes from somewhere (e.g. property or a constant), align it so the select shows the real value; add the missing option only if the product clearly needs it — report what you chose.
+   While there: the preview due dates drift by a day (e.g. 2027-07-03 while saved row is 2027-07-04) — preview and persisted dates must use the same month-add function; fix the preview to match the persisted logic.
+</task>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Another agent is editing OTHER files in this tree at the same time. Touch only the 5 files above. Ignore unrelated diffs/tsc errors in other files, but report them.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit
+  npx eslint <the 5 files>   (react-hooks/rules-of-hooks must report 0 in these files; no new errors vs HEAD)
+  git diff --stat -- <the 5 files>
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access.</action_safety>
+
+<structured_output_contract>
+1. Per item 1-3: what changed (file:line)
+2. Tranche-count decision
+3. Gates (tsc, eslint counts per file, rules-of-hooks count)
+4. Open questions
+</structured_output_contract>

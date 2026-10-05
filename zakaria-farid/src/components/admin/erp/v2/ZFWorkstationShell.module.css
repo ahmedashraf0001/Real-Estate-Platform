@@ -999,8 +999,8 @@
 }
 
 .navItemActive .itemBadge {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.2);
+  background: color-mix(in srgb, var(--erp-accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--erp-accent) 20%, transparent);
   color: var(--erp-accent, #2563eb);
 }
 
@@ -1505,7 +1505,7 @@
 
 .statPillSelect:focus {
   border-color: var(--erp-accent, #2563eb);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--erp-accent) 12%, transparent);
 }
 
 .statPillSelectIcon {
@@ -1582,7 +1582,7 @@
 
 .statFilterSelect:focus {
   border-color: var(--erp-accent, #2563eb);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--erp-accent) 12%, transparent);
 }
 
 /* Discrete Floating KPI Cards (Enterprise Blueprint Standard) */
@@ -2275,7 +2275,7 @@
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: #eff6ff;
+  background: var(--erp-accent-subtle);
   color: var(--erp-accent, #2563eb);
   border: 1px solid #e2e8f0;
   display: flex;
@@ -2863,7 +2863,7 @@
 .canonicalFilterSelect:focus,
 .tableSelect:focus {
   border-color: var(--erp-accent, #2563eb);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--erp-accent) 12%, transparent);
 }
 
 @keyframes tabContentEnter {
@@ -3098,9 +3098,9 @@
   font-size: 0.72rem;
   font-weight: 600;
   line-height: 1.2;
-  background: #eff6ff !important;
-  color: #2563eb !important;
-  border: 1px solid rgba(37, 99, 235, 0.15) !important;
+  background: var(--erp-accent-subtle) !important;
+  color: var(--erp-accent) !important;
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 15%, transparent) !important;
   white-space: nowrap;
 }
 
@@ -3300,7 +3300,7 @@
 }
 
 .tableFooterActionBtn:hover {
-  color: #1d4ed8;
+  color: var(--erp-accent-hover);
   text-decoration: underline;
 }
 
@@ -3476,7 +3476,7 @@
 }
 
 .scheduleHeaderActionBtnActive {
-  border-color: rgba(37, 99, 235, 0.25) !important;
+  border-color: color-mix(in srgb, var(--erp-accent) 25%, transparent) !important;
   color: var(--erp-accent, #2563eb) !important;
   background: var(--erp-accent-subtle, #eff6ff) !important;
 }
@@ -3978,7 +3978,7 @@
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: rgba(37, 99, 235, 0.08);
+  background: color-mix(in srgb, var(--erp-accent) 8%, transparent);
   color: var(--erp-accent, #2563eb);
   display: flex;
   align-items: center;
@@ -4358,6 +4358,57 @@
   border-color: #cbd5e1 !important;
 }
 
+/* Standard button geometry (DESIGN_SYSTEM §3): 34px tall, 8px radius, 0.8rem/600.
+   Variants: btnPrimary (accent), btnSecondary (outlined), btnDanger (destructive), btnGhost (quiet). */
+.btnPrimary, .btnSecondary, .btnDanger, .btnGhost {
+  min-height: 34px;
+  justify-content: center;
+  white-space: nowrap;
+  font-family: inherit;
+  line-height: 1;
+}
+.btnPrimary:disabled, .btnSecondary:disabled, .btnDanger:disabled, .btnGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btnPrimary:focus-visible, .btnSecondary:focus-visible, .btnDanger:focus-visible, .btnGhost:focus-visible {
+  outline: 2px solid var(--erp-accent);
+  outline-offset: 2px;
+}
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--erp-danger, #dc2626) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-shadow: none !important;
+}
+.btnDanger:hover { background: #b91c1c !important; }
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent !important;
+  color: var(--erp-text-body, #334155) !important;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  box-shadow: none !important;
+}
+.btnGhost:hover { background: var(--erp-border-subtle, #f1f5f9) !important; color: var(--erp-accent) !important; }
+.btnSm { min-height: 28px; padding: 0.3rem 0.65rem; font-size: 0.74rem; border-radius: 6px; }
+
 /* --------------------------------------------------------------------------
    4. ENFORCE MINIMAL ENTERPRISE THEME (NO DARK MODE OR GOLD BLEED)
    -------------------------------------------------------------------------- */
@@ -4428,8 +4479,8 @@
 
 :global([data-theme="dark"]) .dockAdminReturnBtn:hover {
   background: #263248;
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--erp-accent);
+  color: var(--erp-accent);
 }
 
 :global([data-theme="dark"]) .dock {
@@ -4463,7 +4514,7 @@
 
 :global([data-theme="dark"]) .dockItem:hover .dockItemIcon,
 :global([data-theme="dark"]) .dockItemActive .dockItemIcon {
-  color: #3b82f6;
+  color: var(--erp-accent);
 }
 
 :global([data-theme="dark"]) .dockBadge {
@@ -4473,9 +4524,9 @@
 }
 
 :global([data-theme="dark"]) .dockBadgeGold {
-  background: rgba(59, 130, 246, 0.18);
-  color: #93c5fd;
-  border-color: rgba(59, 130, 246, 0.35);
+  background: color-mix(in srgb, var(--erp-accent) 18%, transparent);
+  color: var(--erp-accent-hover);
+  border-color: color-mix(in srgb, var(--erp-accent) 35%, transparent);
 }
 
 :global([data-theme="dark"]) .dockBadgeEmerald {
@@ -4485,13 +4536,13 @@
 }
 
 :global([data-theme="dark"]) .academyBtn {
-  background: rgba(59, 130, 246, 0.12);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
+  background: color-mix(in srgb, var(--erp-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--erp-accent) 30%, transparent);
+  color: var(--erp-accent-hover);
 }
 
 :global([data-theme="dark"]) .academyBtn:hover {
-  background: rgba(59, 130, 246, 0.22);
+  background: color-mix(in srgb, var(--erp-accent) 22%, transparent);
   color: #ffffff;
 }
 
@@ -4531,12 +4582,12 @@
 }
 
 :global([data-theme="dark"]) .btnPrimary {
-  background: #2563eb;
+  background: var(--erp-accent);
   color: #ffffff;
 }
 
 :global([data-theme="dark"]) .btnPrimary:hover {
-  background: #1d4ed8;
+  background: var(--erp-accent-hover);
 }
 
 :global([data-theme="dark"]) .btnSecondary {
@@ -4557,12 +4608,12 @@
 }
 
 :global([data-theme="dark"]) .kpiCard:hover {
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
 }
 
 :global([data-theme="dark"]) .flagshipCard {
   background: linear-gradient(135deg, #1e2638 0%, #182030 100%);
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
 }
 
 :global([data-theme="dark"]) .doubleBezelCard {
@@ -4575,12 +4626,12 @@
 }
 
 :global([data-theme="dark"]) .doubleBezelCard:hover {
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
 }
 
 :global([data-theme="dark"]) .doubleBezelCard.flagshipCard {
   background: linear-gradient(135deg, #1e2638 0%, #182030 100%);
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
 }
 
 :global([data-theme="dark"]) .flagshipCard .doubleBezelInner {
@@ -4593,7 +4644,7 @@
 }
 
 :global([data-theme="dark"]) .compactTelemetryCard:hover {
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
 }
 
 :global([data-theme="dark"]) .kpiLabel {
@@ -4601,7 +4652,7 @@
 }
 
 :global([data-theme="dark"]) .flagshipLabel {
-  color: #60a5fa;
+  color: var(--erp-accent-hover);
 }
 
 :global([data-theme="dark"]) .kpiValue {
@@ -4825,8 +4876,8 @@
 
 .drawerTabBtnActive {
   background: #ffffff !important;
-  color: #2563eb !important;
-  border: 1px solid #dbeafe !important;
+  color: var(--erp-accent) !important;
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   font-weight: 700 !important;
 }
@@ -4949,7 +5000,7 @@
   font-weight: 700;
   color: var(--erp-accent, #2563eb);
   background: var(--erp-accent-subtle, #eff6ff);
-  border: 1px solid #bfdbfe;
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent);
   padding: 0.15rem 0.5rem;
   border-radius: 6px;
   display: inline-flex;
@@ -5381,24 +5432,24 @@
 
 .stageBreadcrumb .breadcrumbBrand,
 .stageBreadcrumb > span:first-child {
-  color: #2563eb;
+  color: var(--erp-accent);
   font-weight: 800;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
+  background: var(--erp-accent-subtle);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent);
   padding: 0.12rem 0.5rem;
   border-radius: 6px;
   letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.04);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--erp-accent) 4%, transparent);
   transition: all 0.15s ease;
   user-select: none;
 }
 
 .stageBreadcrumb .breadcrumbBrand:hover,
 .stageBreadcrumb > span:first-child:hover {
-  background: #dbeafe;
-  border-color: #bfdbfe;
+  background: color-mix(in srgb, var(--erp-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--erp-accent) 28%, transparent);
 }
 
 .stageBreadcrumb .breadcrumbDivider,
@@ -5421,7 +5472,7 @@
 
 .stageBreadcrumb .breadcrumbSection:hover,
 .stageBreadcrumb > span:last-child:hover {
-  color: #2563eb;
+  color: var(--erp-accent);
 }
 
 .stageBreadcrumb .breadcrumbSubSection {
@@ -5434,20 +5485,20 @@
 }
 
 .stageBreadcrumb .breadcrumbSubSection:hover {
-  color: #2563eb;
+  color: var(--erp-accent);
 }
 
 .stageBreadcrumb .breadcrumbIcon {
   display: inline-flex;
   align-items: center;
-  color: #2563eb;
+  color: var(--erp-accent);
 }
 
 :global([data-theme="dark"]) .stageBreadcrumb .breadcrumbBrand,
 :global([data-theme="dark"]) .stageBreadcrumb > span:first-child {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.12);
-  border-color: rgba(59, 130, 246, 0.32);
+  color: var(--erp-accent-hover);
+  background: color-mix(in srgb, var(--erp-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--erp-accent) 32%, transparent);
 }
 
 :global([data-theme="dark"]) .stageBreadcrumb .breadcrumbDivider,
@@ -5462,7 +5513,7 @@
 
 :global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSection:hover,
 :global([data-theme="dark"]) .stageBreadcrumb > span:last-child:hover {
-  color: #93c5fd;
+  color: var(--erp-accent-hover);
 }
 
 :global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSubSection {
@@ -5470,7 +5521,7 @@
 }
 
 :global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSubSection:hover {
-  color: #93c5fd;
+  color: var(--erp-accent-hover);
 }
 
 .stageTitle {
@@ -5559,13 +5610,13 @@
 
 .flagshipCard {
   background: #ffffff;
-  border: 1.5px solid #2563eb;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+  border: 1.5px solid var(--erp-accent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--erp-accent) 8%, transparent);
 }
 
 .flagshipCard:hover {
-  border-color: #1d4ed8;
-  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.12);
+  border-color: var(--erp-accent-hover);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--erp-accent) 12%, transparent);
 }
 
 .kpiHeader {
@@ -5582,7 +5633,7 @@
 }
 
 .flagshipLabel {
-  color: #2563eb;
+  color: var(--erp-accent);
   font-weight: 800;
 }
 
@@ -5748,13 +5799,13 @@
 
 .doubleBezelCard.flagshipCard {
   background: #ffffff;
-  border: 1.5px solid #2563eb;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+  border: 1.5px solid var(--erp-accent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--erp-accent) 8%, transparent);
 }
 
 .doubleBezelCard.flagshipCard:hover {
-  border-color: #1d4ed8;
-  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.12);
+  border-color: var(--erp-accent-hover);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--erp-accent) 12%, transparent);
 }
 
 .flagshipCard .doubleBezelInner {
@@ -5777,8 +5828,8 @@
 }
 
 .compactTelemetryCard:hover {
-  border-color: #2563eb;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+  border-color: var(--erp-accent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--erp-accent) 8%, transparent);
   transform: translateY(-1px);
 }
 
@@ -5920,9 +5971,9 @@
 }
 
 .radarAlertButton {
-  background: #2563eb;
+  background: var(--erp-accent);
   color: #ffffff;
-  border: 1px solid #1d4ed8;
+  border: 1px solid var(--erp-accent-hover);
   padding: 0.42rem 0.85rem;
   border-radius: 8px;
   font-size: 0.74rem;
@@ -5931,14 +5982,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--erp-accent) 15%, transparent);
   transition: all 0.15s ease;
 }
 
 .radarAlertButton:hover {
-  background: #1d4ed8;
+  background: var(--erp-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--erp-accent) 25%, transparent);
 }
 
 .radarAlertButtonCrit {
@@ -6192,12 +6243,12 @@
 
 .opsActionBtn:hover {
   transform: translateY(-2px);
-  border-color: #2563eb !important;
-  box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(0, 0, 0, 0.03);
+  border-color: var(--erp-accent) !important;
+  box-shadow: 0 8px 24px -4px color-mix(in srgb, var(--erp-accent) 12%, transparent), 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 .opsActionBtn:hover [data-action-title] {
-  color: #2563eb !important;
+  color: var(--erp-accent) !important;
 }
 
 .opsActionBtn:hover [data-action-icon] {
@@ -6205,14 +6256,14 @@
 }
 
 .opsActionBtnActive {
-  border-color: #2563eb !important;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22) !important;
-  background: #eff6ff !important;
+  border-color: var(--erp-accent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--erp-accent) 22%, transparent) !important;
+  background: var(--erp-accent-subtle) !important;
 }
 
 :global([data-theme="dark"]) .opsActionBtnActive {
-  background: rgba(37, 99, 235, 0.15) !important;
-  border-color: #3b82f6 !important;
+  background: color-mix(in srgb, var(--erp-accent) 15%, transparent) !important;
+  border-color: var(--erp-accent) !important;
 }
 
 /* Radar Recessed Bay */
@@ -6358,7 +6409,7 @@
 .auditedBalanceRibbon {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-top: 3px solid #2563eb;
+  border-top: 3px solid var(--erp-accent);
   color: #0f172a;
   border-radius: 14px;
   padding: 1.15rem 1.6rem;
@@ -6431,7 +6482,7 @@
 }
 
 .auditedEquityValue {
-  color: #2563eb;
+  color: var(--erp-accent);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
 }
@@ -6442,9 +6493,9 @@
   gap: 0.45rem;
   padding: 0.45rem 0.85rem;
   border-radius: 8px;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
-  color: #2563eb;
+  background: var(--erp-accent-subtle);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent);
+  color: var(--erp-accent);
   font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
@@ -6465,7 +6516,7 @@
 :global([data-theme="dark"]) .auditedBalanceRibbon {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   border: 1px solid #334155;
-  border-top: 3px solid #3b82f6;
+  border-top: 3px solid var(--erp-accent);
   color: #ffffff;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
@@ -6491,13 +6542,13 @@
 }
 
 :global([data-theme="dark"]) .auditedEquityValue {
-  color: #60a5fa;
+  color: var(--erp-accent-hover);
 }
 
 :global([data-theme="dark"]) .auditedStampBadge {
-  background: rgba(59, 130, 246, 0.18);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  color: #93c5fd;
+  background: color-mix(in srgb, var(--erp-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 40%, transparent);
+  color: var(--erp-accent-hover);
 }
 
 :global([data-theme="dark"]) .auditedEntryCount {
@@ -6525,9 +6576,9 @@
 
 .islandActionBtn:hover {
   background: #f8fafc;
-  border-color: #2563eb;
+  border-color: var(--erp-accent);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px -2px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 6px 16px -2px color-mix(in srgb, var(--erp-accent) 15%, transparent);
 }
 
 .islandIconBadge {
@@ -6545,9 +6596,9 @@
 }
 
 .islandActionBtn:hover .islandIconBadge {
-  background: #eff6ff;
-  border-color: #dbeafe;
-  color: #2563eb;
+  background: var(--erp-accent-subtle);
+  border-color: color-mix(in srgb, var(--erp-accent) 14%, transparent);
+  color: var(--erp-accent);
   transform: scale(1.08);
 }
 
@@ -6638,8 +6689,8 @@
 }
 
 .tabBtnActive .tabBadge {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--erp-accent-subtle);
+  color: var(--erp-accent);
 }
 
 .searchBox {
@@ -6659,8 +6710,8 @@
 }
 
 .searchBox:focus-within {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  border-color: var(--erp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--erp-accent) 14%, transparent);
 }
 
 .searchInput {
@@ -6922,8 +6973,8 @@
 }
 
 .sortSelect:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  border-color: var(--erp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--erp-accent) 14%, transparent);
 }
 
 .resetFilterBtn {
@@ -6950,9 +7001,9 @@
 }
 
 .filterCountBadge {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
+  background: var(--erp-accent-subtle);
+  color: var(--erp-accent);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent);
   border-radius: 9999px;
   font-size: 0.68rem;
   font-weight: 800;
@@ -6999,7 +7050,7 @@
 }
 
 :global([data-theme="dark"]) .sortSelect:focus {
-  border-color: #3b82f6;
+  border-color: var(--erp-accent);
 }
 
 :global([data-theme="dark"]) .resetFilterBtn {
@@ -7059,8 +7110,8 @@
 }
 
 .calcInputField:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  border-color: var(--erp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--erp-accent) 14%, transparent);
 }
 
 :global([data-theme="dark"]) .calcInputField {
@@ -7070,8 +7121,8 @@
 }
 
 :global([data-theme="dark"]) .calcInputField:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  border-color: var(--erp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--erp-accent) 25%, transparent);
 }
 
 .calcPresetPill {
@@ -7141,8 +7192,8 @@
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--erp-accent-subtle);
+  color: var(--erp-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7690,7 +7741,7 @@
   margin-inline-end: auto;
 }
 
-:global([class*="sideWidgetsContent"]) :global([class*="Header" i]) {
+:global([class*="sideWidgetsContent"]) :global([class*="Header" i]:not([class*="ZFPageHeader-module"])) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -8690,7 +8741,7 @@
   border-radius: 7px;
   background: var(--erp-accent-subtle, #eff6ff);
   color: var(--erp-accent, #2563eb);
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 18%, transparent);
   flex-shrink: 0;
 }
 
@@ -9252,5 +9303,13 @@
   background: var(--erp-accent-subtle, #fdf8ee);
   border-color: var(--erp-accent, #946f23);
 }
+
+.quickMenuAnchor { position: relative; }
+.quickMenu { position: absolute; inset-inline: 0; top: calc(100% + 6px); z-index: 50; min-width: 220px; display: flex; flex-direction: column; padding: 4px; background: var(--erp-bg-panel); border: 1px solid var(--erp-border); border-radius: 10px; }
+.quickMenuItem { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.55rem 0.6rem; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--erp-text-title); text-align: start; cursor: pointer; }
+.quickMenuItem:hover { background: var(--erp-border-subtle); }
+.quickMenuItem:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }
+.quickMenuItem svg { color: var(--erp-accent); flex-shrink: 0; }
+
 
 

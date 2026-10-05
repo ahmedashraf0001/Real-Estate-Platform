@@ -1,0 +1,94 @@
+ROLE: LEAF
+TRACK: SURFACE_UI
+TASK: calc-v1-visual-fixes — fix 5 browser-verified visual defects on the cost & pricing calculator page.
+
+<files>
+ALLOWED (edit only these):
+- src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx
+- src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css
+DENIED: every other file. Do not touch src/lib/erp/pricingCalculator.ts or any shared component (ZFPanel, ZFWorkstationSideWidgets, ZFKpiCard).
+</files>
+
+<defects>
+All measured in the browser at /fin-os/ar/calculator (RTL), property area 150 m², cost 100,000, market 20,000/m².
+
+D1. Scenario table: numeric header cells do not line up with their values.
+  Cause: `.table th { text-align: start }` (specificity 0,1,1) beats `.num { text-align: end }` (0,1,0).
+  th.num has direction:ltr so it renders left-aligned; td.num renders right-aligned. Measured: header "سعر المتر" at
+  the left of its column, value "667" at the right.
+  Fix (CSS): add after the `.num` rule:
+    .table th.num, .table td.num { text-align: end; }
+  Header and value must then sit on the same side in BOTH tables (scenarios + units).
+
+D2. Slider marker labels overlap the track and the thumb.
+  Measured: label boxes bottom = 601px, track top = 599px; thumb (18px) reaches ~593px. The value "20,000" is drawn over the thumb.
+  Fix (CSS):
+    .markerLabel: remove `top: -2.1rem`; use `top: auto; bottom: calc(100% + 14px);`
+    .markerLabelLow: `top: calc(100% + 14px); bottom: auto;`
+    .ladder padding: `3.1rem 0 3.1rem`
+  Keep the existing horizontal translateX centering rules for normal positions.
+
+D3. Edge marker labels overflow the track. Break-even at position 0% (its label "التعادل 667") sticks out 10px past the
+  track edge because it is centered on the marker.
+  Fix (TSX + CSS): in the markers .map, compute `pos` as today, then:
+    - pos <= 8  → label gets extra class `s.markerLabelEdgeStart`, style `{ insetInlineStart: `${pos}%` }`
+    - pos >= 92 → label gets extra class `s.markerLabelEdgeEnd`, style `{ insetInlineEnd: `${100 - pos}%` }` (no insetInlineStart)
+    - else unchanged.
+  CSS (must beat the `[dir='ltr'] .markerLabel` transform rule, so repeat with that selector):
+    .markerLabel.markerLabelEdgeStart, [dir='ltr'] .markerLabel.markerLabelEdgeStart { transform: none; align-items: flex-start; }
+    .markerLabel.markerLabelEdgeEnd, [dir='ltr'] .markerLabel.markerLabelEdgeEnd { transform: none; align-items: flex-end; }
+  The marker line itself (`.marker`) stays as is.
+
+D4. Side widget "توزيع التكاليف" (cost breakdown) is shrink-wrapped to 133px and centered inside a 165px+ body, because the
+  shared panel body uses `display:flex; align-items:center`. A 100% share bar renders short.
+  Fix (CSS, local only): `.breakdown { align-self: stretch; width: 100%; }`. Do NOT edit the shared panel styles.
+  Also `.empty` inside that widget: add `align-self: stretch;`.
+
+D5. Feasibility "النتيجة" panel repeats KPI cards: rows "الإيرادات المتوقعة" and "سعر التعادل للمتر" duplicate the KPI row above.
+  Fix (TSX):
+    - Remove those two `.row` blocks from the result panel (keep land, construction, extras, total cost).
+    - Rename the panel title: isAr ? 'تفصيل التكلفة' : 'Cost breakdown'.
+    - Give the total-cost row an extra class `s.rowTotal`.
+    - Keep the stack bar, legend and the loss notice exactly as they are.
+  CSS: `.rowTotal { border-top: 1px solid var(--erp-border); border-bottom: 0; margin-top: 0.15rem; padding-top: 0.6rem; }`
+       `.rowTotal .rowLabel { font-weight: 700; color: var(--erp-text-title); }`
+
+D6. Notice colors are hardcoded and unreadable in dark theme.
+  Fix (CSS): `.noticeDanger { color: var(--erp-danger); }` (keep its background).
+             `.noticeWarn { background: color-mix(in srgb, #f59e0b 12%, transparent); color: #b45309; }`
+</defects>
+
+<invariants>
+- No change to any calculation, state, handler, or prop. Pure presentation.
+- No new imports except what D3 needs (none expected).
+- All visible strings unchanged except the D5 panel title.
+- Do not add comments narrating the change.
+</invariants>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines; the
+  orchestrator has them.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report: terse, no recap, payload (paths,
+  line numbers, counts, errors) verbatim.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+cd zakaria-farid is the project root (you are already there).
+1. npx tsc --noEmit   (must be clean)
+2. grep -n "markerLabelEdgeStart\|markerLabelEdgeEnd\|rowTotal\|th.num" src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css  (each must appear)
+3. grep -c "الإيرادات المتوقعة" src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx  (expect 1: the KPI card only)
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths touched + line counts changed
+3. DEFECTS: D1..D6 each fixed/skipped + one-line reason if skipped
+4. GATES: each gate command + result
+5. NOTES: anything out of scope you noticed (do not fix it)
+</structured_output_contract>

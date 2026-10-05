@@ -263,7 +263,7 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
     assert.strictEqual(schedules[4].due_date, '2027-01-01');
   });
 
-  it('INV-PDC: Tranche 0 (Down Payment) never generates PDC note during persistNewContract', async () => {
+  it('INV-PDC: Zero-cheque architecture - persistNewContract creates schedules only and never inserts PDC rows', async () => {
     const insertedRecords: Record<string, any[]> = {};
     const mockSupabase: any = {
       from: (tableName: string) => ({
@@ -280,7 +280,7 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
       unit_id: 'u-1',
       buyer_name: 'Buyer PDC',
       gross_contract_value: '1000000.00',
-      total_cash_collected: '200000.00',
+      total_cash_collected: '0.00',
       currency: 'EGP',
       exchange_rate: '1.0000',
       handover_status: 'Pending',
@@ -295,9 +295,9 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
         tranche_number: 0,
         nominal_value: '200000.00',
         due_date: '2026-01-01',
-        status: 'Paid',
+        status: 'Pending',
         schedule_version: 1,
-        amount_paid: '200000.00'
+        amount_paid: '0.00'
       },
       {
         schedule_id: 'sch-1',
@@ -324,8 +324,8 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
     await ERPSupabaseService.persistNewContract(mockSupabase, mockContract, schedules);
 
     const pdcs = insertedRecords['erp_pdc_records'] || [];
-    // Only Tranche 1 and 2 should generate PDCs (2 PDCs), never Tranche 0
-    assert.strictEqual(pdcs.length, 2, 'Only future pending installments (tranche_number > 0) generate PDCs');
+    // Zero-cheque architecture: persistNewContract creates schedules only, NO PDC records
+    assert.strictEqual(pdcs.length, 0, 'No PDC records generated during persistNewContract under zero-cheque architecture');
     assert.ok(!pdcs.some(p => p.schedule_id === 'sch-0'), 'Tranche 0 must never generate a PDC');
   });
 
@@ -450,7 +450,7 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
       deliveredContract,
       '500000.00',
       period,
-      '2026-10-01',
+      '2026-09-28',
       true, // isVaultCash
       'CFO_FARID'
     );

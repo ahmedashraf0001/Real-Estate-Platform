@@ -1,0 +1,38 @@
+.progressTrack {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--erp-border-subtle, #f1f5f9);
+  overflow: hidden;
+  display: flex;
+}
+
+.progressFillAccent {
+  background: var(--erp-accent);
+  height: 100%;
+}
+
+.progressFillSuccess {
+  background: var(--erp-success, #16a34a);
+  height: 100%;
+}
+
+.progressFillDanger {
+  background: var(--erp-danger, #dc2626);
+  height: 100%;
+  width: 100%;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--erp-border-subtle, #f1f5f9);
+  border-radius: 8px;
+}
+
+.simulatorPresets {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}

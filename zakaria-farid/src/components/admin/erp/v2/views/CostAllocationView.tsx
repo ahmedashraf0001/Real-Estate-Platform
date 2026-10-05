@@ -18,7 +18,7 @@ import { RSVEngine } from '@/lib/erp/rsv';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFPagination } from '../ZFPagination';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
-import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { CostAllocationAnalyticsCharts } from './cost-allocation/CostAllocationAnalyticsCharts';
 import { CostAllocationDetailDrawer } from './cost-allocation/CostAllocationDetailDrawer';
@@ -119,8 +119,8 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
         const tA = a.calculated_at ? new Date(a.calculated_at).getTime() : 0;
         return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB);
       }
-      if (sortBy === 'rsv_desc') return D(b.rsv_factor || '0').minus(D(a.rsv_factor || '0')).toNumber();
-      if (sortBy === 'rsv_asc') return D(a.rsv_factor || '0').minus(D(b.rsv_factor || '0')).toNumber();
+      if (sortBy === 'rsv_desc') return Number(b.rsv_factor || 0) - Number(a.rsv_factor || 0);
+      if (sortBy === 'rsv_asc') return Number(a.rsv_factor || 0) - Number(b.rsv_factor || 0);
       if (sortBy === 'wip_desc') return D(b.total_incurred_wip || '0').minus(D(a.total_incurred_wip || '0')).toNumber();
       if (sortBy === 'name_asc') return (a.project_name || '').localeCompare(b.project_name || '', isAr ? 'ar' : 'en');
       return 0;
@@ -161,44 +161,21 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
   };
 
   return (
-    <div className={styles.stageContainer} style={{ minWidth: 0, maxWidth: '100vw', boxSizing: 'border-box' }}>
+    <div className={styles.stageContainer} style={{ minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
       {/* 1. Header & Stage Breadcrumb */}
-      <div className={styles.stageHeader}>
-        <div className={styles.stageTitleArea}>
-          <ZFErpBreadcrumb 
-            sectionTitle={isAr ? 'توزيع مصاريف المباني على الشقق' : 'WIP Cost Allocation (RSV)'} 
-            icon={<BarChart3 size={13} color="var(--erp-accent, #2563eb)" />} 
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h1 className={styles.stageTitle}>
-              {isAr ? 'رسملة تكاليف البناء وتوزيع مصاريف الشقق (معامل RSV)' : 'WIP Capitalization & Relative Sales Value (RSV)'}
-            </h1>
-            <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
-              <ShieldCheck size={11} />
-              <span>{isAr ? 'معيار IFRS 15 الدولي' : 'IFRS 15 Standard'}</span>
-            </span>
-          </div>
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-            {isAr 
-              ? 'توزيع تكاليف المباني والخامات على كل شقة لتحديد تكلفة المبيعات (COGS) بدقة عند التسليم وحساب صافي الأرباح المحققة.' 
-              : 'Determine COGS relief factors upon physical unit handover and track capitalized WIP vs gross sales ceilings under IFRS 15.'}
-          </p>
-        </div>
-
-        <div className={styles.stageActions}>
-          <button
-            type="button"
-            className={styles.btnPrimary}
-            onClick={onOpenNewAllocation}
-          >
+      <ZFPageHeader
+        title={isAr ? 'توزيع تكاليف البناء على الوحدات' : 'Construction cost allocation'}
+        subtitle={isAr ? 'توزيع تكلفة كل مبنى على وحداته حسب القيمة البيعية، لمعرفة تكلفة الوحدة وربحها عند التسليم.' : "Spread each building's cost over its units by sales value to get unit cost and profit at handover."}
+        actions={(
+          <button type="button" className={styles.btnPrimary} onClick={onOpenNewAllocation}>
             <Plus size={14} />
-            <span>{isAr ? '+ توزيع مصاريف جديد لمشروع' : '+ New RSV Allocation'}</span>
+            <span>{isAr ? 'توزيع جديد' : 'New allocation'}</span>
           </button>
-        </div>
-      </div>
+        )}
+      />
 
       {/* 2. 4 DISCRETE FLOATING STAT CARDS */}
-      <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
+      <ZFKpiGrid>
         {/* Stat 1: Weighted RSV Factor */}
         <ZFKpiCard
           title={isAr ? 'نسبة تكلفة المباني (معامل RSV)' : 'Building Cost Ratio (RSV)'}
@@ -355,8 +332,8 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
           textAlign: 'center',
           color: '#64748b'
         }}>
-          <Calculator size={36} color="var(--erp-accent, #2563eb)" style={{ margin: '0 auto 0.75rem' }} />
-          <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
+          <Calculator size={36} color="var(--erp-accent)" style={{ margin: '0 auto 0.75rem' }} />
+          <h3 style={{ margin: 0, color: 'var(--erp-text-title)', fontSize: '0.88rem', fontWeight: 700 }}>
             {isAr ? 'لا توجد حسابات توزيع مصاريف مسجلة' : 'No cost allocations found'}
           </h3>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
@@ -414,7 +391,7 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                         <span style={{
                           fontVariantNumeric: 'tabular-nums',
                           fontWeight: 700,
-                          color: isOverrun ? '#dc2626' : isHighCost ? '#d97706' : 'var(--erp-accent, #2563eb)',
+                          color: isOverrun ? '#dc2626' : isHighCost ? '#d97706' : 'var(--erp-accent)',
                           fontSize: '0.85rem'
                         }}>
                           {rsvPct}%
@@ -465,7 +442,6 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1rem',
-                  boxShadow: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -473,7 +449,7 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                    <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--erp-text-title)', lineHeight: 1.4 }}>
                       {ca.project_name}
                     </h3>
                     <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
@@ -514,11 +490,11 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                     <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                       {isAr ? 'نسبة تكلفة المباني:' : 'Cost Ratio (RSV):'}
                     </span>
-                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--erp-accent)', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
                       {rsvPct}%
                     </div>
                     <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--erp-accent, #2563eb)', display: 'inline-block' }} />
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--erp-accent)', display: 'inline-block' }} />
                       {isAr ? 'من ثمن الشقة مباني' : 'construction cost'}
                     </span>
                   </div>
@@ -546,7 +522,7 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                 {/* Progress Bar */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: factor >= 1.0 ? '#dc2626' : 'var(--erp-accent, #2563eb)', fontWeight: 700 }}>
+                    <span style={{ color: factor >= 1.0 ? '#dc2626' : 'var(--erp-accent)', fontWeight: 700 }}>
                       {isAr ? `تكلفة المباني: ${rsvPct}%` : `WIP: ${rsvPct}%`}
                     </span>
                     <span style={{ color: factor >= 1.0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
@@ -558,7 +534,7 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                       <div style={{ width: '100%', background: '#dc2626', height: '100%' }} />
                     ) : (
                       <>
-                        <div style={{ width: `${Math.max(0, Math.min(parseFloat(rsvPct) || 0, 100))}%`, background: 'var(--erp-accent, #2563eb)', height: '100%' }} />
+                        <div style={{ width: `${Math.max(0, Math.min(parseFloat(rsvPct) || 0, 100))}%`, background: 'var(--erp-accent)', height: '100%' }} />
                         <div style={{ width: `${Math.max(0, Math.min(parseFloat(grossMarginPct) || 0, 100))}%`, background: '#16a34a', height: '100%' }} />
                       </>
                     )}
@@ -568,27 +544,12 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                 {/* Action Button */}
                 <button
                   type="button"
+                  className={styles.btnSecondary}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelectAllocation(ca);
                   }}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: 'var(--erp-accent, #2563eb)',
-                    borderRadius: '8px',
-                    padding: '0.55rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    cursor: 'pointer',
-                    marginTop: 'auto',
-                    boxShadow: 'none',
-                    transition: 'all 0.15s ease'
-                  }}
+                  style={{ marginTop: 'auto' }}
                 >
                   <Eye size={13} />
                   <span>{isAr ? 'فحص تفاصيل المشروع واستنزال التكلفة' : 'Inspect Allocation & Relief'}</span>
@@ -624,8 +585,8 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
           marginBottom: '0.85rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BarChart3 size={16} color="var(--erp-accent, #2563eb)" />
-            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+            <BarChart3 size={16} color="var(--erp-accent)" />
+            <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--erp-text-title)' }}>
               {isAr ? 'التحليلات البيانية والرسملة الهندسية (CAD Analytics)' : 'CAD Cartesian Analytics & Capitalization'}
             </h2>
           </div>

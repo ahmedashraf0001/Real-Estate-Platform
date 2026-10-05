@@ -1,31 +1,23 @@
 'use client';
+/* eslint-disable react-hooks/purity */
 
-import React, { useState, useMemo } from 'react';
-import { 
-  X, 
-  UserPlus, 
-  User, 
-  Users,
-  Phone, 
-  CreditCard, 
-  Landmark, 
-  Building2, 
-  Percent, 
-  Coins, 
-  ShieldCheck, 
-  Calendar, 
-  FileText,
-  CheckCircle2,
+import React, { useState } from 'react';
+import {
+  UserPlus,
   Wallet,
-  AlertCircle,
-  Smartphone,
-  Banknote,
-  Info
+  Smartphone
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
-import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
-import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { ZFModalShell } from '../common/ZFModalShell';
+import {
+  ZFField,
+  ZFMoneyInput,
+  ZFChoices,
+  ZFFormFooter,
+  zfForm
+} from '../common/ZFForm';
+import shellStyles from '../ZFWorkstationShell.module.css';
 
 export interface NewPartnerSubmitPayload {
   name: string;
@@ -68,23 +60,23 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
   isMutating = false,
   onSubmit
 }) => {
-  // Step 1: Personal Profile
+  // Details
   const [name, setName] = useState<string>('');
   const [role, setRole] = useState<'equity_partner' | 'land_partner' | 'silent_financier'>('equity_partner');
   const [phone, setPhone] = useState<string>('');
   const [nationalId, setNationalId] = useState<string>('');
 
-  // Step 2: Payout Details
+  // Payout Details
   const [payoutMethod, setPayoutMethod] = useState<'INSTAPAY' | 'BANK' | 'CASH'>('INSTAPAY');
   const [instapayHandle, setInstapayHandle] = useState<string>('');
-  const [bankName, setBankName] = useState<string>('');
-  const [iban, setIban] = useState<string>('');
+  const [bankName] = useState<string>('');
+  const [iban] = useState<string>('');
 
-  // Step 3: Project Allocation
+  // Project Allocation & Share
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [sharePct, setSharePct] = useState<string>('25');
 
-  // Step 4: Initial Capital Deposit (Optional)
+  // Initial Capital Deposit (Optional)
   const [includeInitialDeposit, setIncludeInitialDeposit] = useState<boolean>(false);
   const [depositAmount, setDepositAmount] = useState<string>('');
   const [depositPaymentMethod, setDepositPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
@@ -93,182 +85,6 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
 
   // Notes
   const [notes, setNotes] = useState<string>('');
-
-  // Role Comparison Popover State
-  const [showRoleComparisonModal, setShowRoleComparisonModal] = useState<boolean>(false);
-
-  const roleSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => [
-    {
-      value: 'equity_partner',
-      labelAr: 'شريك ممول بالمشروع (حصة رأسمال وأرباح)',
-      labelEn: 'Project Equity Partner',
-      sublabelAr: 'مساهمة مالية مقابل حصة في أرباح المشروع',
-      sublabelEn: 'Capital injection for equity profit share',
-      badge: isAr ? 'رأس مال وأرباح' : 'Equity',
-      badgeBg: 'rgba(148, 111, 35, 0.08)',
-      badgeTextColor: '#946f23',
-      icon: Users,
-      iconBg: 'rgba(148, 111, 35, 0.1)',
-      iconColor: '#946f23',
-      tooltipTitleAr: 'شريك ممول بالمشروع (حصة رأسمال وأرباح)',
-      tooltipTitleEn: 'Project Equity Partner',
-      tooltipAr: 'يدخل برأس مال نقدي كشريك في كامل المشروع بحصة مئوية. يتحمل نسبته من تكاليف وخامات المباني (حساب 150000)، وتُحسب حصته تلقائياً من كل قسط محصل من العملاء فوراً بالخزنة.',
-      tooltipEn: 'Capital investor with an equity share. Absorbs proportional building WIP costs and automatically receives proportional share of customer installment collections.'
-    },
-    {
-      value: 'silent_financier',
-      labelAr: 'ممول صامت (عوائد استثمارية دورية)',
-      labelEn: 'Silent Financier',
-      sublabelAr: 'تمويل مالي دون تدخل في الإدارة',
-      sublabelEn: 'Financial backing without management',
-      badge: isAr ? 'عوائد دورية' : 'Financier',
-      badgeBg: 'rgba(29, 78, 216, 0.08)',
-      badgeTextColor: '#1d4ed8',
-      icon: Coins,
-      iconBg: 'rgba(29, 78, 216, 0.1)',
-      iconColor: '#1d4ed8',
-      tooltipTitleAr: 'ممول صامت (عوائد استثمارية دورية)',
-      tooltipTitleEn: 'Silent Financier',
-      tooltipAr: 'يضخ تمويلاً نقدياً لمراحل إنشائية معينة (مثل سقف خرسانة أو تشطيبات) دون تدخل في إدارة المشروع أو البيع، وله عوائد استثمارية دورية متفق عليها ورأس مال مسترد.',
-      tooltipEn: 'Provides capital funding for specific project milestones without management involvement, earning periodic investment returns and capital payback.'
-    },
-    {
-      value: 'land_partner',
-      labelAr: 'شريك مساهم بالأرض (حصة من المبيعات)',
-      labelEn: 'Land / Ground Partner',
-      sublabelAr: 'تقديم قطعة أرض مقابل نسبة من الوحدات أو الإيرادات',
-      sublabelEn: 'Land plot for sales or units share',
-      badge: isAr ? 'شريك بالأرض' : 'Land',
-      badgeBg: 'rgba(4, 120, 87, 0.08)',
-      badgeTextColor: '#047857',
-      icon: Building2,
-      iconBg: 'rgba(4, 120, 87, 0.1)',
-      iconColor: '#047857',
-      tooltipTitleAr: 'شريك مساهم بالأرض (حصة من المبيعات)',
-      tooltipTitleEn: 'Land / Ground Partner',
-      tooltipAr: 'صاحب الأرض الأصلية التي يُقام عليها المشروع بنظام المشاركة مع المطور. يحصل على نسبة متفق عليها من حصيلة مبيعات الشقق والتحصيلات، ولا يتحمل مصاريف خامات البناء والمقاولين.',
-      tooltipEn: 'Original landowner under joint venture. Receives an agreed percentage of apartment sales and collections, without bearing construction WIP expenses.'
-    }
-  ], [isAr]);
-
-  const activeRoleItem = useMemo(() => {
-    return roleSelectItems.find(item => item.value === role) || roleSelectItems[0];
-  }, [roleSelectItems, role]);
-
-  const roleGuideDetails = useMemo(() => {
-    switch (role) {
-      case 'equity_partner':
-        return {
-          titleAr: 'شريك ممول بالمشروع (حصة رأسمال وأرباح)',
-          titleEn: 'Project Equity Partner',
-          pointsAr: [
-            'يتحمل نسبته من تكاليف وخامات المباني (حساب 150000 - مشروعات تحت التنفيذ).',
-            'توزيعات أرباح دورية ومخرجات تصفية المشروع بحسب حصته التعاقدية.'
-          ],
-          pointsEn: [
-            'Bears proportional share of building WIP and materials costs (Account 150000).',
-            'Entitled to periodic dividend distributions and net proceeds per contract.'
-          ],
-          accentBg: 'linear-gradient(135deg, #fffdf8 0%, #fbf6ec 100%)',
-          borderColor: 'rgba(184, 144, 62, 0.25)',
-          textColor: '#785210'
-        };
-      case 'silent_financier':
-        return {
-          titleAr: 'ممول صامت (عوائد استثمارية دورية)',
-          titleEn: 'Silent Financier',
-          pointsAr: [
-            'تمويل مرحلي محدد دون تدخل في إدارة البناء أو مخاطر تسويق الشقق.',
-            'عوائد استثمارية دورية متفق عليها ورأس مال مسترد بأولوية سداد.'
-          ],
-          pointsEn: [
-            'Targeted milestone funding without construction management or sales marketing risks.',
-            'Pre-agreed periodic investment returns and prioritized capital payback.'
-          ],
-          accentBg: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          borderColor: 'rgba(29, 78, 216, 0.2)',
-          textColor: '#1e3a8a'
-        };
-      case 'land_partner':
-        return {
-          titleAr: 'شريك مساهم بالأرض (حصة من المبيعات)',
-          titleEn: 'Land / Ground Partner',
-          pointsAr: [
-            'شراكة عينية بالأرض الأصلية؛ إعفاء كامل من مصاريف ومقاولات وخامات البناء.',
-            'استحقاق نسبة مئوية مباشرة من حصيلة مبيعات وتعاقدات شقق المشروع.'
-          ],
-          pointsEn: [
-            'In-kind land contribution; zero liability for construction or contractor costs.',
-            'Direct entitlement to an agreed percentage of total apartment sales revenue.'
-          ],
-          accentBg: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
-          borderColor: 'rgba(4, 120, 87, 0.2)',
-          textColor: '#065f46'
-        };
-      default:
-        return null;
-    }
-  }, [role]);
-
-  const propertySelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => [
-    {
-      value: '',
-      labelAr: isAr ? '-- بدون ربط بمشروع محدد حالياً (ممول عام) --' : '-- No specific project (General Financier) --',
-      labelEn: '-- No specific project (General Financier) --',
-      sublabelAr: isAr ? 'ممول للمحفظة العامة دون تخصيص لعمارة' : 'General portfolio investor',
-      sublabelEn: 'General portfolio investor',
-      badge: isAr ? 'عام' : 'General',
-      badgeBg: 'rgba(100, 116, 139, 0.08)',
-      badgeTextColor: '#64748b',
-      icon: Building2,
-      iconBg: 'rgba(100, 116, 139, 0.08)',
-      iconColor: '#64748b'
-    },
-    ...properties.map(p => ({
-      value: p.id,
-      labelAr: p.title_ar || p.title_en || '',
-      labelEn: p.title_en || p.title_ar || '',
-      sublabelAr: `${p.location || 'الشرقية'} • ${p.area_sqm || 0} م²`,
-      sublabelEn: `${p.location || 'Sharkia'} • ${p.area_sqm || 0} sqm`,
-      badge: p.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
-      badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
-      badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#946f23',
-      icon: Building2,
-      iconBg: 'rgba(148, 111, 35, 0.1)',
-      iconColor: '#946f23'
-    }))
-  ], [properties, isAr]);
-
-  const depositMethodItems = useMemo<ZFCustomSelectItem<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>[]>(() => [
-    {
-      value: 'CASH_101000',
-      labelAr: 'كاش نقدي باليد',
-      labelEn: 'Cash in Hand',
-      sublabelAr: 'استلام نقدي فعلي وتوريد بالخزينة التشغيلية الرئيسية (101000)',
-      sublabelEn: 'Physical cash received into main operating treasury (101000)',
-      badge: isAr ? 'كاش باليد' : 'Cash',
-      badgeBg: 'rgba(21, 128, 61, 0.08)',
-      badgeTextColor: '#15803d',
-      icon: Banknote,
-      iconBg: 'rgba(21, 128, 61, 0.1)',
-      iconColor: '#15803d'
-    },
-    {
-      value: 'INSTAPAY_102000',
-      labelAr: 'تحويل إنستاباي فوري',
-      labelEn: 'Instant InstaPay Transfer',
-      sublabelAr: 'تحويل إلكتروني فوري لحساب الخزينة الرئيسية (101000)',
-      sublabelEn: 'Instant electronic transfer into main operating treasury (101000)',
-      badge: isAr ? 'إنستاباي' : 'InstaPay',
-      badgeBg: 'rgba(112, 26, 117, 0.08)',
-      badgeTextColor: '#701a75',
-      icon: Smartphone,
-      iconBg: 'rgba(112, 26, 117, 0.1)',
-      iconColor: '#701a75'
-    }
-  ], [isAr]);
-
-  if (!isOpen) return null;
 
   const isNameDuplicate = existingPartnerNames.some(
     existing => existing.trim().toLowerCase() === name.trim().toLowerCase()
@@ -281,7 +97,9 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
     name.trim().length >= 3 &&
     phone.trim().length >= 7 &&
     !isNameDuplicate &&
-    (!includeInitialDeposit || numDeposit > 0);
+    (!includeInitialDeposit || numDeposit > 0) &&
+    (payoutMethod !== 'INSTAPAY' || instapayHandle.trim().length > 0) &&
+    (payoutMethod !== 'BANK' || (bankName.trim().length > 0 && iban.trim().length > 0));
 
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
@@ -313,869 +131,253 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
     onClose();
   };
 
-  return (
-    <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.7)',
-        backdropFilter: 'blur(5px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-        direction: isAr ? 'rtl' : 'ltr'
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div 
-        style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          width: '100%',
-          maxWidth: '720px',
-          maxHeight: '92vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          overflow: 'hidden',
-          border: '1px solid #e2e8f0'
-        }}
+  const footer = (
+    <ZFFormFooter>
+      <button type="button" className={shellStyles.btnSecondary} onClick={onClose}>
+        {isAr ? 'إلغاء' : 'Cancel'}
+      </button>
+      <button
+        type="submit"
+        form="zf-partner-form"
+        className={shellStyles.btnPrimary}
+        disabled={!isValid || isMutating}
       >
-        {/* MODAL HEADER */}
-        <div style={{
-          padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: '#f8fafc'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div 
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 10px rgba(184, 144, 62, 0.25)'
-              }}
+        {isMutating ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'حفظ الشريك' : 'Save partner')}
+      </button>
+    </ZFFormFooter>
+  );
+
+  return (
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isAr ? 'شريك جديد' : 'New partner'}
+      subtitle={
+        isAr
+          ? 'بيانات الشريك وطريقة صرف أرباحه. يمكنك تسجيل أول إيداع له الآن أو لاحقاً.'
+          : 'Partner details and how profit is paid. Record a first deposit now or later.'
+      }
+      icon={<UserPlus size={18} />}
+      isAr={isAr}
+      maxWidth="640px"
+      footer={footer}
+    >
+      <form id="zf-partner-form" className={zfForm.form} onSubmit={handleSubmit}>
+        {/* Section 1: Details */}
+        <div className={zfForm.section}>
+          <h4 className={zfForm.sectionTitle}>{isAr ? 'البيانات' : 'Details'}</h4>
+          <div className={zfForm.row}>
+            <ZFField
+              label={isAr ? 'الاسم' : 'Name'}
+              required
+              error={isNameDuplicate ? (isAr ? 'هذا الاسم مسجل بالفعل كشريك' : 'Name already registered') : undefined}
             >
-              <UserPlus size={22} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'تسجيل وتوثيق شريك / ممول جديد' : 'Register New Partner / Financier'}
-                </h3>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '999px',
-                  background: 'rgba(184, 144, 62, 0.12)',
-                  color: '#946f23',
-                  border: '1px solid rgba(184, 144, 62, 0.25)'
-                }}>
-                  {isAr ? 'ملف استثماري موثق' : 'Verified Partner Profile'}
-                </span>
-              </div>
-              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                {isAr 
-                  ? 'تسجيل بيانات الشريك، حسابات تحويل الأرباح، وربطه بمشاريع الشركة ونسب الشراكة' 
-                  : 'Onboard a project partner, bank payout details, and portfolio equity allocation'}
-              </p>
-            </div>
+              <input
+                type="text"
+                className={zfForm.control}
+                placeholder={isAr ? 'الاسم بالكامل' : 'Full name'}
+                value={name}
+                onChange={e => setName(e.target.value)}
+                autoFocus
+                required
+              />
+            </ZFField>
+            <ZFField label={isAr ? 'الهاتف' : 'Phone'} required>
+              <input
+                type="tel"
+                className={zfForm.control}
+                dir="ltr"
+                placeholder="010XXXXXXXX"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                required
+              />
+            </ZFField>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: '#f1f5f9',
-              border: 'none',
-              borderRadius: '8px',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748b',
-              cursor: 'pointer'
-            }}
-          >
-            <X size={18} />
-          </button>
+          <div className={zfForm.row}>
+            <ZFField label={isAr ? 'الرقم القومي أو السجل التجاري' : 'National ID or CR'}>
+              <input
+                type="text"
+                className={`${zfForm.control} ${zfForm.mono}`}
+                placeholder="289XXXXXXXXXXXXX"
+                value={nationalId}
+                onChange={e => setNationalId(e.target.value)}
+              />
+            </ZFField>
+            <div />
+          </div>
+
+          <ZFField label={isAr ? 'نوع الشراكة' : 'Partnership type'}>
+            <ZFChoices
+              value={role}
+              onChange={setRole}
+              options={[
+                {
+                  id: 'equity_partner',
+                  label: isAr ? 'شريك بحصة' : 'Equity partner',
+                  sub: isAr ? 'يموّل ويأخذ نسبة من الربح' : 'Funds and takes a profit share'
+                },
+                {
+                  id: 'land_partner',
+                  label: isAr ? 'شريك بالأرض' : 'Land partner',
+                  sub: isAr ? 'يقدم الأرض مقابل حصة' : 'Brings the land for a share'
+                },
+                {
+                  id: 'silent_financier',
+                  label: isAr ? 'ممول' : 'Financier',
+                  sub: isAr ? 'يموّل بعائد دون إدارة' : 'Funds for a return, no management role'
+                }
+              ]}
+            />
+          </ZFField>
         </div>
 
-        {/* FORM BODY */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '1.25rem 1.5rem', gap: '1.25rem' }}>
+        {/* Section 2: Project & share */}
+        <div className={zfForm.section}>
+          <h4 className={zfForm.sectionTitle}>{isAr ? 'المشروع والحصة' : 'Project & share'}</h4>
+          <div className={zfForm.row}>
+            <ZFField label={isAr ? 'المشروع' : 'Project'}>
+              <select
+                className={zfForm.control}
+                value={selectedPropertyId}
+                onChange={e => setSelectedPropertyId(e.target.value)}
+              >
+                <option value="">{isAr ? 'بدون مشروع الآن' : 'No project yet'}</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar)}
+                  </option>
+                ))}
+              </select>
+            </ZFField>
+            <ZFField label={isAr ? 'نسبة الحصة' : 'Share %'}>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="any"
+                className={zfForm.control}
+                value={sharePct}
+                onChange={e => setSharePct(e.target.value)}
+              />
+            </ZFField>
+          </div>
+        </div>
 
-          {/* SECTION 1: PERSONAL & IDENTITY DETAILS */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0f172a', fontWeight: 800, fontSize: '0.85rem' }}>
-              <User size={16} color="#946f23" />
-              <span>{isAr ? '1. البيانات الشخصية والتعريفية للشريك' : '1. Personal & Identity Details'}</span>
-            </div>
+        {/* Section 3: Profit payout */}
+        <div className={zfForm.section}>
+          <h4 className={zfForm.sectionTitle}>{isAr ? 'صرف الأرباح' : 'Profit payout'}</h4>
+          <ZFChoices<'INSTAPAY' | 'CASH'>
+            value={payoutMethod === 'BANK' ? 'INSTAPAY' : payoutMethod}
+            onChange={setPayoutMethod}
+            options={[
+              {
+                id: 'INSTAPAY',
+                label: isAr ? 'إنستاباي' : 'InstaPay',
+                sub: isAr ? 'تحويل لحسابه' : 'Transfer to their account',
+                icon: <Smartphone size={16} />
+              },
+              {
+                id: 'CASH',
+                label: isAr ? 'نقداً' : 'Cash',
+                sub: isAr ? 'استلام من الخزينة' : 'Collected from the safe',
+                icon: <Wallet size={16} />
+              }
+            ]}
+          />
+          {payoutMethod === 'INSTAPAY' && (
+            <ZFField label={isAr ? 'عنوان إنستاباي أو رقم الموبايل' : 'InstaPay address or mobile'} required>
+              <input
+                type="text"
+                className={zfForm.control}
+                dir="ltr"
+                placeholder="name@instapay"
+                value={instapayHandle}
+                onChange={e => setInstapayHandle(e.target.value)}
+                required
+              />
+            </ZFField>
+          )}
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', alignItems: 'start' }}>
-              {/* Full Name */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'اسم الشريك أو الممول بالكامل *' : 'Full Partner Name *'}
-                </label>
-                <input 
-                  type="text"
-                  required
-                  placeholder={isAr ? 'مثال: م. أحمد كمال الشريف' : 'e.g. Eng. Ahmed Kamal'}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '8px',
-                    border: isNameDuplicate ? '1.5px solid #dc2626' : '1px solid #cbd5e1',
-                    fontSize: '0.82rem',
-                    color: '#0f172a',
-                    outline: 'none',
-                    background: '#ffffff'
-                  }}
-                />
-                {isNameDuplicate && (
-                  <span style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: '0.25rem', display: 'block' }}>
-                    {isAr ? '⚠️ هذا الاسم مسجل بالفعل كشريك بالمنظومة' : 'Partner name already exists'}
-                  </span>
-                )}
-              </div>
-
-              {/* Partner Role */}
-              <div style={{ position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', position: 'relative' }}>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155' }}>
-                    {isAr ? 'صفة وطبيعة الشراكة *' : 'Partner Role *'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowRoleComparisonModal(prev => !prev)}
-                    title={
-                      isAr
-                        ? 'مقارنة سريعة بين أنواع الشراكة:\n• شريك ممول: يشارك برأس المال والأرباح ويتحمل تكاليف المباني.\n• ممول صامت: تمويل نقدي بعوائد متفق عليها دون إدارة أو مخاطر تشغيل.\n• شريك بالأرض: تقديم الأرض مقابل نسبة من المبيعات دون مصاريف بناء.'
-                        : 'Quick Role Comparison:\n• Equity Partner: Capital & profits, bears building WIP costs.\n• Silent Financier: Capital funding with agreed returns, zero management.\n• Land Partner: Land plot for sales share, zero construction expenses.'
-                    }
-                    style={{
-                      background: showRoleComparisonModal ? 'rgba(184, 144, 62, 0.12)' : 'transparent',
-                      border: 'none',
-                      padding: '0.1rem 0.35rem',
-                      borderRadius: '4px',
-                      color: '#946f23',
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      textDecoration: 'underline decoration-dotted',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.2rem',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {isAr ? '(؟ ما الفرق بين أنواع الشراكة؟)' : '(? Compare Roles)'}
-                  </button>
-
-                  {/* Role Comparison Popover */}
-                  {showRoleComparisonModal && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: isAr ? 0 : 'auto',
-                        right: isAr ? 'auto' : 0,
-                        width: '320px',
-                        maxWidth: '90vw',
-                        background: '#ffffff',
-                        border: '1.5px solid #d4af37',
-                        borderRadius: '10px',
-                        boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
-                        padding: '0.75rem',
-                        zIndex: 100,
-                        direction: isAr ? 'rtl' : 'ltr',
-                        textAlign: isAr ? 'right' : 'left'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.35rem' }}>
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
-                          {isAr ? 'مقارنة سريعة بين أنواع الشراكة الثلاثة' : 'Quick Role Comparison'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowRoleComparisonModal(false)}
-                          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 2px' }}
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                        {roleSelectItems.map((item) => (
-                          <div
-                            key={item.value}
-                            onClick={() => {
-                              setRole(item.value as any);
-                              setShowRoleComparisonModal(false);
-                            }}
-                            style={{
-                              padding: '0.45rem 0.55rem',
-                              borderRadius: '6px',
-                              background: role === item.value ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                              border: role === item.value ? '1px solid rgba(184, 144, 62, 0.4)' : '1px solid #e2e8f0',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '0.2rem'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
-                                {isAr ? (item.tooltipTitleAr || item.labelAr) : (item.tooltipTitleEn || item.labelEn)}
-                              </span>
-                              {item.badge && (
-                                <span style={{
-                                  fontSize: '0.62rem',
-                                  fontWeight: 800,
-                                  padding: '0.1rem 0.35rem',
-                                  borderRadius: '3px',
-                                  background: item.badgeBg,
-                                  color: item.badgeTextColor
-                                }}>
-                                  {item.badge}
-                                </span>
-                              )}
-                            </div>
-                            <p style={{ margin: 0, fontSize: '0.68rem', color: '#64748b', lineHeight: 1.35 }}>
-                              {isAr ? item.tooltipAr : (item.tooltipEn || item.tooltipAr)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <ZFCustomSelect<string>
-                  value={role}
-                  onChange={(val) => setRole(val as any)}
-                  items={roleSelectItems}
-                  placeholderAr="-- اختار صفة الشراكة --"
-                  placeholderEn="-- Select Partner Role --"
-                  isAr={isAr}
-                  searchable={false}
-                />
-
-                {/* Live Partnership Nature Guide Card */}
-                {roleGuideDetails && activeRoleItem && (
-                  <div
-                    style={{
-                      marginTop: '0.55rem',
-                      borderRadius: '10px',
-                      border: `1.5px solid ${roleGuideDetails.borderColor}`,
-                      background: roleGuideDetails.accentBg,
-                      padding: '0.65rem 0.8rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.45rem',
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        {activeRoleItem.icon && (
-                          <div
-                            style={{
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '6px',
-                              background: activeRoleItem.iconBg || 'rgba(148, 111, 35, 0.1)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
-                            }}
-                          >
-                            <activeRoleItem.icon size={13} color={activeRoleItem.iconColor || '#946f23'} />
-                          </div>
-                        )}
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
-                          {isAr ? roleGuideDetails.titleAr : roleGuideDetails.titleEn}
-                        </span>
-                      </div>
-                      {activeRoleItem.badge && (
-                        <span
-                          style={{
-                            fontSize: '0.65rem',
-                            fontWeight: 800,
-                            padding: '0.15rem 0.45rem',
-                            borderRadius: '4px',
-                            background: activeRoleItem.badgeBg || 'rgba(148, 111, 35, 0.08)',
-                            color: activeRoleItem.badgeTextColor || '#946f23',
-                            border: `1px solid ${activeRoleItem.badgeTextColor || '#946f23'}33`,
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {activeRoleItem.badge}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '0 0.1rem' }}>
-                      {(isAr ? roleGuideDetails.pointsAr : roleGuideDetails.pointsEn).map((point, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontSize: '0.7rem', color: '#334155', lineHeight: 1.35 }}>
-                          <span style={{ color: roleGuideDetails.textColor, fontWeight: 700, flexShrink: 0 }}>•</span>
-                          <span>{point}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Automated Collection Math Highlight */}
-                    <div
-                      style={{
-                        marginTop: '0.15rem',
-                        padding: '0.45rem 0.6rem',
-                        borderRadius: '6px',
-                        background: '#ffffff',
-                        border: `1px dashed ${roleGuideDetails.borderColor}`,
-                        fontSize: '0.69rem',
-                        color: roleGuideDetails.textColor,
-                        lineHeight: 1.4,
-                        fontWeight: 600
-                      }}
-                    >
-                      {isAr 
-                        ? '💡 يتم احتساب وإضافة حصته من الأقساط تلقائياً ولحظياً بمجرد تحصيل كل قسط بالخزنة دون الحاجة لأي حسابات يدوية.' 
-                        : '💡 Installment collections are automatically credited in real time to the partner balance without manual entry.'}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-              {/* Phone */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'رقم الهاتف والواتساب *' : 'Phone & WhatsApp *'}
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    type="tel"
+        {/* Section 4: First deposit */}
+        <div className={zfForm.section}>
+          <h4 className={zfForm.sectionTitle}>{isAr ? 'أول إيداع' : 'First deposit'}</h4>
+          <label className={zfForm.labelRow}>
+            <span className={zfForm.label}>
+              <input
+                type="checkbox"
+                checked={includeInitialDeposit}
+                onChange={e => setIncludeInitialDeposit(e.target.checked)}
+              />{' '}
+              {isAr ? 'تسجيل أول إيداع الآن' : 'Record a first deposit now'}
+            </span>
+          </label>
+          {includeInitialDeposit && (
+            <>
+              <div className={zfForm.row}>
+                <ZFField label={isAr ? 'المبلغ' : 'Amount'} required>
+                  <ZFMoneyInput
+                    value={depositAmount}
+                    onChange={e => setDepositAmount(e.target.value)}
+                    unit={isAr ? 'ج.م' : 'EGP'}
                     required
-                    placeholder="010XXXXXXXX"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    dir="ltr"
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem 0.55rem 2.2rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      color: '#0f172a',
-                      outline: 'none'
-                    }}
                   />
-                  <Phone size={14} color="#94a3b8" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-                </div>
-              </div>
-
-              {/* National ID / CR */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'الرقم القومي أو السجل التجاري (اختياري)' : 'National ID / Tax ID (Optional)'}
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    type="text"
-                    placeholder="289XXXXXXXXXXXXX"
-                    value={nationalId}
-                    onChange={(e) => setNationalId(e.target.value)}
-                    dir="ltr"
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem 0.55rem 2.2rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      color: '#0f172a',
-                      outline: 'none'
-                    }}
+                </ZFField>
+                <ZFField label={isAr ? 'التاريخ' : 'Date'} required>
+                  <input
+                    type="date"
+                    className={zfForm.control}
+                    value={depositDate}
+                    onChange={e => setDepositDate(e.target.value)}
+                    required
                   />
-                  <CreditCard size={14} color="#94a3b8" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-                </div>
+                </ZFField>
               </div>
-            </div>
-          </div>
-
-          {/* SECTION 2: PAYOUT & BANKING DETAILS */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0f172a', fontWeight: 800, fontSize: '0.85rem' }}>
-              <Landmark size={16} color="#1d4ed8" />
-              <span>{isAr ? '2. بيانات تحويل وصرف الأرباح والمستحقات' : '2. Payout & Dividend Transfer Channels'}</span>
-            </div>
-
-            {/* Payout method toggle */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                {isAr ? 'وسيلة التحويل المعتمدة لصرف الأرباح' : 'Preferred Payout Channel'}
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setPayoutMethod('INSTAPAY')}
-                  style={{
-                    padding: '0.55rem',
-                    borderRadius: '8px',
-                    border: payoutMethod === 'INSTAPAY' ? '1.5px solid #047857' : '1px solid #e2e8f0',
-                    background: payoutMethod === 'INSTAPAY' ? 'rgba(4, 120, 87, 0.08)' : '#f8fafc',
-                    color: payoutMethod === 'INSTAPAY' ? '#047857' : '#475569',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                >
-                  ⚡ {isAr ? 'إنستاباي فوري (IPA)' : 'InstaPay'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPayoutMethod('CASH')}
-                  style={{
-                    padding: '0.55rem',
-                    borderRadius: '8px',
-                    border: payoutMethod === 'CASH' ? '1.5px solid #b8903e' : '1px solid #e2e8f0',
-                    background: payoutMethod === 'CASH' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                    color: payoutMethod === 'CASH' ? '#946f23' : '#475569',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                >
-                  💵 {isAr ? 'نقداً من الخزينة' : 'Cash Safe'}
-                </button>
-              </div>
-            </div>
-
-            {payoutMethod === 'INSTAPAY' ? (
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'عنوان إنستاباي (IPA) أو رقم الموبايل المسجل *' : 'InstaPay Address (IPA) or Mobile *'}
-                </label>
-                <input 
+              <ZFField label={isAr ? 'طريقة الاستلام' : 'Received by'}>
+                <ZFChoices<'CASH_101000' | 'INSTAPAY_102000'>
+                  value={depositPaymentMethod === 'BANK_102000' ? 'CASH_101000' : depositPaymentMethod}
+                  onChange={setDepositPaymentMethod}
+                  options={[
+                    {
+                      id: 'CASH_101000',
+                      label: isAr ? 'نقداً' : 'Cash',
+                      sub: isAr ? 'يدخل الخزينة' : 'Into the safe',
+                      icon: <Wallet size={16} />
+                    },
+                    {
+                      id: 'INSTAPAY_102000',
+                      label: isAr ? 'إنستاباي' : 'InstaPay',
+                      sub: isAr ? 'يدخل حساب إنستاباي' : 'Into InstaPay',
+                      icon: <Smartphone size={16} />
+                    }
+                  ]}
+                />
+              </ZFField>
+              <ZFField label={isAr ? 'رقم الإيصال' : 'Receipt no.'}>
+                <input
                   type="text"
-                  placeholder="name@instapay أو 010XXXXXXXX"
-                  value={instapayHandle}
-                  onChange={(e) => setInstapayHandle(e.target.value)}
-                  dir="ltr"
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.82rem',
-                    color: '#0f172a',
-                    outline: 'none'
-                  }}
+                  className={`${zfForm.control} ${zfForm.mono}`}
+                  value={depositReceiptRef}
+                  onChange={e => setDepositReceiptRef(e.target.value)}
                 />
-              </div>
-            ) : (
-              <div style={{
-                fontSize: '0.73rem',
-                color: '#64748b',
-                background: '#f8fafc',
-                padding: '0.55rem 0.75rem',
-                borderRadius: '8px',
-                border: '1px dashed #cbd5e1',
-                lineHeight: 1.4
-              }}>
-                {isAr 
-                  ? '✓ يتم صرف وتوزيعات الأرباح نقداً باليد من خزينة الشركة الرئيسية بموجب سند صرف رسمي.' 
-                  : '✓ Dividends will be disbursed in cash from the company safe.'}
-              </div>
-            )}
-          </div>
+              </ZFField>
+            </>
+          )}
+        </div>
 
-          {/* SECTION 3: PROJECT ALLOCATION & EQUITY SHARE */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0f172a', fontWeight: 800, fontSize: '0.85rem' }}>
-              <Building2 size={16} color="#047857" />
-              <span>{isAr ? '3. ربط الشريك بالمشروع وتخصيص نسبة الشراكة' : '3. Project Allocation & Equity Share'}</span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '0.75rem' }}>
-              {/* Target Property */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'المشروع أو العمارة المراد تخصيص حصة بها' : 'Target Portfolio Property'}
-                </label>
-                <ZFCustomSelect<string>
-                  value={selectedPropertyId}
-                  onChange={(val) => setSelectedPropertyId(val)}
-                  items={propertySelectItems}
-                  placeholderAr="-- بدون ربط بمشروع محدد حالياً --"
-                  placeholderEn="-- No specific project --"
-                  isAr={isAr}
-                  searchable={true}
-                />
-              </div>
-
-              {/* Share Percentage */}
-              {selectedPropertyId && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'نسبة الشراكة / الأرباح بالمشروع (%)' : 'Equity Share (%)'}
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type="number"
-                      min="1"
-                      max="90"
-                      step="1"
-                      value={sharePct}
-                      onChange={(e) => setSharePct(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem 0.55rem 2rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.82rem',
-                        fontWeight: 800,
-                        color: '#0f172a',
-                        outline: 'none'
-                      }}
-                    />
-                    <Percent size={14} color="#94a3b8" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {selectedPropertyId && (
-              <div style={{
-                background: 'rgba(184, 144, 62, 0.08)',
-                border: '1px solid rgba(184, 144, 62, 0.25)',
-                borderRadius: '8px',
-                padding: '0.65rem 0.85rem',
-                fontSize: '0.74rem',
-                color: '#854d0e',
-                lineHeight: 1.5
-              }}>
-                ℹ️ {isAr 
-                  ? `سيتم خصم نسبة (${numShare}%) تلقائياً من حصة المطور الرئيسي (${PRIMARY_DEVELOPER_NAME}) ليظل مجموع حصص الشركاء في المشروع 100% بالضبط وفق معايير الحوكمة المالية.`
-                  : `This ${numShare}% will be deducted from ${PRIMARY_DEVELOPER_NAME}'s developer share, keeping total property equity at exactly 100%.`}
-              </div>
-            )}
-          </div>
-
-          {/* SECTION 4: INITIAL CAPITAL DEPOSIT (OPTIONAL) */}
-          <div style={{
-            background: includeInitialDeposit ? '#f8fafc' : '#ffffff',
-            border: includeInitialDeposit ? '1.5px solid #10b981' : '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem',
-            transition: 'all 0.15s ease'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0f172a', fontWeight: 800, fontSize: '0.85rem' }}>
-                <Coins size={16} color="#047857" />
-                <span>{isAr ? '4. تسجيل إيداع رأس مال مبدئي (اختياري)' : '4. Initial Capital Contribution (Optional)'}</span>
-              </div>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 800, color: '#047857' }}>
-                <input 
-                  type="checkbox"
-                  checked={includeInitialDeposit}
-                  onChange={(e) => setIncludeInitialDeposit(e.target.checked)}
-                  style={{ accentColor: '#047857', width: '16px', height: '16px' }}
-                />
-                <span>{isAr ? 'إيداع مبلغ نقدي الآن' : 'Deposit funds now'}</span>
-              </label>
-            </div>
-
-            {includeInitialDeposit && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
-                  {/* Amount */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                      {isAr ? 'مبلغ الإيداع (جنيه مصري) *' : 'Deposit Amount (EGP) *'}
-                    </label>
-                    <input 
-                      type="number"
-                      required={includeInitialDeposit}
-                      min="1000"
-                      placeholder="مثال: 5000000"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.88rem',
-                        fontWeight: 800,
-                        color: '#0f172a',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  {/* Payment Method & Unified Destination */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155' }}>
-                        {isAr ? 'طريقة التحصيل والتوريد *' : 'Collection Method *'}
-                      </label>
-                      <span style={{
-                        fontSize: '0.66rem',
-                        fontWeight: 700,
-                        color: '#047857',
-                        background: 'rgba(4, 120, 87, 0.08)',
-                        padding: '0.12rem 0.45rem',
-                        borderRadius: '5px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem'
-                      }}>
-                        <Landmark size={10} />
-                        {isAr ? 'الوجهة الموحدة: الخزينة الرئيسية (101000)' : 'Unified Destination: Main Safe (101000)'}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => setDepositPaymentMethod('CASH_101000')}
-                        style={{
-                          padding: '0.55rem 0.65rem',
-                          borderRadius: '8px',
-                          border: depositPaymentMethod === 'CASH_101000' ? '1.5px solid #059669' : '1px solid #cbd5e1',
-                          background: depositPaymentMethod === 'CASH_101000' ? 'rgba(5, 150, 105, 0.06)' : '#ffffff',
-                          color: depositPaymentMethod === 'CASH_101000' ? '#059669' : '#475569',
-                          textAlign: isAr ? 'right' : 'left',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Wallet size={16} color={depositPaymentMethod === 'CASH_101000' ? '#059669' : '#64748b'} />
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.78rem', color: depositPaymentMethod === 'CASH_101000' ? '#059669' : '#0f172a' }}>
-                            {isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}
-                          </strong>
-                          <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
-                            {isAr ? 'توريد بالخزينة (101000)' : 'Vault Safe (101000)'}
-                          </span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setDepositPaymentMethod('INSTAPAY_102000')}
-                        style={{
-                          padding: '0.55rem 0.65rem',
-                          borderRadius: '8px',
-                          border: depositPaymentMethod === 'INSTAPAY_102000' ? '1.5px solid #701a75' : '1px solid #cbd5e1',
-                          background: depositPaymentMethod === 'INSTAPAY_102000' ? 'rgba(112, 26, 117, 0.06)' : '#ffffff',
-                          color: depositPaymentMethod === 'INSTAPAY_102000' ? '#701a75' : '#475569',
-                          textAlign: isAr ? 'right' : 'left',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Smartphone size={16} color={depositPaymentMethod === 'INSTAPAY_102000' ? '#701a75' : '#64748b'} />
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.78rem', color: depositPaymentMethod === 'INSTAPAY_102000' ? '#701a75' : '#0f172a' }}>
-                            {isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay'}
-                          </strong>
-                          <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
-                            {isAr ? 'تحويل للخزينة (101000)' : 'Transfer to Safe (101000)'}
-                          </span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-                  {/* Date */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                      {isAr ? 'تاريخ استلام المساهمة' : 'Deposit Date'}
-                    </label>
-                    <input 
-                      type="date"
-                      value={depositDate}
-                      onChange={(e) => setDepositDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.82rem',
-                        color: '#0f172a',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  {/* Receipt Ref */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                      {isAr ? 'رقم الإيصال / مرجع المعاملة' : 'Receipt / Ref #'}
-                    </label>
-                    <input 
-                      type="text"
-                      value={depositReceiptRef}
-                      onChange={(e) => setDepositReceiptRef(e.target.value)}
-                      placeholder={isAr ? 'مثال: REC-2026-088' : 'e.g. REC-2026-088'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.82rem',
-                        color: '#0f172a',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{
-                  fontSize: '0.72rem',
-                  color: '#047857',
-                  background: 'rgba(4, 120, 87, 0.08)',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '6px',
-                  fontWeight: 600
-                }}>
-                  {isAr
-                    ? `✓ سيتم ترحيل قيد يومية متوازن تلقائياً: مدين: الخزينة التشغيلية الرئيسية (101000) [عبر ${depositPaymentMethod === 'INSTAPAY_102000' ? 'إنستاباي' : 'كاش باليد'}] · دائن: رأس مال الشركاء (301000).`
-                    : `✓ Automatic balanced journal entry: Dr: Operating Treasury Safe (101000) [via ${depositPaymentMethod === 'INSTAPAY_102000' ? 'InstaPay' : 'Cash'}] · Cr: Partner Capital (301000).`}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* NOTES */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-              {isAr ? 'ملاحظات وبنود تعاقدية إضافية' : 'Notes & Contractual Terms'}
-            </label>
-            <textarea 
-              rows={2}
-              placeholder={isAr ? 'اكتب أي بنود خاصة بالاتفاق أو شروط السداد...' : 'Enter any special clauses...'}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.55rem 0.75rem',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '0.82rem',
-                color: '#0f172a',
-                outline: 'none',
-                resize: 'none'
-              }}
-            />
-          </div>
-
-          {/* MODAL FOOTER */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '0.75rem',
-            paddingTop: '0.75rem',
-            borderTop: '1px solid #e2e8f0'
-          }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '0.65rem 1.25rem',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: '#ffffff',
-                color: '#475569',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              {isAr ? 'إلغاء' : 'Cancel'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={!isValid || isMutating}
-              style={{
-                padding: '0.65rem 1.5rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: isValid && !isMutating 
-                  ? 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)' 
-                  : '#cbd5e1',
-                color: '#ffffff',
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                cursor: isValid && !isMutating ? 'pointer' : 'not-allowed',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                boxShadow: isValid && !isMutating ? '0 4px 12px rgba(184, 144, 62, 0.3)' : 'none'
-              }}
-            >
-              <CheckCircle2 size={16} />
-              <span>{isMutating ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'توثيق واعتماد الشريك الجديد' : 'Save & Register Partner')}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {/* Notes */}
+        <ZFField label={isAr ? 'ملاحظات' : 'Notes'}>
+          <textarea
+            className={zfForm.control}
+            rows={2}
+            placeholder={isAr ? 'اختياري' : 'Optional'}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+          />
+        </ZFField>
+      </form>
+    </ZFModalShell>
   );
 };

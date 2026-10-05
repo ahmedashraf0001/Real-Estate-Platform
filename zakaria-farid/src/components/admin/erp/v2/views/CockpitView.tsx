@@ -51,15 +51,16 @@ import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
 import { formatCompactEGP } from '@/lib/erp/propertyAnalysisEngine';
+import { computeProjectStatusMetrics } from '@/lib/erp/projectStatusHelper';
 import { ERPApexChart } from '../charts/ERPApexChart';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFSearchBar } from '../common/ZFSearchBar';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
 import { ZFModalShell } from '../common/ZFModalShell';
-import { CockpitDualCharts } from './CockpitDualCharts';
-import styles from '../ZFWorkstationShell.module.css';
+import { CockpitDualCharts, CashflowTimelineMonth } from './CockpitDualCharts';
 import { useERPWorkstation } from '../../context/ERPWorkstationContext';
+import styles from '../ZFWorkstationShell.module.css';
 
 interface CockpitViewProps {
   isAr: boolean;
@@ -75,13 +76,6 @@ interface CockpitViewProps {
   totalWipIncurred: string;
   totalSafePDCs?: string;
   totalInjectedCapital?: string;
-  wipAccounts: {
-    land: string;
-    civil: string;
-    mep: string;
-    finishing: string;
-    financing: string;
-  };
   contracts: ERPContract[];
   pdcRecords: ERPPDCRecord[];
   schedules: ERPInstallmentSchedule[];
@@ -93,8 +87,8 @@ interface CockpitViewProps {
   partnerCalls?: ERPPartnerCall[];
   onOpenProjectExpense?: () => void;
   onInspectContract: (contract: ERPContract) => void;
-  onInspectCheque: (cheque: ERPPDCRecord) => void;
   onCollectItem?: (item: ERPPDCRecord) => void;
+  onOpenCollect?: () => void;
   onOpenNewCheque?: () => void;
   onOpenNewContract?: () => void;
   onNavigateTab?: (tab: string, filterParams?: any) => void;
@@ -119,8 +113,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   partnerCalls = [],
   onOpenProjectExpense,
   onInspectContract,
-  onInspectCheque,
   onCollectItem,
+  onOpenCollect,
   onOpenNewCheque,
   onOpenNewContract,
   onNavigateTab,
@@ -130,9 +124,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
   // Open the operational collection agenda, never the quarantined cheque workflow.
   const handleOpenInstallmentCollection = useCallback(() => {
-    if (onNavigateTab) onNavigateTab('pdc');
-    else if (contracts[0]) onInspectContract(contracts[0]);
-  }, [contracts, onNavigateTab, onInspectContract]);
+    if (onOpenCollect) onOpenCollect();
+    else if (onNavigateTab) onNavigateTab('pdc');
+  }, [onOpenCollect, onNavigateTab]);
 
   // Stat block interactive filters
   const [statPeriodFilter, setStatPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
@@ -198,8 +192,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   }, [activeTableTab, tableSearchQuery, tableStatusFilter, statProjectFilter, statPeriodFilter, pageSize]);
 
   // Mini Calendar Month View State (matches media_1790739647448.png)
-  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date(2026, 8, 30));
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(30);
+  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null);
   const [isGreetingProjectMenuOpen, setIsGreetingProjectMenuOpen] = useState(false);
   const [isNewActionMenuOpen, setIsNewActionMenuOpen] = useState(false);
   const [calendarScopeMode, setCalendarScopeMode] = useState<'day' | 'week' | 'month'>('month');
@@ -344,7 +338,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       return '+100.0%';
     }
     const diff = current.minus(prior);
-    const pct = diff.dividedBy(prior.abs()).times(100);
+    const pct = diff.times(100).dividedBy(prior.abs());
     const sign = pct.gte(0) ? '+' : '';
     return `${sign}${pct.toFixed(1)}%`;
   }, []);
@@ -384,7 +378,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
   // 2. Gross Contract Value (Real aggregation from contracts signed in period and matching project)
   const { grossContractsNum, contractsDelta } = useMemo(() => {
-    const projectContracts = contracts.filter(c => isPropertyInProject(c.property_id, c.unit_id));
+    const projectContracts = contracts.filter(c => c.status !== 'Rescinded' && isPropertyInProject(c.property_id, c.unit_id));
 
     let currentPeriodSum = D(0);
     let priorPeriodSum = D(0);
@@ -500,7 +494,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     const current = sum(isInCurrentPeriod);
     const totalOutstanding = outstandingSchedules.reduce((total, s) =>
       total.plus(D(s.nominal_value || 0).minus(s.amount_paid || 0).max(0)), D(0));
-    const val = current.gt(0) ? current : (totalOutstanding.gt(0) ? totalOutstanding : D(kpis?.accountsReceivable || totalSafePDCs || 0));
+    const val = current.gt(0) ? current : totalOutstanding;
     return { safePdcNum: Math.round(val.toNumber()), pdcDelta: formatDelta(current, sum(isInPriorPeriod)) };
   }, [outstandingSchedules, isInCurrentPeriod, isInPriorPeriod, formatDelta, kpis?.accountsReceivable, totalSafePDCs]);
 
@@ -759,14 +753,94 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     });
   }, [comparisonChartData]);
 
-  const cockpitDualChartTimeline = useMemo(() => {
-    return chartData.categories.map((month, i) => ({
-      month,
-      inflow: chartData.inflows[i] || 0,
-      outflow: chartData.outflows[i] || 0,
-      net: Math.max(0, (chartData.inflows[i] || 0) - (chartData.outflows[i] || 0))
-    }));
-  }, [chartData]);
+  const cockpitDualChartTimeline = useMemo<CashflowTimelineMonth[]>(() => {
+    const today = new Date();
+    const baseYear = today.getFullYear();
+    const baseMonth = today.getMonth();
+
+    const hasSchedules = (schedules || []).length > 0;
+    const hasCosts = (propertyCosts || []).length > 0;
+    if (!hasSchedules && !hasCosts) {
+      return [];
+    }
+
+    const months: CashflowTimelineMonth[] = [];
+
+    // Filter schedules: non-paid, non-void tranches, non-rescinded contracts, project-scoped
+    const validSchedules = (schedules || []).filter(s => {
+      const isUnpaid = s.status !== 'Paid' && s.status !== 'SUPERSEDED' && s.status !== 'Void';
+      if (!isUnpaid) return false;
+      const contract = contracts.find(c => c.contract_id === s.contract_id);
+      if (contract && contract.status === 'Rescinded') return false;
+      if (statProjectFilter !== 'all') {
+        if (!isPropertyInProject(contract?.property_id, contract?.unit_id)) return false;
+      }
+      return true;
+    });
+
+    // Filter costs: project-scoped
+    const validCosts = (propertyCosts || []).filter(c => {
+      if (statProjectFilter !== 'all') {
+        if (!isPropertyInProject(c.property_id)) return false;
+      }
+      return true;
+    });
+
+    for (let i = 0; i < 6; i++) {
+      const targetDate = new Date(baseYear, baseMonth + i, 1);
+      const tYear = targetDate.getFullYear();
+      const tMonth = targetDate.getMonth();
+      const monthLabel = targetDate.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short' });
+
+      // Inflow: installment schedules due in target month
+      let monthInflow = 0;
+      validSchedules.forEach(s => {
+        if (!s.due_date) return;
+        const d = new Date(s.due_date);
+        if (d.getFullYear() === tYear && d.getMonth() === tMonth) {
+          const nominal = parseFloat(s.nominal_value || '0');
+          const paid = parseFloat(s.amount_paid || '0');
+          const remaining = Math.max(0, nominal - paid);
+          monthInflow += remaining;
+        }
+      });
+
+      // Outflow: pending property-cost / contractor payables due in target month
+      let monthOutflow = 0;
+      validCosts.forEach(c => {
+        if (c.payable_installments && c.payable_installments.length > 0) {
+          c.payable_installments.filter(inst => inst.status !== 'PAID').forEach(inst => {
+            if (!inst.due_date) return;
+            const d = new Date(inst.due_date);
+            if (d.getFullYear() === tYear && d.getMonth() === tMonth) {
+              const amount = parseFloat(inst.amount_egp || '0');
+              const paid = parseFloat(inst.paid_amount_egp || '0');
+              monthOutflow += Math.max(0, amount - paid);
+            }
+          });
+        } else if (c.due_date && c.status !== 'capitalized') {
+          const d = new Date(c.due_date);
+          if (d.getFullYear() === tYear && d.getMonth() === tMonth) {
+            const rem = parseFloat(String(c.remaining_amount_egp || c.total_cost_egp || '0'));
+            monthOutflow += Math.max(0, rem);
+          }
+        }
+      });
+
+      const inflowM = parseFloat((monthInflow / 1000000).toFixed(1));
+      const outflowM = parseFloat((monthOutflow / 1000000).toFixed(1));
+      const netM = parseFloat((inflowM - outflowM).toFixed(1));
+
+      months.push({
+        month: monthLabel,
+        inflow: inflowM,
+        outflow: outflowM,
+        net: netM
+      });
+    }
+
+    return months;
+  }, [schedules, contracts, propertyCosts, statProjectFilter, isPropertyInProject, isAr]);
 
   // ─── Unified Recent Transactions Dataset ───
   interface RecentTxItem {
@@ -779,6 +853,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     reference: string;
     amount: number;
     formattedAmount: string;
+    statusKey: string;
     statusLabel: string;
     statusClass: string;
     onClick: () => void;
@@ -787,127 +862,195 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   const allRecentTransactions = useMemo<RecentTxItem[]>(() => {
     const list: RecentTxItem[] = [];
 
-    // 1. Client Collections from contracts
-    contracts.filter(c => isPropertyInProject(c.property_id, c.unit_id) && isInCurrentPeriod(c.contract_date)).forEach((c) => {
-      const isDelivered = c.handover_status === 'Delivered';
-      const isRescinded = c.status === 'Rescinded';
-      const rawCollectedVal = parseFloat(
-        (c as any).total_cash_collected ??
-        (c as any).collected_amount ??
-        (c as any).paid_amount ??
-        '0'
-      );
-      const rawContractVal = parseFloat(
-        (c as any).gross_contract_value ??
-        (c as any).total_contract_value ??
-        c.base_price ??
-        '0'
-      );
-      const amt = rawCollectedVal > 0 ? rawCollectedVal : rawContractVal;
-
-      list.push({
-        id: `c_${c.contract_id}`,
-        date: c.contract_date || '',
-        type: 'collection',
-        typeLabel: isAr ? 'تحصيل عميل' : 'Client Collection',
-        typeColor: '#16a34a',
-        party: c.buyer_name || (isAr ? 'عميل تعاقد' : 'Contract Client'),
-        reference: c.building_unit_number 
-          ? (isAr ? `وحدة ${c.building_unit_number}` : `Unit ${c.building_unit_number}`) 
-          : (c.unit_id || '—'),
-        amount: amt,
-        formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
-        statusLabel: isDelivered 
-          ? (isAr ? 'تم التسليم' : 'Delivered') 
-          : isRescinded 
-            ? (isAr ? 'فسخ واسترداد' : 'Rescinded') 
-            : (isAr ? 'ساري التعاقد' : 'Active'),
-        statusClass: isDelivered ? styles.statusPillBlue : isRescinded ? styles.statusPillRed : styles.statusPillGreen,
-        onClick: () => onInspectContract(c),
-      });
-    });
-
-    // 2. Contractor Payables from propertyCosts
-    propertyCosts.filter(c => isPropertyInProject(c.property_id) && isInCurrentPeriod(c.logged_date)).forEach((cost) => {
-      const amt = parseFloat(cost.total_cost_egp || String((cost as any).total_amount || '0'));
-      const isCap = cost.status === 'capitalized';
-      const isPending = cost.status === 'pending_audit';
-
-      list.push({
-        id: `pc_${cost.item_id || (cost as any).id}`,
-        date: cost.logged_date || '2026-09-14',
-        type: 'contractor',
-        typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
-        typeColor: '#d97706',
-        party: cost.supplier_contractor || (isAr ? 'شركة النيل للمقاولات' : 'Nile Contracting Co.'),
-        reference: cost.invoice_ref || (cost.building_unit_id ? `CON-${cost.building_unit_id}` : 'CON-114'),
-        amount: amt,
-        formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
-        statusLabel: isCap 
-          ? (isAr ? 'مسدد بالكامل' : 'Paid') 
-          : isPending 
-            ? (isAr ? 'قيد المراجعة' : 'In Review') 
-            : (isAr ? 'معتمد للصرف' : 'Approved'),
-        statusClass: isCap ? styles.statusPillGreen : isPending ? styles.statusPillAmber : styles.statusPillBlue,
-        onClick: () => onNavigateTab && onNavigateTab('construction'),
-      });
-    });
-
-    // Fallback contractor records if propertyCosts is empty
-    if ((propertyCosts || []).length === 0) {
-      list.push(
-        {
-          id: 'pc_mock_1',
-          date: '2026-09-14',
-          type: 'contractor',
-          typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
-          typeColor: '#d97706',
-          party: isAr ? 'شركة النيل للمقاولات' : 'Nile Contracting Co.',
-          reference: 'CON-114',
-          amount: 780000,
-          formattedAmount: `780,000 ${isAr ? 'ج.م' : 'EGP'}`,
-          statusLabel: isAr ? 'قيد الصرف' : 'Pending Payout',
-          statusClass: styles.statusPillAmber,
-          onClick: () => onNavigateTab && onNavigateTab('construction'),
-        },
-        {
-          id: 'pc_mock_2',
-          date: '2026-09-11',
-          type: 'contractor',
-          typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
-          typeColor: '#d97706',
-          party: isAr ? 'شركة الأهرام للمقاولات' : 'Al Ahram Contracting',
-          reference: 'CON-089',
-          amount: 1250000,
-          formattedAmount: `1,250,000 ${isAr ? 'ج.م' : 'EGP'}`,
-          statusLabel: isAr ? 'معتمد للصرف' : 'Approved',
-          statusClass: styles.statusPillBlue,
-          onClick: () => onNavigateTab && onNavigateTab('construction'),
-        }
-      );
+    const contractsMap = new Map<string, ERPContract>();
+    for (const c of contracts) {
+      if (c.contract_id) contractsMap.set(c.contract_id, c);
+      if (c.contract_number) contractsMap.set(c.contract_number, c);
     }
 
-    // 4. Cash journal entries
-    journalEntries.filter(j => isInCurrentPeriod(j.entry_date) && (statProjectFilter === 'all' || isPropertyInProject(j.source_entity_id) || j.lines?.some(line => isPropertyInProject(undefined, line.unit_id) || isPropertyInProject(contracts.find(c => c.contract_id === line.contract_id)?.property_id)))).forEach((j) => {
-      const amt = parseFloat(j.lines?.[0]?.debit_amount || j.lines?.[0]?.credit_amount || '0');
-      list.push({
-        id: `j_${j.entry_id}`,
-        date: j.entry_date ? String(j.entry_date).slice(0, 10) : '',
-        type: 'journal',
-        typeLabel: isAr ? 'حركة خزينة' : 'Cash Journal',
-        typeColor: '#6366f1',
-        party: j.description || (isAr ? 'حركة خزينة نقدية' : 'Cash Safe Entry'),
-        reference: `#${j.entry_id ? j.entry_id.slice(0, 8) : '001'}`,
-        amount: amt,
-        formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
-        statusLabel: isAr ? 'مرحل ومطابق' : 'Posted',
-        statusClass: styles.statusPillGreen,
-        onClick: () => onNavigateTab && onNavigateTab('ledger'),
-      });
-    });
+    const costsMap = new Map<string, ERPPropertyCostItem>();
+    if (propertyCosts) {
+      for (const cost of propertyCosts) {
+        if (cost.item_id) costsMap.set(cost.item_id, cost);
+        if ((cost as any).id) costsMap.set((cost as any).id, cost);
+        if (cost.invoice_ref) costsMap.set(cost.invoice_ref, cost);
+      }
+    }
 
-    return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [contracts, propertyCosts, pdcRecords, journalEntries, isAr, onInspectContract, onInspectCheque, onNavigateTab, isPropertyInProject, isInCurrentPeriod, statProjectFilter]);
+    // Build rows from real journal entries (newest first)
+    for (const j of journalEntries) {
+      const lineContractId = j.lines?.find(l => l.contract_id)?.contract_id;
+      let linkedContract = (lineContractId ? contractsMap.get(lineContractId) : undefined) ||
+        (j.source_entity_id ? contractsMap.get(j.source_entity_id) : undefined);
+
+      const num = j.entry_number || '';
+      const desc = j.description || '';
+      const mod = j.source_module;
+      const accountCodes = (j.lines || []).map(l => l.account_code);
+
+      if (!linkedContract && (desc || num)) {
+        linkedContract = contracts.find(c =>
+          (c.contract_number && (desc.includes(c.contract_number) || num.includes(c.contract_number))) ||
+          (c.buyer_name && desc.includes(c.buyer_name))
+        );
+      }
+
+      const linkedCost = (j.source_entity_id ? costsMap.get(j.source_entity_id) : undefined) ||
+        (num ? costsMap.get(num) : undefined);
+
+      // Project scoping filter
+      if (statProjectFilter !== 'all') {
+        const isProjectMatch =
+          (linkedContract && isPropertyInProject(linkedContract.property_id, linkedContract.unit_id || linkedContract.building_unit_number)) ||
+          (linkedCost && isPropertyInProject(linkedCost.property_id)) ||
+          isPropertyInProject(j.source_entity_id) ||
+          (j.lines && j.lines.some(l => isPropertyInProject(undefined, l.unit_id)));
+        if (!isProjectMatch) continue;
+      }
+
+      // Classify transaction into collection / contractor / journal
+      const isReceipt =
+        num.startsWith('JE-RCP-') ||
+        num.startsWith('JE-IP-') ||
+        num.startsWith('JE-COLL-') ||
+        num.startsWith('JE-PDC-CLR-') ||
+        num.startsWith('JE-COL-') ||
+        mod === 'PDC' ||
+        (/receipt|collection|إيصال|تحصيل|إنستاباي/i.test(desc) && !num.startsWith('JE-PAY-'));
+
+      const isAdvancePayment =
+        num.startsWith('JE-PAY-') ||
+        (mod === 'SALES' && !num.startsWith('JE-RCP-') && !num.startsWith('JE-IP-')) ||
+        (/advance|down payment|مقدم تعاقد|دفعة مقدمة/i.test(desc) && !num.startsWith('JE-RCP-') && !num.startsWith('JE-IP-'));
+
+      const isRescission =
+        num.startsWith('JE-RESC-') ||
+        mod === 'RESCISSION' ||
+        /rescission|فسخ واسترداد|فسخ/i.test(desc);
+
+      const isRefund =
+        num.startsWith('JE-REF-') ||
+        /refund|رد أموال|استرداد نقدي/i.test(desc);
+
+      const isExpenseOrPayable =
+        num.startsWith('JE-EXP-') ||
+        num.startsWith('JE-WIP-') ||
+        num.startsWith('JE-BILL-') ||
+        mod === 'WIP_ALLOCATION' ||
+        accountCodes.some(c => c.startsWith('15') || c.startsWith('50') || c.startsWith('201') || c.startsWith('202')) ||
+        (/expense|payable|مصروف|مقاول|مستخلص|فاتورة مورد/i.test(desc) && !isReceipt && !isAdvancePayment);
+
+      let type: 'collection' | 'contractor' | 'cheque' | 'journal' = 'journal';
+      let typeLabel = isAr ? 'حركة خزينة' : 'Cash Journal';
+      let typeColor = '#6366f1';
+      let statusKey = 'active';
+      let statusLabel = isAr ? 'مرحل ومطابق' : 'Posted';
+      let statusClass = styles.statusPillGreen;
+
+      if (isReceipt) {
+        type = 'collection';
+        if (num.startsWith('JE-IP-') || /instapay|إنستاباي/i.test(desc)) {
+          typeLabel = isAr ? 'تحصيل إنستاباي' : 'InstaPay Receipt';
+        } else if (num.startsWith('JE-RCP-') || /إيصال/i.test(desc)) {
+          typeLabel = isAr ? 'إيصال استلام' : 'Collection Receipt';
+        } else {
+          typeLabel = isAr ? 'تحصيل عميل' : 'Client Collection';
+        }
+        typeColor = '#16a34a';
+        statusKey = 'delivered';
+        statusLabel = isAr ? 'مرحل ومطابق' : 'Posted';
+        statusClass = styles.statusPillGreen;
+      } else if (isAdvancePayment) {
+        type = 'collection';
+        typeLabel = isAr ? 'مقدم تعاقد' : 'Down Payment';
+        typeColor = '#059669';
+        statusKey = 'active';
+        statusLabel = isAr ? 'ساري التعاقد' : 'Active';
+        statusClass = styles.statusPillGreen;
+      } else if (isRescission) {
+        type = 'collection';
+        typeLabel = isAr ? 'فسخ واسترداد' : 'Rescission';
+        typeColor = '#dc2626';
+        statusKey = 'rescinded';
+        statusLabel = isAr ? 'فسخ واسترداد' : 'Rescinded';
+        statusClass = styles.statusPillRed;
+      } else if (isRefund) {
+        type = 'collection';
+        typeLabel = isAr ? 'رد أموال' : 'Refund';
+        typeColor = '#ea580c';
+        statusKey = 'rescinded';
+        statusLabel = isAr ? 'مسترد' : 'Refunded';
+        statusClass = styles.statusPillAmber;
+      } else if (isExpenseOrPayable) {
+        type = 'contractor';
+        typeLabel = isAr ? 'مستحقات مقاول' : 'Contractor Payable';
+        typeColor = '#d97706';
+        statusKey = 'active';
+        statusLabel = isAr ? 'معتمد للصرف' : 'Approved';
+        statusClass = styles.statusPillBlue;
+      } else {
+        type = 'journal';
+        typeLabel = isAr ? 'حركة خزينة' : 'Cash Journal';
+        typeColor = '#6366f1';
+        statusKey = 'active';
+        statusLabel = isAr ? 'مرحل بالدفاتر' : 'Posted';
+        statusClass = styles.statusPillGreen;
+      }
+
+      // Party: buyer from linked contract via journal lines contract_id or entry source_entity_id; supplier for costs
+      let party = '';
+      if (linkedContract?.buyer_name) {
+        party = linkedContract.buyer_name;
+      } else if (linkedCost?.supplier_contractor) {
+        party = linkedCost.supplier_contractor;
+      } else if (isExpenseOrPayable) {
+        const memo = j.lines?.find(l => l.memo && l.memo.trim())?.memo;
+        party = memo || (desc ? desc.replace(/^[^:]*:\s*/, '').slice(0, 30) : (isAr ? 'مورد / مقاول' : 'Supplier / Contractor'));
+      } else if (isReceipt || isAdvancePayment || isRescission || isRefund) {
+        const parenMatch = desc.match(/\(([^)]+)\)/);
+        party = parenMatch ? parenMatch[1] : (isAr ? 'عميل تعاقد' : 'Contract Client');
+      } else {
+        party = desc || (isAr ? 'حركة خزينة نقدية' : 'Cash Safe Entry');
+      }
+
+      // Reference: entry_number
+      const reference = num || (j.entry_id ? `#${j.entry_id.slice(0, 8)}` : '—');
+
+      // Amount: sum of debits
+      const debitsSum = (j.lines || []).reduce((sum, line) => sum.plus(D(line.debit_amount || '0')), D(0)).toNumber();
+      const creditsSum = (j.lines || []).reduce((sum, line) => sum.plus(D(line.credit_amount || '0')), D(0)).toNumber();
+      const amount = debitsSum > 0 ? debitsSum : creditsSum;
+      const formattedAmount = `${amount.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
+
+      const onClick = () => {
+        if (linkedContract && onInspectContract) {
+          onInspectContract(linkedContract);
+        } else if (type === 'contractor' && onNavigateTab) {
+          onNavigateTab('construction');
+        } else if (onNavigateTab) {
+          onNavigateTab('ledger');
+        }
+      };
+
+      list.push({
+        id: `j_${j.entry_id || num}`,
+        date: j.entry_date ? String(j.entry_date).slice(0, 10) : '',
+        type,
+        typeLabel,
+        typeColor,
+        party,
+        reference,
+        amount,
+        formattedAmount,
+        statusKey,
+        statusLabel,
+        statusClass,
+        onClick,
+      });
+    }
+
+    return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [journalEntries, contracts, propertyCosts, statProjectFilter, isPropertyInProject, isAr, onInspectContract, onNavigateTab]);
 
   // Filtered & sorted Recent Transactions
   const filteredAllTransactions = useMemo(() => {
@@ -933,7 +1076,13 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
     if (tableStatusFilter !== 'all') {
       const f = tableStatusFilter.toLowerCase();
-      list = list.filter(t => t.statusLabel.toLowerCase().includes(f));
+      list = list.filter(t => {
+        if (t.statusKey === f) return true;
+        if (f === 'active' && (t.statusKey === 'posted' || t.statusKey === 'active' || t.statusKey === 'approved')) return true;
+        if (f === 'delivered' && (t.statusKey === 'cleared' || t.statusKey === 'delivered' || t.statusKey === 'posted')) return true;
+        if (f === 'rescinded' && (t.statusKey === 'rescinded' || t.statusKey === 'refunded')) return true;
+        return t.statusLabel.toLowerCase().includes(f);
+      });
     }
 
     if (tableSortField) {
@@ -1020,7 +1169,10 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       list = list.filter(p => isPropertyInProject(p.id));
     }
 
-    const getColorAndWash = (pct: number) => {
+    const getColorAndWash = (pct: number | null, hasData: boolean) => {
+      if (!hasData || pct === null) {
+        return { color: '#64748b', bgWash: '#f1f5f9' };
+      }
       if (pct >= 100) {
         return { color: '#16a34a', bgWash: '#ecfdf5' };
       }
@@ -1035,18 +1187,12 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         ? ((p as any).district_ar || (p as any).city_ar || (p.location && /[\u0600-\u06FF]/.test(p.location) ? p.location : ''))
         : ((p as any).district || p.location || '');
 
-      let pct = 0;
-      if (typeof p.completion_percentage === 'number' && !isNaN(p.completion_percentage)) {
-        pct = p.completion_percentage;
-      } else if (p.completion_status === 'ready') {
-        pct = 100;
-      }
+      const metrics = computeProjectStatusMetrics(p, contracts, propertyCosts);
+      const hasConstructionData = metrics.hasConstructionData;
+      const constructionProgressPct = metrics.constructionProgressPct;
+      const pct = constructionProgressPct ?? 0;
+      const { color, bgWash } = getColorAndWash(constructionProgressPct, hasConstructionData);
 
-      pct = Math.round(Math.max(0, Math.min(100, pct)));
-      const { color, bgWash } = getColorAndWash(pct);
-
-      const totalUnits = p.building_units?.length || p.total_units_count || 0;
-      const contractedUnits = p.building_units ? p.building_units.filter((u: any) => u.status === 'contracted').length : 0;
       const priceEgp = p.price_egp || (p as any).price || 0;
 
       const rawImg = 
@@ -1062,23 +1208,26 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         name,
         location,
         pct,
+        hasConstructionData,
+        constructionProgressPct,
+        progressDisplay: isAr ? metrics.progressDisplayAr : metrics.progressDisplayEn,
         color,
         bgWash,
         created_at: p.created_at || '',
-        totalUnits,
-        contractedUnits,
+        totalUnits: metrics.totalUnits,
+        contractedUnits: metrics.contractedUnits,
         priceEgp,
         imageUrl,
-        statusText: pct >= 100 ? (isAr ? 'مكتمل' : 'Completed') : (isAr ? 'قيد الإنشاء' : 'In Progress'),
-        statusPillClass: pct >= 100 ? 'statusPillGreen' : 'statusPillAmber',
+        statusText: isAr ? metrics.statusTextAr : metrics.statusTextEn,
+        statusPillClass: metrics.statusPillClass,
       };
     });
 
     // Sort by recent unfinished first: pct < 100 comes before pct === 100.
     // Within unfinished, sort by created_at descending / lowest percentage.
     return mapped.sort((a, b) => {
-      const aUnfinished = a.pct < 100;
-      const bUnfinished = b.pct < 100;
+      const aUnfinished = a.hasConstructionData ? a.pct < 100 : true;
+      const bUnfinished = b.hasConstructionData ? b.pct < 100 : true;
       if (aUnfinished && !bUnfinished) return -1;
       if (!aUnfinished && bUnfinished) return 1;
 
@@ -1092,7 +1241,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       }
       return 0;
     });
-  }, [properties, propertyCosts, statProjectFilter, isPropertyInProject, isAr]);
+  }, [properties, contracts, propertyCosts, statProjectFilter, isPropertyInProject, isAr]);
 
   const displayProjects = useMemo(() => {
     if (!projectsProgressData || projectsProgressData.length === 0) {
@@ -1113,6 +1262,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     iconColor: string;
     badgeText?: string;
     badgeClass?: string;
+    hasSchedule?: boolean;
+    hasPdc?: boolean;
     onClick: () => void;
   }
 
@@ -1122,13 +1273,14 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     const events: AgendaEventItem[] = [];
     const contractsMap = new Map<string, ERPContract>();
     for (const c of contracts) {
-      contractsMap.set(c.contract_id, c);
+      if (c.contract_id) contractsMap.set(c.contract_id, c);
+      if (c.contract_number) contractsMap.set(c.contract_number, c);
     }
 
     const formatDateLabel = (d: string) => {
       const datePart = d ? d.slice(0, 10) : '';
       if (datePart === today) return isAr ? 'اليوم' : 'Today';
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const tomorrow = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       if (datePart === tomorrow) return isAr ? 'غداً' : 'Tomorrow';
       try {
         const parsed = new Date(d);
@@ -1141,84 +1293,113 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       return d;
     };
 
-    // Operational agenda: contract installments and contractor dues only.
+    const matchedPdcChequeIds = new Set<string>();
+
+    // 1. Open (Pending / Partially Paid) installment tranches of non-rescinded contracts due today or later
     for (const sch of schedules) {
-      if (
-        sch.due_date &&
-        sch.status !== 'Paid' &&
-        sch.status !== 'Void' &&
-        sch.status !== 'SUPERSEDED'
-      ) {
-        const c = contractsMap.get(sch.contract_id);
+      if (!sch.due_date) continue;
+      const dueDay = sch.due_date.slice(0, 10);
+      if (dueDay < today) continue;
+
+      if (sch.status !== 'Pending' && sch.status !== 'Partially Paid') continue;
+
+      const c = contractsMap.get(sch.contract_id);
+      if (!c || c.status === 'Rescinded') continue;
+
+      if (statProjectFilter !== 'all') {
+        if (!isPropertyInProject(c?.property_id, c?.unit_id || c?.building_unit_number)) continue;
+      }
+
+      // Check if there is a mirrored cheque record in pdcRecords
+      const matchingPdc = pdcRecords?.find(pdc => {
+        if (pdc.status === 'Cleared' || pdc.status === 'Bounced' || (pdc.status as any) === 'Void') return false;
+        if (pdc.schedule_id && pdc.schedule_id === sch.schedule_id) return true;
+        if (pdc.contract_id === sch.contract_id && pdc.due_date && pdc.due_date.slice(0, 10) === dueDay) return true;
+        return false;
+      });
+
+      if (matchingPdc) {
+        matchedPdcChequeIds.add(matchingPdc.cheque_id);
+      }
+
+      const val = Math.max(0, Number(sch.nominal_value || 0) - Number(sch.amount_paid || 0));
+      const amtStr = `${val.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
+      const trancheLabel = sch.tranche_number === 0
+        ? (isAr ? 'مقدم تعاقد' : 'Down Payment')
+        : (isAr ? `قسط #${sch.tranche_number}` : `Installment #${sch.tranche_number}`);
+      const clientName = c?.buyer_name || (isAr ? 'عميل' : 'Client');
+      const title = `${trancheLabel} - ${clientName}`;
+
+      events.push({
+        id: `sch_${sch.schedule_id}`,
+        type: matchingPdc ? 'pdc' : 'installment',
+        title,
+        due_date: dueDay,
+        dateLabel: formatDateLabel(sch.due_date),
+        formattedAmount: amtStr,
+        iconBg: matchingPdc ? '#eff6ff' : '#ecfdf5',
+        iconColor: matchingPdc ? '#2563eb' : '#16a34a',
+        badgeText: matchingPdc ? (isAr ? 'شيك آجل' : 'PDC Cheque') : undefined,
+        badgeClass: matchingPdc ? 'statusPillBlue' : undefined,
+        hasSchedule: true,
+        hasPdc: !!matchingPdc,
+        onClick: () => {
+          if (c && onInspectContract) {
+            onInspectContract(c);
+          } else if (onNavigateTab) {
+            onNavigateTab('contracts');
+          }
+        },
+      });
+    }
+
+    // 2. Standalone post-dated cheques (PDCs) not mirroring any schedule tranche
+    if (pdcRecords && pdcRecords.length > 0) {
+      for (const pdc of pdcRecords) {
+        if (matchedPdcChequeIds.has(pdc.cheque_id)) continue;
+        if (
+          !pdc.due_date ||
+          pdc.status === 'Cleared' ||
+          pdc.status === 'Bounced' ||
+          (pdc.status as any) === 'Void' ||
+          (pdc.status as any) === 'Quarantined'
+        ) {
+          continue;
+        }
+        const pdcDay = pdc.due_date.slice(0, 10);
+        if (pdcDay < today) continue;
+
+        const c = contractsMap.get(pdc.contract_id);
+        if (c && c.status === 'Rescinded') continue;
+
         if (statProjectFilter !== 'all') {
           if (!isPropertyInProject(c?.property_id, c?.unit_id || c?.building_unit_number)) continue;
         }
 
-        const val = Math.max(0, Number(sch.nominal_value || 0) - Number(sch.amount_paid || 0));
+        const val = parseFloat(String(pdc.nominal_value || '0').replace(/,/g, '')) || 0;
         const amtStr = `${val.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
-        const trancheLabel = sch.tranche_number === 0
-          ? (isAr ? 'مقدم تعاقد' : 'Down Payment')
-          : (isAr ? `قسط #${sch.tranche_number}` : `Installment #${sch.tranche_number}`);
-        const clientName = c?.buyer_name || (isAr ? 'عميل' : 'Client');
-        const title = `${trancheLabel} - ${clientName}`;
+        const drawer = pdc.drawer_name || c?.buyer_name || (isAr ? 'عميل' : 'Client');
+        const title = `${isAr ? 'شيك آجل' : 'PDC Cheque'} - ${drawer}`;
         events.push({
-          id: `sch_${sch.schedule_id}`,
-          type: 'installment',
+          id: `pdc_${pdc.cheque_id}`,
+          type: 'pdc',
           title,
-          due_date: sch.due_date,
-          dateLabel: formatDateLabel(sch.due_date),
+          due_date: pdcDay,
+          dateLabel: formatDateLabel(pdc.due_date),
           formattedAmount: amtStr,
-          iconBg: '#ecfdf5',
-          iconColor: '#16a34a',
+          iconBg: '#eff6ff',
+          iconColor: '#2563eb',
+          hasPdc: true,
           onClick: () => {
-            if (c && onInspectContract) onInspectContract(c);
-            else if (onNavigateTab) onNavigateTab('contracts');
+            if (onNavigateTab) {
+              onNavigateTab('pdc');
+            }
           },
         });
       }
     }
 
-    // 2. Real post-dated cheques (PDC) from pdcRecords
-    if (pdcRecords && pdcRecords.length > 0) {
-      for (const pdc of pdcRecords) {
-        if (
-          pdc.due_date &&
-          pdc.status !== 'Cleared' &&
-          pdc.status !== 'Bounced' &&
-          (pdc.status as any) !== 'Void' &&
-          (pdc.status as any) !== 'Quarantined'
-        ) {
-          const c = contractsMap.get(pdc.contract_id);
-          if (statProjectFilter !== 'all') {
-            if (!isPropertyInProject(c?.property_id, c?.unit_id || c?.building_unit_number)) continue;
-          }
-
-          const val = parseFloat(String(pdc.nominal_value || '0').replace(/,/g, '')) || 0;
-          const amtStr = `${val.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
-          const drawer = pdc.drawer_name || c?.buyer_name || (isAr ? 'عميل' : 'Client');
-          const title = `${isAr ? 'شيك آجل' : 'PDC Cheque'} - ${drawer}`;
-          events.push({
-            id: `pdc_${pdc.cheque_id}`,
-            type: 'pdc',
-            title,
-            due_date: pdc.due_date,
-            dateLabel: formatDateLabel(pdc.due_date),
-            formattedAmount: amtStr,
-            iconBg: '#eff6ff',
-            iconColor: '#2563eb',
-            onClick: () => {
-              if (onInspectCheque) {
-                onInspectCheque(pdc);
-              } else if (onNavigateTab) {
-                onNavigateTab('pdc');
-              }
-            },
-          });
-        }
-      }
-    }
-
-    // 3. Real contractor dues from propertyCosts
+    // 3. Real contractor dues from propertyCosts (due today or later, unpaid)
     if (propertyCosts && propertyCosts.length > 0) {
       for (const cost of propertyCosts) {
         if (statProjectFilter !== 'all') {
@@ -1228,6 +1409,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         if (cost.payable_installments && cost.payable_installments.length > 0) {
           for (const inst of cost.payable_installments) {
             if (inst.status !== 'PAID' && inst.due_date) {
+              const instDay = inst.due_date.slice(0, 10);
+              if (instDay < today) continue;
               const val = Math.max(0, Number(inst.amount_egp || 0) - Number(inst.paid_amount_egp || 0));
               const amtStr = `${val.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
               const supplier = cost.supplier_contractor || (isAr ? 'مقاول' : 'Contractor');
@@ -1237,7 +1420,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                 id: `cost_inst_${cost.item_id}_${inst.installment_id || inst.installment_number}`,
                 type: 'contractor',
                 title,
-                due_date: inst.due_date,
+                due_date: instDay,
                 dateLabel: formatDateLabel(inst.due_date),
                 formattedAmount: amtStr,
                 iconBg: '#fffbeb',
@@ -1258,6 +1441,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
           cost.due_date &&
           (cost.status === 'pending_audit' || (cost.remaining_amount_egp && parseFloat(cost.remaining_amount_egp) > 0))
         ) {
+          const costDay = cost.due_date.slice(0, 10);
+          if (costDay < today) continue;
           const val = parseFloat(cost.remaining_amount_egp || cost.total_cost_egp || '0') || 0;
           const amtStr = `${val.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
           const supplier = cost.supplier_contractor || (isAr ? 'مقاول' : 'Contractor');
@@ -1267,7 +1452,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             id: `cost_${cost.item_id}`,
             type: 'contractor',
             title,
-            due_date: cost.due_date,
+            due_date: costDay,
             dateLabel: formatDateLabel(cost.due_date),
             formattedAmount: amtStr,
             iconBg: '#fffbeb',
@@ -1288,7 +1473,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
     events.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
     return events;
-  }, [schedules, contracts, propertyCosts, pdcRecords, isAr, statProjectFilter, isPropertyInProject, onInspectContract, onInspectCheque, onNavigateTab]);
+  }, [schedules, contracts, propertyCosts, pdcRecords, isAr, statProjectFilter, isPropertyInProject, onInspectContract, onNavigateTab]);
 
   const daysWithEvents = useMemo(() => {
     const days = new Set<number>();
@@ -1305,185 +1490,29 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   }, [allAgendaEvents, calendarViewDate]);
 
   const allUpcomingAgendaEvents = useMemo(() => {
-    return allAgendaEvents.filter(evt => isInCurrentPeriod(evt.due_date));
-  }, [allAgendaEvents, isInCurrentPeriod]);
+    return allAgendaEvents;
+  }, [allAgendaEvents]);
 
   const upcomingAgendaEvents = useMemo(() => {
     if (selectedDateStr) {
       return allAgendaEvents.filter(evt => evt.due_date === selectedDateStr);
     }
-    return allUpcomingAgendaEvents;
-  }, [allAgendaEvents, allUpcomingAgendaEvents, selectedDateStr]);
+    return allAgendaEvents;
+  }, [allAgendaEvents, selectedDateStr]);
 
   const filteredScheduleEvents = useMemo(() => {
-    if (scheduleFilterTab === 'all') return allUpcomingAgendaEvents;
-    if (scheduleFilterTab === 'installments') return allUpcomingAgendaEvents.filter(e => e.type === 'installment');
-    if (scheduleFilterTab === 'contractors') return allUpcomingAgendaEvents.filter(e => e.type === 'contractor');
-    if (scheduleFilterTab === 'pdc') return allUpcomingAgendaEvents.filter(e => e.type === 'pdc');
-    return allUpcomingAgendaEvents;
-  }, [allUpcomingAgendaEvents, scheduleFilterTab]);
-
-  // Full unpaginated filtered table rows with contextual status matching
-  const allFilteredContracts = useMemo(() => {
-    let list = contracts.filter(c => isInCurrentPeriod(c.contract_date));
-    if (statProjectFilter !== 'all') {
-      list = list.filter(c => isPropertyInProject(c.property_id, c.building_unit_number));
-    }
-
-    if (tableSearchQuery.trim()) {
-      const q = tableSearchQuery.toLowerCase().trim();
-      list = list.filter(c => 
-        (c.buyer_name || '').toLowerCase().includes(q) ||
-        (c.contract_id || '').toLowerCase().includes(q) ||
-        (c.building_unit_number || '').toLowerCase().includes(q)
-      );
-    }
-    if (tableStatusFilter === 'active') {
-      list = list.filter(c => c.status === 'Active' && c.handover_status !== 'Delivered');
-    } else if (tableStatusFilter === 'delivered') {
-      list = list.filter(c => c.handover_status === 'Delivered');
-    } else if (tableStatusFilter === 'rescinded') {
-      list = list.filter(c => c.status === 'Rescinded');
-    }
-    return list;
-  }, [contracts, tableSearchQuery, tableStatusFilter, statProjectFilter, isPropertyInProject, isInCurrentPeriod]);
-
-  const allFilteredPDCs = useMemo(() => {
-    let list = pdcRecords.filter(p => isInCurrentPeriod(p.due_date));
-    if (statProjectFilter !== 'all') {
-      list = list.filter(p => {
-        const linkedCt = contracts.find(c => c.contract_id === p.contract_id);
-        return isPropertyInProject(linkedCt?.property_id, linkedCt?.unit_id);
-      });
-    }
-    if (tableSearchQuery.trim()) {
-      const q = tableSearchQuery.toLowerCase().trim();
-      list = list.filter(p => 
-        (p.drawer_name || '').toLowerCase().includes(q) ||
-        (p.cheque_number || '').toLowerCase().includes(q) ||
-        (p.bank_name || '').toLowerCase().includes(q)
-      );
-    }
-    if (tableStatusFilter !== 'all') {
-      const f = tableStatusFilter.toLowerCase();
-      list = list.filter(p => {
-        const s = (p.status || '').toLowerCase();
-        if (f === 'cleared' || f === 'collected') {
-          return s === 'cleared' || s === 'collected';
-        }
-        return s === f;
-      });
-    }
-    return list;
-  }, [pdcRecords, contracts, tableSearchQuery, tableStatusFilter, statProjectFilter, isPropertyInProject, isInCurrentPeriod]);
-
-  const allFilteredJournal = useMemo(() => {
-    let list = journalEntries.filter(j => isInCurrentPeriod(j.entry_date));
-    if (statProjectFilter !== 'all') {
-      list = list.filter(j => {
-        if (isPropertyInProject(j.source_entity_id)) return true;
-        return (j.lines || []).some(l => 
-          isPropertyInProject(undefined, l.unit_id) ||
-          (l.contract_id && isPropertyInProject(contracts.find(c => c.contract_id === l.contract_id)?.property_id))
-        );
-      });
-    }
-    if (tableSearchQuery.trim()) {
-      const q = tableSearchQuery.toLowerCase().trim();
-      list = list.filter(j => 
-        (j.description || '').toLowerCase().includes(q) ||
-        (j.entry_id || '').toLowerCase().includes(q)
-      );
-    }
-    if (tableStatusFilter !== 'all') {
-      const f = tableStatusFilter.toLowerCase();
-      list = list.filter(j => {
-        const m = (j.source_module || '').toLowerCase();
-        if (f === 'sales') return m === 'sales' || m === 'contract_creation';
-        return m === f;
-      });
-    }
-    return list;
-  }, [journalEntries, contracts, tableSearchQuery, tableStatusFilter, statProjectFilter, isPropertyInProject, isInCurrentPeriod]);
-
-  // Column-sorted datasets
-  const sortedContracts = useMemo(() => {
-    if (!tableSortField) return allFilteredContracts;
-    return [...allFilteredContracts].sort((a, b) => {
-      let cmp = 0;
-      if (tableSortField === 'client') {
-        cmp = (a.buyer_name || '').localeCompare(b.buyer_name || '');
-      } else if (tableSortField === 'unit') {
-        cmp = (a.building_unit_number || '').localeCompare(b.building_unit_number || '');
-      } else if (tableSortField === 'total') {
-        const valA = parseFloat((a as any).gross_contract_value ?? (a as any).total_contract_value ?? a.base_price ?? '0');
-        const valB = parseFloat((b as any).gross_contract_value ?? (b as any).total_contract_value ?? b.base_price ?? '0');
-        cmp = valA - valB;
-      } else if (tableSortField === 'collected') {
-        const valA = parseFloat((a as any).total_cash_collected ?? (a as any).collected_amount ?? (a as any).paid_amount ?? '0');
-        const valB = parseFloat((b as any).total_cash_collected ?? (b as any).collected_amount ?? (b as any).paid_amount ?? '0');
-        cmp = valA - valB;
-      } else if (tableSortField === 'status') {
-        cmp = (a.status || '').localeCompare(b.status || '');
-      }
-      return tableSortAsc ? cmp : -cmp;
-    });
-  }, [allFilteredContracts, tableSortField, tableSortAsc]);
-
-  const sortedPDCs = useMemo(() => {
-    if (!tableSortField) return allFilteredPDCs;
-    return [...allFilteredPDCs].sort((a, b) => {
-      let cmp = 0;
-      if (tableSortField === 'client') {
-        cmp = (a.drawer_name || '').localeCompare(b.drawer_name || '');
-      } else if (tableSortField === 'bank') {
-        cmp = `${a.bank_name || ''} ${a.cheque_number || ''}`.localeCompare(`${b.bank_name || ''} ${b.cheque_number || ''}`);
-      } else if (tableSortField === 'due_date') {
-        cmp = (a.due_date || '').localeCompare(b.due_date || '');
-      } else if (tableSortField === 'nominal') {
-        cmp = parseFloat(a.nominal_value || '0') - parseFloat(b.nominal_value || '0');
-      } else if (tableSortField === 'status') {
-        cmp = (a.status || '').localeCompare(b.status || '');
-      }
-      return tableSortAsc ? cmp : -cmp;
-    });
-  }, [allFilteredPDCs, tableSortField, tableSortAsc]);
-
-  const sortedJournal = useMemo(() => {
-    if (!tableSortField) return allFilteredJournal;
-    return [...allFilteredJournal].sort((a, b) => {
-      let cmp = 0;
-      if (tableSortField === 'id') {
-        cmp = (a.entry_id || '').localeCompare(b.entry_id || '');
-      } else if (tableSortField === 'description') {
-        cmp = (a.description || '').localeCompare(b.description || '');
-      } else if (tableSortField === 'date') {
-        cmp = String(a.entry_date || '').localeCompare(String(b.entry_date || ''));
-      } else if (tableSortField === 'amount') {
-        cmp = parseFloat(a.lines?.[0]?.debit_amount || '0') - parseFloat(b.lines?.[0]?.debit_amount || '0');
-      } else if (tableSortField === 'status') {
-        cmp = (a.source_module || '').localeCompare(b.source_module || '');
-      }
-      return tableSortAsc ? cmp : -cmp;
-    });
-  }, [allFilteredJournal, tableSortField, tableSortAsc]);
+    if (scheduleFilterTab === 'all') return allAgendaEvents;
+    if (scheduleFilterTab === 'installments') return allAgendaEvents.filter(e => e.type === 'installment' || e.hasSchedule);
+    if (scheduleFilterTab === 'contractors') return allAgendaEvents.filter(e => e.type === 'contractor');
+    if (scheduleFilterTab === 'pdc') return allAgendaEvents.filter(e => e.type === 'pdc' || e.hasPdc);
+    return allAgendaEvents;
+  }, [allAgendaEvents, scheduleFilterTab]);
 
   // Active dataset totals & interactive pagination calculations
   const totalFilteredCount = useMemo(() => {
-    if (activeTableTab === 'collections') return allFilteredContracts.length;
-    if (activeTableTab === 'pdc') return allFilteredPDCs.length;
-    if (activeTableTab === 'ledger') return allFilteredJournal.length;
-    if (activeTableTab === 'contractors') return filteredAllTransactions.filter(t => t.type === 'contractor').length;
     return filteredAllTransactions.length;
-  }, [activeTableTab, allFilteredContracts.length, allFilteredPDCs.length, allFilteredJournal.length, filteredAllTransactions]);
+  }, [filteredAllTransactions]);
 
-  const totalDatasetCount = useMemo(() => {
-    if (activeTableTab === 'collections') return contracts.length;
-    if (activeTableTab === 'pdc') return pdcRecords.length;
-    if (activeTableTab === 'ledger') return journalEntries.length;
-    if (activeTableTab === 'contractors') return (propertyCosts || []).length || 2;
-    return allRecentTransactions.length;
-  }, [activeTableTab, contracts.length, pdcRecords.length, journalEntries.length, propertyCosts, allRecentTransactions.length]);
 
   const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -1493,21 +1522,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     const start = (safeCurrentPage - 1) * pageSize;
     return filteredAllTransactions.slice(start, start + pageSize);
   }, [filteredAllTransactions, safeCurrentPage, pageSize]);
-
-  const paginatedContracts = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return sortedContracts.slice(start, start + pageSize);
-  }, [sortedContracts, safeCurrentPage, pageSize]);
-
-  const paginatedPDCs = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return sortedPDCs.slice(start, start + pageSize);
-  }, [sortedPDCs, safeCurrentPage, pageSize]);
-
-  const paginatedJournal = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return sortedJournal.slice(start, start + pageSize);
-  }, [sortedJournal, safeCurrentPage, pageSize]);
 
   const rangeStart = totalFilteredCount === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
   const rangeEnd = Math.min((safeCurrentPage - 1) * pageSize + pageSize, totalFilteredCount);
@@ -1616,9 +1630,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                 <button
                   type="button"
                   className={styles.cockpitDropdownMenuItem}
-                  onClick={() => { setIsNewActionMenuOpen(false); if (onOpenNewCheque) onOpenNewCheque(); else if (onOpenProjectExpense) onOpenProjectExpense(); }}
+                  onClick={() => { setIsNewActionMenuOpen(false); if (onOpenProjectExpense) onOpenProjectExpense(); }}
                 >
-                  <span>{isAr ? 'سند صرف / شيك' : 'Disbursement / Cheque'}</span>
+                  <span>{isAr ? 'مصروف أو فاتورة' : 'Expense or bill'}</span>
                 </button>
                 <button
                   type="button"
@@ -1626,13 +1640,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   onClick={() => { setIsNewActionMenuOpen(false); handleOpenInstallmentCollection(); }}
                 >
                   <span>{isAr ? 'تحصيل قسط عميل' : 'Collect Installment'}</span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.cockpitDropdownMenuItem}
-                  onClick={() => { setIsNewActionMenuOpen(false); if (onNavigateTab) onNavigateTab('ledger', { openNewEntry: true }); }}
-                >
-                  <span>{isAr ? 'قيد يومية يدوي' : 'Manual Journal Entry'}</span>
                 </button>
               </div>
             )}
@@ -1713,7 +1720,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
             {/* Stat 3: Scheduled Receivables */}
             <ZFKpiCard
-              title={isAr ? 'مستحقات واجبة التحصيل' : 'Due Collections'}
+              title={isAr ? 'تحصيلات مجدولة (خارج الدفاتر)' : 'Scheduled collections (off-ledger)'}
               value={<AnimatedCounter value={safePdcNum} duration={800} />}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Receipt size={16} />}
@@ -1738,7 +1745,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
                 </button>
               }
-              tooltip={isAr ? 'المتبقي من أقساط العملاء المستحقة في الفترة المختارة' : 'Outstanding customer installments due in the selected period'}
+              tooltip={isAr ? 'مستمدة من جداول الأقساط، غير مثبتة في دفتر الأستاذ العام (أساس نقدي)' : 'Comes from installment schedules, not booked in the GL (cash-basis)'}
             />
 
             {/* Stat 4: Upcoming Payables & Expenses */}
@@ -1981,8 +1988,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Table content based on active tab */}
             <div className={styles.tableContainer}>
               <div key={activeTableTab} className={styles.tableTabPanel}>
-                {activeTableTab === 'all' && (
-                  <table className={styles.canonicalTable}>
+                <table className={styles.canonicalTable}>
                     <thead className={styles.canonicalThead}>
                       <tr>
                         <th
@@ -2158,556 +2164,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                       )}
                     </tbody>
                   </table>
-                )}
-
-                {activeTableTab === 'contractors' && (
-                  <table className={styles.canonicalTable}>
-                    <thead className={styles.canonicalThead}>
-                      <tr>
-                        <th className={styles.canonicalTh}>
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'المقاول / المورد' : 'Contractor / Supplier'}</span>
-                          </div>
-                        </th>
-                        <th className={styles.canonicalTh}>
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'المرجع / البند' : 'Reference / Category'}</span>
-                          </div>
-                        </th>
-                        <th className={styles.canonicalTh}>
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'تاريخ الاستحقاق' : 'Date'}</span>
-                          </div>
-                        </th>
-                        <th className={styles.canonicalTh}>
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'المبلغ المستحق' : 'Amount Due'}</span>
-                          </div>
-                        </th>
-                        <th className={styles.canonicalTh}>
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'الحالة' : 'Status'}</span>
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAllTransactions.filter(t => t.type === 'contractor').length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                            {isAr ? 'لا توجد مستحقات مقاولين مسجلة' : 'No contractor payables found.'}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAllTransactions.filter(t => t.type === 'contractor').slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize).map((cost) => (
-                          <tr
-                            key={cost.id}
-                            className={styles.canonicalRow}
-                            onClick={cost.onClick}
-                            tabIndex={0}
-                            role="button"
-                          >
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cost.party}>
-                              {cost.party}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#64748b', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cost.reference}>
-                              {cost.reference}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.80rem', color: '#64748b' }}>
-                              {cost.date}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                              {cost.formattedAmount}
-                            </td>
-                            <td className={styles.canonicalTd}>
-                              <span className={`${styles.statusPill} ${cost.statusClass}`}>
-                                {cost.statusLabel}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                )}
-
-                {activeTableTab === 'collections' && (
-                  <table className={styles.canonicalTable}>
-                    <thead className={styles.canonicalThead}>
-                      <tr>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('client')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب العميل' : 'Sort by client'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'العميل' : 'Client Name'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'client' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'client' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('unit')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب الوحدة' : 'Sort by unit'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'الوحدة / العقار' : 'Unit / Property'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'unit' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'unit' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('total')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب القيمة' : 'Sort by total price'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'القيمة الإجمالية' : 'Total Price'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'total' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'total' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('collected')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب المتحصل' : 'Sort by collected'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'المتحصل' : 'Collected'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'collected' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'collected' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('status')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب الحالة' : 'Sort by status'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'الحالة' : 'Status'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'status' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'status' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedContracts.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                            {isAr ? 'لا توجد عقود مسجلة مطابقة للبحث' : 'No matching contracts found.'}
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedContracts.map((c) => {
-                          const isDelivered = c.handover_status === 'Delivered';
-                          const isRescinded = c.status === 'Rescinded';
-                          const rawContractVal =
-                            (c as any).gross_contract_value ??
-                            (c as any).total_contract_value ??
-                            (c as any).total_amount ??
-                            c.base_price ??
-                            '0';
-                          const rawCollectedVal =
-                            (c as any).total_cash_collected ??
-                            (c as any).collected_amount ??
-                            (c as any).paid_amount ??
-                            '0';
-                          return (
-                            <tr
-                              key={c.contract_id}
-                              className={styles.canonicalRow}
-                              onClick={() => onInspectContract(c)}
-                            >
-                              <td className={styles.canonicalTd} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.buyer_name || '-'}>
-                                {c.buyer_name || '-'}
-                              </td>
-                              <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#64748b', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.building_unit_number || (isAr ? 'وحدة سكنية' : 'Unit')}>
-                                {c.building_unit_number || (isAr ? 'وحدة سكنية' : 'Unit')}
-                              </td>
-                              <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                                {parseFloat(rawContractVal).toLocaleString('en-US')}{' '}
-                                <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                              </td>
-                              <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                                {parseFloat(rawCollectedVal).toLocaleString('en-US')}{' '}
-                                <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                              </td>
-                              <td className={styles.canonicalTd}>
-                                {isDelivered ? (
-                                  <span className={`${styles.statusPill} ${styles.statusPillBlue}`}>
-                                    {isAr ? 'تم التسليم' : 'Delivered'}
-                                  </span>
-                                ) : isRescinded ? (
-                                  <span className={`${styles.statusPill} ${styles.statusPillRed}`}>
-                                    {isAr ? 'فسخ واسترداد' : 'Rescinded'}
-                                  </span>
-                                ) : (
-                                  <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
-                                    {isAr ? 'ساري التعاقد' : 'Active'}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                )}
-
-                {activeTableTab === 'pdc' && (
-                  <table className={styles.canonicalTable}>
-                    <thead className={styles.canonicalThead}>
-                      <tr>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('client')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب العميل' : 'Sort by client'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'الساحب / العميل' : 'Drawer / Client'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'client' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'client' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('bank')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب البنك' : 'Sort by bank'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'البنك ورقم الشيك' : 'Bank & Cheque #'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'bank' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'bank' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('due_date')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب تاريخ الاستحقاق' : 'Sort by due date'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'due_date' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'due_date' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('nominal')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب القيمة' : 'Sort by nominal value'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'القيمة الاسمية' : 'Nominal Value'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'nominal' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'nominal' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('status')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب الحالة' : 'Sort by status'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'الحالة' : 'Status'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'status' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'status' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedPDCs.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                            {isAr ? 'لا توجد شيكات مسجلة' : 'No cheques recorded.'}
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedPDCs.map((p) => (
-                          <tr
-                            key={p.cheque_id}
-                            className={styles.canonicalRow}
-                            onClick={() => onInspectCheque(p)}
-                          >
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.drawer_name || '-'}>
-                              {p.drawer_name || '-'}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#64748b', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${p.bank_name || 'البنك التجاري'} (${p.cheque_number || '---'})`}>
-                              {p.bank_name || 'البنك التجاري'} ({p.cheque_number || '---'})
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.80rem', color: '#64748b' }}>
-                              {p.due_date || '-'}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                              {parseFloat(p.nominal_value || '0').toLocaleString('en-US')}{' '}
-                              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                            </td>
-                            <td className={styles.canonicalTd}>
-                              <span className={`
-                                ${styles.statusPill} 
-                                ${p.status === 'In Safe' 
-                                  ? styles.statusPillAmber 
-                                  : p.status === 'Bounced' 
-                                    ? styles.statusPillRed 
-                                    : p.status === 'Deposited' 
-                                      ? styles.statusPillBlue 
-                                      : styles.statusPillGreen}
-                              `}>
-                                {p.status === 'In Safe'
-                                  ? (isAr ? 'في الخزنة' : 'In Safe')
-                                  : p.status === 'Deposited'
-                                    ? (isAr ? 'مودع بالبنك' : 'Deposited')
-                                    : p.status === 'Cleared'
-                                      ? (isAr ? 'محصل' : 'Cleared')
-                                      : p.status === 'Bounced'
-                                        ? (isAr ? 'مرتد' : 'Bounced')
-                                        : p.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                )}
-
-                {activeTableTab === 'ledger' && (
-                  <table className={styles.canonicalTable}>
-                    <thead className={styles.canonicalThead}>
-                      <tr>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('id')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب رقم القيد' : 'Sort by entry ID'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'رقم القيد' : 'Entry ID'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'id' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'id' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('description')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب البيان' : 'Sort by description'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'البيان المحاسبي' : 'Description'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'description' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'description' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('date')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب التاريخ' : 'Sort by date'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'التاريخ' : 'Date'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'date' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'date' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('amount')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب المبلغ' : 'Sort by amount'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'المبلغ' : 'Amount'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'amount' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'amount' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className={styles.canonicalTh}
-                          onClick={() => handleTableSort('status')}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isAr ? 'ترتيب حسب الحالة' : 'Sort by status'}
-                        >
-                          <div className={styles.canonicalThContent}>
-                            <span>{isAr ? 'الحالة' : 'Status'}</span>
-                            <ChevronsUpDown
-                              size={12}
-                              className={styles.canonicalSortIcon}
-                              style={{
-                                color: tableSortField === 'status' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
-                                opacity: tableSortField === 'status' ? 1 : 0.65,
-                              }}
-                            />
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedJournal.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                            {isAr ? 'لا توجد قيود يومية حديثة' : 'No recent journal entries.'}
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedJournal.map((j) => (
-                          <tr
-                            key={j.entry_id}
-                            className={styles.canonicalRow}
-                            onClick={() => onNavigateTab && onNavigateTab('ledger')}
-                          >
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                              #{j.entry_id ? j.entry_id.slice(0, 8) : '001'}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#334155', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {j.description || '-'}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.80rem', color: '#64748b' }}>
-                              {j.entry_date ? String(j.entry_date).slice(0, 10) : '-'}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                              {parseFloat(j.lines?.[0]?.debit_amount || '0').toLocaleString('en-US')}{' '}
-                              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                            </td>
-                            <td className={styles.canonicalTd}>
-                              <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
-                                {isAr ? 'مرحل ومطابق' : 'Posted'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                )}
               </div>
             </div>
 
@@ -2882,8 +2338,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   type="button"
                   className={styles.miniCalendarTodayBtn}
                   onClick={() => {
-                    setCalendarViewDate(new Date(2026, 8, 30));
-                    setSelectedCalendarDay(30);
+                    const now = new Date();
+                    setCalendarViewDate(now);
+                    setSelectedCalendarDay(now.getDate());
                   }}
                 >
                   {isAr ? 'اليوم' : 'Today'}
@@ -2899,8 +2356,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                 ))}
                 {miniCalendarCells.map((cell, idx) => {
                   const isSelected = cell.isCurrentMonth && selectedCalendarDay === cell.day;
-                  const hasEvent = cell.isCurrentMonth && (daysWithEvents.has(cell.day) || cell.day === 30);
-                  const isDay30 = cell.isCurrentMonth && cell.day === 30;
+                  const hasEvent = cell.isCurrentMonth && daysWithEvents.has(cell.day);
                   return (
                     <button
                       key={idx}
@@ -2928,13 +2384,10 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                       {hasEvent && (
                         <span style={{ display: 'inline-flex', gap: '2px', position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)' }}>
                           <span className={styles.miniCalendarEventDot} style={{
-                            background: isSelected ? '#ffffff' : (isDay30 ? '#dc2626' : undefined),
+                            background: isSelected ? '#ffffff' : 'var(--erp-accent, #2563eb)',
                             width: 3.5,
                             height: 3.5
                           }} />
-                          {isDay30 && !isSelected && (
-                            <span style={{ width: 3.5, height: 3.5, borderRadius: '50%', background: '#16a34a' }} />
-                          )}
                         </span>
                       )}
                     </button>
@@ -2945,9 +2398,13 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               {/* Dues Section */}
               <div className={styles.calendarDuesSummaryBar}>
                 <span>
-                  {isAr 
-                    ? `استحقاقات ${selectedCalendarDay || 30} ${miniCalendarMonthTitle} (${upcomingAgendaEvents.length})` 
-                    : `Dues on ${selectedCalendarDay || 30} ${miniCalendarMonthTitle} (${upcomingAgendaEvents.length})`}
+                  {selectedCalendarDay !== null
+                    ? (isAr 
+                        ? `استحقاقات ${selectedCalendarDay} ${miniCalendarMonthTitle} (${upcomingAgendaEvents.length})` 
+                        : `Dues on ${selectedCalendarDay} ${miniCalendarMonthTitle} (${upcomingAgendaEvents.length})`)
+                    : (isAr
+                        ? `جميع الاستحقاقات القادمة (${upcomingAgendaEvents.length})`
+                        : `All Upcoming Dues (${upcomingAgendaEvents.length})`)}
                 </span>
                 {selectedCalendarDay !== null && (
                   <button
@@ -3134,8 +2591,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                           <span className={styles.projectProgressName} title={proj.name}>
                             {proj.name}
                           </span>
-                          <span className={`statusPill ${proj.statusPillClass || (proj.pct >= 100 ? 'statusPillGreen' : 'statusPillAmber')}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
-                            {proj.statusText || (proj.pct >= 100 ? (isAr ? 'مكتمل' : 'Completed') : (isAr ? 'قيد الإنشاء' : 'In Progress'))}
+                          <span className={`statusPill ${proj.statusPillClass}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                            {proj.statusText}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#64748b', marginTop: '3px' }}>
@@ -3149,15 +2606,15 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                               <HardHat size={11} style={{ flexShrink: 0 }} />
                               <span>{isAr ? 'الإنجاز الإنشائي' : 'Construction Progress'}</span>
                             </span>
-                            <span className={styles.projectProgressPct} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '0.68rem' }}>
-                              {Math.min(100, Math.max(0, proj.pct))}%
+                            <span className={styles.projectProgressPct} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '0.68rem', color: proj.hasConstructionData ? undefined : '#94a3b8' }}>
+                              {proj.hasConstructionData ? `${Math.min(100, Math.max(0, proj.pct))}%` : (isAr ? '— لا توجد بيانات تنفيذ' : '— No construction data')}
                             </span>
                           </div>
                           <div className={styles.projectProgressBarTrack} style={{ height: '5px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
                             <div
                               className={styles.projectProgressBarFill}
                               style={{
-                                width: `${Math.min(100, Math.max(0, proj.pct))}%`,
+                                width: proj.hasConstructionData ? `${Math.min(100, Math.max(0, proj.pct))}%` : '0%',
                                 height: '100%',
                                 backgroundColor: 'var(--erp-accent, #2563eb)',
                                 borderRadius: '999px',
@@ -3536,8 +2993,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
             {/* Scrollable Modal Table Area */}
             <div style={{ maxHeight: '52vh', overflowY: 'auto', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-              {activeTableTab === 'all' && (
-                <table className={styles.canonicalTable}>
+              <table className={styles.canonicalTable}>
                   <thead className={styles.canonicalThead}>
                     <tr>
                       <th className={styles.canonicalTh}>{isAr ? 'التاريخ' : 'Date'}</th>
@@ -3602,263 +3058,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     )}
                   </tbody>
                 </table>
-              )}
-
-              {activeTableTab === 'contractors' && (
-                <table className={styles.canonicalTable}>
-                  <thead className={styles.canonicalThead}>
-                    <tr>
-                      <th className={styles.canonicalTh}>{isAr ? 'المقاول / المورد' : 'Contractor / Supplier'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'المرجع / البند' : 'Reference / Category'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'تاريخ الاستحقاق' : 'Date'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'المبلغ المستحق' : 'Amount Due'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'الحالة' : 'Status'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAllTransactions.filter(t => t.type === 'contractor').length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                          {isAr ? 'لا توجد مستحقات مقاولين مسجلة' : 'No contractor payables found.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredAllTransactions.filter(t => t.type === 'contractor').map((cost) => (
-                        <tr
-                          key={cost.id}
-                          className={styles.canonicalRow}
-                          onClick={() => {
-                            setIsFullScreenTableOpen(false);
-                            cost.onClick();
-                          }}
-                          tabIndex={0}
-                          role="button"
-                        >
-                          <td className={styles.canonicalTd} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cost.party}>
-                            {cost.party}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#64748b', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cost.reference}>
-                            {cost.reference}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.80rem', color: '#64748b' }}>
-                            {cost.date}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                            {cost.formattedAmount}
-                          </td>
-                          <td className={styles.canonicalTd}>
-                            <span className={`${styles.statusPill} ${cost.statusClass}`}>
-                              {cost.statusLabel}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {activeTableTab === 'collections' && (
-                <table className={styles.canonicalTable}>
-                  <thead className={styles.canonicalThead}>
-                    <tr>
-                      <th className={styles.canonicalTh}>{isAr ? 'العميل' : 'Client Name'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'الوحدة / العقار' : 'Unit / Property'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'القيمة الإجمالية' : 'Total Price'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'المتحصل' : 'Collected'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'الحالة' : 'Status'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedContracts.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                          {isAr ? 'لا توجد عقود مسجلة مطابقة للبحث' : 'No matching contracts found.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      sortedContracts.map((c) => {
-                        const isDelivered = c.handover_status === 'Delivered';
-                        const isRescinded = c.status === 'Rescinded';
-                        const rawContractVal =
-                          (c as any).gross_contract_value ??
-                          (c as any).total_contract_value ??
-                          (c as any).total_amount ??
-                          c.base_price ??
-                          '0';
-                        const rawCollectedVal =
-                          (c as any).total_cash_collected ??
-                          (c as any).collected_amount ??
-                          (c as any).paid_amount ??
-                          '0';
-                        return (
-                          <tr
-                            key={c.contract_id}
-                            className={styles.canonicalRow}
-                            onClick={() => {
-                              setIsFullScreenTableOpen(false);
-                              onInspectContract(c);
-                            }}
-                          >
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.buyer_name || '-'}>
-                              {c.buyer_name || '-'}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#64748b', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.building_unit_number || (isAr ? 'وحدة سكنية' : 'Unit')}>
-                              {c.building_unit_number || (isAr ? 'وحدة سكنية' : 'Unit')}
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                              {parseFloat(rawContractVal).toLocaleString('en-US')}{' '}
-                              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                            </td>
-                            <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                              {parseFloat(rawCollectedVal).toLocaleString('en-US')}{' '}
-                              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                            </td>
-                            <td className={styles.canonicalTd}>
-                              {isDelivered ? (
-                                <span className={`${styles.statusPill} ${styles.statusPillBlue}`}>
-                                  {isAr ? 'تم التسليم' : 'Delivered'}
-                                </span>
-                              ) : isRescinded ? (
-                                <span className={`${styles.statusPill} ${styles.statusPillRed}`}>
-                                  {isAr ? 'فسخ واسترداد' : 'Rescinded'}
-                                </span>
-                              ) : (
-                                <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
-                                  {isAr ? 'ساري التعاقد' : 'Active'}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {activeTableTab === 'pdc' && (
-                <table className={styles.canonicalTable}>
-                  <thead className={styles.canonicalThead}>
-                    <tr>
-                      <th className={styles.canonicalTh}>{isAr ? 'الساحب / العميل' : 'Drawer / Client'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'البنك ورقم الشيك' : 'Bank & Cheque #'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'القيمة الاسمية' : 'Nominal Value'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'الحالة' : 'Status'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedPDCs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                          {isAr ? 'لا توجد شيكات مسجلة' : 'No cheques recorded.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      sortedPDCs.map((p) => (
-                        <tr
-                          key={p.cheque_id}
-                          className={styles.canonicalRow}
-                          onClick={() => {
-                            setIsFullScreenTableOpen(false);
-                            onInspectCheque(p);
-                          }}
-                        >
-                          <td className={styles.canonicalTd} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.drawer_name || '-'}>
-                            {p.drawer_name || '-'}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#64748b', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${p.bank_name || 'البنك التجاري'} (${p.cheque_number || '---'})`}>
-                            {p.bank_name || 'البنك التجاري'} ({p.cheque_number || '---'})
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.80rem', color: '#64748b' }}>
-                            {p.due_date || '-'}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                            {parseFloat(p.nominal_value || '0').toLocaleString('en-US')}{' '}
-                            <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                          </td>
-                          <td className={styles.canonicalTd}>
-                            <span className={`
-                              ${styles.statusPill} 
-                              ${p.status === 'In Safe' 
-                                ? styles.statusPillAmber 
-                                : p.status === 'Bounced' 
-                                  ? styles.statusPillRed 
-                                  : p.status === 'Deposited' 
-                                    ? styles.statusPillBlue 
-                                    : styles.statusPillGreen}
-                            `}>
-                              {p.status === 'In Safe'
-                                ? (isAr ? 'في الخزنة' : 'In Safe')
-                                : p.status === 'Deposited'
-                                  ? (isAr ? 'مودع بالبنك' : 'Deposited')
-                                  : p.status === 'Cleared'
-                                    ? (isAr ? 'محصل' : 'Cleared')
-                                    : p.status === 'Bounced'
-                                      ? (isAr ? 'مرتد' : 'Bounced')
-                                      : p.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {activeTableTab === 'ledger' && (
-                <table className={styles.canonicalTable}>
-                  <thead className={styles.canonicalThead}>
-                    <tr>
-                      <th className={styles.canonicalTh}>{isAr ? 'رقم القيد' : 'Entry ID'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'البيان المحاسبي' : 'Description'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'التاريخ' : 'Date'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'المبلغ' : 'Amount'}</th>
-                      <th className={styles.canonicalTh}>{isAr ? 'الحالة' : 'Status'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedJournal.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                          {isAr ? 'لا توجد قيود يومية حديثة' : 'No recent journal entries.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      sortedJournal.map((j) => (
-                        <tr
-                          key={j.entry_id}
-                          className={styles.canonicalRow}
-                          onClick={() => {
-                            setIsFullScreenTableOpen(false);
-                            if (onNavigateTab) onNavigateTab('ledger');
-                          }}
-                        >
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                            #{j.entry_id ? j.entry_id.slice(0, 8) : '001'}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontSize: '0.80rem', fontWeight: 400, color: '#334155', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {j.description || '-'}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.80rem', color: '#64748b' }}>
-                            {j.entry_date ? String(j.entry_date).slice(0, 10) : '-'}
-                          </td>
-                          <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
-                            {parseFloat(j.lines?.[0]?.debit_amount || '0').toLocaleString('en-US')}{' '}
-                            <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-                          </td>
-                          <td className={styles.canonicalTd}>
-                            <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
-                              {isAr ? 'مرحل ومطابق' : 'Posted'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
             </div>
           </div>
         </ZFModalShell>
@@ -4453,11 +3652,11 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     </span>
                   </div>
                   <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.72rem', fontWeight: 700 }}>
-                    {projectsProgressData.filter(p => p.pct >= 100).length} {isAr ? 'مكتمل' : 'Completed'}
+                    {projectsProgressData.filter(p => p.hasConstructionData && p.pct >= 100).length} {isAr ? 'مكتمل' : 'Completed'}
                   </span>
                 </div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums', margin: '0.35rem 0 0.15rem 0' }}>
-                  {projectsProgressData.filter(p => p.pct >= 100).length}
+                  {projectsProgressData.filter(p => p.hasConstructionData && p.pct >= 100).length}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                   {isAr ? 'جاهزة للتسليم والتشغيل النهائي' : 'Ready for handover & occupancy'}
@@ -4533,15 +3732,17 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                         <td className={styles.canonicalTd}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', width: '100%' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: proj.color, fontVariantNumeric: 'tabular-nums' }}>
-                                {`${proj.pct}%`}
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: proj.hasConstructionData ? proj.color : '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                                {proj.hasConstructionData ? `${proj.pct}%` : '—'}
                               </span>
                               <span style={{ fontSize: '0.70rem', color: '#64748b' }}>
-                                {proj.pct >= 100 ? (isAr ? 'مكتمل' : 'Done') : (isAr ? 'قيد التنفيذ' : 'In Progress')}
+                                {proj.hasConstructionData
+                                  ? (proj.pct >= 100 ? (isAr ? 'مكتمل' : 'Done') : (isAr ? 'قيد التنفيذ' : 'In Progress'))
+                                  : (isAr ? 'لا توجد بيانات تنفيذ' : 'No construction data')}
                               </span>
                             </div>
                             <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(100, Math.max(0, proj.pct))}%`, height: '100%', background: proj.color, borderRadius: '999px', transition: 'width 0.3s ease' }} />
+                              <div style={{ width: proj.hasConstructionData ? `${Math.min(100, Math.max(0, proj.pct))}%` : '0%', height: '100%', background: proj.color, borderRadius: '999px', transition: 'width 0.3s ease' }} />
                             </div>
                           </div>
                         </td>
@@ -4554,9 +3755,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                         <td className={styles.canonicalTd}>
                           <span className={`
                             ${styles.statusPill}
-                            ${proj.pct >= 100 ? styles.statusPillGreen : styles.statusPillBlue}
+                            ${styles[proj.statusPillClass as keyof typeof styles] || proj.statusPillClass}
                           `}>
-                            {proj.pct >= 100 ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'قيد الإنشاء' : 'Under Construction')}
+                            {proj.statusText}
                           </span>
                         </td>
                         <td className={styles.canonicalTd} style={{ textAlign: 'center' }}>
@@ -4568,8 +3769,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                               if (onNavigateTab) onNavigateTab('properties', { propertyId: proj.id });
                             }}
                             style={{
-                              background: '#eff6ff',
-                              border: '1px solid #bfdbfe',
+                              background: 'var(--erp-accent-subtle)',
+                              border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                               color: 'var(--erp-accent, #2563eb)',
                               borderRadius: '4px',
                               padding: '0.25rem 0.65rem',

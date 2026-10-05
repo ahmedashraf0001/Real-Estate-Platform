@@ -550,7 +550,7 @@
 }
 
 .typeBadgeAsset { background: #ecfdf5; color: #059669; }
-.typeBadgeLiability { background: #eff6ff; color: #2563eb; }
+.typeBadgeLiability { background: var(--erp-accent-subtle); color: var(--erp-accent); }
 .typeBadgeEquity { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 .typeBadgeRevenue { background: #ecfdf5; color: #059669; }
 .typeBadgeExpense { background: #fff1f2; color: #e11d48; }
@@ -607,9 +607,9 @@
 }
 
 .statusPillBlue {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background: var(--erp-accent-subtle);
+  color: var(--erp-accent);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent);
 }
 
 .statusPillAmber {

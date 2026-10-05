@@ -6,8 +6,6 @@ import { StatsSection } from '@/components/home/StatsSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MapSection } from '@/components/map/MapSection';
 import { SovereignAdvisorySection } from '@/components/home/SovereignAdvisorySection';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
@@ -69,20 +67,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
     router.push('/' + locale + '/contact');
   });
 
-  // Use server-fetched real DB properties, fall back to adapted FALLBACK_PROPERTIES
-  const fallbackAdapted = React.useMemo(() => adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar'), [locale]);
-  const allProps = (propProperties && propProperties.length > 0) ? propProperties : fallbackAdapted;
+  const allProps = React.useMemo(() => propProperties || [], [propProperties]);
 
-  // Guarantee balanced 6-card collection for the showcase grid
+  // Guarantee balanced collection for the showcase grid (up to 6 cards)
   const featuredProperties = React.useMemo(() => {
     const featured = allProps.filter((p) => p.featured || p.is_featured);
     if (featured.length >= 6) return featured.slice(0, 6);
     const nonFeatured = allProps.filter((p) => !p.featured && !p.is_featured);
     const combined = [...featured, ...nonFeatured];
-    if (combined.length >= 6) return combined.slice(0, 6);
-    const extraFallback = fallbackAdapted.filter(fb => !combined.some(c => c.id === fb.id));
-    return [...combined, ...extraFallback].slice(0, 6);
-  }, [allProps, fallbackAdapted]);
+    return combined.slice(0, 6);
+  }, [allProps]);
 
   const { registerProperties } = useFavorites();
 
@@ -416,25 +410,41 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
             {/* 6-Card Animated Grid */}
             <div className="featured-grid">
-              <AnimatePresence mode="popLayout">
-                {filteredFeaturedProperties.map((property, idx) => (
-                  <motion.div
-                    key={property.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <PropertyCard
-                      property={property}
-                      index={idx}
-                      onSelect={onSelectProperty}
-                      locale={locale}
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              {filteredFeaturedProperties.length === 0 ? (
+                <div style={{
+                  gridColumn: '1 / -1',
+                  textAlign: 'center',
+                  padding: '4rem 1.5rem',
+                  color: 'var(--text-secondary, #94A3B8)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: '16px',
+                  border: '1px dashed rgba(255, 255, 255, 0.1)',
+                }}>
+                  <p style={{ margin: 0, fontSize: '1rem', fontWeight: 500 }}>
+                    {isAr ? 'لا توجد عقارات متاحة حالياً' : 'No properties available yet'}
+                  </p>
+                </div>
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  {filteredFeaturedProperties.map((property, idx) => (
+                    <motion.div
+                      key={property.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <PropertyCard
+                        property={property}
+                        index={idx}
+                        onSelect={onSelectProperty}
+                        locale={locale}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
             </div>
           </div>
         </section>

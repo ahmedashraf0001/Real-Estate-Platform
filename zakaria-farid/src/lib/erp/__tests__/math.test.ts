@@ -9,6 +9,7 @@ import {
   generateUUID,
   isUUID,
   ensureUUID,
+  ratio,
 } from '../math';
 
 describe('ERP Fixed-Point Math Engine & Decimal Utility Suite', () => {
@@ -34,10 +35,25 @@ describe('ERP Fixed-Point Math Engine & Decimal Utility Suite', () => {
       assert.strictEqual(D('-3.4').toFixed(2), '-3.40');
     });
 
-    it('truncates decimal strings beyond 2 decimal places', () => {
-      assert.strictEqual(D('10.555').toFixed(2), '10.55');
-      assert.strictEqual(D('99.9999').toFixed(2), '99.99');
+    it('rounds decimal strings half-up to piastres', () => {
+      assert.strictEqual(D('10.555').toFixed(2), '10.56');
+      assert.strictEqual(D('99.9999').toFixed(2), '100.00');
       assert.strictEqual(D('0.12345').toFixed(2), '0.12');
+      assert.strictEqual(D('0.005').toFixed(2), '0.01');
+      assert.strictEqual(D('-0.005').toFixed(2), '-0.01');
+    });
+
+    it('parses exponent and grouped strings', () => {
+      assert.strictEqual(D('1e5').toFixed(2), '100000.00');
+      assert.strictEqual(D('1.5e2').toFixed(2), '150.00');
+      assert.strictEqual(D(' 1,234.565 ').toFixed(2), '1234.57');
+      assert.strictEqual(D(1e-7).toFixed(2), '0.00');
+      assert.strictEqual(D('abc').toFixed(2), '0.00');
+    });
+
+    it('number inputs round from their decimal text', () => {
+      assert.strictEqual(D(1.005).toFixed(2), '1.01');
+      assert.strictEqual(D(0.1 + 0.2).toFixed(2), '0.30');
     });
 
     it('handles zero values and empty strings safely as 0.00', () => {
@@ -131,6 +147,38 @@ describe('ERP Fixed-Point Math Engine & Decimal Utility Suite', () => {
       assert.strictEqual(D('-10.00').div(2).toFixed(2), '-5.00');
       assert.strictEqual(D('10.00').div(-2).toFixed(2), '-5.00');
       assert.strictEqual(D('-10.00').div(-2).toFixed(2), '5.00');
+    });
+
+    it('times applies number/string factors at full precision', () => {
+      assert.strictEqual(D(2000000).times('0.125').toFixed(2), '250000.00');
+      assert.strictEqual(D(1000000).times(0.4537).toFixed(2), '453700.00');
+      assert.strictEqual(D(900000).times(1 / 3).toFixed(2), '300000.00');
+      assert.strictEqual(D('0.01').times('0.5').toFixed(2), '0.01');
+      assert.strictEqual(D('-0.01').times('0.5').toFixed(2), '-0.01');
+    });
+
+    it('timesRatio applies shares with one rounding', () => {
+      assert.strictEqual(D(900000).timesRatio(33.33, 100).toFixed(2), '299970.00');
+      assert.strictEqual(D(900000).timesRatio(1, 3).toFixed(2), '300000.00');
+      assert.strictEqual(D(100).timesRatio(2, 3).toFixed(2), '66.67');
+      assert.strictEqual(D(100).timesRatio('7.5', 100).toFixed(2), '7.50');
+      assert.strictEqual(D(100).timesRatio(D(1), D(3)).toFixed(2), '33.33');
+      assert.throws(() => D(100).timesRatio(1, 0), /Division by zero/);
+    });
+
+    it('ratio returns an exact factor string', () => {
+      assert.strictEqual(ratio(4537, 10000), '0.453700');
+      assert.strictEqual(ratio(1, 3), '0.333333');
+      assert.strictEqual(ratio(2, 3, 4), '0.6667');
+      assert.strictEqual(ratio(D(125000), D(1000000), 8), '0.12500000');
+      assert.strictEqual(ratio(-1, 8), '-0.125000');
+      assert.strictEqual(ratio(5, 2, 0), '3');
+      assert.throws(() => ratio(1, 0), /Division by zero/);
+    });
+
+    it('div by fractional number/string uses full precision', () => {
+      assert.strictEqual(D(100).div('0.333').toFixed(2), '300.30');
+      assert.throws(() => D(100).div('0'), /Division by zero/);
     });
 
     it('throws on division by zero', () => {

@@ -1,0 +1,25 @@
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip it and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Another agent edits OTHER files in this tree concurrently. Touch only files allowed in your brief. Report unrelated tsc errors; do not fix them.
+- Preserve UTF-8 (Arabic strings). Do targeted edits; never rewrite whole files. Do not delete imports/lines you did not intend to change.
+- After any "remove X" change, grep for X and confirm 0 remaining references (or justify each).
+- Hooks: never place a hook after an early return.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit                (must be clean for your files)
+  npx eslint <files you touched>  (no new errors vs HEAD; report counts)
+  git diff --stat -- <files you touched>
+For every target grep given in the brief: count + reason for each remaining hit.
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access, no migrations.</action_safety>
+
+<structured_output_contract>
+1. Per numbered item: done/skipped + file:line
+2. Decisions you made that the brief left open
+3. Gates (tsc, eslint per file vs HEAD, grep counts)
+4. Open questions
+</structured_output_contract>

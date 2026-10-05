@@ -49,8 +49,8 @@ function LoginForm() {
         padding: '40px 36px',
         width: '100%',
         maxWidth: '420px',
-        boxShadow: '0 25px 50px rgba(0,0,0,0.6), 0 0 30px rgba(221,167,82,0.12)',
-        border: '1px solid rgba(221, 167, 82, 0.25)',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.6), 0 0 30px rgba(37, 99, 235, 0.10)',
+        border: '1px solid rgba(37, 99, 235, 0.25)',
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
@@ -147,8 +147,8 @@ function LoginForm() {
               marginTop: '8px',
               padding: '12px 20px',
               borderRadius: '10px',
-              background: 'linear-gradient(135deg, #DDA752 0%, #C48D3A 100%)',
-              color: '#0A0C10',
+              background: '#2563eb',
+              color: '#FFFFFF',
               border: 'none',
               fontWeight: 800,
               fontSize: '14px',
@@ -157,8 +157,8 @@ function LoginForm() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 4px 14px rgba(221,167,82,0.35)',
-              transition: 'transform 0.15s ease',
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+              transition: 'all 0.15s ease',
               fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
               letterSpacing: '0.02em',
             }}
@@ -169,7 +169,7 @@ function LoginForm() {
         </form>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', color: '#5A6678', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <ShieldCheck size={14} style={{ color: '#DDA752' }} />
+          <ShieldCheck size={14} style={{ color: '#2563eb' }} />
           <span>Protected by Auth RLS Security</span>
         </div>
       </div>
@@ -180,8 +180,8 @@ function LoginForm() {
 export default function AdminLoginPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07090D' }}>
-        <Loader2 size={24} style={{ color: '#DDA752', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111622' }}>
+        <Loader2 size={24} style={{ color: '#2563eb', animation: 'spin 0.8s linear infinite' }} />
       </div>
     }>
       <LoginForm />

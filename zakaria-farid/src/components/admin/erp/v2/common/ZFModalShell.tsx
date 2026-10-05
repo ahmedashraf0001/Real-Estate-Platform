@@ -112,9 +112,9 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
           maxWidth: `min(94vw, ${maxWidth})`,
           maxHeight,
           background: '#ffffff',
-          border: '1px solid var(--erp-border, #cbd5e1)',
+          border: '1px solid var(--erp-card-border, #e2e8f0)',
           borderRadius: '12px',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 24px 48px -12px rgba(15, 23, 42, 0.22)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -128,7 +128,7 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
         <div
           style={{
             padding: '0.95rem 1.25rem',
-            borderBottom: '1px solid var(--erp-border, #cbd5e1)',
+            borderBottom: '1px solid var(--erp-border-subtle, #f1f5f9)',
             background: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -145,7 +145,7 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '50%',
+                  borderRadius: '8px',
                   background: 'var(--erp-accent-subtle, #eff6ff)',
                   color: 'var(--erp-accent, #2563eb)',
                   display: 'flex',
@@ -162,10 +162,9 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
                 <h3
                   style={{
                     margin: 0,
-                    fontSize: '0.92rem',
+                    fontSize: '0.98rem',
                     fontWeight: 700,
-                    color: '#0f172a',
-                    letterSpacing: '-0.01em',
+                    color: 'var(--erp-text-title, #0f172a)',
                     lineHeight: 1.3,
                   }}
                 >
@@ -196,26 +195,23 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
               width: '32px',
               height: '32px',
               borderRadius: '7px',
-              border: '1px solid var(--erp-border, #cbd5e1)',
-              background: '#ffffff',
-              color: '#334155',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--erp-text-muted, #64748b)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-              transition: 'all 0.15s ease',
+              transition: 'background 0.15s ease, color 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-              e.currentTarget.style.borderColor = '#94a3b8';
-              e.currentTarget.style.color = '#0f172a';
+              e.currentTarget.style.background = 'var(--erp-border-subtle, #f1f5f9)';
+              e.currentTarget.style.color = 'var(--erp-text-title, #0f172a)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-              e.currentTarget.style.borderColor = 'var(--erp-border, #cbd5e1)';
-              e.currentTarget.style.color = '#334155';
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--erp-text-muted, #64748b)';
             }}
           >
             <X size={16} />
@@ -241,8 +237,8 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
           <div
             style={{
               padding: '0.85rem 1.25rem',
-              borderTop: '1px solid var(--erp-border, #cbd5e1)',
-              background: '#ffffff',
+              borderTop: '1px solid var(--erp-border-subtle, #f1f5f9)',
+              background: 'var(--erp-bg-canvas, #f8fafc)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'flex-end',

@@ -31,7 +31,6 @@ import {
   UnitRescissionState,
   TaxType,
   TaxRemittanceStatus,
-  CapitalCallStatus,
   MakerCheckerStatus,
   ERPPropertyCostItem,
   PropertyCostCategory,
@@ -40,10 +39,8 @@ import {
   ERPConstructionPurchaseOrder
 } from './types';
 import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
-import { D, generateUUID, isUUID, ensureUUID } from './math';
+import { D, generateUUID, isUUID, ensureUUID, ratio } from './math';
 import { CANONICAL_COA } from './ledger';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { createInitialERPState } from './store';
 import { prepareConstructionSettlement } from './constructionSettlement';
 
 export interface LiveERPDataset {
@@ -106,7 +103,7 @@ export class ERPSupabaseService {
     }
 
     const rawProps = (propertiesData as Property[]) || [];
-    const baseProperties = rawProps.length > 0 ? rawProps : (FALLBACK_PROPERTIES as Property[]);
+    const baseProperties = rawProps;
 
     const properties: Property[] = baseProperties.map(p => {
       const isBuilding = p.type === 'building' || (p.title_ar || '').includes('عمارة') || (p.title_en || '').toLowerCase().includes('building');
@@ -185,55 +182,6 @@ export class ERPSupabaseService {
       console.warn('Leads fetch error in ERP:', e);
     }
 
-    if (leads.length === 0) {
-      leads = [
-        {
-          id: 'lead-001',
-          name: 'المهندس حسام الدين عثمان',
-          phone: '01012345678',
-          email: 'hossam.othman@gmail.com',
-          property_id: properties[0]?.id || null,
-          stage: 'negotiating',
-          created_at: new Date().toISOString(),
-          message: 'طلب تفاصيل التعاقد ومواعيد السداد للشقة',
-          notes: 'مشتري جاد، تم الاتفاق مبدئياً على التعاقد'
-        },
-        {
-          id: 'lead-002',
-          name: 'الدكتور محمود طه الشرقاوي',
-          phone: '01223456789',
-          email: 'dr.mahmoud@sharqawy.com',
-          property_id: properties[1]?.id || null,
-          stage: 'viewing_scheduled',
-          created_at: new Date().toISOString(),
-          message: 'معاينة روف مدينتي بريفادو',
-          notes: 'يرغب في نظام سداد على سنتين'
-        },
-        {
-          id: 'lead-003',
-          name: 'الأستاذ وائل عزمي عبد الوهاب',
-          phone: '01134567890',
-          email: 'wael.azmy@yahoo.com',
-          property_id: properties[2]?.id || null,
-          stage: 'contacted',
-          created_at: new Date().toISOString(),
-          message: 'استفسار عن عمارة سكنية بالشيخ زايد',
-          notes: 'مستثمر عقاري يبحث عن عمارة كاملة'
-        },
-        {
-          id: 'lead-004',
-          name: 'شركة الأهرام للاستثمار والتطوير',
-          phone: '01098765432',
-          email: 'invest@alahram-group.eg',
-          property_id: properties[3]?.id || null,
-          stage: 'negotiating',
-          created_at: new Date().toISOString(),
-          message: 'طلب شراء جراج تجاري بالتجمع الخامس',
-          notes: 'سداد كاش كامل 100%'
-        }
-      ];
-    }
-
     // In development mode, check if we have an authenticated user session.
     // If unauthenticated, avoid firing failing queries on all 16 RLS-restricted tables to prevent console 401 storms.
     if (process.env.NODE_ENV === 'development') {
@@ -247,10 +195,23 @@ export class ERPSupabaseService {
 
       if (!hasSession) {
         return {
-          ...createInitialERPState(),
+          periods: [],
+          contracts: [],
+          schedules: [],
+          journalEntries: [],
+          pdcRecords: [],
+          rescissions: [],
+          amendments: [],
+          costAllocations: [],
+          taxRecords: [],
+          partnerCalls: [],
+          partnerCommitments: [],
+          makerCheckerRequests: [],
           properties,
           leads,
           propertyCosts: [],
+          purchaseOrders: [],
+          unitEstimates: [],
           isSchemaMigrated: true
         };
       }
@@ -283,29 +244,7 @@ export class ERPSupabaseService {
     }
 
     let periods: ERPAccountingPeriod[] = [];
-    if (!isSchemaMigrated || !periodsData || periodsData.length === 0) {
-      periods = [
-        { period_id: 'prd-2026-01', fiscal_year: 2026, period_number: 1, start_date: '2026-01-01', end_date: '2026-01-31', status: 'CLOSED' },
-        { period_id: 'prd-2026-02', fiscal_year: 2026, period_number: 2, start_date: '2026-02-01', end_date: '2026-02-28', status: 'CLOSED' },
-        { period_id: 'prd-2026-03', fiscal_year: 2026, period_number: 3, start_date: '2026-03-01', end_date: '2026-03-31', status: 'OPEN' },
-        { period_id: 'prd-2026-04', fiscal_year: 2026, period_number: 4, start_date: '2026-04-01', end_date: '2026-04-30', status: 'OPEN' },
-        { period_id: 'prd-2026-05', fiscal_year: 2026, period_number: 5, start_date: '2026-05-01', end_date: '2026-05-31', status: 'OPEN' },
-        { period_id: 'prd-2026-06', fiscal_year: 2026, period_number: 6, start_date: '2026-06-01', end_date: '2026-06-30', status: 'OPEN' },
-        { period_id: 'prd-2026-07', fiscal_year: 2026, period_number: 7, start_date: '2026-07-01', end_date: '2026-07-31', status: 'OPEN' },
-        { period_id: 'prd-2026-08', fiscal_year: 2026, period_number: 8, start_date: '2026-08-01', end_date: '2026-08-31', status: 'OPEN' },
-        { period_id: 'prd-2026-09', fiscal_year: 2026, period_number: 9, start_date: '2026-09-01', end_date: '2026-09-30', status: 'OPEN' },
-        { period_id: 'prd-2026-10', fiscal_year: 2026, period_number: 10, start_date: '2026-10-01', end_date: '2026-10-31', status: 'OPEN' },
-        { period_id: 'prd-2026-11', fiscal_year: 2026, period_number: 11, start_date: '2026-11-01', end_date: '2026-11-30', status: 'OPEN' },
-        { period_id: 'prd-2026-12', fiscal_year: 2026, period_number: 12, start_date: '2026-12-01', end_date: '2026-12-31', status: 'OPEN' }
-      ];
-      if (isSchemaMigrated && (!periodsData || periodsData.length === 0)) {
-        try {
-          await supabase.from('erp_accounting_periods').insert(periods);
-        } catch {
-          // Ignore if table cannot be inserted into
-        }
-      }
-    } else {
+    if (isSchemaMigrated && periodsData && periodsData.length > 0) {
       periods = periodsData.map(p => ({
         period_id: p.period_id as string,
         fiscal_year: p.fiscal_year as number,
@@ -412,7 +351,6 @@ export class ERPSupabaseService {
     }
 
     // 3. Contracts
-    const fallbackInit = createInitialERPState();
     const contracts: ERPContract[] = (contractsData && contractsData.length > 0)
       ? contractsData.map(c => ({
           contract_id: c.contract_id as string,
@@ -438,7 +376,7 @@ export class ERPSupabaseService {
           payment_plan_type: (c.payment_plan_type as ERPContract['payment_plan_type']) || undefined,
           sale_model: (c.sale_model as ERPContract['sale_model']) || undefined,
         }))
-      : fallbackInit.contracts;
+      : [];
 
     // 4. Installment Schedules
     const schedules: ERPInstallmentSchedule[] = (schedulesData && schedulesData.length > 0)
@@ -455,7 +393,7 @@ export class ERPSupabaseService {
           amount_paid: D((s.amount_paid as string | number) || 0).toFixed(),
           paid_date: s.paid_date as string | undefined
         }))
-      : fallbackInit.schedules;
+      : [];
 
     // 5. Journal Entries & Lines
     const journalEntries: ERPJournalEntry[] = (entriesData && entriesData.length > 0)
@@ -482,10 +420,10 @@ export class ERPSupabaseService {
             memo: l.memo as string | undefined
           }))
         }))
-      : fallbackInit.journalEntries;
+      : [];
 
-    // 6. PDCs — Auto-sync with contracts if empty
-    let pdcRecords: ERPPDCRecord[] = (pdcData && pdcData.length > 0)
+    // 6. PDCs
+    const pdcRecords: ERPPDCRecord[] = (pdcData && pdcData.length > 0)
       ? pdcData.map(p => ({
           cheque_id: p.cheque_id as string,
           contract_id: p.contract_id as string,
@@ -499,107 +437,7 @@ export class ERPSupabaseService {
           deposited_date: p.deposited_date as string | undefined,
           cleared_date: p.cleared_date as string | undefined
         }))
-      : fallbackInit.pdcRecords;
-
-    if (pdcRecords.length === 0 && contracts.length > 0) {
-      const generatedPDCs: ERPPDCRecord[] = [];
-      contracts.forEach((ct) => {
-        const contractScheds = schedules.filter(s => s.contract_id === ct.contract_id);
-        const tranches = contractScheds;
-
-        tranches.forEach((tr, tIdx) => {
-          const chqId = generateUUID();
-          const numDigits = ct.contract_number.replace(/\D/g, '') || '789';
-          const chqNum = `SND-${numDigits}-${(tIdx + 1).toString().padStart(3, '0')}`;
-          const isCleared = tr.status === 'Paid';
-          const status: PDCStatus = isCleared ? 'Cleared' : 'In Safe';
-
-          generatedPDCs.push({
-            cheque_id: chqId,
-            contract_id: ct.contract_id,
-            schedule_id: tr.schedule_id,
-            cheque_number: chqNum,
-            bank_name: '',
-            drawer_name: ct.buyer_name || 'العميل المتعاقد',
-            nominal_value: tr.nominal_value,
-            due_date: tr.due_date,
-            status: status,
-            cleared_date: isCleared ? (tr.paid_date || new Date().toISOString().split('T')[0]) : undefined
-          });
-        });
-      });
-
-      if (generatedPDCs.length > 0) {
-        pdcRecords = generatedPDCs;
-        if (isSchemaMigrated) {
-          try {
-            const rowsToInsert = generatedPDCs.map(p => ({
-              cheque_id: p.cheque_id,
-              contract_id: p.contract_id,
-              schedule_id: p.schedule_id && isUUID(p.schedule_id) ? p.schedule_id : null,
-              cheque_number: p.cheque_number,
-              bank_name: p.bank_name,
-              drawer_name: p.drawer_name,
-              nominal_value: p.nominal_value,
-              due_date: p.due_date,
-              status: p.status,
-              deposited_date: p.deposited_date || null,
-              cleared_date: p.cleared_date || null
-            }));
-            await supabase.from('erp_pdc_records').insert(rowsToInsert);
-          } catch (e) {
-            console.warn('Silent auto-sync pdcRecords insert:', e);
-          }
-        }
-      }
-    } else if (pdcRecords.length > 0 && contracts.length > 0) {
-      // Reconcile any pending schedules that are missing in pdcRecords
-      const pendingScheds = schedules.filter(s => s.status === 'Pending');
-      const missingPDCs: ERPPDCRecord[] = [];
-      pendingScheds.forEach(s => {
-        const hasPdc = pdcRecords.some(p => p.schedule_id === s.schedule_id || (p.contract_id === s.contract_id && p.due_date === s.due_date));
-        if (!hasPdc) {
-          const ct = contracts.find(c => c.contract_id === s.contract_id);
-          const chqId = generateUUID();
-          const numDigits = ct?.contract_number ? ct.contract_number.replace(/\D/g, '') : '789';
-          const chqNum = `SND-${numDigits}-T${s.tranche_number}`;
-          const newPdc: ERPPDCRecord = {
-            cheque_id: chqId,
-            contract_id: s.contract_id,
-            schedule_id: s.schedule_id,
-            cheque_number: chqNum,
-            bank_name: 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)',
-            drawer_name: ct?.buyer_name || 'العميل المتعاقد',
-            nominal_value: s.nominal_value,
-            due_date: s.due_date,
-            status: 'In Safe'
-          };
-          missingPDCs.push(newPdc);
-        }
-      });
-
-      if (missingPDCs.length > 0) {
-        pdcRecords = [...missingPDCs, ...pdcRecords];
-        if (isSchemaMigrated) {
-          try {
-            const rowsToInsert = missingPDCs.map(p => ({
-              cheque_id: p.cheque_id,
-              contract_id: p.contract_id,
-              schedule_id: p.schedule_id && isUUID(p.schedule_id) ? p.schedule_id : null,
-              cheque_number: p.cheque_number,
-              bank_name: p.bank_name,
-              drawer_name: p.drawer_name,
-              nominal_value: p.nominal_value,
-              due_date: p.due_date,
-              status: p.status
-            }));
-            await supabase.from('erp_pdc_records').insert(rowsToInsert);
-          } catch (e) {
-            console.warn('Silent reconcile pdcRecords insert:', e);
-          }
-        }
-      }
-    }
+      : [];
 
     // 7. Rescissions
     const rescissions: ERPRescissionRecord[] = (rescissionsData || []).map(r => ({
@@ -629,8 +467,8 @@ export class ERPSupabaseService {
       created_at: a.created_at as string
     }));
 
-    // 9. Cost Allocations — Auto-seed benchmark RSV allocation if empty
-    let costAllocations: ERPCostAllocation[] = (costAllocationsData || []).map(ca => ({
+    // 9. Cost Allocations
+    const costAllocations: ERPCostAllocation[] = (costAllocationsData || []).map(ca => ({
       allocation_id: ca.allocation_id as string,
       project_name: ca.project_name as string,
       total_incurred_wip: D((ca.total_incurred_wip as string | number) || 0).toFixed(),
@@ -639,27 +477,8 @@ export class ERPSupabaseService {
       calculated_at: ca.calculated_at as string
     }));
 
-    if (costAllocations.length === 0) {
-      const benchmarkAllocation: ERPCostAllocation = {
-        allocation_id: generateUUID(),
-        project_name: 'مشروع بالاشيال فيلاز & نايل هورايزونز',
-        total_incurred_wip: '45000000.00',
-        total_sales_value: '100000000.00',
-        rsv_factor: '0.450000',
-        calculated_at: new Date().toISOString()
-      };
-      costAllocations = [benchmarkAllocation];
-      if (isSchemaMigrated) {
-        try {
-          await supabase.from('erp_cost_allocations').insert([benchmarkAllocation]);
-        } catch (e) {
-          console.warn('Silent auto-sync costAllocations insert:', e);
-        }
-      }
-    }
-
-    // 10. Tax Records — Auto-generate 2.5% Statutory Real Estate Disposal Tax if empty
-    let taxRecords: ERPTaxRecord[] = (taxData || []).map(t => ({
+    // 10. Tax Records
+    const taxRecords: ERPTaxRecord[] = (taxData || []).map(t => ({
       tax_id: t.tax_id as string,
       contract_id: t.contract_id as string,
       tax_type: (t.tax_type as TaxType) || 'Disposal 2.5% Case A',
@@ -669,49 +488,6 @@ export class ERPSupabaseService {
       remittance_status: (t.remittance_status as TaxRemittanceStatus) || 'Pending',
       created_at: t.created_at as string
     }));
-
-    if (taxRecords.length === 0 && contracts.length > 0) {
-      const generatedTaxes: ERPTaxRecord[] = contracts
-        .filter(ct => (ct.tax_amount && D(ct.tax_amount).gt(0)) || !ct.tax_amount)
-        .map((ct, idx) => {
-          const taxId = generateUUID();
-          const base = ct.base_price ? D(ct.base_price).toFixed(2) : ct.gross_contract_value;
-          const amt = ct.tax_amount ? D(ct.tax_amount).toFixed(2) : D(base).times('0.0250').toFixed(2);
-          const rate = D(base).gt(0) ? D(amt).div(base).toFixed(4) : '0.0250';
-          const isRemitted = idx === 1;
-          return {
-            tax_id: taxId,
-            contract_id: ct.contract_id,
-            tax_type: (ct.tax_description as TaxType) || 'Disposal 2.5% Case A',
-            taxable_base: base,
-            tax_rate: rate,
-            tax_amount: amt,
-            remittance_status: isRemitted ? 'Remitted to ETA' : 'Pending',
-            created_at: ct.contract_date || new Date().toISOString()
-          };
-        });
-
-      if (generatedTaxes.length > 0) {
-        taxRecords = generatedTaxes;
-        if (isSchemaMigrated) {
-          try {
-            const taxRowsToInsert = generatedTaxes.map(t => ({
-              tax_id: t.tax_id,
-              contract_id: t.contract_id,
-              tax_type: t.tax_type,
-              taxable_base: t.taxable_base,
-              tax_rate: t.tax_rate,
-              tax_amount: t.tax_amount,
-              remittance_status: t.remittance_status,
-              created_at: t.created_at
-            }));
-            await supabase.from('erp_tax_records').insert(taxRowsToInsert);
-          } catch (e) {
-            console.warn('Silent auto-sync taxRecords insert:', e);
-          }
-        }
-      }
-    }
 
     // 11. Partner Capital Calls (Legacy table dropped in Migration 019; superseded by partnerCommitments)
     const partnerCalls: ERPPartnerCall[] = [];
@@ -830,7 +606,7 @@ export class ERPSupabaseService {
     supabase: SupabaseClient,
     contract: ERPContract,
     schedules: ERPInstallmentSchedule[],
-    advanceEntry?: ERPJournalEntry
+    _advanceEntry?: ERPJournalEntry
   ): Promise<void> {
     try {
       // Ensure contract_id is guaranteed to be a valid UUID
@@ -920,47 +696,19 @@ export class ERPSupabaseService {
         }
       }
 
-      // Insert Advance Journal Entry if provided
-      if (advanceEntry) {
-        advanceEntry.source_entity_id = contractId;
-        advanceEntry.lines.forEach(l => {
-          l.contract_id = contractId;
-        });
-        await this.persistJournalEntry(supabase, advanceEntry);
-      }
-
-      // Auto-generate Post-Dated Cheques (PDC) for all upcoming installment tranches
-      const upcomingTranches = schedules.filter(s => s.status === 'Pending' && s.tranche_number > 0);
-      if (upcomingTranches.length > 0) {
-        try {
-          const pdcRows = upcomingTranches.map((s, idx) => ({
-            cheque_id: generateUUID(),
-            contract_id: contractId,
-            schedule_id: s.schedule_id && isUUID(s.schedule_id) ? s.schedule_id : null,
-            cheque_number: `SND-${contract.contract_number.replace(/\D/g, '') || '789'}-${(idx + 1).toString().padStart(3, '0')}`,
-            bank_name: '',
-            drawer_name: contract.buyer_name || 'العميل المتعاقد',
-            nominal_value: s.nominal_value,
-            due_date: s.due_date,
-            status: 'In Safe'
-          }));
-          await supabase.from('erp_pdc_records').insert(pdcRows);
-        } catch (e) {
-          console.warn('Could not auto-generate PDCs on contract creation:', e);
-        }
-      }
+      // Contract creation: schedules only, NO advance-payment JE, NO PDC rows (user-confirmed 2026-10-04)
 
       // Save Manual Apartment Tax (Not static, added by hand per apartment, calculated in pricing)
       if (contract.tax_amount && D(contract.tax_amount).gt(0)) {
         try {
           const manualTaxAmt = D(contract.tax_amount).toFixed(2);
           const basePrice = contract.base_price ? D(contract.base_price).toFixed(2) : contract.gross_contract_value;
-          const taxRate = D(basePrice).gt(0) ? D(manualTaxAmt).div(basePrice).toFixed(4) : '0.0000';
+          const taxRate = D(basePrice).gt(0) ? ratio(manualTaxAmt, basePrice, 6) : '0.000000';
 
           const taxRow = {
             tax_id: generateUUID(),
             contract_id: contractId,
-            tax_type: 'Disposal 2.5% Case A',
+            tax_type: contract.tax_description || 'Manual tax',
             taxable_base: basePrice,
             tax_rate: taxRate,
             tax_amount: manualTaxAmt,
@@ -1164,6 +912,8 @@ export class ERPSupabaseService {
         }
       }
       if (lineError) {
+        // Never leave a journal header without its lines (an entry with no lines breaks the ledger).
+        await supabase.from('erp_journal_entries').delete().eq('entry_id', entryId);
         if (!strict && this.isSchemaCacheError(lineError)) return;
         throw lineError;
       }
@@ -1205,7 +955,10 @@ export class ERPSupabaseService {
       }
     }
 
-    // 1. Update Schedule
+    // 1. Ledger first (strict): if the entry cannot be saved, the installment is not marked paid.
+    await this.persistJournalEntry(supabase, journalEntry, true);
+
+    // 2. Update Schedule
     const { error: schError } = await supabase
       .from('erp_installment_schedules')
       .update({
@@ -1244,9 +997,6 @@ export class ERPSupabaseService {
     } catch {
       // Ignore if no direct PDC link
     }
-
-    // 4. Insert Journal Entry
-    await this.persistJournalEntry(supabase, journalEntry);
   }
 
   /**
@@ -1326,35 +1076,7 @@ export class ERPSupabaseService {
 
     if (insertError) throw insertError;
 
-    // 3b. Generate replacement PDCs for version N+1 tranches
-    try {
-      const { data: contractData } = await supabase
-        .from('erp_contracts')
-        .select('contract_number, buyer_name')
-        .eq('contract_id', cleanContractId)
-        .single();
-
-      const contractDigits = (contractData?.contract_number || '').replace(/\D/g, '') || '789';
-      const drawerName = contractData?.buyer_name || 'العميل المتعاقد';
-
-      const replacementPdcRows = newSchedules.map((s, idx) => ({
-        cheque_id: generateUUID(),
-        contract_id: cleanContractId,
-        schedule_id: ensureUUID(s.schedule_id),
-        cheque_number: `SND-${contractDigits}-v${s.schedule_version || amendment.new_version || '2'}-T${s.tranche_number}`,
-        bank_name: '',
-        drawer_name: drawerName,
-        nominal_value: s.nominal_value,
-        due_date: s.due_date,
-        status: 'In Safe' as const
-      }));
-
-      if (replacementPdcRows.length > 0) {
-        await supabase.from('erp_pdc_records').insert(replacementPdcRows);
-      }
-    } catch (pdcInsertErr) {
-      console.warn('Notice while generating replacement PDCs during escalation:', pdcInsertErr);
-    }
+    // 3b. Replacement PDCs generation removed per user-confirmed zero-cheque architecture
 
     // 4. Update Contract Gross Value
     const { error: contractError } = await supabase
@@ -1369,7 +1091,6 @@ export class ERPSupabaseService {
    * Append a Contract Supplement / Extra Tranche (إضافة ملحق أو دفعة إضافية للعقد).
    * - Increments contract gross_contract_value with D()
    * - Inserts new installment schedule tranche (Pending)
-   * - Inserts new PDC record in safe (101000)
    */
   static async addContractSupplement(
     supabase: SupabaseClient,
@@ -1377,15 +1098,12 @@ export class ERPSupabaseService {
       contractId: string;
       newGrossValue: string;
       newSchedule: ERPInstallmentSchedule;
-      newPdc: ERPPDCRecord;
+      newPdc?: ERPPDCRecord;
     }
   ): Promise<void> {
     const cleanContractId = ensureUUID(params.contractId);
     params.newSchedule.schedule_id = ensureUUID(params.newSchedule.schedule_id);
     params.newSchedule.contract_id = cleanContractId;
-    params.newPdc.cheque_id = ensureUUID(params.newPdc.cheque_id);
-    params.newPdc.contract_id = cleanContractId;
-    params.newPdc.schedule_id = params.newSchedule.schedule_id;
 
     // 1. Update contract gross value
     const { error: contractErr } = await supabase
@@ -1412,24 +1130,6 @@ export class ERPSupabaseService {
     if (schErr) {
       console.warn('Supabase schedule insert notice:', schErr.message);
     }
-
-    // 3. Insert new PDC in safe
-    const { error: pdcErr } = await supabase
-      .from('erp_pdc_records')
-      .insert([{
-        cheque_id: params.newPdc.cheque_id,
-        contract_id: params.newPdc.contract_id,
-        schedule_id: params.newPdc.schedule_id,
-        cheque_number: params.newPdc.cheque_number,
-        bank_name: params.newPdc.bank_name,
-        drawer_name: params.newPdc.drawer_name,
-        nominal_value: params.newPdc.nominal_value,
-        due_date: params.newPdc.due_date,
-        status: params.newPdc.status
-      }]);
-    if (pdcErr) {
-      console.warn('Supabase PDC insert notice:', pdcErr.message);
-    }
   }
 
   /**
@@ -1446,6 +1146,9 @@ export class ERPSupabaseService {
     const rescissionId = ensureUUID(rescissionRecord.rescission_id);
     rescissionRecord.rescission_id = rescissionId;
     rescissionRecord.contract_id = cleanContractId;
+
+    // 0. Ledger first (strict): a rescission without its journal entry must not be saved.
+    await this.persistJournalEntry(supabase, journalEntry, true);
 
     // 1. Insert Rescission Record
     const { error: rescError } = await supabase
@@ -1502,14 +1205,11 @@ export class ERPSupabaseService {
       console.warn('Notice while voiding uncollected PDCs for rescinded contract:', pdcErr);
     }
 
-    // 4. Insert Journal Entry
-    await this.persistJournalEntry(supabase, journalEntry);
-
     // 5. Restore property listing status to active and update building_units.status to available
     try {
       const { data: rescindedContract } = await supabase
         .from('erp_contracts')
-        .select('property_id, building_unit_id')
+        .select('property_id, building_unit_id, lead_id, contract_number')
         .eq('contract_id', cleanContractId)
         .single();
 
@@ -1526,6 +1226,22 @@ export class ERPSupabaseService {
             rescindedContract.building_unit_id,
             'available'
           );
+        }
+      }
+
+      // If contract has lead_id, update CRM Lead stage to 'closed_lost'
+      if (rescindedContract?.lead_id && isUUID(rescindedContract.lead_id)) {
+        try {
+          await supabase
+            .from('leads')
+            .update({
+              stage: 'closed_lost',
+              stage_updated_at: new Date().toISOString(),
+              notes: `تم فسخ العقد بالمنظومة المالية رقم: ${rescindedContract.contract_number || cleanContractId}`
+            })
+            .eq('id', rescindedContract.lead_id);
+        } catch (leadErr) {
+          console.warn('Notice while updating CRM lead stage to closed_lost on rescission:', leadErr);
         }
       }
     } catch (e) {
@@ -1599,6 +1315,84 @@ export class ERPSupabaseService {
       if (this.isSchemaCacheError(err)) return;
       console.warn('Handled period lock update error:', err);
     }
+  }
+
+  /**
+   * Ensure that accounting periods exist for the given calendar date.
+   * When no period covers the date, inserts all 12 calendar-month periods of that fiscal year
+   * (status OPEN, period_id `prd-YYYY-MM`, same shape as existing rows; on conflict do nothing),
+   * and returns the period.
+   */
+  static async ensurePeriodsForDate(
+    supabase: SupabaseClient,
+    date: string | Date
+  ): Promise<ERPAccountingPeriod> {
+    const dateStr = typeof date === 'string' ? date.slice(0, 10) : date.toISOString().slice(0, 10);
+    const parts = dateStr.split('-');
+    const year = parseInt(parts[0], 10) || new Date().getFullYear();
+    const month = parseInt(parts[1], 10) || 1;
+
+    // 1. Check if period exists for this date in Supabase
+    try {
+      const { data: existing, error } = await supabase
+        .from('erp_accounting_periods')
+        .select('*')
+        .lte('start_date', dateStr)
+        .gte('end_date', dateStr)
+        .order('period_number', { ascending: true })
+        .limit(1);
+
+      if (!error && existing && existing.length > 0) {
+        const p = existing[0];
+        return {
+          period_id: String(p.period_id),
+          fiscal_year: Number(p.fiscal_year),
+          period_number: Number(p.period_number),
+          start_date: String(p.start_date),
+          end_date: String(p.end_date),
+          status: p.status as 'OPEN' | 'LOCKED' | 'CLOSED',
+          locked_at: p.locked_at ? String(p.locked_at) : undefined,
+          locked_by: p.locked_by ? String(p.locked_by) : undefined
+        };
+      }
+    } catch (e) {
+      // Schema error or network issue; proceed to create/upsert
+    }
+
+    // 2. Generate all 12 calendar-month periods of that fiscal year
+    const periodsToInsert: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const mPad = String(m).padStart(2, '0');
+      const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+      return {
+        period_id: `prd-${year}-${mPad}`,
+        fiscal_year: year,
+        period_number: m,
+        start_date: `${year}-${mPad}-01`,
+        end_date: `${year}-${mPad}-${String(lastDay).padStart(2, '0')}`,
+        status: 'OPEN' as const
+      };
+    });
+
+    try {
+      const { error: upsertErr } = await supabase
+        .from('erp_accounting_periods')
+        .upsert(periodsToInsert, { onConflict: 'period_id', ignoreDuplicates: true });
+
+      if (upsertErr && (upsertErr.code === '23505' || upsertErr.message?.includes('conflict') || upsertErr.message?.includes('duplicate'))) {
+        await supabase
+          .from('erp_accounting_periods')
+          .upsert(periodsToInsert, { onConflict: 'fiscal_year,period_number', ignoreDuplicates: true });
+      }
+    } catch (insertErr) {
+      console.warn('Could not insert auto-generated fiscal periods into Supabase:', insertErr);
+    }
+
+    const matchedPeriod = periodsToInsert.find(p => p.start_date <= dateStr && dateStr <= p.end_date)
+      || periodsToInsert[month - 1]
+      || periodsToInsert[0];
+
+    return matchedPeriod;
   }
 
   /**
@@ -2369,6 +2163,50 @@ export class ERPSupabaseService {
       console.warn('Failed to fetch unit estimates:', e);
       return [];
     }
+  }
+
+  /**
+   * Persist a manual tax record to erp_tax_records.
+   * Columns: tax_id, contract_id, tax_type, taxable_base, tax_rate, tax_amount, remittance_status 'Pending', created_at.
+   * Cash-basis invariant: Recording a tax creates NO journal entry. Tax hits GL only when remitted.
+   */
+  static async recordTaxRecord(
+    supabase: SupabaseClient,
+    payload: {
+      contract_id: string;
+      tax_type: string;
+      taxable_base: string | number;
+      tax_rate?: string | number;
+      tax_amount: string | number;
+      created_at?: string;
+      notes?: string;
+    }
+  ): Promise<ERPTaxRecord> {
+    const taxId = generateUUID();
+    const createdAt = payload.created_at || new Date().toISOString();
+    const baseAmt = D(payload.taxable_base || 0).toFixed(2);
+    const taxAmt = D(payload.tax_amount || 0).toFixed(2);
+    const rateVal = payload.tax_rate !== undefined && String(payload.tax_rate).trim() !== ''
+      ? ratio(payload.tax_rate, 100, 6) // 2.5 -> '0.025000' (D(2.5).div(100) gave 0.03)
+      : (D(baseAmt).gt(0) ? ratio(taxAmt, baseAmt, 6) : '0.000000');
+
+    const taxRow: ERPTaxRecord = {
+      tax_id: taxId,
+      contract_id: payload.contract_id,
+      tax_type: payload.tax_type,
+      taxable_base: baseAmt,
+      tax_rate: rateVal,
+      tax_amount: taxAmt,
+      remittance_status: 'Pending',
+      created_at: createdAt
+    };
+
+    const { error } = await supabase.from('erp_tax_records').insert([taxRow]);
+    if (error) {
+      // Must fail loudly: the caller posts the accrual JE only after the record exists.
+      throw new Error(`Tax record insert failed: ${error.message}`);
+    }
+    return taxRow;
   }
 }
 

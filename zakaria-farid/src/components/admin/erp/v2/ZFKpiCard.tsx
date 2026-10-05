@@ -180,7 +180,7 @@ const getIconSquircleStyle = (accent?: ZFKpiAccentColor): React.CSSProperties =>
     case 'gold':
       return {
         ...base,
-        background: '#fdf8ee',
+        background: 'var(--erp-accent-subtle)',
         color: 'var(--erp-accent, #b48c36)',
         border: '1px solid rgba(180, 140, 54, 0.22)',
       };

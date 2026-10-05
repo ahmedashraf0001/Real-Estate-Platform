@@ -39,7 +39,6 @@ import {
 import { Property } from '@/lib/supabase/types';
 import {
   ERPAccountingPeriod,
-  ERPConstructionPurchaseOrder,
   ERPContract,
   ERPJournalEntry,
   ERPPropertyCostItem,
@@ -51,6 +50,7 @@ import {
 import { D, Decimal, generateUUID } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
@@ -69,14 +69,11 @@ import { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal
 import { EditPropertyCostModal } from '../modals/EditPropertyCostModal';
 import { CostAdjustmentModal } from '../modals/CostAdjustmentModal';
 import { ZFDirectExpenseModal } from '../modals/ZFDirectExpenseModal';
-import { ConstructionPurchaseOrderModal } from '../modals/ConstructionPurchaseOrderModal';
 import { toast } from 'sonner';
 
 export interface ConstructionPayablesViewProps {
   properties?: Property[];
   propertyCosts?: ERPPropertyCostItem[];
-  purchaseOrders?: ERPConstructionPurchaseOrder[];
-  onCreatePurchaseOrder?: (order: ERPConstructionPurchaseOrder) => Promise<void>;
   contracts?: ERPContract[];
   activePeriod: ERPAccountingPeriod;
   periods?: ERPAccountingPeriod[];
@@ -115,8 +112,6 @@ function formatCompactEGP(val: number | string | Decimal, isAr = true): string {
 export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> = ({
   properties = [],
   propertyCosts = [],
-  purchaseOrders = [],
-  onCreatePurchaseOrder,
   contracts = [],
   activePeriod,
   periods,
@@ -172,7 +167,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
   const [pageSize, setPageSize] = useState(10);
 
   // Modals & Drawers State
-  const [isPurchaseOrderModalOpen, setIsPurchaseOrderModalOpen] = useState(false);
   const [expensePurpose, setExpensePurpose] = useState<'claim' | 'site'>('claim');
   const [isNewExpenseModalOpen, setIsNewExpenseModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -280,8 +274,8 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     });
 
     const totalClaims = totalApPaid.plus(totalApLiabilities);
-    const paidPercentage = totalClaims.gt(0) ? totalApPaid.div(totalClaims).times(100).toFixed(0) : '0';
-    const overduePercentage = totalApLiabilities.gt(0) ? overdueInstallmentsAmount.div(totalApLiabilities).times(100).toFixed(0) : '0';
+    const paidPercentage = totalClaims.gt(0) ? totalApPaid.times(100).div(totalClaims).toFixed(0) : '0';
+    const overduePercentage = totalApLiabilities.gt(0) ? overdueInstallmentsAmount.times(100).div(totalApLiabilities).toFixed(0) : '0';
 
     return {
       totalWipCapitalized,
@@ -335,7 +329,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
 
     return {
       items: Object.entries(specialties).map(([key, s]) => {
-        const pct = total.gt(0) ? s.amount.div(total).times(100).toNumber() : 0;
+        const pct = total.gt(0) ? s.amount.times(100).div(total).toNumber() : 0;
         return {
           key,
           label: s.label,
@@ -424,10 +418,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     });
 
     const total = dues90.plus(dues6090).plus(dues3160).plus(dues030);
-    const p90 = total.gt(0) ? dues90.div(total).times(100).toNumber() : 0;
-    const p6090 = total.gt(0) ? dues6090.div(total).times(100).toNumber() : 0;
-    const p3160 = total.gt(0) ? dues3160.div(total).times(100).toNumber() : 0;
-    const p030 = total.gt(0) ? dues030.div(total).times(100).toNumber() : 0;
+    const p90 = total.gt(0) ? dues90.times(100).div(total).toNumber() : 0;
+    const p6090 = total.gt(0) ? dues6090.times(100).div(total).toNumber() : 0;
+    const p3160 = total.gt(0) ? dues3160.times(100).div(total).toNumber() : 0;
+    const p030 = total.gt(0) ? dues030.times(100).div(total).toNumber() : 0;
 
     return {
       totalDues: total,
@@ -486,7 +480,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     return entries.map((item, idx) => ({
       ...item,
       rank: idx + 1,
-      percentage: totalDues.gt(0) ? Math.round(item.dues.div(totalDues).times(100).toNumber()) : 0
+      percentage: totalDues.gt(0) ? Math.round(item.dues.times(100).div(totalDues).toNumber()) : 0
     }));
   }, [effectivePropertyCosts, selectedProjectFilter]);
 
@@ -1008,20 +1002,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
 
   return (
     <div className={vStyles.containerQueryContext} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* ─── 1. HEADER ROW ─── */}
-      <div className={vStyles.headerRow}>
-        <div className={vStyles.titleArea}>
-          <h1 className={vStyles.pageTitle}>
-            {isAr ? 'مصاريف البناء ومستحقات المقاولين (AP)' : 'Construction WIP & Contractor Payables (AP)'}
-          </h1>
-          <p className={vStyles.subtitle}>
-            {isAr
-              ? 'متابعة جميع مصاريف المشاريع الإنشائية ومستحقات المقاولين (AP) مع إمكانية التصفية والتحليل'
-              : 'Monitor all construction project expenses and contractor obligations with filtering and analysis'}
-          </p>
-        </div>
-
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'تكاليف البناء ومستحقات المقاولين' : 'Construction costs & contractor dues'}
+        subtitle={isAr ? 'كل مصاريف المشاريع والمبالغ المستحقة للمقاولين، مع التصفية والتحليل.' : 'All project spend and amounts owed to contractors, with filters and analysis.'}
+      />
 
       {/* ─── 2. EXECUTIVE 4 DISCRETE FLOATING KPI CARDS ─── */}
       <ZFKpiGrid>
@@ -1838,23 +1822,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
             <div className={vStyles.quickActionsList}>
               <button
                 type="button"
-                className={vStyles.quickActionRow}
-                onClick={() => setIsPurchaseOrderModalOpen(true)}
-                disabled={isMutating}
-              >
-                <div className={vStyles.quickActionLeading}>
-                  <div className={vStyles.quickActionIconSquircle}>
-                    <FileText size={16} />
-                  </div>
-                  <span className={vStyles.quickActionLabel}>
-                    {isAr ? 'أمر شراء جديد' : 'New Purchase Order'}
-                  </span>
-                </div>
-                <ChevronLeft size={16} className={vStyles.quickActionChevron} />
-              </button>
-
-              <button
-                type="button"
                 className={`${vStyles.quickActionRow} ${vStyles.quickActionRowActive}`}
                 onClick={() => {
                   setExpensePurpose('claim');
@@ -1893,21 +1860,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                 <ChevronLeft size={16} className={vStyles.quickActionChevron} />
               </button>
             </div>
-            {purchaseOrders.length > 0 && (
-              <div className={vStyles.purchaseOrdersList}>
-                <h4>{isAr ? 'مسودات أوامر الشراء' : 'Purchase Order Drafts'}</h4>
-                {purchaseOrders.slice(0, 5).map(order => (
-                  <div key={order.order_id}>
-                    <strong>{order.supplier_name}</strong>
-                    <span>{order.description}</span>
-                    <bdi>{formatIntegerEGP(order.amount_egp)} {isAr ? 'ج.م' : 'EGP'}</bdi>
-                    <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>
-                      {isAr ? 'مسودة' : 'Draft'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </ZFWidgetCard>
 
           {/* [CONST-WIDGET-02] Contractor Aging Side Widget (media_1790909310831.png) */}
@@ -2183,8 +2135,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         initialPaymentSource={expensePurpose === 'claim' ? '201000' : '101000'}
         purpose={expensePurpose}
       />
-
-      {onCreatePurchaseOrder && <ConstructionPurchaseOrderModal isOpen={isPurchaseOrderModalOpen} onClose={() => setIsPurchaseOrderModalOpen(false)} properties={properties} onSave={onCreatePurchaseOrder} isAr={isAr} />}
 
       {/* ─── 8. MODAL: CONTRACTOR AP SETTLEMENT MODAL ─── */}
       <CostPayableSettlementModal

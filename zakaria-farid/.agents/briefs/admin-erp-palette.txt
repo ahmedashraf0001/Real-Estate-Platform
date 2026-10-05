@@ -1,0 +1,77 @@
+<task>
+Repo: Next.js 16 app at the current working directory (zakaria-farid). Read AGENTS.md first: this Next.js has breaking changes; consult node_modules/next/dist/docs/ before touching any Next API (you should not need to).
+
+GOAL: Re-skin the ADMIN panel (/admin/*) so its colors match the FIN-OS ERP workstation (/fin-os/*), and remove admin UI that duplicates the ERP.
+
+PART 1 — Token layer (single source of truth)
+Edit src/app/admin/admin.module.css. The `.adminWrapper` block defines dark `--admin-*` tokens and `[data-theme="light"] .adminWrapper` defines light ones. Replace the warm gold/alabaster palette with the ERP palette:
+
+LIGHT (`[data-theme="light"] .adminWrapper`):
+  canvas #f1f5f9 | card #ffffff | card-bg-subtle #f8fafc | card-border #e2e8f0 | card-border-subtle #f1f5f9
+  divider #e2e8f0 | input-bg #ffffff | input-border #cbd5e1 | track-bg #e2e8f0
+  dropzone-bg #f8fafc | dropzone-border #cbd5e1 | drawer/modal bg #ffffff
+  text-title #0f172a | text-body #334155 | text-muted #64748b | text-dim #94a3b8
+  card-shadow: none (ERP uses 1px hairlines, not shadows)
+  accent #2563eb | accent-hover #1d4ed8 | accent-subtle #eff6ff | accent-tint rgba(37,99,235,0.08) | accent-border rgba(37,99,235,0.25)
+DARK (`.adminWrapper` default):
+  canvas #111622 | card #1a2232 | card-bg-subtle #222c40 | card-border rgba(255,255,255,0.09) | card-border-subtle rgba(255,255,255,0.06)
+  divider rgba(255,255,255,0.09) | input-bg #141a27 | input-border rgba(255,255,255,0.14) | track-bg #263248
+  dropzone-bg #141a27 | dropzone-border rgba(255,255,255,0.12) | drawer/modal bg #161c2b
+  text-title #ffffff | text-body #cbd5e1 | text-muted #8a99ad | text-dim #64748b
+  card-shadow 0 4px 16px rgba(0,0,0,0.22)
+  accent #3b82f6 | accent-hover #60a5fa | accent-subtle rgba(59,130,246,0.18) | accent-tint rgba(59,130,246,0.10) | accent-border rgba(59,130,246,0.35)
+
+Add NEW tokens `--admin-accent`, `--admin-accent-hover`, `--admin-accent-subtle`, `--admin-accent-tint`, `--admin-accent-border` in both blocks. Keep every existing `--admin-*` token name (other files use them) but re-point gold ones: `--admin-gold-primary: var(--admin-accent)`, `--admin-gold-glow: var(--admin-accent-tint)`, `--admin-kpi-border: var(--admin-card-border)`, `--admin-advisory-border: var(--admin-accent-border)`. Semantic success/warn/danger tokens stay green/amber/red (light: #16a34a/#d97706/#dc2626; dark: #10b981/#f59e0b/#f87171).
+Remove the gold radial-gradient background and gold scrollbar on `.adminMain`; use flat `var(--admin-canvas-bg)` and a neutral scrollbar (`var(--admin-card-border)`). Fix any other gold literals in admin.module.css the same way.
+
+PART 2 — Replace legacy gold literals with tokens
+In these files, replace every legacy gold/brass color with the accent tokens. Gold values to hunt: #E5B869 #946F23 #C5A059 #DDA752 #B8860B #D4AF37 #B8903E #B8934A #8C6826 and rgba(229,184,105,…) rgba(148,111,35,…) rgba(197,160,89,…) rgba(221,167,82,…) (case-insensitive, with or without spaces).
+  - solid gold → var(--admin-accent)
+  - gold hover/darker → var(--admin-accent-hover)
+  - gold at alpha ≤0.12 → var(--admin-accent-tint); alpha 0.13–0.4 → var(--admin-accent-border)
+  - warm alabaster neutrals #D8D2C4 #EAE6DC #F4F1EA #E3DDD1 #EDE8DD → matching --admin-card-border / --admin-canvas-bg / --admin-card-bg-subtle / --admin-track-bg / --admin-text-body
+  - Where a hardcoded var() fallback exists, e.g. `var(--admin-text-title, #FFFFFF)`, leave the var and just fix gold fallbacks.
+Files:
+  src/app/admin/admin.module.css
+  src/app/admin/login/page.tsx  (login lives OUTSIDE .adminWrapper — define the needed tokens locally or use literal ERP values #2563eb/#1d4ed8; must look right in both themes)
+  src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/page.tsx
+  src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/analytics/page.tsx
+  src/components/admin/AdminSidebar.module.css
+  src/components/admin/AdminUniversalHeader.module.css
+  src/components/admin/AdminPlatformSettings.tsx
+  src/components/admin/LeadPipeline.tsx
+  src/components/admin/PropertiesAdminClient.tsx
+  src/components/admin/analytics/*.tsx
+  src/components/admin/ui/ZFSkeletonLoader.tsx
+DO NOT touch (another task owns them): AdminPropertyForm.tsx, AdminPropertyForm.module.css, CADBlueprintBuilder.tsx, ZoneInspector.tsx, MapPicker.tsx, DynamicMapPicker.tsx.
+DO NOT touch anything under src/components/admin/erp/, src/app/fin-os/, src/lib/, or the public site (src/app/[locale], src/components outside admin, src/app/globals.css).
+
+Style rules from the ERP design system: flat panels, 1px hairline borders, no heavy shadows, no tinted/colored card backgrounds for status (status = small pill), primary buttons solid accent with white text, active nav item = accent text + accent-subtle background. Never use pure black #000.
+
+PART 3 — Remove admin UI duplicated by the ERP
+a) In src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/page.tsx delete the whole `{/* ─── FIN-OS Executive Workstation Gateway ─── */}` section (starts ~line 459, ends right before `{/* ─── 4. Live Inquiries & Portfolio Inventory ─── */}`), including its Quick Module Launch buttons linking to /fin-os/*. Remove any variables/imports that become unused. Keep all other sections.
+b) In src/components/admin/AdminSidebar.tsx, in the FIN-OS nav item remove the `subItems` array (Treasury, Contracts, PDC, Ledger, Partners — the ERP has its own navigation dock) and the `badge: 'v2.4'`. Keep the single FIN-OS link. Remove now-unused render code/CSS classes only if they are unused everywhere (subItemsList, subItem, subItemDot, subItemLabel, erpVersionBadge).
+c) Delete the legacy redirect route folder src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/erp/ (page.tsx only redirects to /fin-os). First grep the repo for links to `/admin/${...}/erp` or `/admin/ar/erp` / `/admin/en/erp`; if any exist, repoint them to `/fin-os/${locale}` instead.
+Note: AdminSidebar.tsx contains Arabic strings — preserve file encoding as UTF-8; do not re-encode or mangle Arabic text.
+</task>
+
+<verification_loop>
+Run from the repo root and fix anything they surface:
+  npx tsc --noEmit
+  npx eslint src/app/admin src/components/admin --no-warn-ignored   (only fix errors you introduced; report pre-existing ones)
+Then run this grep and confirm zero hits in the files you were assigned:
+  grep -rniE "#E5B869|#946F23|#C5A059|#DDA752|#B8860B|#D4AF37|#B8903E|229, ?184, ?105|148, ?111, ?35|197, ?160, ?89|221, ?167, ?82" src/app/admin src/components/admin --include=*.tsx --include=*.css | grep -vE "/erp/|AdminPropertyForm|CADBlueprintBuilder|ZoneInspector|MapPicker"
+Confirm `git status` shows only files from the lists above changed (plus the deleted erp/ route).
+</verification_loop>
+
+<action_safety>
+Scope strictly to the above. No refactors, renames, layout changes, or copy changes beyond what is listed. Do NOT git add, commit, or stash. Leave work uncommitted.
+</action_safety>
+
+<structured_output_contract>
+End with:
+  1. What changed and why (per PART)
+  2. Files touched
+  3. Gate outcomes (tsc result, eslint counts, grep result)
+  4. Deviations, open questions, anything you could not map cleanly
+</structured_output_contract>

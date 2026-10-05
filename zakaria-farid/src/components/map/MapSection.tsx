@@ -4,8 +4,6 @@ let L: any = null;
 if (typeof window !== 'undefined') {
   L = require('leaflet');
 }
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
 import { createCachedTileLayer } from '@/lib/mapCache';
 import { Sparkles, ArrowRight, Compass, MapPin } from 'lucide-react';
@@ -31,11 +29,9 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [activeFlyZone, setActiveFlyZone] = useState('all');
 
-  // Use server-passed real DB properties, fall back to adapted FALLBACK_PROPERTIES
   const propertiesList = React.useMemo(() => {
-    if (properties && properties.length > 0) return properties;
-    return adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar');
-  }, [properties, locale]);
+    return properties || [];
+  }, [properties]);
 
   const handleFlyTo = (dest: typeof FLY_DESTINATIONS[0]) => {
     setActiveFlyZone(dest.id);

@@ -1,0 +1,52 @@
+<task>
+Repo: Next.js 16 app at the current working directory (zakaria-farid). Files in scope:
+  src/components/admin/CADBlueprintBuilder.tsx   (~9.5k lines — targeted edits only, never rewrite the file)
+  src/components/admin/AdminPropertyForm.module.css   (one small change, item 4)
+
+CONTEXT: The admin floor-plan builder must work in light AND dark theme. Its embedded <style> block defines theme variables (search `--fp-canvas-bg:`; dark block ~line 7007, light block ~line 7027, another block ~line 7952): --fp-canvas-bg, --fp-surface, --fp-line, --fp-text, --fp-text-dim, --fp-gold (= accent). Dark mode already looks correct; LIGHT mode was verified in a browser and has these defects:
+
+1. SVG text hardcoded white. 34 occurrences of `fill="#FFFFFF"` (find with `grep -n 'fill="#FFFFFF"' src/components/admin/CADBlueprintBuilder.tsx`). Room-name labels in the flat plan ("Living / Reception", "Kitchen", "Master Bedroom", "Bathroom", "Balcony", "Guest Toilet", …) sit directly on light room fills and are invisible in light mode. Elevation/site labels (~lines 4120-4750: "GUARD & SECURITY BOOTH", "BAY P-01", "Grand Reception", "P-0x", …) are drawn on dark chips (see 2).
+   → For <text>: replace `fill="#FFFFFF"` with `style={{ fill: 'var(--fp-text)' }}` (remove the attribute).
+   → For small decorative <circle fill="#FFFFFF"> dots (~4289-4291): use `style={{ fill: 'var(--fp-text)' }}` only if they sit on a chip/panel you are re-theming in item 2; otherwise leave them.
+   → Exception: keep white text ONLY where it sits on a solid accent fill (#2563eb / var(--fp-gold)). Check the shape directly behind each text before changing it.
+
+2. SVG dark chips/panels. 32 occurrences of near-black rgba fills (find with `grep -nE 'rgba\((10|6|8|13), ?(14|9|12|19|10), ?(24|16|20|34|15)' src/components/admin/CADBlueprintBuilder.tsx`), e.g. `fill="rgba(10, 14, 24, 0.9)"`. They are label chips, the "ARCHITECTURAL CAD FLOOR PLAN" title block, the "EXTERIOR BALCONY" tag, elevation floor backgrounds, and booth/tank boxes. In light mode they are dark slabs.
+   → Label chips, tags, title blocks, small boxes: `style={{ fill: 'var(--fp-surface)' }}` (keep the existing stroke).
+   → Large translucent backdrops/overlays (e.g. ~line 4625 `width="600" ... fill="rgba(10,14,24,0.6)"`, ~4353 basement band): `style={{ fill: 'var(--fp-canvas-bg)', opacity: <same alpha> }}` so they keep the same relative weight in both themes. If an element already has `opacity`, multiply rather than overwrite.
+   → If any chip's text is NOT one of the white texts from item 1 (e.g. it uses #7FB4D8 or an accent), make sure it is still readable on --fp-surface in light mode; switch to var(--fp-text) or var(--fp-gold) if not.
+
+3. Floor-plan wizard chips. In the embedded <style>, 5 rules use `color: rgba(237, 232, 221, 0.6|0.7)` (~lines 7639, 7680, 7723, 7768, 7787) — an old cream text color. Unselected wizard chips ("Dining / Salon Area", "Laundry / Storage", "Maid's Room", "Master Dressing Room") are near-invisible on white in light mode. Replace with `var(--fp-text-dim)` (for 0.6) / `var(--fp-text)` at reduced weight is NOT wanted — use `var(--fp-text-dim)` for all five. Confirm the same rules still read well in dark mode (--fp-text-dim is #94a3b8 there).
+
+4. AdminPropertyForm.module.css: the step-4 review text uses `var(--admin-text-dim…)` (#94a3b8 on white = 2.6:1 contrast) for meaningful content ("No location specified", "apartment • m² • 2 Bedrooms", "No photos uploaded yet", "0 Trade Specs"). Find the review-related selectors (search `review` in the CSS) that use --admin-text-dim for these lines and switch them to `var(--admin-text-muted)`. Do not change other uses of --admin-text-dim.
+
+SVG RULE: `var()` inside SVG presentation attributes (fill="var(--x)") is unreliable — always use the style prop and remove the attribute you replace. For ternaries, put the ternary inside the style value.
+Do NOT change geometry, coordinates, sizes, stroke widths, strokes, gradients/filters, event handlers, logic, or copy. Preserve UTF-8 (Arabic strings).
+</task>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines; the orchestrator has them.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit                                              (must be clean)
+  npx eslint src/components/admin/CADBlueprintBuilder.tsx       (baseline 27 errors; must not increase)
+  grep -c 'fill="#FFFFFF"' src/components/admin/CADBlueprintBuilder.tsx        (report count; each remaining one must be text on a solid accent fill — list them)
+  grep -cE 'rgba\((10|6|8|13), ?(14|9|12|19|10), ?(24|16|20|34|15)' src/components/admin/CADBlueprintBuilder.tsx   (target 0; justify any remaining)
+  grep -cE '237, ?232, ?221' src/components/admin/CADBlueprintBuilder.tsx      (target 0)
+  git diff --stat   (only the two in-scope files; ignore graphify-out/ changes made by a hook)
+</verification_loop>
+
+<action_safety>
+Only these two files, only colors. Do NOT git add, commit, stash, checkout, or restore. Leave changes uncommitted.
+</action_safety>
+
+<structured_output_contract>
+End with:
+  1. Summary per item (1-4) with counts replaced
+  2. Any white text you kept and why (line numbers)
+  3. Gate outcomes (tsc, eslint count, each grep count)
+  4. Anything left or uncertain
+</structured_output_contract>

@@ -24,6 +24,7 @@ import { ZFKpiCard } from '../ZFKpiCard';
 import { ERPApexChart } from '../charts/ERPApexChart';
 import { ZFContractInspectionModal } from '../modals/ZFContractInspectionModal';
 import shellStyles from '../ZFWorkstationShell.module.css';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import css from './ContractsRegistryView.module.css';
 import { 
   getContractPaymentStatus, 
@@ -249,7 +250,7 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
     });
 
     const collectionPct = grossTotal.gt(0)
-      ? Math.round(collectedTotal.div(grossTotal).times(100).toNumber())
+      ? Math.round(collectedTotal.times(100).div(grossTotal).toNumber())
       : 0;
 
     let card1Title = isAr ? 'إجمالي قيمة العقود المباعة' : 'Gross Sold Contracts';
@@ -541,20 +542,10 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
   return (
     <div className={css.container}>
       {/* ─── 1. TOP HEADER ─── */}
-      <div className={css.headerRow}>
-        <div className={css.headerLeading}>
-          <div className={css.titleGroup}>
-            <h1 className={css.pageTitle}>
-              {isAr ? 'عقود البيع ومتابعة أقساط العملاء' : 'Sales Contracts & Installments'}
-            </h1>
-          </div>
-          <p className={css.pageSubtitle}>
-            {isAr 
-              ? 'إدارة العقود، متابعة الأقساط، وتحليل حالة العملاء' 
-              : 'Centralized registry of booked contracts, installment pipeline, and client payment telemetry'}
-          </p>
-        </div>
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'عقود البيع' : 'Sales contracts'}
+        subtitle={isAr ? 'كل عقود البيع، الأقساط المستحقة، وموقف تحصيل كل عميل.' : "All sales contracts, installments due, and each client's collection status."}
+      />
 
       {/* ─── 2. 4 DISCRETE FLOATING KPI STAT CARDS (100% FULL WIDTH) ─── */}
       <div className={css.kpiGrid}>

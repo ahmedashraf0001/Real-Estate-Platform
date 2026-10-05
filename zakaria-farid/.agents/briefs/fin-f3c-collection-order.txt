@@ -1,0 +1,67 @@
+ROLE: LEAF
+TRACK: FINANCIAL_CORE
+TASK: fin-f3c-collection-order — ledger first, then operational rows; exact installment match; drop dead collect handler.
+
+<files>
+EDIT ONLY: src/components/admin/erp/context/ERPWorkstationContext.tsx, src/lib/erp/canonicalMetrics.ts (add glBalanceSheetKpis only), tests under src/lib/erp/__tests__/ (source-text
+tests that grep this file, only if they reference removed code — list them).
+DENIED: everything else.
+</files>
+
+<steps>
+1. handleConfirmHandCollection (~2975-3110): today it updates erp_installment_schedules and erp_contracts.total_cash_collected
+   BEFORE persistJournalEntryGuarded(entry). If the entry fails, the installment shows paid with no ledger record.
+   Reorder: persist the journal entry FIRST (await persistJournalEntryGuarded(entry); confirm it throws on failure — if it
+   swallows errors, use the strict variant / check its return), THEN update the schedule, THEN the contract total, THEN
+   the PDC status. Add a one-line comment why.
+2. Same handler, schedule lookup (~3008-3013): the last fallback
+   `(s.contract_id === item.contract_id && (Pending || Partially Paid))` applies the money to whichever pending tranche
+   comes first. Keep matches by schedule_id and by (contract_id + due_date + open status). If none match: toast.error
+   (ar: 'تعذر تحديد القسط المطلوب تحصيله. افتح القسط من جدول العقد وحاول مرة أخرى.' en: 'Could not identify which
+   installment to collect. Open it from the contract schedule and try again.') and return without posting.
+3. contract total: compute the new total from the freshest value — read `total_cash_collected` from the database for that
+   contract right before the update (select ... single()) and add the collected amount, instead of the in-memory copy.
+4. Audit every other handler in this file that persists a journal entry AND updates operational rows (handover,
+   escalation, rescission, partner funding/payout, contractor/site payments, transfers, tax remittance, refunds): the
+   journal entry must be persisted before (or in the same service call as) the operational updates. Fix the order where
+   it is wrong; report each handler: ok / fixed / cannot-fix + reason.
+6. Balance-sheet KPIs (~1306-1382). [user-confirmed] GL is the single source of truth; schedule dues are off-ledger.
+   Today deferredRevenue / realizedRevenue are summed from contract rows and do NOT exclude Rescinded contracts, and
+   accountsReceivable = gross - collected (an accrual figure). Replace, using
+   GeneralLedgerEngine.calculateTrialBalance(data.journalEntries) (ledger.ts):
+     deferredRevenue  = credit - debit of 203000
+     realizedRevenue  = credit - debit of 401000
+     accountsReceivable = debit - credit of 103000
+   Keep the names/types (strings, toFixed(2)) so consumers compile. totalGrossContractValue / totalCollectedCash stay
+   (they already exclude Rescinded) for the sales KPIs.
+   Test (new file balanceKpisFromGl.test.ts) on a pure helper you extract to src/lib/erp/canonicalMetrics.ts
+   `glBalanceSheetKpis(entries)`: one advance 100,000 (Dr 101000 / Cr 203000), one handover V=1,000,000 C=100,000
+   (Dr 203000 100,000, Dr 103000 900,000, Cr 401000 1,000,000) -> deferred 0.00, realized 1000000.00, AR 900000.00.
+5. handleCollectPayment (~2146-2291) has no UI caller (grep `handleCollectPayment` in src). Remove it, its type line (~372)
+   and its export (~4524). It also always collected the full nominal_value ignoring partial payments.
+</steps>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+1. npx tsc --noEmit (clean)
+2. npx tsx --test src/lib/erp/__tests__/*.test.ts — report counts; list any failure beyond the 7 pre-existing UI ones
+3. grep -rn "handleCollectPayment" src -> 0 hits
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths + line counts changed
+3. STEPS: 1-5 done/deviated; step 4 per-handler table
+4. GATES: each command + result
+5. NOTES: out-of-scope observations (do not fix)
+</structured_output_contract>

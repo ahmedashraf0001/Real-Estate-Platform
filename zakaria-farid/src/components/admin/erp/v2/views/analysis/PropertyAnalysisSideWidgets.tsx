@@ -447,7 +447,7 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
                             fontWeight: 700,
                             padding: '0.1rem 0.35rem',
                             borderRadius: '4px',
-                            background: isSold ? '#f1f5f9' : isReady ? '#ecfdf5' : '#eff6ff',
+                            background: isSold ? '#f1f5f9' : isReady ? '#ecfdf5' : 'var(--erp-accent-subtle)',
                             color: isSold ? '#475569' : isReady ? '#059669' : '#0284c7',
                             border: `1px solid ${isSold ? '#cbd5e1' : isReady ? '#a7f3d0' : '#bae6fd'}`,
                             flexShrink: 0

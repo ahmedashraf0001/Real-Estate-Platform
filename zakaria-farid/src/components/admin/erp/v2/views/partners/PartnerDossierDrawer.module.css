@@ -1,0 +1,190 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.toolbar {
+  display: flex;
+  justifyContent: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--erp-bg-canvas, #f8fafc);
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+}
+
+.toolbarStart {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dateText {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.contactBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  background: var(--erp-bg-canvas, #f8fafc);
+  border: 1px solid var(--erp-border-subtle, #f1f5f9);
+}
+
+.contactRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.contactLabel {
+  color: var(--erp-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.contactVal {
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.copyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  background: var(--erp-bg-panel, #ffffff);
+  border: 1px solid var(--erp-border, #cbd5e1);
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--erp-accent, #2563eb);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-family: inherit;
+}
+
+.copyBtn:hover {
+  text-decoration: underline;
+}
+
+.accordionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.accordionItem {
+  background: var(--erp-bg-panel, #ffffff);
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.accordionHeader {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  background: var(--erp-bg-panel, #ffffff);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.accordionHeader:hover {
+  background: var(--erp-bg-canvas, #f8fafc);
+}
+
+.accordionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.accordionMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.accordionBody {
+  padding: 0.75rem 0.85rem;
+  background: var(--erp-bg-canvas, #f8fafc);
+  border-top: 1px solid var(--erp-border-subtle, #f1f5f9);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  font-size: 0.74rem;
+}
+
+.accordionBodyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accordionBodyLabel {
+  font-size: 0.68rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.accordionBodyVal {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+}
+
+.emptyHoldings {
+  padding: 1.25rem;
+  text-align: center;
+  background: var(--erp-bg-canvas, #f8fafc);
+  border: 1px dashed var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.drawerFooter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}

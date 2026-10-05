@@ -72,23 +72,22 @@ export const ZF_PARTNERS_STORAGE_KEY = 'zf_registered_partners';
  */
 export function getRegisteredPartners(): SystemPartner[] {
   if (typeof window === 'undefined') {
-    return INITIAL_REGISTERED_PARTNERS;
+    return [];
   }
   try {
     const raw = localStorage.getItem(ZF_PARTNERS_STORAGE_KEY);
-    if (!raw) return INITIAL_REGISTERED_PARTNERS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return INITIAL_REGISTERED_PARTNERS;
+    if (!Array.isArray(parsed)) return [];
     
-    // Merge without duplicates
+    // Return only stored partners without merging demo fallbacks
     const map = new Map<string, SystemPartner>();
-    INITIAL_REGISTERED_PARTNERS.forEach(p => map.set(p.name, p));
     parsed.forEach((p: any) => {
       if (p && p.name) map.set(p.name, p);
     });
     return Array.from(map.values());
   } catch {
-    return INITIAL_REGISTERED_PARTNERS;
+    return [];
   }
 }
 

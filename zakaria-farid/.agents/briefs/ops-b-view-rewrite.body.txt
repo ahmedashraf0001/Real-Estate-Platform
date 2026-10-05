@@ -1,0 +1,470 @@
+ROLE: LEAF — implementer. Execute exactly. Do not redesign, rename, add sections, add colors,
+add animations, or invent copy. Every string, class name, and CSS value you need is below.
+TRACK: SURFACE_UI
+PROJECT ROOT: zakaria-farid/ (run every command from there)
+DEPENDS ON: src/lib/erp/treasuryLedger.ts (already exists; read it first, use its exports as-is).
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for prose and the final report: terse, payload verbatim.
+- Do NOT commit. Do NOT touch any file not listed in <files>.
+- To drop an optional callback, omit it — never pass a no-op function.
+</execution_rules>
+
+<files>
+REWRITE (replace whole content):
+  src/components/admin/erp/v2/views/DailyOperationsView.tsx
+  src/components/admin/erp/v2/views/DailyOperationsView.module.css
+EDIT:
+  src/components/admin/erp/v2/views/operations/OperationsSideWidgets.tsx
+  src/components/admin/erp/v2/views/operations/OperationsSideWidgets.module.css
+  src/components/admin/erp/v2/views/operations/index.ts
+  src/lib/erp/__tests__/dailyOperationsRevamp.test.ts
+  src/lib/erp/__tests__/operationsSideWidgets.test.ts
+DELETE (git rm):
+  src/components/admin/erp/v2/views/operations/OperationsTopKpis.tsx
+  src/components/admin/erp/v2/views/operations/OperationsTopKpis.module.css
+  src/components/admin/erp/v2/views/operations/OperationsCashFlowMap.tsx
+  src/components/admin/erp/v2/views/operations/OperationsCashFlowMap.module.css
+  src/lib/erp/__tests__/operationsTopKpis.test.ts
+  src/lib/erp/__tests__/operationsCashFlowMap.test.ts
+CREATE:
+  src/lib/erp/__tests__/dailyOperationsView.test.ts
+DO NOT TOUCH: src/components/admin/erp/views/DailyOperationsRouteView.tsx (props contract stays identical),
+  src/lib/erp/operationsStreamFilters.ts, src/lib/erp/treasuryLedger.ts, any modal file.
+</files>
+
+<why>
+Current page computes cash from journal entries PLUS synthetic PDC/property-cost rows (double counts),
+shows hardcoded demo numbers (471,147,918 / 197,131,251) when a balance is <= 0, renders a hardcoded
+construction-category flow map, and duplicates the movements table (side "recent" widget +
+full-screen modal + report modal). New page = one GL-sourced treasury cash book.
+</why>
+
+<step_1 name="DailyOperationsView.tsx — full rewrite">
+Keep, byte-identical: the `DailyOperationsViewProps` interface (all fields), the export name
+`DailyOperationsView`, and these two re-export lines:
+  export type { CashMovementTransaction, UpcomingDueItem, UpcomingDuesSummary };
+  export { formatNumberWithCommas, formatEGPInteger, formatTime12h, computeUpcomingDues, buildTransactionInspectionPayload };
+(import those names from '@/lib/erp/operationsStreamFilters').
+
+Destructure ONLY these props (others stay in the interface, unused, not destructured):
+  isAr = true, properties = [], contracts = [], pdcRecords = [], journalEntries = [], activePeriod,
+  periods, propertyCosts = [], isMutating = false, onOpenProjectExpense, onCollectItem, onInspectCheque,
+  onInspectTransaction, onOpenCashReceipt, onUpdatePropertyCostItem, onAddCostAdjustment,
+  onRecordPayablePayment, onSaveExpenseEntry, onOpenPartnerOperations, onOpenPartnerPayout,
+  onOpenPartnerInjection, onExportExcel, onNavigateToTab
+
+Imports (exactly these, nothing else):
+  React, { useMemo, useRef, useState } from 'react'
+  lucide-react: Wallet, ArrowDownLeft, ArrowUpRight, Scale, Landmark, Layers, BookOpen, Download,
+    Zap, Coins, Users, HardHat, Receipt, HandCoins, ChevronLeft, ChevronRight, ArrowUp, ArrowDown,
+    ArrowUpDown, X
+  types from '@/lib/erp/types': ERPContract, ERPPDCRecord, ERPInstallmentSchedule, ERPAccountingPeriod,
+    ERPJournalEntry, ERPPropertyCostItem, ERPPropertyCostAdjustment, ERPPayableInstallment
+  { Property, BuildingUnitItem } from '@/lib/supabase/types'
+  type { PartnerFinancialSummary } from '@/lib/erp/partnersEngine'
+  from '@/lib/erp/treasuryLedger': buildTreasuryMovements, summarizeTreasury, getTreasuryPeriodRange,
+    isInTreasuryPeriod, toLocalDateStr, CASH_MOVEMENT_KIND_LABELS, CASH_ACCOUNT_LABELS,
+    TREASURY_PERIOD_LABELS, and types TreasuryMovement, TreasuryPeriod, CashMovementKind, CashAccountCode
+  from '@/lib/erp/operationsStreamFilters': formatNumberWithCommas, formatEGPInteger, formatTime12h,
+    computeUpcomingDues, buildTransactionInspectionPayload, and types CashMovementTransaction,
+    UpcomingDueItem, UpcomingDuesSummary
+  ops from './DailyOperationsView.module.css'
+  shellStyles from '../ZFWorkstationShell.module.css'
+  { ZFKpiCard } from '../ZFKpiCard'
+  { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets'
+  { ZFSearchBar } from '../common/ZFSearchBar'
+  { ZFPagination } from '../ZFPagination'
+  { OperationsSideWidgets } from './operations/OperationsSideWidgets'
+  { CostAdjustmentModal } from '../modals/CostAdjustmentModal'
+  { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal'
+  { EditPropertyCostModal } from '../modals/EditPropertyCostModal'
+  { ZFDirectExpenseModal } from '../modals/ZFDirectExpenseModal'
+If HandCoins is not exported by the installed lucide-react, use Coins instead and report it.
+
+State:
+  period: TreasuryPeriod = 'today'
+  direction: 'all' | 'IN' | 'OUT' | 'TRANSFER' = 'all'
+  kindFilter: CashMovementKind | null = null
+  accountFilter: 'all' | CashAccountCode = 'all'
+  search: string = ''
+  sortField: 'date' | 'amount' = 'date'; sortDesc: boolean = true
+  page: number = 1; pageSize: number = 15
+  isExpenseModalOpen, selectedCostForEdit, selectedCostForAdjustment, selectedCostForPayable,
+  selectedInstallmentForPayable  (same types as the current file)
+  ledgerRef = useRef<HTMLDivElement>(null)
+
+Derived (useMemo each):
+  todayStr = toLocalDateStr(new Date())                       (useMemo with [])
+  movements = buildTreasuryMovements(journalEntries, contracts, isAr)
+  allSummary = summarizeTreasury(movements, 'all', todayStr)
+  summary = summarizeTreasury(movements, period, todayStr)
+  range = getTreasuryPeriodRange(period, todayStr)
+  periodMovements = movements.filter(m => isInTreasuryPeriod(m, range))
+  baseFiltered = periodMovements filtered by: kindFilter (m.kind === kindFilter),
+     accountFilter (m.account === f || m.fromAccount === f), search (trim, lowercase; match if any of
+     m.description, m.originalDescription, m.counterparty, m.entryNumber, m.contract?.contract_number
+     lowercased includes it)
+  directionCounts = { all: baseFiltered.length, IN, OUT, TRANSFER counts from baseFiltered }
+  filtered = direction === 'all' ? baseFiltered : baseFiltered.filter(m => m.direction === direction)
+  sorted = [...filtered].sort: sortField 'date' -> by m.timestamp; 'amount' -> by m.amount (Decimal
+     compare via .cmp or .minus().toNumber()); apply sortDesc; tie -> m.id
+  totalPages = Math.max(1, Math.ceil(sorted.length / pageSize)); safePage = Math.min(page, totalPages)
+  pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize)
+  upcomingDues = computeUpcomingDues(pdcRecords, propertyCosts, isAr, todayStr)
+  periodLabel = TREASURY_PERIOD_LABELS[period][isAr ? 'ar' : 'en']
+  dateLabel = new Intl.DateTimeFormat(isAr ? 'ar-EG' : 'en-GB', { weekday: 'long', day: 'numeric',
+     month: 'long', year: 'numeric' }).format(new Date(`${todayStr}T00:00:00`))
+  safeRow / bankRow / totalRow = summary.accounts[0] / [1] / [2]
+  safeNow / bankNow = allSummary.accounts[0].closing / [1].closing
+  hasNegative = safeNow.lt(0) || bankNow.lt(0)
+
+Helpers (plain functions inside the component file, above the component):
+  fmt(v: Decimal) => formatNumberWithCommas(v)
+  cur = isAr ? 'ج.م' : 'EGP'   (inside component)
+  directionPillClass(d) => d === 'IN' ? `${shellStyles.statusPill} ${shellStyles.statusPillGreen}`
+     : d === 'OUT' ? `${shellStyles.statusPill} ${shellStyles.statusPillRed}`
+     : `${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`
+  amountClass(d) => d === 'IN' ? ops.amountIn : d === 'OUT' ? ops.amountOut : ops.amountNeutral
+  signedText(m) => m.direction === 'IN' ? `+${fmt(m.amount)}` : m.direction === 'OUT' ? `-${fmt(m.amount)}` : fmt(m.amount)
+  displayDate(s) => s.split('-').reverse().join('/')
+  accountText(m) => TRANSFER: isAr ? `من ${A(m.fromAccount)} إلى ${A(m.account)}` : `${A(m.fromAccount)} → ${A(m.account)}`
+     else A(m.account); where A(code) = CASH_ACCOUNT_LABELS[code][isAr ? 'ar' : 'en']
+
+Handlers:
+  resetPage = () => setPage(1)   — call it inside every filter/sort/period/direction/search/account/pageSize handler. NO useEffect for this.
+  scrollToLedger = () => ledgerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  focusDirection(d) = setDirection(d); setKindFilter(null); resetPage(); scrollToLedger()
+  toggleKind(k) = setKindFilter(prev => prev === k ? null : k); setDirection('all'); resetPage(); scrollToLedger()
+  clearFilters() = setKindFilter(null); setAccountFilter('all'); setSearch(''); setDirection('all'); resetPage()
+  toggleSort(f) = if f === sortField -> setSortDesc(v => !v) else { setSortField(f); setSortDesc(true) }; resetPage()
+  inspect(m: TreasuryMovement) = onInspectTransaction?.({ type: 'journal', entry: m.entry,
+     journalEntry: m.entry, amount: m.amount.toFixed(2), title: m.description, party: m.counterparty })
+  handleQuickAction(key: 'cash_receipt' | 'partner_injection' | 'pay_contractor' | 'record_expense' | 'partner_payout'):
+    cash_receipt: if (onOpenCashReceipt) onOpenCashReceipt(); else { const p = pdcRecords.find(x => x.status !== 'Cleared' && x.status !== 'Void'); if (p) onCollectItem(p); else onOpenProjectExpense(); }
+    partner_injection: if (onOpenPartnerInjection) onOpenPartnerInjection(); else if (onOpenPartnerOperations) onOpenPartnerOperations();
+    pay_contractor: copy the CURRENT file's `case 'pay_contractor'` body verbatim (uses propertyCosts instead of effectivePropertyCosts).
+    record_expense: setIsExpenseModalOpen(true)
+    partner_payout: if (onOpenPartnerPayout) onOpenPartnerPayout(); else if (onOpenPartnerOperations) onOpenPartnerOperations();
+
+JSX (exact structure; `dir={isAr ? 'rtl' : 'ltr'}` on root):
+
+<div className={ops.page} dir=...>
+  <header className={ops.header}>
+    <div className={ops.headerTitles}>
+      <h1 className={ops.title}>{isAr ? 'الخزينة والعمليات اليومية' : 'Treasury & Daily Operations'}</h1>
+      <p className={ops.subtitle}>{dateLabel} · {isAr ? `${summary.count} حركة — ${periodLabel}` : `${summary.count} movements — ${periodLabel}`}</p>
+    </div>
+    <div className={ops.headerControls}>
+      <div className={ops.periodTabs} role="tablist" aria-label={isAr ? 'الفترة' : 'Period'}>
+        for p of ['today','7d','month','all']: <button type="button" role="tab" aria-selected={period===p}
+          className={`${ops.periodTab} ${period===p ? ops.periodTabActive : ''}`}
+          onClick={() => { setPeriod(p); resetPage(); }}>{TREASURY_PERIOD_LABELS[p][lang]}</button>
+      </div>
+      {onExportExcel && <button type="button" className={ops.ghostBtn} onClick={onExportExcel}><Download size={14} />{isAr ? 'تصدير Excel' : 'Export Excel'}</button>}
+    </div>
+  </header>
+
+  <section className={ops.kpiGrid}>
+    <ZFKpiCard title={isAr ? 'الرصيد النقدي الحالي' : 'Cash on hand'} value={fmt(allSummary.accounts[2].closing)} currency={cur}
+      icon={<Wallet size={16} />} accentColor="accent"
+      subtitleLabel={isAr ? 'الخزينة · إنستاباي' : 'Safe · InstaPay'} subtitleValue={`${fmt(safeNow)} · ${fmt(bankNow)}`}
+      badge={hasNegative ? { text: isAr ? 'رصيد سالب — راجع القيود' : 'Negative balance — review entries', variant: 'danger' } : undefined}
+      tooltip={isAr ? 'من القيود المرحّلة على حسابي 101000 و102000 فقط' : 'From posted entries on 101000 and 102000 only'} />
+    <ZFKpiCard title={isAr ? `المقبوضات — ${periodLabel}` : `Receipts — ${periodLabel}`} value={fmt(summary.inflow)} currency={cur}
+      icon={<ArrowDownLeft size={16} />} accentColor="accent"
+      subtitleLabel={isAr ? 'عدد الحركات' : 'Movements'} subtitleValue={String(periodMovements.filter(m => m.direction === 'IN').length)}
+      onClick={() => focusDirection('IN')} />
+    <ZFKpiCard title={isAr ? `المدفوعات — ${periodLabel}` : `Payments — ${periodLabel}`} value={fmt(summary.outflow)} currency={cur}
+      icon={<ArrowUpRight size={16} />} accentColor="accent"
+      subtitleLabel={isAr ? 'عدد الحركات' : 'Movements'} subtitleValue={String(periodMovements.filter(m => m.direction === 'OUT').length)}
+      onClick={() => focusDirection('OUT')} />
+    <ZFKpiCard title={isAr ? `صافي التدفق — ${periodLabel}` : `Net flow — ${periodLabel}`} value={fmt(summary.net)} currency={cur}
+      icon={<Scale size={16} />} accentColor="accent"
+      subtitleLabel={isAr ? 'رصيد أول الفترة' : 'Opening balance'} subtitleValue={`${fmt(totalRow.opening)} ${cur}`} />
+  </section>
+  (Check ZFKpiCard's real prop names in src/components/admin/erp/v2/ZFKpiCard.tsx; if `badge.variant`
+   'danger' is not accepted, use the closest listed variant and report it.)
+
+  <section className={ops.analyticsRow}>
+    <div className={ops.card}>
+      <div className={ops.cardHeader}>
+        <div className={ops.cardTitleGroup}><span className={ops.iconSquircle}><Landmark size={15} /></span>
+          <h2 className={ops.cardTitle}>{isAr ? 'أرصدة الخزينة' : 'Cash balances'}</h2></div>
+        <span className={ops.cardHint}>{periodLabel}</span>
+      </div>
+      <table className={ops.miniTable}>
+        thead th: [الحساب|Account] [أول الفترة|Opening] [وارد|In] [منصرف|Out] [الرصيد|Closing]
+          — every numeric th and td gets className={ops.numCell}
+        tbody: one <tr> for safeRow and bankRow:
+          td1: <span className={ops.accountName}>{CASH_ACCOUNT_LABELS[code][lang]}</span> <span className={ops.mono}>{code}</span>
+          td2..td5: <span className={`${ops.amount} ${value.lt(0) ? ops.amountOut : ''}`}>{fmt(value)}</span> for opening, inflow, outflow, closing
+        then <tr className={ops.totalRow}> td1 {isAr ? 'الإجمالي' : 'Total'} + same 4 numeric cells from totalRow
+      </table>
+    </div>
+
+    <div className={ops.card}>
+      <div className={ops.cardHeader}>
+        <div className={ops.cardTitleGroup}><span className={ops.iconSquircle}><Layers size={15} /></span>
+          <h2 className={ops.cardTitle}>{isAr ? 'توزيع الحركة حسب النوع' : 'Movements by type'}</h2></div>
+        <span className={ops.cardHint}>{isAr ? 'اضغط على نوع لتصفية الدفتر' : 'Click a type to filter the book'}</span>
+      </div>
+      if summary.byKind.length === 0: <div className={ops.empty}>{isAr ? 'لا توجد حركات في هذه الفترة' : 'No movements in this period'}</div>
+      else <table className={ops.miniTable}>
+        thead: [النوع|Type] [العدد|Count](numCell) [المبلغ|Amount](numCell) [النسبة|Share](numCell)
+        tbody: for row of summary.byKind:
+          <tr key={row.kind} className={`${ops.kindRow} ${kindFilter===row.kind ? ops.kindRowActive : ''}`}
+              role="button" tabIndex={0} aria-pressed={kindFilter===row.kind}
+              onClick={() => toggleKind(row.kind)}
+              onKeyDown={e => { if (e.key==='Enter' || e.key===' ') { e.preventDefault(); toggleKind(row.kind); } }}>
+            <td><span className={directionPillClass(row.direction)}>{CASH_MOVEMENT_KIND_LABELS[row.kind][lang]}</span></td>
+            <td className={ops.numCell}><span className={ops.amount}>{row.count}</span></td>
+            <td className={ops.numCell}><span className={`${ops.amount} ${amountClass(row.direction)}`}>{fmt(row.amount)}</span></td>
+            <td className={ops.numCell}>{row.share === null ? <span className={ops.shareText}>—</span> :
+               <span className={ops.shareCell}><span className={ops.shareTrack}><span className={ops.shareFill} style={{ width: `${Math.min(100, row.share)}%` }} /></span>
+               <span className={ops.shareText}>{row.share.toFixed(1)}%</span></span>}</td>
+          </tr>
+      </table>
+    </div>
+  </section>
+
+  <section className={ops.card} ref={ledgerRef}>
+    <div className={ops.cardHeader}>
+      <div className={ops.cardTitleGroup}><span className={ops.iconSquircle}><BookOpen size={15} /></span>
+        <h2 className={ops.cardTitle}>{isAr ? 'دفتر حركة الخزينة' : 'Treasury cash book'}</h2></div>
+      <span className={ops.cardHint}>{isAr ? `${filtered.length} حركة · ${periodLabel}` : `${filtered.length} movements · ${periodLabel}`}</span>
+    </div>
+    <div className={ops.ledgerToolbar}>
+      <div className={ops.tabs} role="tablist">
+        tabs [all: الكل|All] [IN: المقبوضات|Receipts] [OUT: المدفوعات|Payments] [TRANSFER: التحويلات|Transfers]:
+        <button type="button" role="tab" aria-selected={direction===d} className={`${ops.tab} ${direction===d ? ops.tabActive : ''}`}
+          onClick={() => { setDirection(d); resetPage(); }}>{label}<span className={ops.tabCount}>{directionCounts[d]}</span></button>
+      </div>
+      <div className={ops.filters}>
+        {kindFilter && <span className={ops.chip}>{CASH_MOVEMENT_KIND_LABELS[kindFilter][lang]}
+          <button type="button" className={ops.chipClear} aria-label={isAr ? 'إزالة التصفية' : 'Clear filter'} onClick={() => { setKindFilter(null); resetPage(); }}><X size={12} /></button></span>}
+        <select className={ops.select} value={accountFilter} aria-label={isAr ? 'الحساب' : 'Account'}
+          onChange={e => { setAccountFilter(e.target.value as 'all' | CashAccountCode); resetPage(); }}>
+          <option value="all">{isAr ? 'كل الحسابات' : 'All accounts'}</option>
+          <option value="101000">{CASH_ACCOUNT_LABELS['101000'][lang]}</option>
+          <option value="102000">{CASH_ACCOUNT_LABELS['102000'][lang]}</option>
+        </select>
+        <ZFSearchBar value={search} onChange={v => { setSearch(v); resetPage(); }} isAr={isAr}
+          placeholder={isAr ? 'بحث بالبيان أو الجهة أو رقم القيد' : 'Search description, party, entry #'} />
+      </div>
+    </div>
+    if movements.length === 0:
+      <div className={ops.empty}>{isAr ? 'لا توجد حركات نقدية مسجلة بعد. أي تحصيل أو صرف يظهر هنا فور ترحيل قيده.' : 'No cash movements yet. Any receipt or payment appears here once its entry is posted.'}</div>
+    else if sorted.length === 0:
+      <div className={ops.empty}>{isAr ? 'لا توجد حركات تطابق الفلاتر الحالية' : 'No movements match the current filters'}
+        <button type="button" className={ops.ghostBtn} onClick={clearFilters}>{isAr ? 'مسح الفلاتر' : 'Clear filters'}</button></div>
+    else:
+      <div className={ops.tableScroll}><table className={ops.table}>
+        <thead><tr>
+          <th><button type="button" className={ops.sortBtn} onClick={() => toggleSort('date')}>{isAr ? 'التاريخ' : 'Date'}{sortIcon('date')}</button></th>
+          <th>{isAr ? 'النوع' : 'Type'}</th>
+          <th>{isAr ? 'البيان' : 'Description'}</th>
+          <th>{isAr ? 'الجهة' : 'Party'}</th>
+          <th>{isAr ? 'الحساب' : 'Account'}</th>
+          <th>{isAr ? 'رقم القيد' : 'Entry #'}</th>
+          <th className={ops.numCell}><button type="button" className={ops.sortBtn} onClick={() => toggleSort('amount')}>{isAr ? 'المبلغ' : 'Amount'}{sortIcon('amount')}</button></th>
+          <th className={ops.numCell} title={isAr ? 'إجمالي الخزينة وإنستاباي بعد الحركة' : 'Safe + InstaPay after this movement'}>{isAr ? 'الرصيد بعد الحركة' : 'Balance after'}</th>
+        </tr></thead>
+        sortIcon(f) = sortField !== f ? <ArrowUpDown size={12} /> : sortDesc ? <ArrowDown size={12} /> : <ArrowUp size={12} />
+        <tbody> for m of pageRows:
+          <tr key={m.id} className={ops.row} tabIndex={0} onClick={() => inspect(m)}
+              onKeyDown={e => { if (e.key === 'Enter') inspect(m); }}>
+            <td><div className={ops.dateCell}><span className={ops.dateMain}>{displayDate(m.date)}</span>
+                {m.time && <span className={ops.dateSub}>{formatTime12h(m.time, isAr)}</span>}</div></td>
+            <td><span className={directionPillClass(m.direction)}>{CASH_MOVEMENT_KIND_LABELS[m.kind][lang]}</span></td>
+            <td><div className={ops.descCell}><span className={ops.descMain} title={m.description}>{m.description}</span>
+                {m.originalDescription && m.originalDescription !== m.description &&
+                  <span className={ops.descSub} title={m.originalDescription}>{m.originalDescription}</span>}</div></td>
+            <td>{m.counterparty}</td>
+            <td>{accountText(m)}</td>
+            <td><span className={ops.mono}>{m.entryNumber}</span></td>
+            <td className={ops.numCell}><span className={`${ops.amount} ${amountClass(m.direction)}`}>{signedText(m)}</span></td>
+            <td className={ops.numCell}><span className={`${ops.amount} ${m.balanceAfter.lt(0) ? ops.amountOut : ''}`}>{fmt(m.balanceAfter)}</span></td>
+          </tr>
+        </tbody></table></div>
+      <div className={ops.footer}><ZFPagination currentPage={safePage} totalPages={totalPages} totalItems={sorted.length}
+         pageSize={pageSize} onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); resetPage(); }}
+         pageSizeOptions={[15, 30, 60]} isAr={isAr} itemLabel={{ ar: 'حركة', en: 'movements' }} /></div>
+  </section>
+
+  <ZFWorkstationSideWidgets>
+    <div className={ops.side}>
+      <div className={ops.card}>
+        <div className={ops.cardHeader}><div className={ops.cardTitleGroup}><span className={ops.iconSquircle}><Zap size={15} /></span>
+          <h2 className={ops.cardTitle}>{isAr ? 'إجراءات الخزينة' : 'Treasury actions'}</h2></div></div>
+        <div className={ops.actionGroupLabel}>{isAr ? 'قبض' : 'Receive'}</div>
+        <div className={ops.actionList}>
+          ACTION(cash_receipt, <Coins/>, 'تحصيل قسط' | 'Collect installment', 'نقداً أو بإنستاباي فور الاستلام' | 'Cash or InstaPay, on receipt')
+          ACTION(partner_injection, <Users/>, 'تمويل من شريك' | 'Partner funding', 'إيداع حصة أو زيادة رأس المال' | 'Capital contribution')
+        </div>
+        <div className={ops.actionGroupLabel}>{isAr ? 'صرف' : 'Pay'}</div>
+        <div className={ops.actionList}>
+          ACTION(pay_contractor, <HardHat/>, 'سداد مستخلص مقاول' | 'Pay contractor', 'أقرب دفعة مستحقة' | 'Earliest due installment')
+          ACTION(record_expense, <Receipt/>, 'مصروف مباشر' | 'Direct expense', 'تكاليف موقع أو تشغيل' | 'Site or operating cost')
+          ACTION(partner_payout, <HandCoins/>, 'توزيع على الشركاء' | 'Partner distribution', 'أرباح أو مسحوبات' | 'Profit or drawings')
+        </div>
+      </div>
+      <OperationsSideWidgets upcomingDues={upcomingDues} isAr={isAr}
+        onViewAllUpcomingDues={() => onNavigateToTab?.('pdc')}
+        onCollectItem={onCollectItem} onInspectCheque={onInspectCheque}
+        onRecordPayablePayment=  (copy the current file's inline handler verbatim)
+        onUpdatePropertyCostItem= (copy verbatim)
+        onOpenExpenseModal={() => setIsExpenseModalOpen(true)} onNavigateToTab={onNavigateToTab} />
+    </div>
+  </ZFWorkstationSideWidgets>
+
+  Then the 4 modal blocks copied VERBATIM from the current file (ZFDirectExpenseModal, EditPropertyCostModal,
+  CostAdjustmentModal, CostPayableSettlementModal — the code under the comments
+  "Canonical project bill and expense workflow" through the end of "Cost Payable Settlement Modal").
+</div>
+
+ACTION(key, icon, title, sub) expands to:
+  <button type="button" className={ops.actionBtn} disabled={isMutating} onClick={() => handleQuickAction(key)}>
+    <span className={ops.iconSquircle}>{icon with size={15}}</span>
+    <span className={ops.actionTexts}><span className={ops.actionTitle}>{title}</span><span className={ops.actionSub}>{sub}</span></span>
+    {isAr ? <ChevronLeft size={14} className={ops.actionArrow} /> : <ChevronRight size={14} className={ops.actionArrow} />}
+  </button>
+
+`lang` = isAr ? 'ar' : 'en' (const inside component).
+Removed on purpose — must NOT appear in the new file: OperationsTopKpis, OperationsCashFlowMap,
+ZFKpiGrid, ZFModalShell, AnimatedCounter, BrandLogo, toast, CANONICAL_COA, getAvailableCash,
+localizeJournalDescription, matchesIn*, matchesOut*, rawPdc, paid_amount_egp, isFullScreenTableOpen,
+isReportModalOpen, any `{false && ...}` block, any hex color literal.
+</step_1>
+
+<step_2 name="DailyOperationsView.module.css — replace entire file with exactly this">
+.page { display: flex; flex-direction: column; gap: 1rem; min-width: 0; padding: 1rem 1.25rem 1.5rem; }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.headerTitles { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.title { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--erp-text-title); }
+.subtitle { margin: 0; font-size: 0.8rem; color: var(--erp-text-muted); }
+.headerControls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.periodTabs { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--erp-border); border-radius: 9999px; background: var(--erp-bg-panel); }
+.periodTab { border: 0; background: transparent; padding: 0.35rem 0.8rem; border-radius: 9999px; font: inherit; font-size: 0.75rem; font-weight: 700; color: var(--erp-text-muted); cursor: pointer; }
+.periodTab:hover { color: var(--erp-text-title); }
+.periodTabActive, .periodTabActive:hover { background: var(--erp-accent-subtle); color: var(--erp-accent); }
+.ghostBtn { display: inline-flex; align-items: center; gap: 0.4rem; height: 32px; padding: 0 0.8rem; border: 1px solid var(--erp-border); border-radius: 8px; background: var(--erp-bg-panel); color: var(--erp-text-body); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+.ghostBtn:hover { border-color: var(--erp-accent); color: var(--erp-accent); }
+.periodTab:focus-visible, .ghostBtn:focus-visible, .tab:focus-visible, .sortBtn:focus-visible, .chipClear:focus-visible, .row:focus-visible, .kindRow:focus-visible, .actionBtn:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: 2px; }
+.kpiGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+.analyticsRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; align-items: start; }
+.card { background: var(--erp-bg-panel); border: 1px solid var(--erp-card-border); border-radius: 12px; min-width: 0; overflow: hidden; }
+.cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--erp-border-subtle); }
+.cardTitleGroup { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.iconSquircle { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 7px; background: var(--erp-accent-subtle); color: var(--erp-accent); border: 1px solid var(--erp-accent-tint); }
+.cardTitle { margin: 0; font-size: 0.88rem; font-weight: 800; color: var(--erp-text-title); }
+.cardHint { font-size: 0.72rem; color: var(--erp-text-muted); text-align: end; }
+.miniTable { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.miniTable th { padding: 0.5rem 1rem; text-align: start; font-size: 0.7rem; font-weight: 700; color: var(--erp-text-muted); border-bottom: 1px solid var(--erp-border-subtle); white-space: nowrap; }
+.miniTable td { padding: 0.6rem 1rem; color: var(--erp-text-body); border-bottom: 1px solid var(--erp-border-subtle); white-space: nowrap; }
+.miniTable tbody tr:last-child td { border-bottom: 0; }
+.miniTable .numCell, .table .numCell { text-align: end; }
+.accountName { font-weight: 700; color: var(--erp-text-title); margin-inline-end: 0.4rem; }
+.totalRow td { border-top: 1px solid var(--erp-border); font-weight: 800; color: var(--erp-text-title); }
+.amount { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--erp-text-title); }
+.amountIn { color: var(--erp-success); }
+.amountOut { color: var(--erp-danger); }
+.amountNeutral { color: var(--erp-text-muted); }
+.kindRow { cursor: pointer; }
+.kindRow:hover td { background: var(--erp-border-subtle); }
+.kindRowActive td, .kindRowActive:hover td { background: var(--erp-accent-tint); }
+.shareCell { display: inline-flex; align-items: center; gap: 0.5rem; }
+.shareTrack { width: 64px; height: 4px; border-radius: 9999px; background: var(--erp-border-subtle); overflow: hidden; }
+.shareFill { display: block; height: 100%; border-radius: 9999px; background: var(--erp-accent); }
+.shareText { min-width: 3.2rem; text-align: end; font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--erp-text-muted); }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 2rem 1rem; text-align: center; font-size: 0.8rem; color: var(--erp-text-muted); }
+.ledgerToolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; padding: 0.6rem 1rem; border-bottom: 1px solid var(--erp-border-subtle); }
+.tabs { display: flex; gap: 1rem; flex-wrap: wrap; }
+.tab { position: relative; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0; border: 0; background: transparent; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--erp-text-muted); cursor: pointer; }
+.tab:hover { color: var(--erp-text-title); }
+.tabActive, .tabActive:hover { color: var(--erp-accent); }
+.tabActive::after { content: ''; position: absolute; inset-inline: 0; bottom: -0.62rem; height: 2px; border-radius: 2px; background: var(--erp-accent); }
+.tabCount { padding: 0 0.4rem; border: 1px solid var(--erp-border); border-radius: 9999px; font-size: 0.68rem; font-variant-numeric: tabular-nums; color: var(--erp-text-muted); }
+.filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.select { height: 32px; padding: 0 0.6rem; border: 1px solid var(--erp-border); border-radius: 8px; background: var(--erp-bg-panel); color: var(--erp-text-body); font: inherit; font-size: 0.75rem; }
+.chip { display: inline-flex; align-items: center; gap: 0.35rem; height: 26px; padding-inline: 0.6rem 0.3rem; border: 1px solid var(--erp-accent-tint); border-radius: 9999px; background: var(--erp-bg-panel); color: var(--erp-accent); font-size: 0.72rem; font-weight: 700; }
+.chipClear { display: inline-flex; padding: 2px; border: 0; border-radius: 9999px; background: transparent; color: inherit; cursor: pointer; }
+.tableScroll { overflow-x: auto; }
+.table { width: 100%; min-width: 860px; border-collapse: collapse; font-size: 0.78rem; }
+.table thead th { position: sticky; top: 0; z-index: 1; padding: 0.55rem 0.75rem; text-align: start; font-size: 0.7rem; font-weight: 700; color: var(--erp-text-muted); background: var(--erp-bg-panel); border-bottom: 1px solid var(--erp-border); white-space: nowrap; }
+.table td { padding: 0.6rem 0.75rem; color: var(--erp-text-body); border-bottom: 1px solid var(--erp-border-subtle); vertical-align: middle; }
+.sortBtn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; }
+.row { cursor: pointer; }
+.row:hover td { background: var(--erp-border-subtle); }
+.dateCell { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.dateMain { font-weight: 700; color: var(--erp-text-title); font-variant-numeric: tabular-nums; }
+.dateSub { font-size: 0.68rem; color: var(--erp-text-muted); }
+.descCell { display: flex; flex-direction: column; gap: 2px; max-width: 320px; }
+.descMain { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--erp-text-title); }
+.descSub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; color: var(--erp-text-muted); }
+.mono { direction: ltr; unicode-bidi: isolate; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.7rem; color: var(--erp-text-muted); }
+.footer { padding: 0.5rem 1rem; border-top: 1px solid var(--erp-border-subtle); }
+.side { display: flex; flex-direction: column; gap: 0.75rem; }
+.actionGroupLabel { padding: 0.6rem 1rem 0.25rem; font-size: 0.68rem; font-weight: 800; color: var(--erp-text-muted); }
+.actionList { display: flex; flex-direction: column; padding: 0 0.5rem 0.5rem; }
+.actionBtn { display: flex; align-items: center; gap: 0.65rem; width: 100%; padding: 0.55rem 0.5rem; border: 0; border-radius: 8px; background: transparent; font: inherit; text-align: start; cursor: pointer; }
+.actionBtn:hover { background: var(--erp-border-subtle); }
+.actionBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.actionTexts { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.actionTitle { font-size: 0.8rem; font-weight: 700; color: var(--erp-text-title); }
+.actionSub { font-size: 0.68rem; color: var(--erp-text-muted); }
+.actionArrow { flex-shrink: 0; color: var(--erp-text-subtle); }
+@container middleSection (max-width: 1100px) { .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container middleSection (max-width: 860px) { .analyticsRow { grid-template-columns: minmax(0, 1fr); } }
+@container middleSection (max-width: 520px) { .page { padding: 0.75rem; } .kpiGrid { grid-template-columns: minmax(0, 1fr); } .header { align-items: stretch; } }
+@media (max-width: 640px) { .kpiGrid, .analyticsRow { grid-template-columns: minmax(0, 1fr); } .page { padding: 0.75rem; } }
+</step_2>
+
+<step_3 name="OperationsSideWidgets">
+- Delete the whole "أحدث العمليات (RECENT TRANSACTIONS)" widget JSX (from the comment
+  `{/* ─── TOP WIDGET: أحدث العمليات` up to — not including — the comment
+  `{/* ─── BOTTOM WIDGET:`).
+- Remove props `recentTransactions`, `onViewAllTransactions`, `onInspectTransaction` from the
+  interface and destructuring; remove `displayedRecent` and any import that becomes unused.
+- In OperationsSideWidgets.module.css replace every `#fdf8ee` with `var(--erp-accent-subtle)` and every
+  `#b48c36` with `var(--erp-accent)`; delete CSS rules used only by the deleted widget ONLY if you can
+  prove by grep they are unused in the TSX; otherwise leave them.
+- index.ts: keep only `export { OperationsSideWidgets } from './OperationsSideWidgets';`
+</step_3>
+
+<step_4 name="tests">
+- dailyOperationsRevamp.test.ts: delete the entire `describe('6. FIN-OS ERP Invariants on DailyOperationsView Source Code'`
+  block. In describe '8.' delete every `it(...)` whose body reads DailyOperationsView.tsx or
+  DailyOperationsView.module.css (grep for `DailyOperationsView` inside the block). Keep everything else.
+  Remove imports/variables that become unused.
+- operationsSideWidgets.test.ts: delete the `it` for Widget 1 (أحدث العمليات) and the `it` asserting
+  `#fdf8ee`/`#b48c36`; update any render call to drop the removed props. Keep everything else.
+- CREATE dailyOperationsView.test.ts (node:test + assert/strict, read files with fs from
+  path.join(process.cwd(), ...)):
+  1. view source does NOT contain any of: '197131251', '471147918', 'OperationsTopKpis',
+     'OperationsCashFlowMap', 'rawPdc', 'paid_amount_egp', 'ZFModalShell', '{false &&'.
+  2. view source contains 'buildTreasuryMovements(' and 'summarizeTreasury(' and 'ZFWorkstationSideWidgets'.
+  3. view source has no hex color: !/#[0-9a-fA-F]{3,8}\b/.test(src) (ignore nothing — there must be none).
+  4. CSS module has no hex color, no 'gradient', no 'box-shadow'.
+  5. operations/ directory has no OperationsTopKpis.tsx and no OperationsCashFlowMap.tsx (fs.existsSync false).
+</step_4>
+
+<gates>
+npx tsc --noEmit                                                         (0 errors)
+npx tsx --test src/lib/erp/__tests__/dailyOperationsView.test.ts src/lib/erp/__tests__/dailyOperationsRevamp.test.ts src/lib/erp/__tests__/operationsSideWidgets.test.ts src/lib/erp/__tests__/treasuryLedger.test.ts src/lib/erp/__tests__/operationsStreamFilters.test.ts   (all pass)
+npx eslint src/components/admin/erp/v2/views/DailyOperationsView.tsx src/components/admin/erp/v2/views/operations/OperationsSideWidgets.tsx src/lib/erp/__tests__/dailyOperationsView.test.ts   (report error count per file)
+grep -rn "OperationsTopKpis\|OperationsCashFlowMap" src   (must print nothing)
+</gates>
+
+<structured_output_contract>
+Report (caveman, ≤20 lines):
+STATUS: done | partial | blocked
+FILES: list with +/- line counts
+GATES: each command -> pass/fail + first failing line verbatim
+DEVIATIONS: every departure from this brief (prop names, icon fallback, test removals) + one-line reason, or "none"
+OPEN: anything unresolved or "none"
+</structured_output_contract>

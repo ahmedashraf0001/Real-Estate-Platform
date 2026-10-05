@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "zakaria-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "zakaria-farid",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "51101"
+      ],
+      "port": 51101,
+      "autoPort": false
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { 
   AlertTriangle, 
@@ -18,8 +18,13 @@ import {
   HardHat,
   Calendar,
   Users,
-  Calculator 
+  Calculator,
+  Coins,
+  Receipt,
+  ArrowLeftRight,
+  FileSignature
 } from 'lucide-react';
+import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
 
 import shellStyles from './v2/ZFWorkstationShell.module.css';
 import '@/components/erp/erpTokens.css';
@@ -37,53 +42,52 @@ import { ZFErpAcademyModal } from './ZFErpAcademyModal';
 import { ZFErpGuidedTour } from './ZFErpGuidedTour';
 import { ZFNotificationCenter } from './ZFNotificationCenter';
 import { NewContractWizardModal } from './v2/modals/NewContractWizardModal';
-import { CashCollectionReceiptModal } from './v2/modals/CashCollectionReceiptModal';
+import { ZFCollectInstallmentModal } from './v2/modals/ZFCollectInstallmentModal';
 import { ContractEscalationModal } from './v2/modals/ContractEscalationModal';
 import { RescissionSettlementModal } from './v2/modals/RescissionSettlementModal';
 import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
 import { HandoverExecutionModal } from './v2/modals/HandoverExecutionModal';
 import { NewChequeModal } from './NewChequeModal';
-import { HandCollectionModal } from './HandCollectionModal';
 import { ZFDirectExpenseModal } from './v2/modals/ZFDirectExpenseModal';
+import { ZFCashTransferModal } from './v2/modals/ZFCashTransferModal';
 import { PropertyLifecycleAuditModal } from './PropertyLifecycleAuditModal';
 import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
 import { NewPartnerProfileModal } from './v2/modals/NewPartnerProfileModal';
 import { PartnerCapitalInjectionModal } from './v2/modals/PartnerCapitalInjectionModal';
 import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
-import { PartnerOperationsModal } from './v2/modals/PartnerOperationsModal';
 
 const MODULE_TITLES_AR: Record<string, string> = {
-  dashboard: 'قمرة القيادة والعمليات المالية',
-  cockpit: 'قمرة القيادة والعمليات المالية',
-  operations: 'حركة الخزينة والعمليات اليومية',
-  properties: 'محفظة المشاريع والوحدات',
-  construction: 'مصاريف البناء ومستحقات المقاولين',
-  calculator: 'حاسبة وهيكلة التكاليف والجدوى',
-  contracts: 'سجل عقود البيع والعملاء',
-  pdc: 'أجندة الشيكات والتحصيلات',
-  rescissions: 'فسخ واسترداد العقود',
-  ledger: 'الدفتر العام واليومية المحاسبية',
-  'cost-allocation': 'رسملة التكاليف ومعامل RSV',
-  tax: 'الضرائب العقارية ورسوم الوحدات',
-  partners: 'الشركاء وممولو المشاريع',
-  analysis: 'تحليل العقارات ودورة الحياة والجدوى',
+  dashboard: 'لوحة القيادة',
+  cockpit: 'لوحة القيادة',
+  operations: 'الخزينة والعمليات اليومية',
+  properties: 'العقارات والوحدات',
+  construction: 'تكاليف البناء ومستحقات المقاولين',
+  calculator: 'حاسبة التكاليف والتسعير',
+  contracts: 'عقود البيع',
+  pdc: 'أجندة المستحقات',
+  rescissions: 'فسخ العقود والتسويات',
+  ledger: 'الحسابات ودفتر اليومية',
+  'cost-allocation': 'توزيع تكاليف البناء',
+  tax: 'الضرائب والرسوم والتراخيص',
+  partners: 'الشركاء ورؤوس الأموال',
+  analysis: 'تحليل العقارات',
 };
 
 const MODULE_TITLES_EN: Record<string, string> = {
-  dashboard: 'Executive Dashboard',
-  cockpit: 'Executive Dashboard',
-  operations: 'Daily Cashier & Operations',
-  properties: 'Properties & Units',
-  construction: 'Construction & Payables',
-  calculator: 'Feasibility Calculator',
-  contracts: 'Sales Contracts',
-  pdc: 'PDC & Due Cheques',
-  rescissions: 'Contract Rescissions',
-  ledger: 'General Ledger',
-  'cost-allocation': 'Cost Allocation & RSV',
-  tax: 'Property Taxes',
-  partners: 'Partners & Financiers',
-  analysis: 'Property Lifecycle & Feasibility Analysis',
+  dashboard: 'Dashboard',
+  cockpit: 'Dashboard',
+  operations: 'Treasury & daily operations',
+  properties: 'Properties & units',
+  construction: 'Construction costs & contractor dues',
+  calculator: 'Cost & pricing calculator',
+  contracts: 'Sales contracts',
+  pdc: 'Dues agenda',
+  rescissions: 'Contract rescissions',
+  ledger: 'Accounts & journal',
+  'cost-allocation': 'Cost allocation',
+  tax: 'Taxes, fees & permits',
+  partners: 'Partners & capital',
+  analysis: 'Property analysis',
 };
 
 const SIDE_WIDGETS_CONFIG_AR: Record<string, { title: string; badge?: string; icon: React.ComponentType<{ size?: number | string; strokeWidth?: number; className?: string }> }> = {
@@ -124,6 +128,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
   const erp = useERPWorkstation();
   const pathname = usePathname() || '';
   const stageRef = useRef<HTMLElement | null>(null);
+  const cash = useMemo(() => getAvailableCash(erp.data.journalEntries), [erp.data.journalEntries]);
 
   // Auto-scroll stage to top on pathname changes
   useEffect(() => {
@@ -131,6 +136,19 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
       stageRef.current.scrollTop = 0;
     }
   }, [pathname]);
+
+  // Auto-route legacy collectingPDCItem callers to modern collectRequest modal
+  useEffect(() => {
+    if (!erp.collectingPDCItem) return;
+    const item = erp.collectingPDCItem;
+    const rawSched = item.schedule_id || (item.cheque_id?.startsWith('SCH-') ? item.cheque_id : undefined);
+    const scheduleId = rawSched ? rawSched.replace(/^SCH-/, '') : undefined;
+    erp.openCollect({
+      contractId: item.contract_id,
+      scheduleId,
+    });
+    erp.setCollectingPDCItem(null);
+  }, [erp.collectingPDCItem, erp.openCollect, erp.setCollectingPDCItem]);
 
   // Splitter and side widgets resizable & collapsible states
   const [sidebarWidth, setSidebarWidth] = useState<number>(260);
@@ -658,8 +676,8 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
   }
 
   const moduleTitle = erp.isAr
-    ? (MODULE_TITLES_AR[erp.activeTab] || 'قمرة القيادة والعمليات المالية')
-    : (MODULE_TITLES_EN[erp.activeTab] || 'Executive Dashboard');
+    ? (MODULE_TITLES_AR[erp.activeTab] || 'لوحة القيادة')
+    : (MODULE_TITLES_EN[erp.activeTab] || 'Dashboard');
 
   const sideWidgetsConfig = erp.isAr
     ? (SIDE_WIDGETS_CONFIG_AR[erp.activeTab] || { title: 'لوحة الأدوات والودجات', badge: '', icon: PanelRight })
@@ -708,7 +726,12 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isMobileOpen={erp.isMobileDockOpen}
         onCloseMobile={() => erp.setIsMobileDockOpen(false)}
         onToggleDock={erp.handleToggleDock}
-        onQuickRequest={() => erp.setShowProjectExpenseModal(true)}
+        quickMenu={[
+          { key: 'collect', labelAr: 'تحصيل قسط', labelEn: 'Collect installment', icon: <Coins size={15} />, onSelect: () => erp.openCollect({}) },
+          { key: 'expense', labelAr: 'مصروف أو فاتورة', labelEn: 'Expense or bill', icon: <Receipt size={15} />, onSelect: () => erp.setShowProjectExpenseModal(true) },
+          { key: 'transfer', labelAr: 'تحويل بين الخزينة وإنستاباي', labelEn: 'Safe ⇄ InstaPay transfer', icon: <ArrowLeftRight size={15} />, onSelect: () => erp.setShowCashTransferModal(true) },
+          { key: 'contract', labelAr: 'عقد بيع جديد', labelEn: 'New sales contract', icon: <FileSignature size={15} />, onSelect: () => erp.handleOpenGenericNewContract() }
+        ]}
         width={sidebarWidth}
         isResizing={!isHydrated || isDraggingSidebar}
       />
@@ -957,9 +980,8 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
             }
           }
         }}
-        isAr={erp.isAr}
-        isOverModal={!!(erp.showNewPDCModal || erp.showRSVModal || erp.showProjectExpenseModal || erp.collectingPDCItem || erp.showEscalationModal || erp.showRescissionModal || erp.auditModalProperty || erp.showHandoverModal)}
-        onPayInstallment={(c, sch) => erp.setShowPayModal({ contract: c, schedule: sch })}
+        isOverModal={!!(erp.showNewPDCModal || erp.showRSVModal || erp.showProjectExpenseModal || erp.collectingPDCItem || erp.showEscalationModal || erp.showRescissionModal || erp.auditModalProperty || erp.showHandoverModal || erp.collectRequest)}
+        onPayInstallment={(c, sch) => erp.openCollect({ contractId: c.contract_id, scheduleId: sch.schedule_id })}
         onOpenEscalation={(c) => {
           erp.setShowEscalationModal(c);
           erp.setEscalationDelta('1500000.00');
@@ -976,7 +998,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
         onNavigateToTab={(tab) => erp.navigateToTab(tab)}
         onToggleHandover={erp.handleToggleContractHandover}
-        onUpdateChequeStatus={erp.handlePDCStatusChange}
         onInspectContract={erp.handleInspectContract}
         onRemitTax={erp.handleRemitTax}
         isMutating={erp.isMutating}
@@ -1085,19 +1106,18 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
       />
 
-      {/* CASH COLLECTION & RECEIPT VOUCHER MODAL */}
-      <CashCollectionReceiptModal 
-        isOpen={!!erp.showPayModal}
-        onClose={() => erp.setShowPayModal(null)}
-        contract={erp.showPayModal?.contract}
-        schedule={erp.showPayModal?.schedule}
-        activePeriod={erp.activePeriod}
-        periods={erp.data.periods}
+      {/* CUSTOMER INSTALLMENT COLLECTION MODAL */}
+      <ZFCollectInstallmentModal
+        isOpen={!!erp.collectRequest}
+        onClose={() => erp.setCollectRequest(null)}
         isAr={erp.isAr}
         isMutating={erp.isMutating}
-        onConfirmCollection={async (details) => {
-          await erp.handleCollectPayment(details);
-        }}
+        contracts={erp.data.contracts}
+        schedules={erp.data.schedules}
+        properties={erp.data.properties}
+        initialContractId={erp.collectRequest?.contractId}
+        initialScheduleId={erp.collectRequest?.scheduleId}
+        onConfirm={erp.handleConfirmHandCollection}
       />
 
       {/* ESCALATION MODAL */}
@@ -1134,10 +1154,10 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         periods={erp.data.periods}
         isAr={erp.isAr}
         isMutating={erp.isMutating}
-        onConfirmRescission={async ({ selectedBranch, rescissionDate: rDate, targetContract }) => {
+        onConfirmRescission={async ({ selectedBranch, rescissionDate: rDate, targetContract, penaltyRate }) => {
           erp.setSelectedBranch(selectedBranch);
           erp.setRescissionDate(rDate);
-          await erp.handleExecuteRescission(targetContract);
+          await erp.handleExecuteRescission(targetContract, penaltyRate);
         }}
       />
 
@@ -1146,6 +1166,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isOpen={erp.showRSVModal}
         onClose={() => erp.setShowRSVModal(false)}
         properties={erp.data.properties}
+        propertyCosts={erp.data.propertyCosts}
         isAr={erp.isAr}
         isMutating={erp.isMutating}
         onSaveAllocation={async ({ projectName, salesValue, wipAmount }) => {
@@ -1189,20 +1210,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isAr={erp.isAr}
       />
 
-      {/* HAND CASH COLLECTION PROCESS MODAL */}
-      <HandCollectionModal 
-        isOpen={!!erp.collectingPDCItem}
-        onClose={() => erp.setCollectingPDCItem(null)}
-        item={erp.collectingPDCItem}
-        allItems={erp.data.pdcRecords}
-        contracts={erp.data.contracts}
-        schedules={erp.data.schedules}
-        properties={erp.data.properties}
-        linkedContract={erp.data.contracts.find(c => c.contract_id === erp.collectingPDCItem?.contract_id)}
-        onConfirmCollection={erp.handleConfirmHandCollection}
-        isMutating={erp.isMutating}
-        isAr={erp.isAr}
-      />
 
       {/* CANONICAL PROJECT BILL & EXPENSE MODAL */}
       <ZFDirectExpenseModal
@@ -1222,6 +1229,17 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         properties={erp.data.properties}
         onSaveEntry={erp.handleSaveProjectExpense}
         isAr={erp.isAr}
+      />
+
+      {/* CASH TRANSFER MODAL */}
+      <ZFCashTransferModal
+        isOpen={erp.showCashTransferModal}
+        onClose={() => erp.setShowCashTransferModal(false)}
+        isAr={erp.isAr}
+        isMutating={erp.isMutating}
+        safeBalance={cash.safeCash}
+        instapayBalance={cash.bankCash}
+        onConfirm={erp.handleInternalTransfer}
       />
 
       {/* PROPERTY LIFECYCLE AUDIT & MATERIAL LOGS MODAL */}
@@ -1326,28 +1344,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
       />
 
-      {/* PARTNER OPERATIONS 2-SIDED WORKBENCH MODAL */}
-      <PartnerOperationsModal
-        isOpen={erp.showPartnerOperationsModal}
-        onClose={() => erp.setShowPartnerOperationsModal(false)}
-        partners={erp.partnerSummaries}
-        partnerProfiles={erp.partnerProfiles}
-        partnerTransactions={erp.partnerTransactions}
-        properties={erp.data.properties}
-        contracts={erp.data.contracts}
-        isAr={erp.isAr}
-        isMutating={erp.isMutating}
-        onOpenNewPartnerModal={() => {
-          erp.setShowPartnerOperationsModal(false);
-          erp.setShowNewPartnerModal(true);
-        }}
-        onConfirmPayout={async (details) => {
-          await erp.handleConfirmPartnerPayout(details);
-        }}
-        onConfirmInjection={async (details) => {
-          await erp.handleConfirmPartnerInjection(details);
-        }}
-      />
     </div>
   );
 }

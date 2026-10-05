@@ -47,6 +47,8 @@ export interface PropertyMilestone {
 
 export interface PropertyCostBreakdown {
   landCost: Decimal;
+  /** True when no land cost is recorded (no land_allocation item and no purchase price): land counts as 0. */
+  landCostMissing?: boolean;
   structureWip: Decimal;
   finishingWip: Decimal;
   mepWip: Decimal;
@@ -218,15 +220,13 @@ export function calculateSinglePropertyAnalysis({
   // Land cost: check if logged under land_allocation, or target_budget / price
   const explicitLandLogged = !D(byCat.land_allocation?.total || '0').isZero();
   let landCost = D(byCat.land_allocation?.total || '0');
+  let landCostMissing = false;
   if (!explicitLandLogged) {
     if ((property as any).purchase_price_egp) {
       landCost = D((property as any).purchase_price_egp);
-    } else if (propertyCostList.length > 0) {
-      // If site construction costs are logged but no explicit land_allocation record exists,
-      // derive realistic land allocation proportional to built area
-      const estimatedLand = D(safeArea).times(5000);
-      const priceCap = D(property.price_egp || 0).times(0.25);
-      landCost = priceCap.isPositive() && priceCap.lessThan(estimatedLand) && !priceCap.isZero() ? priceCap : estimatedLand;
+    } else {
+      // No recorded land cost: count it as 0 and flag it — never estimate (user-confirmed: no assumed costs).
+      landCostMissing = true;
     }
   }
   
@@ -259,6 +259,7 @@ export function calculateSinglePropertyAnalysis({
   
   const breakdown: PropertyCostBreakdown = {
     landCost,
+    landCostMissing,
     structureWip,
     finishingWip,
     mepWip,

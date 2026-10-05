@@ -518,7 +518,7 @@ export const InstallmentsCalendarStrip: React.FC<InstallmentsCalendarStripProps>
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#d97706' }} title={isAr ? 'مستحق' : 'Due'} />
                       )}
                       {data.hasDeposited && (
-                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#2563eb' }} title={isAr ? 'مودع' : 'Deposited'} />
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--erp-accent)' }} title={isAr ? 'مودع' : 'Deposited'} />
                       )}
                       {data.hasCleared && (
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a' }} title={isAr ? 'محصل' : 'Cleared'} />
@@ -629,7 +629,7 @@ export const InstallmentsCalendarStrip: React.FC<InstallmentsCalendarStripProps>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                         {data.hasOverdue && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#dc2626' }} />}
                         {data.hasDue && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#d97706' }} />}
-                        {data.hasDeposited && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#2563eb' }} />}
+                        {data.hasDeposited && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--erp-accent)' }} />}
                         {data.hasCleared && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#16a34a' }} />}
                       </div>
                     </div>

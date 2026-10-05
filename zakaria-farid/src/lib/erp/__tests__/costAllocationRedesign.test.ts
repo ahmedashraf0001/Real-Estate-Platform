@@ -49,7 +49,7 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
   ];
 
   describe('1. RSV Factor Calculation Formulas & Decimal Precision', () => {
-    it('calculates allocation factor with fixed 4 decimal precision', () => {
+    it('calculates allocation factor with 6 decimal precision', () => {
       const wip = '45000000.00';
       const sales = '100000000.00';
       const alloc = RSVEngine.calculateAllocation('أبراج النيل بلازا', wip, sales);
@@ -57,21 +57,21 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
       assert.strictEqual(alloc.project_name, 'أبراج النيل بلازا');
       assert.strictEqual(alloc.total_incurred_wip, '45000000.00');
       assert.strictEqual(alloc.total_sales_value, '100000000.00');
-      assert.strictEqual(alloc.rsv_factor, '0.4500');
+      assert.strictEqual(alloc.rsv_factor, '0.450000');
       assert.ok(alloc.allocation_id && alloc.allocation_id.length > 0);
       assert.ok(alloc.calculated_at && !isNaN(new Date(alloc.calculated_at).getTime()));
     });
 
-    it('preserves precision consistent with Decimal cents precision', () => {
-      // 10M / 30M = 0.33 (in Decimal cents) -> fixed to 0.3300
+    it('keeps the factor exact to 6 decimals (not rounded to piastres)', () => {
+      // 10M / 30M = 0.333333 (a Decimal would have rounded it to 0.33)
       const alloc = RSVEngine.calculateAllocation('كمبوند الواحة', '10000000.00', '30000000.00');
-      assert.strictEqual(alloc.rsv_factor, '0.3300');
+      assert.strictEqual(alloc.rsv_factor, '0.333333');
     });
 
     it('correctly calculates factor for exact round ratios', () => {
       // 2.5M / 5M = 0.5000
       const alloc = RSVEngine.calculateAllocation('برج النخيل', '2500000.00', '5000000.00');
-      assert.strictEqual(alloc.rsv_factor, '0.5000');
+      assert.strictEqual(alloc.rsv_factor, '0.500000');
     });
   });
 
@@ -122,7 +122,7 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
 
     it('handles zero incurred WIP gracefully with 0.0000 factor and 100% margin', () => {
       const alloc = RSVEngine.calculateAllocation('مشروع أراضي فقط', '0.00', '20000000.00');
-      assert.strictEqual(alloc.rsv_factor, '0.0000');
+      assert.strictEqual(alloc.rsv_factor, '0.000000');
       const cogs = RSVEngine.computeUnitCOGS('5000000.00', alloc.rsv_factor);
       assert.strictEqual(cogs.toFixed(2), '0.00');
       const marginPct = RSVEngine.computeGrossMarginPct(alloc.rsv_factor);
@@ -131,7 +131,7 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
 
     it('handles break-even project where WIP equals Sales Value', () => {
       const alloc = RSVEngine.calculateAllocation('مشروع بدون هامش', '10000000.00', '10000000.00');
-      assert.strictEqual(alloc.rsv_factor, '1.0000');
+      assert.strictEqual(alloc.rsv_factor, '1.000000');
       const cogs = RSVEngine.computeUnitCOGS('2000000.00', alloc.rsv_factor);
       assert.strictEqual(cogs.toFixed(2), '2000000.00');
       const profit = RSVEngine.computeGrossMarginAmount('2000000.00', alloc.rsv_factor);
@@ -142,7 +142,7 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
 
     it('handles loss projects (WIP exceeds sales) without crashing', () => {
       const alloc = RSVEngine.calculateAllocation('مشروع خسارة تكاليف', '60000000.00', '50000000.00');
-      assert.strictEqual(alloc.rsv_factor, '1.2000');
+      assert.strictEqual(alloc.rsv_factor, '1.200000');
       const margin = RSVEngine.computeGrossMargin(alloc.rsv_factor);
       assert.strictEqual(margin.toFixed(4), '-0.2000');
       const marginPct = RSVEngine.computeGrossMarginPct(alloc.rsv_factor);
@@ -385,7 +385,7 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
       assert.strictEqual(units[0].gross_margin, '0.00');
     });
 
-    it('generates standard architectural floor plan units when no contracts exist', () => {
+    it('returns no units when there are no contracts and no defined building units (never invents units)', () => {
       const alloc: ERPCostAllocation = {
         allocation_id: 'alloc-2',
         project_name: 'مشروع جديد قيد التخطيط',
@@ -396,15 +396,7 @@ describe('Cost Allocation & RSV Factor Engine Suite', () => {
       };
 
       const units = RSVEngine.calculateProjectUnitsBreakdown(alloc, []);
-      assert.ok(units.length > 0);
-
-      // Verify each unit has allocated cost, margin, and pending status
-      units.forEach(u => {
-        assert.ok(D(u.unit_sales_value).gt(0));
-        assert.ok(D(u.allocated_cost).gt(0));
-        assert.ok(D(u.gross_margin).gt(0));
-        assert.strictEqual(u.handover_status, 'Pending');
-      });
+      assert.deepStrictEqual(units, []);
     });
   });
 
