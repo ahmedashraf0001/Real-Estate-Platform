@@ -65,7 +65,6 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   onOpenNewPartnerModal,
   onOpenPayout,
   onOpenInjection,
-  onOpenDossier: externalOnOpenDossier,
   onOpenReallocation: externalOnOpenReallocation,
   onConfirmCommitment,
   onSaveProperty
@@ -179,7 +178,6 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   const handleOpenDossier = (partner: PartnerFinancialSummary) => {
     setDossierPartner(partner);
     setIsDossierOpen(true);
-    if (externalOnOpenDossier) externalOnOpenDossier(partner);
   };
 
   const handleOpenDossierByName = (partnerName: string) => {

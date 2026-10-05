@@ -1,0 +1,128 @@
+.simBox {
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  background: var(--erp-bg-canvas, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.simHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.stackedBar {
+  height: 12px;
+  background: var(--erp-border, #cbd5e1);
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+}
+
+.seg { height: 100%; transition: width 0.3s ease; }
+.seg0 { background: #0f172a; }
+.seg1 { background: #2563eb; }
+.seg2 { background: #16a34a; }
+.seg3 { background: #d97706; }
+.seg4 { background: #7c3aed; }
+.seg5 { background: #0891b2; }
+
+.tableWrap {
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  overflow-x: auto;
+  background: var(--erp-bg-panel, #ffffff);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.table th {
+  padding: 0.45rem 0.65rem;
+  background: var(--erp-bg-canvas, #f8fafc);
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+  text-align: start;
+}
+
+.table td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--erp-border-subtle, #f1f5f9);
+  color: var(--erp-text-body, #334155);
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.cellCenter {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellNum {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.rangeWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rangeSlider {
+  flex: 1;
+  accent-color: var(--erp-accent, #2563eb);
+}
+
+.checkboxWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--erp-bg-canvas, #f8fafc);
+  cursor: pointer;
+}
+
+.checkboxInput {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--erp-accent, #2563eb);
+  cursor: pointer;
+}
+
+.checkboxTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkboxTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.checkboxSub {
+  font-size: 0.7rem;
+  color: var(--erp-text-muted, #64748b);
+}

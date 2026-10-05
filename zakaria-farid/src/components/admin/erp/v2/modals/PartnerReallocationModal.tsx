@@ -1,24 +1,14 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  X, 
-  CheckCircle2, 
-  AlertTriangle, 
   ArrowRightLeft, 
   UserMinus, 
   UserPlus, 
-  Users, 
-  Scale, 
-  ShieldCheck, 
-  Calendar, 
-  FileText, 
-  Percent, 
-  Building2,
-  Coins,
-  Crown,
-  History,
-  Info
+  Percent,
+  CheckCircle2, 
+  AlertTriangle
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 import { Property } from '@/lib/supabase/types';
@@ -37,6 +27,16 @@ import {
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 import { toast } from 'sonner';
 import { ZFModalShell } from '../common/ZFModalShell';
+import {
+  ZFField,
+  ZFMoneyInput,
+  ZFChoices,
+  ZFEffect,
+  ZFFormFooter,
+  zfForm
+} from '../common/ZFForm';
+import shellStyles from '../ZFWorkstationShell.module.css';
+import styles from './PartnerReallocationModal.module.css';
 
 export type ReallocationMode = 'full_buyout' | 'partial_sale' | 'full_substitution';
 
@@ -124,8 +124,6 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
   }, [activeProperty, partnerTransactions]);
 
   // Filter eligible sellers
-  // For full_buyout and full_substitution: founder cannot exit
-  // For partial_sale: founder can sell partial share as long as share remains > 0
   const eligibleSellers = useMemo(() => {
     if (mode === 'full_buyout' || mode === 'full_substitution') {
       return activeSplits.filter(s => 
@@ -144,21 +142,12 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
         setFromPartner(eligibleSellers[0].partner_name);
       }
     }
-  }, [eligibleSellers, initialSellerPartner, selectedPropertyId, isOpen]);
+  }, [eligibleSellers, initialSellerPartner, selectedPropertyId, isOpen, fromPartner]);
 
   // Eligible buyers based on mode
   const eligibleExistingBuyers = useMemo(() => {
-    if (mode === 'full_buyout') {
-      // Must be an active partner in this building different from seller
-      return activeSplits.filter(s => s.partner_name !== fromPartner);
-    }
-    if (mode === 'partial_sale') {
-      // Can be an existing partner in this building (excluding seller) or an external profile
-      return activeSplits.filter(s => s.partner_name !== fromPartner);
-    }
-    // full_substitution: usually a new partner or external profile
     return activeSplits.filter(s => s.partner_name !== fromPartner);
-  }, [activeSplits, fromPartner, mode]);
+  }, [activeSplits, fromPartner]);
 
   // Reset or initialize buyer
   useEffect(() => {
@@ -286,8 +275,6 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
     };
   }, [activeSplits, currentSellerSplit, effectiveBuyerName, fromPartner, mode, soldSharePct, isAr]);
 
-  if (!isOpen) return null;
-
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!simulatedPreview.isValid || isSubmitting) return;
@@ -340,716 +327,379 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
 
       await onSaveProperty(updatedProperty);
       toast.success(
-        isAr ? 'تمت إعادة هيكلة وتوثيق حركة الحصص بنجاح' : 'Partnership reallocation executed successfully',
-        {
-          description: isAr 
-            ? `المبنى: ${activeProperty.title_ar || activeProperty.title_en} • تم تحديث سجل الملكية وقيد التاريخ`
-            : `Building: ${activeProperty.title_ar || activeProperty.title_en} • Ownership log recorded`,
-          duration: 5000
-        }
+        isAr ? 'تمت إعادة هيكلة وتوثيق حركة الحصص بنجاح' : 'Partnership reallocation executed successfully'
       );
       onClose();
-    } catch (err: any) {
-      console.error('Reallocation error:', err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       toast.error(
         isAr ? 'فشلت عملية إعادة الهيكلة' : 'Reallocation failed',
-        { description: err?.message || String(err) }
+        { description: msg }
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const footer = (
+    <ZFFormFooter>
+      <button
+        type="button"
+        className={shellStyles.btnSecondary}
+        onClick={onClose}
+        disabled={isSubmitting}
+      >
+        {isAr ? 'إلغاء' : 'Cancel'}
+      </button>
+      <button
+        type="submit"
+        form="zf-reallocation-form"
+        className={shellStyles.btnPrimary}
+        disabled={!simulatedPreview.isValid || isSubmitting}
+      >
+        {isSubmitting
+          ? (isAr ? 'جارٍ التوثيق…' : 'Saving…')
+          : (isAr ? 'اعتماد التنازل' : 'Commit reallocation')}
+      </button>
+    </ZFFormFooter>
+  );
+
   return (
     <ZFModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title={isAr ? 'استوديو التخارج وإعادة توزيع الحصص' : 'Equity Reallocation & Exit Studio'}
-      subtitle={isAr 
-        ? 'إدارة التخارج، الشراء الداخلي، والتنازل الجزئي مع تدقيق الـ 100% وسجل التاريخ غير القابل للتعديل' 
-        : 'Execute immutable exits, internal buyouts, and partial sales with 100% equity balance lock'}
+      title={isAr ? 'إعادة توزيع الحصص' : 'Equity reallocation'}
+      subtitle={
+        isAr
+          ? 'إدارة التخارج والشراء الداخلي والتنازل عن الحصص بين الشركاء.'
+          : 'Manage partner exits, buyouts, and share transfers.'
+      }
       icon={<ArrowRightLeft size={18} />}
-      headerExtra={
-        buildingProperties.length > 1 ? (
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            background: 'var(--erp-accent-subtle)',
-            border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
-            borderRadius: '8px',
-            padding: '0.2rem 0.55rem'
-          }}>
-            <Building2 size={13} color="var(--erp-accent)" />
+      isAr={isAr}
+      maxWidth="880px"
+      footer={footer}
+    >
+      <form id="zf-reallocation-form" className={zfForm.form} onSubmit={handleConfirm}>
+        {/* 1. Mode Pathway */}
+        <ZFField label={isAr ? 'نوع التنازل' : 'Transfer type'}>
+          <ZFChoices<ReallocationMode>
+            value={mode}
+            onChange={setMode}
+            options={[
+              {
+                id: 'full_buyout',
+                label: isAr ? 'تخارج وشراء داخلي' : 'Internal buyout',
+                sub: isAr ? 'تنازل كامل لشريك قائم' : 'Exit to existing partner',
+                icon: <UserMinus size={16} />
+              },
+              {
+                id: 'partial_sale',
+                label: isAr ? 'تنازل وبيع جزئي' : 'Partial sale',
+                sub: isAr ? 'بيع جزء من الحصة' : 'Sell share %',
+                icon: <Percent size={16} />
+              },
+              {
+                id: 'full_substitution',
+                label: isAr ? 'إحلال شريك جديد' : 'Full substitution',
+                sub: isAr ? 'دخول شريك بديل' : 'Replace partner',
+                icon: <UserPlus size={16} />
+              }
+            ]}
+          />
+        </ZFField>
+
+        {/* 2. Building Project Selection (if multiple) */}
+        {buildingProperties.length > 1 && (
+          <ZFField label={isAr ? 'المشروع العقاري' : 'Building project'}>
             <select
+              className={zfForm.control}
               value={selectedPropertyId}
-              onChange={(e) => {
+              onChange={e => {
                 setSelectedPropertyId(e.target.value);
                 setFromPartner('');
                 setToPartner('');
               }}
-              style={{
-                background: 'transparent',
-                color: 'var(--erp-accent-hover)',
-                border: 'none',
-                outline: 'none',
-                fontWeight: 800,
-                fontSize: '0.74rem',
-                cursor: 'pointer'
-              }}
-              title={isAr ? 'التبديل بين عماير الشركة' : 'Switch building'}
             >
               {buildingProperties.map(b => (
-                <option key={b.id} value={b.id} style={{ background: '#ffffff', color: '#0f172a' }}>
+                <option key={b.id} value={b.id}>
                   {b.title_ar || b.title_en}
                 </option>
               ))}
             </select>
-          </div>
-        ) : (
-          <span style={{
-            fontSize: '0.68rem',
-            fontWeight: 800,
-            padding: '0.18rem 0.55rem',
-            borderRadius: '999px',
-            background: 'var(--erp-accent-subtle)',
-            color: 'var(--erp-accent)',
-            border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)'
-          }}>
-            {activeProperty.title_ar || activeProperty.title_en}
-          </span>
-        )
-      }
-      isAr={isAr}
-      maxWidth="780px"
-      maxHeight="94vh"
-      bodyStyle={{ padding: 0 }}
-    >
+          </ZFField>
+        )}
 
-        {/* MODAL BODY */}
-        <form onSubmit={handleConfirm} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '1.4rem 1.65rem', gap: '1.25rem' }}>
-          
-          {/* 1. PATHWAY SELECTOR (THE 3 APPROVED WORKFLOWS) */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-              {isAr ? 'مسار إعادة الهيكلة والتخارج المعتمد:' : 'Select Reallocation Pathway:'}
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
-              {/* Option 1: Full Buyout */}
-              <button
-                type="button"
-                onClick={() => setMode('full_buyout')}
-                style={{
-                  padding: '0.85rem 0.65rem',
-                  borderRadius: '10px',
-                  border: mode === 'full_buyout' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
-                  background: mode === 'full_buyout' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                  color: mode === 'full_buyout' ? 'var(--erp-accent)' : '#475569',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  boxShadow: mode === 'full_buyout' ? '0 2px 8px rgba(184, 144, 62, 0.15)' : 'none'
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: mode === 'full_buyout' ? 'var(--erp-accent)' : '#e2e8f0',
-                  color: mode === 'full_buyout' ? '#ffffff' : '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <UserMinus size={18} />
-                </div>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>
-                  {isAr ? '1. انسحاب وتخارج كامل لصالح شريك قائم' : '1. Full Internal Buyout'}
-                </span>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: 1.2 }}>
-                  {isAr ? 'خروج الشريك البائع تماماً وتنازله لشريك حالي وزيادة حصة المشتري' : '100% exit & transfer to existing partner'}
-                </span>
-              </button>
+        {/* 3. Partners Row: Seller & Buyer */}
+        <div className={zfForm.row}>
+          {/* Seller */}
+          <ZFField
+            label={isAr ? 'الشريك المتنازل' : 'Selling partner'}
+            required
+            hint={
+              currentSellerSplit
+                ? (isAr ? `الحصة الحالية: ${currentSellerSplit.share_percentage}%` : `Current share: ${currentSellerSplit.share_percentage}%`)
+                : undefined
+            }
+          >
+            <select
+              className={zfForm.control}
+              value={fromPartner}
+              onChange={e => setFromPartner(e.target.value)}
+            >
+              {eligibleSellers.map(s => (
+                <option key={s.partner_name} value={s.partner_name}>
+                  {s.partner_name} ({s.share_percentage}%)
+                </option>
+              ))}
+            </select>
+          </ZFField>
 
-              {/* Option 2: Partial Sale */}
-              <button
-                type="button"
-                onClick={() => setMode('partial_sale')}
-                style={{
-                  padding: '0.85rem 0.65rem',
-                  borderRadius: '10px',
-                  border: mode === 'partial_sale' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
-                  background: mode === 'partial_sale' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                  color: mode === 'partial_sale' ? 'var(--erp-accent)' : '#475569',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  boxShadow: mode === 'partial_sale' ? '0 2px 8px rgba(184, 144, 62, 0.15)' : 'none'
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: mode === 'partial_sale' ? 'var(--erp-accent)' : '#e2e8f0',
-                  color: mode === 'partial_sale' ? '#ffffff' : '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Percent size={18} />
-                </div>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>
-                  {isAr ? '2. تنازل وبيع جزئي من الحصة' : '2. Partial Share Sale'}
-                </span>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: 1.2 }}>
-                  {isAr ? 'بيع جزء من الحصة لشريك قائم أو لشريك خارجي بديل/منضم' : 'Carve out % to current or new partner'}
-                </span>
-              </button>
-
-              {/* Option 3: Full Substitution */}
-              <button
-                type="button"
-                onClick={() => setMode('full_substitution')}
-                style={{
-                  padding: '0.85rem 0.65rem',
-                  borderRadius: '10px',
-                  border: mode === 'full_substitution' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
-                  background: mode === 'full_substitution' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                  color: mode === 'full_substitution' ? 'var(--erp-accent)' : '#475569',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  boxShadow: mode === 'full_substitution' ? '0 2px 8px rgba(184, 144, 62, 0.15)' : 'none'
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: mode === 'full_substitution' ? 'var(--erp-accent)' : '#e2e8f0',
-                  color: mode === 'full_substitution' ? '#ffffff' : '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <UserPlus size={18} />
-                </div>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>
-                  {isAr ? '3. تنازل وإحلال كامل لشريك بديل جديد' : '3. Full Substitution'}
-                </span>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: 1.2 }}>
-                  {isAr ? 'إحلال شريك جديد بالكامل محل الشريك المتخارج مع خيار نقل المتأخرات' : 'Full exit to new partner + arrears transfer'}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* 2. PARTNERS INVOLVED (SELLER & BUYER) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {/* SELLER */}
-            <div style={{
-              background: '#fff1f2',
-              border: '1.5px solid #fecdd3',
-              borderRadius: '12px',
-              padding: '0.9rem 1rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#9f1239', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <UserMinus size={15} />
-                  <span>{isAr ? 'الشريك المتنازل / البائع:' : 'Exiting / Selling Partner:'}</span>
-                </span>
-                {currentSellerSplit && (
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#be123c', background: '#ffe4e6', padding: '0.1rem 0.45rem', borderRadius: '4px' }}>
-                    {isAr ? `الحصة الحالية: ${currentSellerSplit.share_percentage}%` : `Current: ${currentSellerSplit.share_percentage}%`}
-                  </span>
-                )}
-              </div>
-
-              <select
-                value={fromPartner}
-                onChange={(e) => setFromPartner(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #fda4af',
-                  borderRadius: '8px',
-                  padding: '0.55rem 0.75rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  color: '#0f172a'
-                }}
-              >
-                {eligibleSellers.map(s => (
-                  <option key={s.partner_name} value={s.partner_name}>
-                    {s.partner_name} ({s.share_percentage}%)
-                  </option>
-                ))}
-              </select>
-
-              {/* Seller financial alert */}
-              {fromPartner && (
-                <div style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: '#881337', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>{isAr ? 'متأخرات مساهمة رأس المال:' : 'Capital Arrears:'}</span>
-                  <strong style={{ color: D(sellerArrears).gt(0) ? '#e11d48' : '#059669' }}>
-                    {D(sellerArrears).formatEGP(true)}
-                  </strong>
-                </div>
-              )}
-            </div>
-
-            {/* BUYER */}
-            <div style={{
-              background: '#f0fdf4',
-              border: '1.5px solid #bbf7d0',
-              borderRadius: '12px',
-              padding: '0.9rem 1rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <UserPlus size={15} />
-                  <span>{isAr ? 'الشريك المشتري / المتنازل له:' : 'Buyer / Incoming Partner:'}</span>
-                </span>
-                {mode !== 'full_buyout' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomNewBuyer(!isCustomNewBuyer);
-                      if (!isCustomNewBuyer) setCustomBuyerName('');
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#15803d',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    {isCustomNewBuyer 
-                      ? (isAr ? 'اختر من الشركاء' : 'Select from list') 
-                      : (isAr ? '+ طرف خارجي جديد' : '+ New external')}
-                  </button>
-                )}
-              </div>
-
-              {isCustomNewBuyer ? (
-                <input
-                  type="text"
-                  placeholder={isAr ? 'اكتب اسم الشريك الجديد بالكامل...' : 'Enter new partner name...'}
-                  value={customBuyerName}
-                  onChange={(e) => setCustomBuyerName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#ffffff',
-                    border: '1.5px solid #86efac',
-                    borderRadius: '8px',
-                    padding: '0.55rem 0.75rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    color: '#0f172a'
-                  }}
-                  required
-                />
-              ) : (
-                <select
-                  value={toPartner}
-                  onChange={(e) => setToPartner(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#ffffff',
-                    border: '1px solid #86efac',
-                    borderRadius: '8px',
-                    padding: '0.55rem 0.75rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    color: '#0f172a'
+          {/* Buyer */}
+          <ZFField
+            label={isAr ? 'الشريك المشتري' : 'Buyer'}
+            required
+            aside={
+              mode !== 'full_buyout' ? (
+                <button
+                  type="button"
+                  className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`}
+                  onClick={() => {
+                    setIsCustomNewBuyer(!isCustomNewBuyer);
+                    if (!isCustomNewBuyer) setCustomBuyerName('');
                   }}
                 >
-                  <optgroup label={isAr ? 'شركاء حاليون بالعمارة' : 'Current Building Partners'}>
-                    {eligibleExistingBuyers.map(b => (
-                      <option key={b.partner_name} value={b.partner_name}>
-                        {b.partner_name} ({b.share_percentage}%)
-                      </option>
-                    ))}
-                  </optgroup>
-                  {mode !== 'full_buyout' && allPartnerProfiles.length > 0 && (
-                    <optgroup label={isAr ? 'شركاء مسجلون بالدليل العام' : 'Registered Directory Partners'}>
-                      {allPartnerProfiles
-                        .filter(p => !eligibleExistingBuyers.some(b => b.partner_name === p.name) && p.name !== fromPartner)
-                        .map(p => (
-                          <option key={p.id} value={p.name}>
-                            {p.name} ({p.role})
-                          </option>
-                        ))}
-                    </optgroup>
-                  )}
-                </select>
-              )}
-
-              <div style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: '#166534' }}>
-                {isAr 
-                  ? (mode === 'full_buyout' ? '✓ تنتقل إليه كامل حصة الشريك البائع' : '✓ تضاف الحصة المتفق عليها لمحفظته') 
-                  : 'Receives transferred share directly'}
-              </div>
-            </div>
-          </div>
-
-          {/* 3. MODE-SPECIFIC PARAMETERS */}
-          {/* A. PARTIAL SALE: PERCENTAGE INPUT */}
-          {mode === 'partial_sale' && (
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '0.9rem 1.15rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.65rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'النسبة المئوية المراد بيعها والتنازل عنها (%):' : 'Percentage to Transfer (%):'}
-                </label>
-                {currentSellerSplit && (
-                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                    {isAr ? `الحد الأقصى المتاح: ${(currentSellerSplit.share_percentage - 0.01).toFixed(2)}%` : `Max: ${(currentSellerSplit.share_percentage - 0.01).toFixed(2)}%`}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max={currentSellerSplit ? (currentSellerSplit.share_percentage - 0.01) : 99}
-                  value={soldSharePct}
-                  onChange={(e) => setSoldSharePct(e.target.value)}
-                  style={{
-                    width: '140px',
-                    background: '#ffffff',
-                    border: '1.5px solid var(--erp-accent)',
-                    borderRadius: '8px',
-                    padding: '0.55rem 0.75rem',
-                    fontSize: '1rem',
-                    fontWeight: 900,
-                    color: 'var(--erp-accent)'
-                  }}
-                  required
-                />
-                <input
-                  type="range"
-                  min="1"
-                  max={currentSellerSplit ? Math.max(1, currentSellerSplit.share_percentage - 1) : 50}
-                  step="1"
-                  value={parseFloat(soldSharePct) || 1}
-                  onChange={(e) => setSoldSharePct(e.target.value)}
-                  style={{ flex: 1, accentColor: 'var(--erp-accent)' }}
-                />
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>%</span>
-              </div>
-            </div>
-          )}
-
-          {/* B. FULL SUBSTITUTION: TRANSFER ARREARS TOGGLE */}
-          {mode === 'full_substitution' && (
-            <div style={{
-              background: transferArrears ? 'rgba(245, 158, 11, 0.08)' : '#f8fafc',
-              border: transferArrears ? '1.5px solid #f59e0b' : '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '0.9rem 1.15rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'نقل المتأخرات والالتزامات السابقة للشريك الجديد' : 'Transfer Past Arrears to New Partner'}
-                  </span>
-                  {D(sellerArrears).gt(0) && (
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      background: '#fef3c7',
-                      color: '#b45309',
-                      padding: '0.1rem 0.45rem',
-                      borderRadius: '4px'
-                    }}>
-                      {isAr ? `متأخرات: ${D(sellerArrears).formatEGP(true)}` : `Arrears: ${D(sellerArrears).formatEGP(true)}`}
-                    </span>
-                  )}
-                </div>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>
-                  {isAr 
-                    ? 'عند التفعيل، يلتزم الشريك الجديد بسداد التزامات رأس المال المتأخرة المستحقة على الحصة بموجب ضخ المؤسس' 
-                    : 'When enabled, new partner assumes past unpaid capital calls and founder-matching arrears'}
-                </p>
-              </div>
-
-              <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={transferArrears}
-                  onChange={(e) => setTransferArrears(e.target.checked)}
-                  style={{ width: '20px', height: '20px', accentColor: 'var(--erp-accent)', cursor: 'pointer' }}
-                />
-              </label>
-            </div>
-          )}
-
-          {/* 4. DOCUMENTATION FIELDS: AGREED VALUATION & EFFECTIVE DATE */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.85rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                {isAr ? 'قيمة التنازل المتفق عليها (ج.م) - اختياري للتوثيق:' : 'Agreed Transfer Value (EGP) - Optional:'}
-              </label>
+                  {isCustomNewBuyer ? (isAr ? 'من القائمة' : 'From list') : (isAr ? '+ شريك جديد' : '+ New partner')}
+                </button>
+              ) : undefined
+            }
+          >
+            {isCustomNewBuyer ? (
               <input
-                type="number"
-                min="0"
-                step="any"
-                placeholder="0.00"
-                value={transferValueEgp}
-                onChange={(e) => setTransferValueEgp(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '0.55rem 0.75rem',
-                  fontSize: '0.85rem',
-                  color: '#0f172a'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                {isAr ? 'تاريخ سريان التنازل والاتفاق:' : 'Effective Date:'}
-              </label>
-              <input
-                type="date"
-                value={effectiveDate}
-                onChange={(e) => setEffectiveDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '0.55rem 0.75rem',
-                  fontSize: '0.85rem',
-                  color: '#0f172a'
-                }}
+                type="text"
+                className={zfForm.control}
+                placeholder={isAr ? 'اسم الشريك الجديد…' : 'New partner name…'}
+                value={customBuyerName}
+                onChange={e => setCustomBuyerName(e.target.value)}
                 required
               />
-            </div>
-          </div>
+            ) : (
+              <select
+                className={zfForm.control}
+                value={toPartner}
+                onChange={e => setToPartner(e.target.value)}
+              >
+                <optgroup label={isAr ? 'شركاء حاليون بالمشروع' : 'Current building partners'}>
+                  {eligibleExistingBuyers.map(b => (
+                    <option key={b.partner_name} value={b.partner_name}>
+                      {b.partner_name} ({b.share_percentage}%)
+                    </option>
+                  ))}
+                </optgroup>
+                {mode !== 'full_buyout' && allPartnerProfiles.length > 0 && (
+                  <optgroup label={isAr ? 'دليل الشركاء العام' : 'General partners'}>
+                    {allPartnerProfiles
+                      .filter(p => !eligibleExistingBuyers.some(b => b.partner_name === p.name) && p.name !== fromPartner)
+                      .map(p => (
+                        <option key={p.id} value={p.name}>
+                          {p.name} ({p.role})
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            )}
+          </ZFField>
+        </div>
 
-          {/* 5. NOTES */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-              {isAr ? 'ملاحظات وبيان الاتفاق الودي:' : 'Agreement Terms & Notes:'}
-            </label>
+        {/* 4. Mode-Specific Inputs */}
+        {mode === 'partial_sale' && (
+          <ZFField
+            label={isAr ? 'النسبة المئوية المراد بيعها (%)' : 'Percentage to sell (%)'}
+            required
+            hint={
+              currentSellerSplit
+                ? (isAr ? `الحد الأقصى: ${(currentSellerSplit.share_percentage - 0.01).toFixed(2)}%` : `Max: ${(currentSellerSplit.share_percentage - 0.01).toFixed(2)}%`)
+                : undefined
+            }
+          >
+            <div className={styles.rangeWrap}>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max={currentSellerSplit ? (currentSellerSplit.share_percentage - 0.01) : 99}
+                value={soldSharePct}
+                onChange={e => setSoldSharePct(e.target.value)}
+                className={`${zfForm.control} ${zfForm.money}`}
+                required
+              />
+              <input
+                type="range"
+                min="1"
+                max={currentSellerSplit ? Math.max(1, currentSellerSplit.share_percentage - 1) : 50}
+                step="1"
+                value={parseFloat(soldSharePct) || 1}
+                onChange={e => setSoldSharePct(e.target.value)}
+                className={styles.rangeSlider}
+              />
+            </div>
+          </ZFField>
+        )}
+
+        {mode === 'full_substitution' && (
+          <label className={styles.checkboxWrap}>
             <input
-              type="text"
-              placeholder={isAr ? 'بيان الاتفاق، رقم العقد الودي، وأي شروط مضافة...' : 'Notes or amicable agreement memo...'}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              style={{
-                width: '100%',
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '0.55rem 0.75rem',
-                fontSize: '0.82rem',
-                color: '#0f172a'
-              }}
+              type="checkbox"
+              checked={transferArrears}
+              onChange={e => setTransferArrears(e.target.checked)}
+              className={styles.checkboxInput}
             />
-          </div>
-
-          {/* 6. BEFORE & AFTER LIVE SIMULATION PREVIEW (محاكاة بصرية فورية) */}
-          <div style={{
-            background: '#fafaf9',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '1rem 1.15rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <Scale size={16} color="var(--erp-accent)" />
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'محاكاة بصرية فورية (قبل وبعد التنفيذ):' : 'Before & After Live Preview:'}
-                </span>
-              </div>
-
-              {/* Total 100% Equity Badge */}
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '999px',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                background: simulatedPreview.isValid ? '#dcfce7' : '#fee2e2',
-                color: simulatedPreview.isValid ? '#15803d' : '#b91c1c',
-                border: simulatedPreview.isValid ? '1px solid #86efac' : '1px solid #fca5a5'
-              }}>
-                {simulatedPreview.isValid ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
-                <span>{simulatedPreview.validationMsg}</span>
-              </div>
-            </div>
-
-            {/* Live Stacked Bar */}
-            <div style={{
-              height: '14px',
-              background: '#e2e8f0',
-              borderRadius: '999px',
-              overflow: 'hidden',
-              display: 'flex',
-              marginBottom: '0.75rem'
-            }}>
-              {simulatedPreview.splits
-                .filter(s => !s.isArchived && s.afterPct > 0)
-                .map((s, idx) => {
-                  const colors = ['#0f172a', '#946f23', '#2563eb', '#059669', '#7c3aed', '#d97706'];
-                  const color = colors[idx % colors.length];
-                  return (
-                    <div
-                      key={s.partner_name}
-                      style={{
-                        width: `${s.afterPct}%`,
-                        background: color,
-                        height: '100%',
-                        transition: 'width 0.3s ease'
-                      }}
-                      title={`${s.partner_name}: ${s.afterPct}%`}
-                    />
-                  );
-                })}
-            </div>
-
-            {/* Comparative Table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', fontSize: '0.74rem', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
-                    <th style={{ textAlign: isAr ? 'right' : 'left', padding: '0.35rem 0' }}>{isAr ? 'الشريك' : 'Partner'}</th>
-                    <th style={{ textAlign: 'center', padding: '0.35rem' }}>{isAr ? 'الحصة السابقة' : 'Before'}</th>
-                    <th style={{ textAlign: 'center', padding: '0.35rem' }}>{isAr ? 'الحركة' : 'Change'}</th>
-                    <th style={{ textAlign: 'center', padding: '0.35rem', fontWeight: 800 }}>{isAr ? 'الحصة الجديدة' : 'After'}</th>
-                    <th style={{ textAlign: 'center', padding: '0.35rem' }}>{isAr ? 'الحالة' : 'Status'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {simulatedPreview.splits.map(s => {
-                    const isFounder = s.partner_name === PRIMARY_DEVELOPER_NAME || s.partner_name.includes('زكريا فريد');
-                    return (
-                      <tr key={s.partner_name} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.45rem 0', fontWeight: 800, color: '#0f172a' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                            {isFounder && <Crown size={12} color="var(--erp-accent)" />}
-                            <span>{s.partner_name}</span>
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'center', color: '#64748b' }}>
-                          {s.beforePct}%
-                        </td>
-                        <td style={{ textAlign: 'center', fontWeight: 800 }}>
-                          {s.deltaPct > 0 && <span style={{ color: '#16a34a' }}>+{s.deltaPct}%</span>}
-                          {s.deltaPct < 0 && <span style={{ color: '#dc2626' }}>{s.deltaPct}%</span>}
-                          {s.deltaPct === 0 && <span style={{ color: '#94a3b8' }}>—</span>}
-                        </td>
-                        <td style={{ textAlign: 'center', fontWeight: 900, color: '#0f172a' }}>
-                          {s.afterPct}%
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          {s.isArchived ? (
-                            <span style={{ fontSize: '0.65rem', background: '#fee2e2', color: '#dc2626', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 800 }}>
-                              {isAr ? 'أرشفة وتخارج' : 'Archived'}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: '0.65rem', background: '#f1f5f9', color: '#475569', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                              {isAr ? 'مستمر' : 'Active'}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* FOOTER ACTIONS */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '0.75rem',
-            marginTop: '0.5rem',
-            borderTop: '1px solid #e2e8f0',
-            paddingTop: '1rem'
-          }}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              style={{
-                padding: '0.6rem 1.25rem',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: '#ffffff',
-                color: '#64748b',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {isAr ? 'إلغاء' : 'Cancel'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={!simulatedPreview.isValid || isSubmitting}
-              style={{
-                padding: '0.6rem 1.65rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: !simulatedPreview.isValid || isSubmitting
-                  ? '#94a3b8'
-                  : 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
-                color: '#ffffff',
-                fontSize: '0.85rem',
-                fontWeight: 800,
-                cursor: !simulatedPreview.isValid || isSubmitting ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                boxShadow: !simulatedPreview.isValid || isSubmitting ? 'none' : '0 4px 14px rgba(184, 144, 62, 0.35)'
-              }}
-            >
-              <CheckCircle2 size={16} />
-              <span>
-                {isSubmitting 
-                  ? (isAr ? 'جاري توثيق التنازل...' : 'Committing...') 
-                  : (isAr ? 'اعتماد التنازل وتوثيق الملكية' : 'Commit & Record Reallocation')}
+            <span className={styles.checkboxTexts}>
+              <span className={styles.checkboxTitle}>
+                {isAr ? 'نقل المتأخرات والالتزامات السابقة للشريك الجديد' : 'Transfer past arrears to new partner'}
+                {D(sellerArrears).gt(0) ? ` (${D(sellerArrears).formatEGP(isAr)})` : ''}
               </span>
-            </button>
+              <span className={styles.checkboxSub}>
+                {isAr
+                  ? 'يلتزم الشريك الجديد بسداد المتأخرات المستحقة على الحصة.'
+                  : 'New partner assumes previous unpaid capital calls on this share.'}
+              </span>
+            </span>
+          </label>
+        )}
+
+        {/* 5. Row: Valuation & Effective Date */}
+        <div className={zfForm.row}>
+          <ZFField label={isAr ? 'قيمة التنازل المتفق عليها' : 'Transfer valuation'}>
+            <ZFMoneyInput
+              value={transferValueEgp}
+              onChange={e => setTransferValueEgp(e.target.value)}
+              unit={isAr ? 'ج.م' : 'EGP'}
+              placeholder="0.00"
+            />
+          </ZFField>
+          <ZFField label={isAr ? 'تاريخ السريان' : 'Effective date'} required>
+            <input
+              type="date"
+              className={zfForm.control}
+              value={effectiveDate}
+              onChange={e => setEffectiveDate(e.target.value)}
+              required
+            />
+          </ZFField>
+        </div>
+
+        {/* 6. Notes */}
+        <ZFField label={isAr ? 'ملاحظات الاتفاق' : 'Agreement notes'}>
+          <input
+            type="text"
+            className={zfForm.control}
+            placeholder={isAr ? 'رقم العقد الودي، شروط مضافة (اختياري)…' : 'Optional agreement notes…'}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+          />
+        </ZFField>
+
+        {/* 7. Effect Note */}
+        {!simulatedPreview.isValid ? (
+          <ZFEffect tone="warn">
+            {simulatedPreview.validationMsg}
+          </ZFEffect>
+        ) : (
+          <ZFEffect>
+            {isAr ? (
+              <>
+                {mode === 'full_buyout' && (
+                  <>سيتنازل <strong>{fromPartner}</strong> عن كامل حصته ({currentSellerSplit?.share_percentage}%) لصالح <strong>{effectiveBuyerName}</strong> في <strong>{activeProperty.title_ar || activeProperty.title_en}</strong>.</>
+                )}
+                {mode === 'partial_sale' && (
+                  <>سيتنازل <strong>{fromPartner}</strong> عن <strong>{soldSharePct}%</strong> لصالح <strong>{effectiveBuyerName}</strong> في <strong>{activeProperty.title_ar || activeProperty.title_en}</strong>.</>
+                )}
+                {mode === 'full_substitution' && (
+                  <>سيحل <strong>{effectiveBuyerName}</strong> محل <strong>{fromPartner}</strong> بكامل حصته ({currentSellerSplit?.share_percentage}%){transferArrears ? ' مع نقل المتأخرات' : ''} في <strong>{activeProperty.title_ar || activeProperty.title_en}</strong>.</>
+                )}
+              </>
+            ) : (
+              <>
+                {fromPartner} transfers equity to {effectiveBuyerName} on {activeProperty.title_en || activeProperty.title_ar}.
+              </>
+            )}
+          </ZFEffect>
+        )}
+
+        {/* 8. Live Simulation Section */}
+        <div className={styles.simBox}>
+          <div className={styles.simHeader}>
+            <span className={styles.simTitle}>
+              {isAr ? 'محاكاة توزيع الحصص (بعد التنفيذ)' : 'Equity share simulation (after)'}
+            </span>
+            <span
+              className={`${shellStyles.statusPill} ${
+                simulatedPreview.isValid
+                  ? shellStyles.statusPillGreen
+                  : shellStyles.statusPillRed
+              }`}
+            >
+              {simulatedPreview.isValid ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+              <span>{simulatedPreview.validationMsg}</span>
+            </span>
           </div>
-        </form>
+
+          {/* Stacked Progress Bar */}
+          <div className={styles.stackedBar}>
+            {simulatedPreview.splits
+              .filter(s => !s.isArchived && s.afterPct > 0)
+              .map((s, idx) => (
+                <div
+                  key={s.partner_name}
+                  className={`${styles.seg} ${styles[`seg${idx % 6}`]}`}
+                  style={{ width: `${s.afterPct}%` }}
+                  title={`${s.partner_name}: ${s.afterPct}%`}
+                />
+              ))}
+          </div>
+
+          {/* Comparative Table */}
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{isAr ? 'الشريك' : 'Partner'}</th>
+                  <th className={styles.cellCenter}>{isAr ? 'الحصة السابقة' : 'Before'}</th>
+                  <th className={styles.cellCenter}>{isAr ? 'الحركة' : 'Change'}</th>
+                  <th className={styles.cellCenter}>{isAr ? 'الحصة الجديدة' : 'After'}</th>
+                  <th className={styles.cellCenter}>{isAr ? 'الحالة' : 'Status'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {simulatedPreview.splits.map(s => (
+                  <tr key={s.partner_name}>
+                    <td><strong>{s.partner_name}</strong></td>
+                    <td className={styles.cellCenter}>{s.beforePct}%</td>
+                    <td className={styles.cellCenter}>
+                      {s.deltaPct > 0 && <span className={shellStyles.statusPillGreen}>+{s.deltaPct}%</span>}
+                      {s.deltaPct < 0 && <span className={shellStyles.statusPillRed}>{s.deltaPct}%</span>}
+                      {s.deltaPct === 0 && '—'}
+                    </td>
+                    <td className={styles.cellCenter}><strong>{s.afterPct}%</strong></td>
+                    <td className={styles.cellCenter}>
+                      {s.isArchived ? (
+                        <span className={`${shellStyles.statusPill} ${shellStyles.statusPillRed}`}>
+                          {isAr ? 'تخارج' : 'Exited'}
+                        </span>
+                      ) : (
+                        <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>
+                          {isAr ? 'مستمر' : 'Active'}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </form>
     </ZFModalShell>
   );
 };
