@@ -1,0 +1,58 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; deletions only, no redesign.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first; run `npx tsc --noEmit` after each file group; full gates at the end.
+- Always finish with the report (caveman skill). Do NOT git add/commit/stash/checkout/restore. Keep UTF-8 Arabic byte-exact.
+- Touch only the files listed. Do NOT touch the database, src/lib/erp/supabaseService.ts, src/lib/erp/types.ts (types stay).
+</execution_rules>
+
+<context>
+User policy (PROJECT_SPEC.md): there are NO cheques; payments are cash or InstaPay only. Partner funding and payout open
+their own popups directly, so the 2-sided PartnerOperationsModal is only reachable as a fallback that never fires.
+Remove both dead UI paths.
+</context>
+
+<part_a title="PartnerOperationsModal removal">
+1. DELETE src/components/admin/erp/v2/modals/PartnerOperationsModal.tsx and PartnerOperationsModal.module.css.
+2. src/components/admin/erp/ERPWorkstationShell.tsx: remove its import and the <PartnerOperationsModal …/> mount block.
+3. src/components/admin/erp/context/ERPWorkstationContext.tsx: remove showPartnerOperationsModal / setShowPartnerOperationsModal
+   (state, interface fields, value entries) and any code that only sets them.
+4. src/components/admin/erp/v2/views/DailyOperationsView.tsx: remove prop onOpenPartnerOperations (interface + destructure) and the
+   two `else if (onOpenPartnerOperations) onOpenPartnerOperations();` fallbacks.
+5. src/components/admin/erp/views/DailyOperationsRouteView.tsx: stop passing onOpenPartnerOperations.
+6. Any other reference found by grep `PartnerOperationsModal|PartnerOperations\b|onOpenPartnerOperations` in src: remove it if it only
+   serves the deleted modal; list each in the report.
+</part_a>
+
+<part_b title="cheque inspector removal">
+1. src/components/admin/erp/ZFInspectorDrawer.tsx: delete the `payload.type === 'cheque'` render branch (starts ~line 520 with
+   `if (payload.type === 'cheque') {` and ends at its closing `}` before the next payload branch), the `{ type: 'cheque'; cheque: …}`
+   member of the payload union, the `onUpdateChequeStatus` prop (interface + destructure), and imports only that branch used.
+2. src/components/admin/erp/ERPWorkstationShell.tsx: remove `onUpdateChequeStatus={erp.handlePDCStatusChange}` from the inspector.
+3. src/components/admin/erp/context/ERPWorkstationContext.tsx: remove handleInspectCheque (type, impl, value) and the block in the
+   PDC status handler that refreshes a 'cheque' inspector payload (`inspectorPayload?.type === 'cheque'` … setInspectorPayload({ type:
+   'cheque' …})). Keep handlePDCStatusChange itself ONLY if something other than the inspector still calls it; otherwise remove it
+   too (type, impl, value) and say which in the report.
+4. Route views CockpitRouteView.tsx, DailyOperationsRouteView.tsx, HandInstallmentsVaultRouteView.tsx: remove onInspectCheque props
+   and the code that finds a cheque and calls erp.handleInspectCheque.
+5. Views CockpitView.tsx, DailyOperationsView.tsx, HandInstallmentsVaultView.tsx: remove the onInspectCheque prop (interface +
+   destructure) and every call/branch that only exists to call it. If a row click called onInspectCheque for a cheque-type row,
+   drop that branch only; other row types keep their behaviour.
+</part_b>
+
+<tests>
+src/lib/erp/__tests__/handInstallmentsVaultTableContracts.test.ts, inspectorModalRedesign.test.ts, sideWidgetsDesignContract.test.ts:
+update ONLY assertions that require the removed props/branches/modal (flip `includes` to `!includes` where the test pins presence of
+cheque inspection; delete assertions that pin PartnerOperationsModal). List every changed assertion old -> new.
+</tests>
+
+<gates>
+npx tsc --noEmit
+npx eslint src/components/admin/erp/ZFInspectorDrawer.tsx src/components/admin/erp/v2/views/DailyOperationsView.tsx src/components/admin/erp/v2/views/CockpitView.tsx src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx   (list only NEW errors)
+npx tsx --test src/lib/erp/__tests__/*.test.ts 2>&1 | tail -5   (7 failures pre-exist; list any NEW failing test)
+grep -rn "PartnerOperationsModal\|onOpenPartnerOperations\|handleInspectCheque\|onInspectCheque\|onUpdateChequeStatus\|type: 'cheque'" src -> list remaining hits (target: none)
+</gates>
+
+<structured_output_contract>
+STATUS | part A files | part B files | handlePDCStatusChange kept/removed + why | tests changed | GATES + first failing line | OPEN. Caveman, <=25 lines.
+</structured_output_contract>
