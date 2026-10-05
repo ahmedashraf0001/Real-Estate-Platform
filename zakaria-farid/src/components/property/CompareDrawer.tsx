@@ -507,7 +507,7 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                     <div key={`built-${p.id}`} className="matrix-cell">
                       <span className="cell-metric-val">
                         <Calendar size={14} className="cell-spec-icon" />
-                        {p.builtYear || (isAr ? 'استلام فوري جاهز' : 'Immediate Key Handover')}
+                        {p.builtYear || '—'}
                       </span>
                     </div>
                   ))}

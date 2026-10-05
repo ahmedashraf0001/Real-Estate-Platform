@@ -206,7 +206,7 @@ export const MapView: React.FC<MapViewProps> = ({
   // Handle Card Click -> Pan & Zoom Map Close to Property
   const handleSelectCard = (property: Property) => {
     setSelectedPropertyId(property.id);
-    if (mapInstanceRef.current) {
+    if (mapInstanceRef.current && property.mapCoordinates) {
       mapInstanceRef.current.flyTo(
         [property.mapCoordinates.lat, property.mapCoordinates.lng],
         16.5,
