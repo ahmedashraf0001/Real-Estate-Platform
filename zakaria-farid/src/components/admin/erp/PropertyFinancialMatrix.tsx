@@ -245,7 +245,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
 
     const totalRemaining = totalGross.minus(totalCollected);
     const avgCollectionPct = totalGross.gt(0) 
-      ? Math.round(totalCollected.dividedBy(totalGross).times(100).toNumber()) 
+      ? Math.round(totalCollected.times(100).dividedBy(totalGross).toNumber()) 
       : 0;
 
     return {

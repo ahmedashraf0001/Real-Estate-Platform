@@ -501,9 +501,9 @@ export function PropertyLifecycleAuditModal({
               </div>
               <div className={styles.kpiSub}>
                 {isAr ? (
-                  <>نسبة المصاريف من سعر البيع: <strong className={styles.textAccent}>{D(metrics.totalLoggedCost).dividedBy(activeProperty.price_egp || 1).times(100).toFixed(1)}%</strong></>
+                  <>نسبة المصاريف من سعر البيع: <strong className={styles.textAccent}>{D(metrics.totalLoggedCost).times(100).dividedBy(activeProperty.price_egp || 1).toFixed(1)}%</strong></>
                 ) : (
-                  <>Cost-to-List Ratio: <strong className={styles.textAccent}>{D(metrics.totalLoggedCost).dividedBy(activeProperty.price_egp || 1).times(100).toFixed(1)}%</strong></>
+                  <>Cost-to-List Ratio: <strong className={styles.textAccent}>{D(metrics.totalLoggedCost).times(100).dividedBy(activeProperty.price_egp || 1).toFixed(1)}%</strong></>
                 )}
               </div>
             </div>
@@ -629,7 +629,7 @@ export function PropertyLifecycleAuditModal({
                 const isSelected = selectedCategoryFilter === cat.key;
                 const isClickable = hasCosts || selectedPhaseFilter === 'all';
                 const pct = hasCosts && D(activeCategoryBreakdown.totalBase).gt(0)
-                  ? D(catData.total).dividedBy(activeCategoryBreakdown.totalBase).times(100).toFixed(1) 
+                  ? D(catData.total).times(100).dividedBy(activeCategoryBreakdown.totalBase).toFixed(1) 
                   : '0';
 
                 return (

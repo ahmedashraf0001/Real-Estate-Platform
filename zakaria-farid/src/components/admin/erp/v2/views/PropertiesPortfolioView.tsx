@@ -561,7 +561,7 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
 
   const soldPct = totalCatalogVal.isZero() 
     ? 0 
-    : Math.round(contractedSalesVal.div(totalCatalogVal).times(100).toNumber());
+    : Math.round(contractedSalesVal.times(100).div(totalCatalogVal).toNumber());
 
   return (
     <div className={styles.stageContainer}>

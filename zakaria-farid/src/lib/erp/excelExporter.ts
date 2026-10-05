@@ -10,6 +10,7 @@ import { ERPAccount, ERPJournalEntry, ERPContract, ERPPropertyCostItem, ERPInsta
 import { Property } from '@/lib/supabase/types';
 import { SinglePropertyAnalysis } from './propertyAnalysisEngine';
 import { CANONICAL_COA } from './ledger';
+import { PartnersEngine } from './partnersEngine';
 import { 
   renderDonutChart, 
   renderHorizontalBarChart, 
@@ -223,13 +224,9 @@ export async function exportComprehensiveArabicExcel(
     percentage: wipNum > 0 ? (val / wipNum) * 100 : 0
   })).sort((a, b) => b.value - a.value).slice(0, 6);
 
-  const wipBarBase64 = renderHorizontalBarChart(
-    wipBarItems.length > 0 ? wipBarItems : [
-      { label: 'خرسانات وهيكل إنشائي', value: wipNum * 0.45, color: '#c2410c' },
-      { label: 'مصنعيات ومقاول باطن', value: wipNum * 0.25, color: '#047857' },
-      { label: 'كهروميكانيك وتشطيبات', value: wipNum * 0.20, color: '#1d4ed8' },
-      { label: 'تراخيص ورسوم حكومية', value: wipNum * 0.10, color: '#b8903e' }
-    ],
+  // No recorded categories -> no chart (never an invented split).
+  const wipBarBase64 = wipBarItems.length === 0 ? '' : renderHorizontalBarChart(
+    wipBarItems,
     {
       title: isAr ? 'توزيع تكاليف وخامات المباني حسب البنود المعتمدة (WIP)' : 'Construction WIP Costs by Category',
       subtitle: isAr ? 'المصروفات الفعلية المحملة على عماير ومشاريع الشركة' : 'Actual logged development costs',
@@ -701,31 +698,48 @@ export async function exportComprehensiveArabicExcel(
   });
   styleHeaderRow(pHeaderRow, isAr);
 
-  // Group transactions by partner
-  const partnerStats: Record<string, { capital: number; payout: number; role: string }> = {
-    'زكريا فريد': { capital: 15000000, payout: 0, role: 'المطور الرئيسي والمدير التنفيذي' },
-    'الحاج أحمد عبد الرحمن': { capital: 5000000, payout: 450000, role: 'شريك ممول رئيسي' },
-    'م. أسامة المنياوي': { capital: 3500000, payout: 280000, role: 'شريك بالأرض والتمويل' },
-    'د. مصطفى الشريف': { capital: 2000000, payout: 150000, role: 'شريك ممول' }
-  };
+  // Group real transactions by partner (no seeded partners or sample figures)
+  const partnerStats: Record<string, { capital: number; payout: number; role: string }> = {};
 
-  const partnerTxs = (data as any).partnerTransactions || (data as any).partnerCalls || [];
+  const partnerTxs = (data as any).partnerTransactions || [];
   partnerTxs.forEach((t: any) => {
     const partnerName = t.partner_name || t.partnerName || '';
+    if (!partnerName) return;
     const p = partnerStats[partnerName] || { capital: 0, payout: 0, role: 'شريك استثماري' };
     const amt = parseFloat(t.amount) || 0;
     if (t.type === 'CAPITAL_INJECTION') p.capital += amt;
     if (t.type === 'PROFIT_DISTRIBUTION') p.payout += amt;
-    if (partnerName) partnerStats[partnerName] = p;
+    partnerStats[partnerName] = p;
   });
+
+  // Collections share from the partner engine (real contracts, splits and recorded costs)
+  const collectionsByPartner = new Map<string, number>();
+  try {
+    PartnersEngine.calculatePartnerSummaries(
+      [],
+      data.properties || [],
+      data.contracts || [],
+      partnerTxs,
+      data.partnerCalls || [],
+      data.propertyCosts || []
+    ).forEach(summary => {
+      collectionsByPartner.set(summary.partnerName, parseFloat(summary.totalCollectionsShare) || 0);
+      if (!partnerStats[summary.partnerName] && (parseFloat(summary.totalCollectionsShare) || 0) > 0) {
+        partnerStats[summary.partnerName] = { capital: 0, payout: 0, role: summary.roleTitleAr };
+      }
+    });
+  } catch {
+    // leave collections unknown
+  }
 
   let pRowIdx = 5;
   Object.entries(partnerStats).forEach(([name, stats], idx) => {
     const r = wsPartners.getRow(pRowIdx);
     r.height = 22;
 
-    const collectionsShare = stats.capital * 0.22; // Pro-rated sample
-    const netBalance = collectionsShare - stats.payout;
+    const knownCollections = collectionsByPartner.has(name);
+    const collectionsShare: number | string = knownCollections ? (collectionsByPartner.get(name) || 0) : '—';
+    const netBalance = (knownCollections ? (collectionsByPartner.get(name) || 0) : stats.capital) - stats.payout;
 
     r.getCell(1).value = idx + 1;
     r.getCell(2).value = name;
@@ -1280,8 +1294,8 @@ export async function exportPartnerDossierExcel(
     r.getCell(6).value = isCash
       ? (isAr ? 'خزينة كاش (101000)' : 'Cash Safe (101000)')
       : isInsta
-        ? (isAr ? 'إنستاباي - خزينة (101000)' : 'InstaPay Treasury (101000)')
-        : (isAr ? 'حساب بنكي تجاري (102000)' : 'Commercial Bank (102000)');
+        ? (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)')
+        : (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)');
     r.getCell(7).value = t.memo || '—';
 
     r.getCell(1).alignment = { horizontal: 'center' };

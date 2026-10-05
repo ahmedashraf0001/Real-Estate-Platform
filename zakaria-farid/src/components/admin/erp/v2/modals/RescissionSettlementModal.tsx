@@ -4,9 +4,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule, ERPAccountingPeriod } from '@/lib/erp/types';
-import { RescissionEngine } from '@/lib/erp/rescission';
+import { RescissionEngine, resolveRescissionCost } from '@/lib/erp/rescission';
 import { resolvePeriodForDate, CANONICAL_COA } from '@/lib/erp/ledger';
-import { D } from '@/lib/erp/math';
+import { D, ratio } from '@/lib/erp/math';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { 
   ZFField, 
@@ -71,7 +71,6 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
       } else if (contracts.length > 0 && (!selectedContractId || !contracts.some(c => c.contract_id === selectedContractId))) {
         setSelectedContractId(contracts[0].contract_id);
       }
-      setSelectedBranch('Branch1_PreDelivery');
       setRescissionDate(new Date().toISOString().split('T')[0]);
       setPenaltyRatePercent(10);
       setRescissionSuccess(null);
@@ -100,15 +99,35 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
   }, [rescissionDate, periods, activePeriod]);
   const isTargetPeriodLocked = targetPeriod.status !== 'OPEN';
 
+  // Fraction as exact text: D(7.5).div(100) would round 7.5% to 8%.
   const penaltyRateFraction = useMemo(() => {
     const val = Number(penaltyRatePercent);
-    if (isNaN(val) || val < 0) return D('0');
-    if (val > 100) return D('1');
-    return D(val).div(100);
+    if (isNaN(val) || val < 0) return '0';
+    if (val > 100) return '1';
+    return ratio(val, 100, 6);
   }, [penaltyRatePercent]);
 
+  // The branch follows the contract's real delivery status (the engine decides by it too).
+  useEffect(() => {
+    if (isOpen && activeContract) {
+      setSelectedBranch(activeContract.handover_status === 'Delivered' ? 'Branch2_PostDelivery' : 'Branch1_PreDelivery');
+    }
+  }, [isOpen, activeContract]);
+
+  // Unit cost from recorded data only (handover entry or RSV allocation) — never an assumed ratio.
+  const costResolution = useMemo(() => {
+    if (!activeContract) return null;
+    return resolveRescissionCost({
+      contract: activeContract,
+      journalEntries: erp?.data.journalEntries,
+      costAllocations: erp?.data.costAllocations,
+      properties: erp?.data.properties,
+    });
+  }, [activeContract, erp?.data.journalEntries, erp?.data.costAllocations, erp?.data.properties]);
+  const isCostMissing = Boolean(costResolution?.needed && costResolution.amount === null);
+
   const computed = useMemo(() => {
-    if (!activeContract || !targetPeriod) return null;
+    if (!activeContract || !targetPeriod || !costResolution || isCostMissing) return null;
     try {
       const calculationPeriod: ERPAccountingPeriod = targetPeriod.status === 'OPEN'
         ? targetPeriod
@@ -118,18 +137,18 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
         contractSchedules,
         calculationPeriod,
         rescissionDate,
-        D(activeContract.gross_contract_value).times('0.45').toFixed(),
+        costResolution.amount ?? '0.00',
         '501000',
         '151000',
         'CFO_FARID',
-        undefined,
+        costResolution.handoverEntry,
         penaltyRateFraction
       );
     } catch (err) {
       console.warn('Rescission preview computation error:', err);
       return null;
     }
-  }, [activeContract, contractSchedules, targetPeriod, rescissionDate, penaltyRateFraction]);
+  }, [activeContract, contractSchedules, targetPeriod, rescissionDate, penaltyRateFraction, costResolution, isCostMissing]);
 
   if (!isOpen || !activeContract) return null;
 
@@ -145,7 +164,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
     e.preventDefault();
     if (!computed || isTargetPeriodLocked || isMutating) return;
 
-    const rateNum = penaltyRateFraction.toNumber();
+    const rateNum = Number(penaltyRateFraction);
     erp?.setRescissionPenaltyRate?.(rateNum);
     await onConfirmRescission({
       selectedBranch,
@@ -251,6 +270,14 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                 ))}
               </select>
             </ZFField>
+          )}
+
+          {isCostMissing && (
+            <ZFEffect tone="danger">
+              {isAr
+                ? 'تكلفة الوحدة غير مسجلة. سجّل التكاليف ووزّعها قبل فسخ عقد تم تسليمه.'
+                : 'Unit cost is not recorded. Record and allocate costs before rescinding a delivered contract.'}
+            </ZFEffect>
           )}
 
           {/* 2. Contract Facts */}

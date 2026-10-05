@@ -240,6 +240,25 @@ export class Decimal {
   }
 }
 
+/**
+ * Exact numerator / denominator as a plain decimal string with `digits` decimals (half-up).
+ * Use it for ratios and factors (RSV factor, share, rate) — a Decimal can only hold 2 decimals.
+ */
+export function ratio(
+  numerator: number | string | Decimal,
+  denominator: number | string | Decimal,
+  digits = 6
+): string {
+  const a = operand(numerator);
+  const b = operand(denominator);
+  const unit = B_TEN ** BigInt(digits);
+  const q = roundHalfUpDiv(a.n * b.scale * unit, a.scale * b.n);
+  const negative = q < B_ZERO;
+  const abs = (negative ? -q : q).toString().padStart(digits + 1, '0');
+  const text = digits > 0 ? `${abs.slice(0, abs.length - digits)}.${abs.slice(-digits)}` : abs;
+  return negative ? `-${text}` : text;
+}
+
 export function D(val: number | string | Decimal | bigint): Decimal {
   return new Decimal(val);
 }

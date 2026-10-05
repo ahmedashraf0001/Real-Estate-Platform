@@ -1,0 +1,130 @@
+ROLE: LEAF
+TRACK: FINANCIAL_CORE
+TASK: fin-f3a-real-costs — remove invented cost ratios and seeded figures; partner capital from recorded costs.
+
+<user_decisions>
+[user-confirmed 2026-10-05] No hardcoded cost ratios. Unit cost for cancellations and partner figures = cost actually
+recorded for the property/unit (its RSV share for building units). If no cost is recorded, show "cost not recorded" and
+block the cancellation posting until costs exist.
+[user-confirmed 2026-10-05] Partner capital owed = partner share % x costs actually recorded for the building so far.
+Use Decimal; apply percentages with amount.timesRatio(pct, 100); never D(pct).div(100) (see src/lib/erp/math.ts).
+</user_decisions>
+
+<files>
+EDIT ONLY:
+- src/lib/erp/rescission.ts
+- src/components/admin/erp/v2/modals/RescissionSettlementModal.tsx
+- src/components/admin/erp/ERPWorkstationShell.tsx (ONLY the <RescissionSettlementModal> props)
+- src/components/admin/erp/context/ERPWorkstationContext.tsx (ONLY: handleExecuteRescission ~1928-2010; wipAccounts
+  ~1384-1393 and its type/export lines 159 and ~4333; calculatePartnerSummaries call ~1415)
+- src/components/admin/erp/v2/views/CockpitView.tsx and src/components/admin/erp/views/CockpitRouteView.tsx (ONLY to drop the unused wipAccounts prop)
+- src/lib/erp/partnersEngine.ts
+- src/components/admin/erp/v2/modals/PartnerReallocationModal.tsx, v2/views/partners/PartnersAnalyticsCharts.tsx,
+  v2/views/partners/PartnersProjectsView.tsx, v2/views/partners/PartnersSideWidgets.tsx, v2/views/PartnersManagementView.tsx
+  (ONLY to pass propertyCosts / remove fake chart points)
+- src/lib/erp/propertyAnalysisEngine.ts (ONLY the land-cost estimate ~218-231 and its result type if needed)
+- src/lib/erp/excelExporter.ts (ONLY ~226-232, ~703-735, ~1278-1284)
+- tests under src/lib/erp/__tests__/ for these modules
+DENIED: everything else.
+</files>
+
+<part_1_rescission>
+Today: ERPWorkstationContext.tsx ~1960 passes `D(gross).times('0.45')` as originalRsvCostAmount when no handover entry
+exists, and RescissionSettlementModal.tsx ~121 always passes it, so the preview can differ from the posting and a
+pre-delivery rescission stores wip_cost_restored = 45% of V.
+a) rescission.ts — add exported pure function:
+   resolveRescissionCost(params: { contract: ERPContract; journalEntries: ERPJournalEntry[];
+     costAllocations: ERPCostAllocation[]; properties: Property[] }):
+     { needed: boolean; amount: string | null; source: 'not-needed' | 'handover-entry' | 'rsv' | 'none';
+       handoverEntry?: ERPJournalEntry }
+   - contract.handover_status !== 'Delivered' -> { needed:false, amount:'0.00', source:'not-needed' }
+   - find the handover entry exactly as the context does today (entry_number === `JE-HANDOVER-${contract_number}` or
+     SALES + source_entity_id === contract_id + entry_number startsWith 'JE-HANDOVER'); if found -> amount = its COGS debit
+     line (account starts with '50') or else its WIP credit line (starts with '15'); source 'handover-entry'.
+   - else getHandoverCOGS({ contractValue: contract.gross_contract_value, costAllocations, property }) from
+     canonicalMetrics (property = properties.find(p => p.id === contract.property_id || p.id === contract.unit_id));
+     if isAllocated and amount > 0 -> source 'rsv'.
+   - else { needed:true, amount:null, source:'none' }.
+b) processRescission: pre-delivery branch records wip_cost_restored '0.00' (it restores nothing). Post-delivery branch:
+   if no handover entry was given AND D(originalRsvCostAmount) <= 0 -> throw
+   'ERP Rescission Error: unit cost is not recorded; record and allocate costs before rescinding a delivered contract.'
+   Change the default of originalRsvCostAmount from '0.00' to undefined-safe handling (keep the parameter order).
+c) Context handleExecuteRescission: call resolveRescissionCost with data.journalEntries, data.costAllocations,
+   data.properties. If needed && amount === null -> toast.error (Arabic: 'تكلفة الوحدة غير مسجلة. سجّل التكاليف ووزّعها قبل
+   فسخ عقد تم تسليمه.' / English: 'Unit cost is not recorded. Record and allocate costs before rescinding a delivered
+   contract.') and return without posting. Else pass amount and handoverEntry to processRescission. Delete the 0.45 line.
+d) Modal: add optional props journalEntries?, costAllocations?, properties? (Shell passes erp.data.journalEntries,
+   erp.data.costAllocations, erp.data.properties). Preview uses resolveRescissionCost the same way; when amount is null show
+   the same message in the existing notice style and disable the confirm button. Delete the 0.45 line.
+e) Tests (new file rescissionCost.test.ts): pre-delivery -> not-needed/0.00 and record wip_cost_restored '0.00';
+   delivered with handover entry COGS 412,345.67 -> that amount; delivered without entry, allocation rsv_factor '0.4537'
+   on V 1,000,000 -> '453700.00'; delivered, nothing -> source 'none' and processRescission throws.
+</part_1_rescission>
+
+<part_2_partners>
+a) computeDynamicBuildingCapital(property, transactions = [], propertyCosts: ERPPropertyCostItem[] = []):
+   recorded = D(calculatePropertyAuditMetrics(property.id, property.area_sqm || 0, propertyCosts).totalLoggedCost)
+   (from propertyCostEngine). total capital = recorded. required(partner) = recorded.timesRatio(sharePct, 100).
+   paid/arrears unchanged. fundingRatioPct = recorded > 0 ? Number(totalActualInjected.times(100).div(recorded).toFixed(2)) : 0.
+   Keep the returned fields; impliedTotalCapitalEgp now = recorded (update the JSDoc formula block to say so).
+b) calculatePartnerSummaries(..., partnerCalls = [], propertyCosts: ERPPropertyCostItem[] = []) and
+   getProjectPartnershipCards(properties, contracts, transactions, propertyCosts = []) (and its two aliases):
+   replace `D(prop.price_egp).times(0.45)` (~704, ~841) with the property's recorded cost (same audit helper);
+   wipCostShare = recorded.timesRatio(sharePct, 100). Pass propertyCosts into the internal computeDynamicBuildingCapital
+   call (~759).
+c) Callers pass propertyCosts: context ~1415 (data.propertyCosts); PartnersManagementView ~109 and the four partner
+   views/modal (get it from props if available, else `useERPWorkstationContext()?.data.propertyCosts ?? []`).
+d) PartnersManagementView ~140-165: the sparkline series invent history when there is too little data
+   ([1000000, 1500000, ...], [0, 200000, ...], totalNetDue * 0.4/0.55/0.7/0.8/0.9). Use only real points: if fewer than 2
+   real points, pass the real points (or a flat [value, value]) — no invented numbers.
+e) Tests: update partners*.test.ts expectations that encoded the founder-implied capital or the 45% WIP. Add this case
+   (hand-checked): building area 500, recorded costs 600,000 + 400,000 = 1,000,000; splits founder 60 / 'Partner B' 40;
+   Partner B CAPITAL_INJECTION 300,000; founder none ->
+     Partner B required 400000.00, paid 300000.00, arrears 100000.00
+     founder required 600000.00, paid 0.00, arrears 600000.00
+     impliedTotalCapitalEgp 1000000.00, fundingRatioPct 30
+   List every changed expectation (old -> new) in the report.
+</part_2_partners>
+
+<part_3_other_invented_numbers>
+a) ERPWorkstationContext wipAccounts (~1384-1393) splits WIP 40/30/15/10/5 and nothing renders it: remove the memo, its
+   type field (line ~159), its export (~4333) and the prop on CockpitRouteView/CockpitView. tsc must stay clean.
+b) propertyAnalysisEngine ~218-231: when no land_allocation cost and no purchase_price_egp, do NOT estimate
+   (area x 5000 or 25% of price). landCost = 0 and set a result flag `landCostMissing: true` (add optional field to the
+   result type). Update tests that encoded the estimate.
+c) excelExporter:
+   - ~226-232: if wipBarItems is empty, skip the chart (no invented 45/25/20/10 split).
+   - ~703-735: delete the seeded partnerStats (four named partners with 15,000,000 / 5,000,000 / 3,500,000 / 2,000,000)
+     — start from {} and build only from real transactions. Delete `collectionsShare = stats.capital * 0.22`. Use the real
+     collections share from PartnersEngine.calculatePartnerSummaries(...) when the export data has partners/properties/
+     contracts/transactions; if not available write '—' in that column and compute net balance as capital - payout.
+   - ~1278-1284: InstaPay label must say 102000, not 101000 ([user-confirmed] InstaPay = 102000); keep cash = 101000.
+</part_3_other_invented_numbers>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report.
+- To disable an optional callback, omit the prop — never pass a no-op function.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+1. npx tsc --noEmit (clean)
+2. npx tsx --test src/lib/erp/__tests__/*.test.ts — report counts; the 7 pre-existing UI source-text failures may remain;
+   list any other failure with its message.
+3. grep -rnE "times\(['\"]?0\.45|\* ?0\.45|0\.22; // Pro-rated|15000000" src --include=*.ts* | grep -v __tests__ -> 0 hits
+4. grep -rn "wipAccounts" src --include=*.ts* -> 0 hits
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths + line counts changed
+3. PARTS: 1a-e, 2a-e, 3a-c each done/deviated + reason; changed test expectations (old -> new)
+4. GATES: each command + result
+5. NOTES: other invented/seeded figures you saw (file:line), not fixed
+</structured_output_contract>

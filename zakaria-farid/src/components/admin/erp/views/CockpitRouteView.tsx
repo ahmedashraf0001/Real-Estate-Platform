@@ -48,7 +48,6 @@ export function CockpitRouteView() {
       totalWipIncurred={erp.totalWipIncurred}
       totalSafePDCs={erp.totalSafePDCs}
       totalInjectedCapital={erp.totalInjectedCapital}
-      wipAccounts={erp.wipAccounts}
       contracts={erp.data.contracts}
       pdcRecords={erp.data.pdcRecords}
       schedules={erp.data.schedules}

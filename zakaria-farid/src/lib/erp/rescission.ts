@@ -7,11 +7,69 @@ import { D, Decimal, minDecimal, generateUUID } from './math';
 import { 
   ERPAccountingPeriod, 
   ERPContract, 
+  ERPCostAllocation,
   ERPInstallmentSchedule, 
   ERPJournalEntry, 
   ERPRescissionRecord 
 } from './types';
+import { Property } from '../supabase/types';
 import { GeneralLedgerEngine } from './ledger';
+import { getHandoverCOGS } from './canonicalMetrics';
+
+export interface RescissionCostResolution {
+  /** True when the rescission must reverse a unit cost (delivered contracts only). */
+  needed: boolean;
+  /** Unit cost to restore to WIP, or null when it is needed but not recorded. */
+  amount: string | null;
+  source: 'not-needed' | 'handover-entry' | 'rsv' | 'none';
+  handoverEntry?: ERPJournalEntry;
+}
+
+/** The handover journal entry of a contract, if one was posted. */
+export function findHandoverEntry(contract: ERPContract, journalEntries: ERPJournalEntry[] = []): ERPJournalEntry | undefined {
+  return journalEntries.find(j =>
+    j.entry_number === `JE-HANDOVER-${contract.contract_number}` ||
+    (j.source_module === 'SALES' && j.source_entity_id === contract.contract_id && j.entry_number.startsWith('JE-HANDOVER'))
+  );
+}
+
+/**
+ * Unit cost a rescission must restore to WIP, from recorded data only (no assumed cost ratio).
+ * Delivered: the handover entry's COGS, else the project's RSV allocation; otherwise not recorded.
+ */
+export function resolveRescissionCost(params: {
+  contract: ERPContract;
+  journalEntries?: ERPJournalEntry[];
+  costAllocations?: ERPCostAllocation[];
+  properties?: Property[];
+}): RescissionCostResolution {
+  const { contract } = params;
+  if (contract.handover_status !== 'Delivered') {
+    return { needed: false, amount: '0.00', source: 'not-needed' };
+  }
+
+  const handoverEntry = findHandoverEntry(contract, params.journalEntries);
+  if (handoverEntry) {
+    const cogsLine = handoverEntry.lines.find(l => D(l.debit_amount).gt(0) && l.account_code.startsWith('50'));
+    const wipLine = handoverEntry.lines.find(l => D(l.credit_amount).gt(0) && l.account_code.startsWith('15'));
+    const line = cogsLine ? cogsLine.debit_amount : wipLine?.credit_amount;
+    if (line && D(line).gt(0)) {
+      return { needed: true, amount: D(line).toFixed(2), source: 'handover-entry', handoverEntry };
+    }
+  }
+
+  const property = (params.properties || []).find(p => p.id === contract.property_id || p.id === contract.unit_id);
+  const cogs = getHandoverCOGS({
+    contractValue: contract.gross_contract_value,
+    costAllocations: params.costAllocations || [],
+    property,
+  });
+  if (cogs.isAllocated && cogs.cogsAmount.gt(0)) {
+    return { needed: true, amount: cogs.cogsFormatted, source: 'rsv', handoverEntry };
+  }
+
+  return { needed: true, amount: null, source: 'none', handoverEntry };
+}
 
 export class RescissionEngine {
   /**
@@ -33,7 +91,7 @@ export class RescissionEngine {
     schedules: ERPInstallmentSchedule[],
     period: ERPAccountingPeriod,
     rescissionDate: string,
-    originalRsvCostAmount = '0.00',
+    originalRsvCostAmount: string | Decimal = '0.00',
     cogsAccountCode = '501000',
     wipAccountCode = '151000',
     actor = 'CHIEF_FINANCIAL_OFFICER',
@@ -48,26 +106,29 @@ export class RescissionEngine {
     const V = D(contract.gross_contract_value);
     const C = D(contract.total_cash_collected);
 
-    // Validate and parse adjustable penalty rate (0.00 <= rate <= 1.00)
-    if (typeof penaltyRate === 'number' && Number.isNaN(penaltyRate)) {
+    // Validate and parse adjustable penalty rate (0.00 <= rate <= 1.00).
+    // The rate stays text: a Decimal would round 0.075 to 0.08.
+    const rateText = penaltyRate instanceof Decimal
+      ? penaltyRate.toString()
+      : String(penaltyRate !== undefined && penaltyRate !== null && String(penaltyRate).trim() !== '' ? penaltyRate : '0.10').trim();
+    const rateNum = Number(rateText);
+    if (Number.isNaN(rateNum)) {
       throw new Error(
         `ERP Invariant 4.10 Violation: Invalid penalty rate NaN. Must be between 0.00 and 1.00 (0% - 100%).`
       );
     }
-    const rateDec = D(penaltyRate !== undefined && penaltyRate !== null ? penaltyRate : '0.10');
-    if (rateDec.lt(0) || rateDec.gt(1)) {
+    if (rateNum < 0 || rateNum > 1) {
       throw new Error(
-        `ERP Invariant 4.10 Violation: Invalid penalty rate ${rateDec.toString()}. Must be between 0.00 and 1.00 (0% - 100%).`
+        `ERP Invariant 4.10 Violation: Invalid penalty rate ${rateText}. Must be between 0.00 and 1.00 (0% - 100%).`
       );
     }
-    const penaltyRateEffective = rateDec;
-    const penaltyUncapped = V.times(penaltyRateEffective);
+    const penaltyUncapped = V.times(rateText);
 
     // Forfeiture Floor: Retained penalty cannot exceed what customer actually paid
     const penaltyRetained = minDecimal(penaltyUncapped, C);
     const netRefund = C.minus(penaltyRetained);
 
-    const penaltyPercentStr = `${penaltyRateEffective.times(100).toString()}%`;
+    const penaltyPercentStr = `${D(100).times(rateText).toString()}%`;
 
     // Invariant 4.10 Assertion: Refund liability cannot be negative
     if (netRefund.isNegative()) {
@@ -107,6 +168,16 @@ export class RescissionEngine {
           effectiveRsvCost = D(wipLine.credit_amount);
         }
       }
+    }
+
+    if (isPostDelivery && !effectiveRsvCost.isPositive()) {
+      throw new Error(
+        'ERP Rescission Error: unit cost is not recorded; record and allocate costs before rescinding a delivered contract.'
+      );
+    }
+    // A pre-delivery cancellation restores no cost.
+    if (!isPostDelivery) {
+      effectiveRsvCost = D(0);
     }
 
     if (!isPostDelivery) {

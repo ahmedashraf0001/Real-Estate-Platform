@@ -7,9 +7,9 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { ERPSupabaseService, LiveERPDataset, isAuthError } from '@/lib/erp/supabaseService';
 import { GeneralLedgerEngine, resolvePeriodForDate, buildCalendarMonthPeriod } from '@/lib/erp/ledger';
-import { ContractsEngine } from '@/lib/erp/contracts';
+import { ContractsEngine, generateContractNumber } from '@/lib/erp/contracts';
 import { EscalationEngine } from '@/lib/erp/escalation';
-import { RescissionEngine } from '@/lib/erp/rescission';
+import { RescissionEngine, resolveRescissionCost } from '@/lib/erp/rescission';
 import { RSVEngine } from '@/lib/erp/rsv';
 import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
 import { D, Decimal, generateUUID, isUUID, ensureUUID } from '@/lib/erp/math';
@@ -156,7 +156,6 @@ export interface ERPWorkstationContextValue {
   totalWipIncurred: string;
   totalSafePDCs: string;
   totalInjectedCapital: string;
-  wipAccounts: { land: string; civil: string; mep: string; finishing: string; financing: string };
   kpis: { cashBank: string; totalWip: string; accountsReceivable: string; deferredRevenue: string; realizedRevenue: string };
   deferredRevenue: string;
   realizedRevenue: string;
@@ -431,6 +430,13 @@ export function useERPWorkstation(): ERPWorkstationContextValue {
 
 export function useERPWorkstationContext(): ERPWorkstationContextValue | null {
   return useContext(ERPWorkstationContext);
+}
+
+const NO_PROPERTY_COSTS: ERPPropertyCostItem[] = [];
+
+/** Recorded property costs from the workstation (empty outside the provider). */
+export function usePropertyCosts(): ERPPropertyCostItem[] {
+  return useContext(ERPWorkstationContext)?.data.propertyCosts ?? NO_PROPERTY_COSTS;
 }
 
 export function ERPWorkstationProvider({
@@ -1381,17 +1387,6 @@ export function ERPWorkstationProvider({
     };
   }, [data.journalEntries, totalWipIncurred, totalGrossContractValue, totalCollectedCash, deferredRevenue, realizedRevenue]);
 
-  const wipAccounts = useMemo(() => {
-    const total = D(totalWipIncurred);
-    return {
-      land: total.times('0.40').toFixed(2),
-      civil: total.times('0.30').toFixed(2),
-      mep: total.times('0.15').toFixed(2),
-      finishing: total.times('0.10').toFixed(2),
-      financing: total.times('0.05').toFixed(2)
-    };
-  }, [totalWipIncurred]);
-
   const totalTaxLiabilities = useMemo(() => {
     return data.taxRecords
       .filter(t => t.remittance_status === 'Pending')
@@ -1417,9 +1412,10 @@ export function ERPWorkstationProvider({
       data.properties,
       data.contracts,
       partnerTransactions,
-      data.partnerCalls
+      data.partnerCalls,
+      data.propertyCosts
     );
-  }, [partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls]);
+  }, [partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls, data.propertyCosts]);
 
   const contractPortfolioKPIs = useMemo(() => {
     let totalGross = D(0);
@@ -1446,7 +1442,7 @@ export function ERPWorkstationProvider({
       : totalGross.minus(totalCollected).toFixed(2);
     const overallProgress = totalGross.isZero() 
       ? 0 
-      : Math.min(100, Math.max(0, totalCollected.div(totalGross).times(100).toNumber()));
+      : Math.min(100, Math.max(0, totalCollected.times(100).div(totalGross).toNumber()));
 
     return {
       totalGross: totalGross.toFixed(2),
@@ -1565,13 +1561,16 @@ export function ERPWorkstationProvider({
     setIsMutating(true);
     try {
       const contractValue = targetTotalNominalValue ? D(targetTotalNominalValue).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : '0.00');
-      const contractNumber = `ZF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const contractNumber = generateContractNumber(
+        data.contracts.map(c => c.contract_number),
+        new Date().getFullYear()
+      );
 
-      const dpDec = D(targetDpAmount ?? 0);
-      let effectiveDpPct: Decimal | string = downPaymentPct;
-      if (D(contractValue).gt(0) && dpDec.gte(0)) {
-        effectiveDpPct = dpDec.div(D(contractValue));
-      }
+      // Exact down payment amount when the user typed one; a percent would round it.
+      const hasDpAmount = targetDpAmount !== undefined && targetDpAmount !== null && String(targetDpAmount).trim() !== '';
+      let effectiveDpPct: string | { amount: string } = hasDpAmount
+        ? { amount: D(targetDpAmount).toFixed(2) }
+        : String(downPaymentPct);
       let effectiveNumInstallments = parseInt(targetNumInstallments, 10);
       if (isNaN(effectiveNumInstallments) || effectiveNumInstallments < 0) {
         effectiveNumInstallments = 0;
@@ -1608,16 +1607,13 @@ export function ERPWorkstationProvider({
       }
 
       let cumulativeSplitShare = D(0);
-      let cumulativeCashShare = D(0);
       const calculatedSplits = targetPartnerSplits.map((p, idx) => {
         const isLast = idx === targetPartnerSplits.length - 1;
-        const pct = D(p.sharePct || 0).div(100);
         let sAmount: Decimal;
-        let cAmount = D(0);
         if (isLast && targetPartnerSplits.length > 1) {
           sAmount = D(contractValue).minus(cumulativeSplitShare);
         } else {
-          sAmount = D(contractValue).times(pct);
+          sAmount = D(contractValue).timesRatio(p.sharePct || 0, 100);
           cumulativeSplitShare = cumulativeSplitShare.plus(sAmount);
         }
         return {
@@ -1943,25 +1939,34 @@ export function ERPWorkstationProvider({
 
     const effectiveRate = penaltyRateOverride !== undefined ? Number(penaltyRateOverride) : rescissionPenaltyRate;
 
+    // Unit cost comes from recorded data only; a delivered contract without it cannot be rescinded (user-confirmed).
+    const costResolution = resolveRescissionCost({
+      contract,
+      journalEntries: data.journalEntries,
+      costAllocations: data.costAllocations,
+      properties: data.properties,
+    });
+    if (costResolution.needed && costResolution.amount === null) {
+      toast.error(isAr
+        ? 'تكلفة الوحدة غير مسجلة. سجّل التكاليف ووزّعها قبل فسخ عقد تم تسليمه.'
+        : 'Unit cost is not recorded. Record and allocate costs before rescinding a delivered contract.');
+      return;
+    }
+
     setIsMutating(true);
     try {
       const contractSchedules = data.schedules.filter(s => s.contract_id === contract.contract_id);
-
-      const handoverEntry = data.journalEntries.find(j => 
-        j.entry_number === `JE-HANDOVER-${contract.contract_number}` ||
-        (j.source_module === 'SALES' && j.source_entity_id === contract.contract_id && j.entry_number.startsWith('JE-HANDOVER'))
-      );
 
       const result = RescissionEngine.processRescission(
         contract,
         contractSchedules,
         targetPeriod,
         rescissionDate,
-        handoverEntry ? undefined : D(contract.gross_contract_value).times('0.45').toFixed(),
+        costResolution.amount ?? '0.00',
         '501000',
         '151000',
         'CFO_FARID',
-        handoverEntry,
+        costResolution.handoverEntry,
         effectiveRate
       );
 
@@ -2054,7 +2059,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [showRescissionModal, rescissionPenaltyRate, data.contracts, data.schedules, data.journalEntries, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
+  }, [showRescissionModal, rescissionPenaltyRate, data.contracts, data.schedules, data.journalEntries, data.costAllocations, data.properties, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
 
   // Handler: Pay Rescission Refund
   const handlePayRefund = useCallback(async (params: {
@@ -4330,7 +4335,6 @@ export function ERPWorkstationProvider({
     totalWipIncurred,
     totalSafePDCs,
     totalInjectedCapital,
-    wipAccounts,
     kpis,
     deferredRevenue,
     realizedRevenue,

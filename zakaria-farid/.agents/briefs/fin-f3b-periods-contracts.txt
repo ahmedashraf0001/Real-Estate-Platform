@@ -1,0 +1,88 @@
+ROLE: LEAF
+TRACK: FINANCIAL_CORE
+TASK: fin-f3b-periods-contracts — entries land in their date's period; lead conversion follows contract rules;
+unique contract numbers; escalation validates before saving.
+
+<user_decisions>
+[user-confirmed 2026-10-05] A journal entry is posted into the accounting period that contains its entry date (created
+automatically if missing); posting is refused if that period is closed.
+[user-confirmed] The down payment is NOT auto-collected when a contract is created; it stays pending until actually
+received and recorded.
+</user_decisions>
+
+<files>
+EDIT ONLY:
+- src/lib/erp/ledger.ts
+- src/lib/erp/contracts.ts (add generateContractNumber only)
+- src/lib/erp/partnersEngine.ts (ONLY the periodObj fallbacks ~1007-1016 and ~1070-1079)
+- src/components/admin/erp/context/ERPWorkstationContext.tsx (ONLY: the resolvePeriodForDate call sites listed below,
+  contract number at ~1568, handleExecuteEscalation ~1794-1870)
+- src/components/admin/LeadPipeline.tsx (ONLY handleContractCreatedFromLead ~140-240 and the defaultActivePeriod memo)
+- tests under src/lib/erp/__tests__/ (periodLockAndPosting.test.ts and new files)
+DENIED: everything else.
+</files>
+
+<steps>
+1. ledger.ts validateAndCreateEntry: after the period-status check, if params.period.start_date and end_date are set and
+   entry_date (first 10 chars) is outside [start_date, end_date] -> throw
+   `ERP Invariant 0.9 Violation: Entry date ${date} is outside period ${fiscal_year}-${period_number} (${start} to ${end}).`
+2. ledger.ts resolvePeriodForDate(dateStr, periods, fallback): when dateStr is given and no period contains it, return
+   buildCalendarMonthPeriod(dateStr) (the date's own month, OPEN) — never the fallback/another month. Keep the fallback
+   only for a missing dateStr. Check buildCalendarMonthPeriod uses local-date parsing; make it timezone-safe by parsing
+   'YYYY-MM-DD' manually (split on '-') instead of new Date(...).
+3. ERPWorkstationContext.tsx: these call `resolvePeriodForDate(<date>, data.periods, activePeriod)` synchronously:
+   ~2068, ~2283, ~2539, ~2715, ~2964, ~3197, ~3338, ~3554, ~3750, ~3958. For each one whose period is used to POST an entry,
+   replace with `await resolveAndEnsurePeriodForDate(<same date>)` (it creates the year's periods in the DB if missing;
+   see ~1015). Make the enclosing callback async if needed and keep its deps correct. If a site only pre-checks a lock for
+   UI, leave it but report it. Report each line: replaced / left + reason.
+4. partnersEngine.ts ~1007 and ~1070: the fallback builds a fake full-year period (`${year}-01-01` to `${year}-12-31`,
+   id `prd-${year}-01`). Replace with buildCalendarMonthPeriod(entryDate) from ledger.ts.
+5. contracts.ts: export function generateContractNumber(existingNumbers: string[], year: number): string
+   -> `ZF-${year}-NNNN`, NNNN = 1 + max numeric suffix among existing numbers that start with `ZF-${year}-`
+   (ignore malformed), zero-padded to 4 (grows past 9999). Tests: [] , 2026 -> 'ZF-2026-0001';
+   ['ZF-2026-4386','ZF-2026-0007','ZF-2025-9999','bad'] , 2026 -> 'ZF-2026-4387'.
+   Use it in ERPWorkstationContext ~1568 (data.contracts.map(c => c.contract_number)) and LeadPipeline (fetch existing
+   numbers with the supabase client: select contract_number from erp_contracts where contract_number like 'ZF-<year>-%').
+   Replaces `Math.floor(1000 + Math.random() * 9000)` (collisions).
+6. LeadPipeline.tsx handleContractCreatedFromLead:
+   - Remove the automatic down-payment journal entry (dpEntry) and its fake period `PRD-2026-FY` (delete the
+     defaultActivePeriod memo; if another prop needs an activePeriod, build buildCalendarMonthPeriod(today)).
+     persistNewContract receives no entry (check its signature accepts undefined/null; if not, pass what the context's
+     new-contract handler passes when no down payment is collected).
+   - The schedule's tranche 0 stays Pending with amount_paid '0.00' (same as the ERP's own new-contract handler).
+7. handleExecuteEscalation (~1794-1870): build/validate the post-handover adjusting entry (validateAndCreateEntry) BEFORE
+   calling ERPSupabaseService.persistEscalation, so a validation failure (closed period, bad date) changes nothing.
+   Persist the entry after the escalation as today. Add a code comment one line: why the order matters.
+8. Tests: periodLockAndPosting.test.ts (or new periodDates.test.ts):
+   - entry dated 2026-03-15 into period 2026-04 (2026-04-01..2026-04-30) -> throws 'outside period'
+   - resolvePeriodForDate('2027-01-10', [periods of 2026], fallbackApril2026) -> period_id 'prd-2027-01', start '2027-01-01', end '2027-01-31'
+   - resolvePeriodForDate('2026-02-28', periods2026) -> the Feb 2026 period
+   - buildCalendarMonthPeriod('2024-02-10') -> end_date '2024-02-29'
+</steps>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+1. npx tsc --noEmit (clean)
+2. npx tsx --test src/lib/erp/__tests__/*.test.ts — report counts; the 7 pre-existing UI source-text failures may remain;
+   list any other failure with its message.
+3. grep -rn "PRD-2026-FY\|Math.random() \* 9000" src --include=*.ts* -> 0 hits
+4. grep -n "resolvePeriodForDate(" src/components/admin/erp/context/ERPWorkstationContext.tsx -> each remaining hit explained
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths + line counts changed
+3. STEPS: 1-8 done/deviated + reason; per-line report for step 3
+4. GATES: each command + result
+5. NOTES: out-of-scope observations (do not fix)
+</structured_output_contract>

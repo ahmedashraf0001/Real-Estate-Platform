@@ -17,7 +17,7 @@ export class ContractsEngine {
    * Generate Installment Schedule with Invariant 4.3 (Remainder absorbed in final tranche).
    * @param contractId Contract ID
    * @param grossValue Total contract value (V)
-   * @param downPaymentPercent Down payment percentage (e.g. 0.15 for 15%)
+   * @param downPaymentPercent Down payment fraction (e.g. 0.15 for 15%) or `{ amount }` for an exact down payment
    * @param numberOfInstallments Number of subsequent tranches (e.g. 12 quarters)
    * @param startDate Contract start date (YYYY-MM-DD)
    * @param intervalMonthsOrFrequency Interval between installments in months (e.g. 3) or frequency ('MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL')
@@ -26,7 +26,7 @@ export class ContractsEngine {
   static generateSchedule(
     contractId: string,
     grossValue: string | Decimal,
-    downPaymentPercent: string | number | Decimal,
+    downPaymentPercent: string | number | Decimal | { amount: string | Decimal },
     numberOfInstallments: number,
     startDate: string,
     intervalMonthsOrFrequency: number | 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | string = 3,
@@ -49,8 +49,21 @@ export class ContractsEngine {
     }
 
     const totalV = D(grossValue);
-    const dpPct = D(downPaymentPercent);
-    const downPaymentAmount = totalV.times(dpPct);
+    let downPaymentAmount: Decimal;
+    if (typeof downPaymentPercent === 'object' && !(downPaymentPercent instanceof Decimal)) {
+      // Exact amount typed by the user; converting it to a percent first would round it.
+      downPaymentAmount = D(downPaymentPercent.amount);
+      if (downPaymentAmount.isNegative()) {
+        downPaymentAmount = D(0);
+      }
+      if (downPaymentAmount.gt(totalV)) {
+        throw new Error(
+          `ERP Schedule Error: Down payment (${downPaymentAmount.toFixed(2)}) exceeds contract value (${totalV.toFixed(2)}).`
+        );
+      }
+    } else {
+      downPaymentAmount = totalV.times(downPaymentPercent);
+    }
     const remainingAmount = totalV.minus(downPaymentAmount);
 
     const schedules: ERPInstallmentSchedule[] = [];
@@ -326,4 +339,20 @@ export class ContractsEngine {
       ]
     });
   }
+}
+
+/**
+ * Next sequential contract number for a year: ZF-YYYY-NNNN (1 + highest existing suffix, at least 4 digits).
+ * Replaces random suffixes, which could collide.
+ */
+export function generateContractNumber(existingNumbers: string[], year: number): string {
+  const prefix = `ZF-${year}-`;
+  let max = 0;
+  for (const num of existingNumbers) {
+    if (!num || !num.startsWith(prefix)) continue;
+    const suffix = num.slice(prefix.length);
+    if (!/^\d+$/.test(suffix)) continue;
+    max = Math.max(max, parseInt(suffix, 10));
+  }
+  return `${prefix}${String(max + 1).padStart(4, '0')}`;
 }

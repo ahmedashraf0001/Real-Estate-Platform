@@ -274,8 +274,8 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     });
 
     const totalClaims = totalApPaid.plus(totalApLiabilities);
-    const paidPercentage = totalClaims.gt(0) ? totalApPaid.div(totalClaims).times(100).toFixed(0) : '0';
-    const overduePercentage = totalApLiabilities.gt(0) ? overdueInstallmentsAmount.div(totalApLiabilities).times(100).toFixed(0) : '0';
+    const paidPercentage = totalClaims.gt(0) ? totalApPaid.times(100).div(totalClaims).toFixed(0) : '0';
+    const overduePercentage = totalApLiabilities.gt(0) ? overdueInstallmentsAmount.times(100).div(totalApLiabilities).toFixed(0) : '0';
 
     return {
       totalWipCapitalized,
@@ -329,7 +329,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
 
     return {
       items: Object.entries(specialties).map(([key, s]) => {
-        const pct = total.gt(0) ? s.amount.div(total).times(100).toNumber() : 0;
+        const pct = total.gt(0) ? s.amount.times(100).div(total).toNumber() : 0;
         return {
           key,
           label: s.label,
@@ -418,10 +418,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     });
 
     const total = dues90.plus(dues6090).plus(dues3160).plus(dues030);
-    const p90 = total.gt(0) ? dues90.div(total).times(100).toNumber() : 0;
-    const p6090 = total.gt(0) ? dues6090.div(total).times(100).toNumber() : 0;
-    const p3160 = total.gt(0) ? dues3160.div(total).times(100).toNumber() : 0;
-    const p030 = total.gt(0) ? dues030.div(total).times(100).toNumber() : 0;
+    const p90 = total.gt(0) ? dues90.times(100).div(total).toNumber() : 0;
+    const p6090 = total.gt(0) ? dues6090.times(100).div(total).toNumber() : 0;
+    const p3160 = total.gt(0) ? dues3160.times(100).div(total).toNumber() : 0;
+    const p030 = total.gt(0) ? dues030.times(100).div(total).toNumber() : 0;
 
     return {
       totalDues: total,
@@ -480,7 +480,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     return entries.map((item, idx) => ({
       ...item,
       rank: idx + 1,
-      percentage: totalDues.gt(0) ? Math.round(item.dues.div(totalDues).times(100).toNumber()) : 0
+      percentage: totalDues.gt(0) ? Math.round(item.dues.times(100).div(totalDues).toNumber()) : 0
     }));
   }, [effectivePropertyCosts, selectedProjectFilter]);
 

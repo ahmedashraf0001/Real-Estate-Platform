@@ -595,7 +595,7 @@ describe('Canonical Metrics Engine: Single Source of Truth', () => {
       assert.equal(res.isAllocated, true);
       assert.equal(res.cogsAmount.toFixed(2), '2520000.00');
       assert.equal(res.cogsFormatted, '2520000.00');
-      assert.equal(res.rsvFactor.toFixed(4), '0.4200');
+      assert.equal(res.rsvFactor, '0.4200');
     });
 
     it('matches project name and property titles against approved allocations', () => {

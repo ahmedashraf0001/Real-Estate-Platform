@@ -528,7 +528,7 @@ export function calculateVaultKPIs(
   // Calculate collection rate: cleared vs total due potential
   const totalDuePotential = clearedSum.plus(overdueSum).plus(dueTodaySum).plus(depositedSum);
   const collectionRate = totalDuePotential.gt(0)
-    ? parseFloat(clearedSum.dividedBy(totalDuePotential).times(100).toFixed(1))
+    ? parseFloat(clearedSum.times(100).dividedBy(totalDuePotential).toFixed(1))
     : 0;
 
   return {

@@ -17,11 +17,18 @@ import {
   ERPAccountingPeriod,
   BuildingOwnershipLogEntry,
   OwnershipActionType,
-  DynamicBuildingCapitalInfo
+  DynamicBuildingCapitalInfo,
+  ERPPropertyCostItem
 } from './types';
 import { Property } from '@/lib/supabase/types';
 import { PRIMARY_DEVELOPER_NAME } from './partnersDirectory';
-import { GeneralLedgerEngine } from './ledger';
+import { GeneralLedgerEngine, buildCalendarMonthPeriod } from './ledger';
+import { calculatePropertyAuditMetrics } from './propertyCostEngine';
+
+/** Costs actually recorded for a property (user-confirmed basis for partner capital and cost shares). */
+export function recordedPropertyCost(property: Property, propertyCosts: ERPPropertyCostItem[] = []): Decimal {
+  return D(calculatePropertyAuditMetrics(property.id, property.area_sqm || 0, propertyCosts).totalLoggedCost);
+}
 
 export interface PartnerProjectHolding {
   propertyId: string;
@@ -262,42 +269,41 @@ export function normalizePropertySplits(property: Property): Array<{
 }
 
 /**
- * Computes dynamic capital matching and partner arrears based on the primary founder's capital injection.
+ * Computes partner capital owed and arrears for a building (user-confirmed 2026-10-05).
  * Formula:
- * - founderInjected = sum(transactions for PRIMARY_DEVELOPER_NAME on this property with type === 'CAPITAL_INJECTION')
- * - impliedTotalCapital = founderSharePct > 0 ? founderInjected / (founderSharePct / 100) : 0
+ * - recordedCost = costs actually recorded for this building so far
  * - For each partner:
- *     required = impliedTotalCapital * (sharePct / 100)
+ *     required = recordedCost * (sharePct / 100)
  *     paid = sum(transactions for this partner on this property with type === 'CAPITAL_INJECTION')
  *     arrears = required > paid ? required - paid : 0
+ * `impliedTotalCapitalEgp` carries recordedCost.
  */
 export function computeDynamicBuildingCapital(
   property: Property,
-  transactions: ERPPartnerTransaction[] = []
+  transactions: ERPPartnerTransaction[] = [],
+  propertyCosts: ERPPropertyCostItem[] = []
 ): DynamicBuildingCapitalInfo {
   const propTitle = property.title_ar || property.title_en || 'مشروع عقاري';
   const normalizedSplits = normalizePropertySplits(property);
   const activeSplits = normalizedSplits.filter(s => !s.is_archived);
 
   // 1. Identify founder split
-  const founderSplit = activeSplits.find(s => 
+  const founderSplit = activeSplits.find(s =>
     s.partner_name === PRIMARY_DEVELOPER_NAME || s.partner_name.includes('زكريا فريد')
   );
   const founderSharePct = founderSplit ? founderSplit.share_percentage : 0;
 
   // 2. Founder's total capital injected into this specific building
   const founderInjected = transactions
-    .filter(t => 
+    .filter(t =>
       (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) &&
       t.property_id === property.id &&
       t.type === 'CAPITAL_INJECTION'
     )
     .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-  // 3. Implied total building capital derived from founder's injection
-  const impliedTotalCapital = founderSharePct > 0 
-    ? founderInjected.div(D(founderSharePct).div(100))
-    : D(0);
+  // 3. Total building capital = costs actually recorded so far
+  const impliedTotalCapital = recordedPropertyCost(property, propertyCosts);
 
   // 4. Per-partner calculation
   const partnerStatuses: DynamicBuildingCapitalInfo['partnerStatuses'] = [];
@@ -305,7 +311,7 @@ export function computeDynamicBuildingCapital(
   activeSplits.forEach(split => {
     const isFounder = split.partner_name === PRIMARY_DEVELOPER_NAME || split.partner_name.includes('زكريا فريد');
     const sharePct = split.share_percentage;
-    const required = impliedTotalCapital.times(D(sharePct).div(100));
+    const required = impliedTotalCapital.timesRatio(sharePct, 100);
 
     // Calculate actual paid by this partner
     const paid = transactions
@@ -335,7 +341,7 @@ export function computeDynamicBuildingCapital(
     .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
   const fundingRatioPct = impliedTotalCapital.gt(0)
-    ? Number(totalActualInjected.div(impliedTotalCapital).times(100).toFixed(2))
+    ? Number(totalActualInjected.times(100).div(impliedTotalCapital).toFixed(2))
     : 0;
 
   return {
@@ -632,7 +638,8 @@ export class PartnersEngine {
     properties: Property[] = [],
     contracts: ERPContract[] = [],
     transactions: ERPPartnerTransaction[] = [],
-    partnerCalls: ERPPartnerCall[] = []
+    partnerCalls: ERPPartnerCall[] = [],
+    propertyCosts: ERPPropertyCostItem[] = []
   ): PartnerFinancialSummary[] {
     const propertyMap = new Map<string, Property>();
     properties.forEach(p => propertyMap.set(p.id, p));
@@ -698,14 +705,11 @@ export class PartnersEngine {
         }
 
         if (partnerSharePct > 0) {
-          const shareRatio = D(partnerSharePct).div(100);
+          // Cost actually recorded on the property (no assumed cost ratio)
+          const wipCostShare = recordedPropertyCost(prop, propertyCosts).timesRatio(partnerSharePct, 100);
 
-          // Incurred WIP on property (e.g. price / area or estimate)
-          const propWip = D(prop.price_egp || 0).times(0.45); // Standard 45% WIP ratio
-          const wipCostShare = propWip.times(shareRatio);
-
-          // Contracts on this property
-          const propContracts = contracts.filter(c => c.property_id === prop.id || c.unit_id === prop.id);
+          // Live contracts on this property (rescinded contracts carry no sales or collections share)
+          const propContracts = contracts.filter(c => (c.property_id === prop.id || c.unit_id === prop.id) && c.status !== 'Rescinded');
 
           let contractSalesShare = D(0);
           let collectionsShare = D(0);
@@ -720,16 +724,16 @@ export class PartnersEngine {
                 let sAmt = D(cSplit.share_amount || 0);
                 let cAmt = D(cSplit.cash_share || 0);
                 if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
-                  const pct = D(cSplit.share_percentage.replace('%', '')).div(100);
-                  sAmt = D(c.gross_contract_value || 0).times(pct);
-                  cAmt = D(c.total_cash_collected || 0).times(pct);
+                  const pct = cSplit.share_percentage.replace('%', '').trim();
+                  sAmt = D(c.gross_contract_value || 0).timesRatio(pct, 100);
+                  cAmt = D(c.total_cash_collected || 0).timesRatio(pct, 100);
                 }
                 contractSalesShare = contractSalesShare.plus(sAmt);
                 collectionsShare = collectionsShare.plus(cAmt);
               }
             } else {
-              contractSalesShare = contractSalesShare.plus(D(c.gross_contract_value || 0).times(shareRatio));
-              collectionsShare = collectionsShare.plus(D(c.total_cash_collected || 0).times(shareRatio));
+              contractSalesShare = contractSalesShare.plus(D(c.gross_contract_value || 0).timesRatio(partnerSharePct, 100));
+              collectionsShare = collectionsShare.plus(D(c.total_cash_collected || 0).timesRatio(partnerSharePct, 100));
             }
           });
 
@@ -756,7 +760,7 @@ export class PartnersEngine {
       // Total arrears across all buildings
       let totalArrearsDec = D(0);
       buildingProperties.forEach(prop => {
-        const cap = computeDynamicBuildingCapital(prop, transactions);
+        const cap = computeDynamicBuildingCapital(prop, transactions, propertyCosts);
         const status = cap.partnerStatuses.find(s => s.partnerName === partnerName);
         if (status && status.hasArrears) {
           totalArrearsDec = totalArrearsDec.plus(status.arrearsEgp);
@@ -786,7 +790,7 @@ export class PartnersEngine {
 
       // ROI % calculation: Net profit / Contributed capital * 100
       const roiPercent = totalContributedCapital.greaterThan(0)
-        ? Math.round(totalDistributionsPaid.div(totalContributedCapital).times(100).toNumber())
+        ? Math.round(totalDistributionsPaid.times(100).div(totalContributedCapital).toNumber())
         : 0;
 
       summaries.push({
@@ -831,14 +835,15 @@ export class PartnersEngine {
   static getProjectPartnershipCards(
     properties: Property[] = [],
     contracts: ERPContract[] = [],
-    transactions: ERPPartnerTransaction[] = []
+    transactions: ERPPartnerTransaction[] = [],
+    propertyCosts: ERPPropertyCostItem[] = []
   ): ProjectPartnershipCardData[] {
     const buildingProperties = properties.filter(p => p.type === 'building');
     return buildingProperties.map(prop => {
-      const propContracts = contracts.filter(c => c.property_id === prop.id || c.unit_id === prop.id);
+      const propContracts = contracts.filter(c => (c.property_id === prop.id || c.unit_id === prop.id) && c.status !== 'Rescinded');
       const totalContractSales = propContracts.reduce((sum, c) => sum.plus(c.gross_contract_value || 0), D(0));
       const totalCashCollected = propContracts.reduce((sum, c) => sum.plus(c.total_cash_collected || 0), D(0));
-      const totalIncurredWip = D(prop.price_egp || 0).times(0.45);
+      const totalIncurredWip = recordedPropertyCost(prop, propertyCosts);
       const projectNetProfit = totalContractSales.minus(totalIncurredWip);
 
       const rawSplits = (prop.partner_splits as any[]) || [];
@@ -872,7 +877,7 @@ export class PartnersEngine {
       }> = [];
 
       // Helper to calculate partner sales and collection shares honoring contract-level splits
-      const computePartnerShares = (name: string, ratio: Decimal) => {
+      const computePartnerShares = (name: string, sharePct: number) => {
         let salesShare = D(0);
         let colShare = D(0);
         propContracts.forEach(c => {
@@ -884,29 +889,28 @@ export class PartnersEngine {
               let sAmt = D(cSplit.share_amount || 0);
               let cAmt = D(cSplit.cash_share || 0);
               if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
-                const pct = D(cSplit.share_percentage.replace('%', '')).div(100);
-                sAmt = D(c.gross_contract_value || 0).times(pct);
-                cAmt = D(c.total_cash_collected || 0).times(pct);
+                const pct = cSplit.share_percentage.replace('%', '').trim();
+                sAmt = D(c.gross_contract_value || 0).timesRatio(pct, 100);
+                cAmt = D(c.total_cash_collected || 0).timesRatio(pct, 100);
               }
               salesShare = salesShare.plus(sAmt);
               colShare = colShare.plus(cAmt);
             }
           } else {
-            salesShare = salesShare.plus(D(c.gross_contract_value || 0).times(ratio));
-            colShare = colShare.plus(D(c.total_cash_collected || 0).times(ratio));
+            salesShare = salesShare.plus(D(c.gross_contract_value || 0).timesRatio(sharePct, 100));
+            colShare = colShare.plus(D(c.total_cash_collected || 0).timesRatio(sharePct, 100));
           }
         });
         return { salesShare, colShare };
       };
 
       // Primary developer
-      const primRatio = D(primaryShare).div(100);
       const primPayouts = transactions
         .filter(t => (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
         .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-      const { salesShare: primSales, colShare: primCollections } = computePartnerShares(PRIMARY_DEVELOPER_NAME, primRatio);
-      const primWipCost = totalIncurredWip.times(primRatio);
+      const { salesShare: primSales, colShare: primCollections } = computePartnerShares(PRIMARY_DEVELOPER_NAME, primaryShare);
+      const primWipCost = totalIncurredWip.timesRatio(primaryShare, 100);
       const primProfit = primSales.minus(primWipCost);
       partnersList.push({
         name: PRIMARY_DEVELOPER_NAME,
@@ -924,13 +928,12 @@ export class PartnersEngine {
         const name = (s.partnerName || s.partner_name || '').trim();
         if (name && name !== PRIMARY_DEVELOPER_NAME && !name.includes('زكريا فريد')) {
           const pct = Number(s.sharePct ?? s.share_percentage ?? 0) || 0;
-          const ratio = D(pct).div(100);
           const payouts = transactions
             .filter(t => t.partner_name === name && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
             .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-          const { salesShare: partnerSales, colShare } = computePartnerShares(name, ratio);
-          const wipCost = totalIncurredWip.times(ratio);
+          const { salesShare: partnerSales, colShare } = computePartnerShares(name, pct);
+          const wipCost = totalIncurredWip.timesRatio(pct, 100);
           const profit = partnerSales.minus(wipCost);
           partnersList.push({
             name,
@@ -948,8 +951,8 @@ export class PartnersEngine {
       return {
         propertyId: prop.id,
         propertyTitle: prop.title_ar || prop.title_en || 'مشروع عقاري',
-        location: prop.location || 'الشرقية',
-        totalUnitsCount: prop.total_units_count || 6,
+        location: prop.location || '',
+        totalUnitsCount: prop.total_units_count || prop.building_units?.length || 0,
         soldUnitsCount: propContracts.length,
         totalIncurredWip: totalIncurredWip.toFixed(2),
         totalContractSales: totalContractSales.toFixed(2),
@@ -1006,14 +1009,7 @@ export class PartnersEngine {
 
     const periodObj: ERPAccountingPeriod = typeof params.currentPeriod === 'object' && params.currentPeriod !== null
       ? params.currentPeriod
-      : {
-          period_id: String(params.currentPeriod || `prd-${year}-01`),
-          fiscal_year: year,
-          period_number: parseInt(entryDate.split('-')[1], 10) || (new Date().getMonth() + 1),
-          start_date: `${year}-01-01`,
-          end_date: `${year}-12-31`,
-          status: 'OPEN'
-        };
+      : buildCalendarMonthPeriod(entryDate); // the entry date's own month, never a whole-year stand-in
 
     return GeneralLedgerEngine.validateAndCreateEntry({
       entry_number: `JE-${year}-DIST-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1069,14 +1065,7 @@ export class PartnersEngine {
 
     const periodObj: ERPAccountingPeriod = typeof params.currentPeriod === 'object' && params.currentPeriod !== null
       ? params.currentPeriod
-      : {
-          period_id: String(params.currentPeriod || `prd-${year}-01`),
-          fiscal_year: year,
-          period_number: parseInt(entryDate.split('-')[1], 10) || (new Date().getMonth() + 1),
-          start_date: `${year}-01-01`,
-          end_date: `${year}-12-31`,
-          status: 'OPEN'
-        };
+      : buildCalendarMonthPeriod(entryDate); // the entry date's own month, never a whole-year stand-in
 
     return GeneralLedgerEngine.validateAndCreateEntry({
       entry_number: `JE-${year}-CAP-${Math.floor(1000 + Math.random() * 9000)}`,

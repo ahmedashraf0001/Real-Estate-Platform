@@ -171,7 +171,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
           : (isAr ? 'سارٍ ومنتظم' : 'Active');
 
     const progressPct = grossValue.gt(0) 
-      ? Math.min(100, cashCollected.div(grossValue).times(100).toNumber()).toFixed(1)
+      ? Math.min(100, cashCollected.times(100).div(grossValue).toNumber()).toFixed(1)
       : '0.0';
 
     const handoverDate = contract.handover_date || '—';

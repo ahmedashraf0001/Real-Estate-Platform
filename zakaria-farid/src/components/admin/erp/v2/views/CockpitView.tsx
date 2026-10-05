@@ -76,13 +76,6 @@ interface CockpitViewProps {
   totalWipIncurred: string;
   totalSafePDCs?: string;
   totalInjectedCapital?: string;
-  wipAccounts: {
-    land: string;
-    civil: string;
-    mep: string;
-    finishing: string;
-    financing: string;
-  };
   contracts: ERPContract[];
   pdcRecords: ERPPDCRecord[];
   schedules: ERPInstallmentSchedule[];
@@ -345,7 +338,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       return '+100.0%';
     }
     const diff = current.minus(prior);
-    const pct = diff.dividedBy(prior.abs()).times(100);
+    const pct = diff.times(100).dividedBy(prior.abs());
     const sign = pct.gte(0) ? '+' : '';
     return `${sign}${pct.toFixed(1)}%`;
   }, []);

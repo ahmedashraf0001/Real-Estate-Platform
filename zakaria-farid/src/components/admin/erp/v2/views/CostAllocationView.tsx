@@ -119,8 +119,8 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
         const tA = a.calculated_at ? new Date(a.calculated_at).getTime() : 0;
         return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB);
       }
-      if (sortBy === 'rsv_desc') return D(b.rsv_factor || '0').minus(D(a.rsv_factor || '0')).toNumber();
-      if (sortBy === 'rsv_asc') return D(a.rsv_factor || '0').minus(D(b.rsv_factor || '0')).toNumber();
+      if (sortBy === 'rsv_desc') return Number(b.rsv_factor || 0) - Number(a.rsv_factor || 0);
+      if (sortBy === 'rsv_asc') return Number(a.rsv_factor || 0) - Number(b.rsv_factor || 0);
       if (sortBy === 'wip_desc') return D(b.total_incurred_wip || '0').minus(D(a.total_incurred_wip || '0')).toNumber();
       if (sortBy === 'name_asc') return (a.project_name || '').localeCompare(b.project_name || '', isAr ? 'ar' : 'en');
       return 0;

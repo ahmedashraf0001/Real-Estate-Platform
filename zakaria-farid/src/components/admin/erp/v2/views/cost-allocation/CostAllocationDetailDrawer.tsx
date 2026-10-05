@@ -76,9 +76,10 @@ export const CostAllocationDetailDrawer: React.FC<CostAllocationDetailDrawerProp
 
   if (!allocation) return null;
 
-  const rsvFactor = D(allocation.rsv_factor || '0');
-  const rsvPct = rsvFactor.times(100).toFixed(2);
-  const grossMarginPct = D(1).minus(rsvFactor).times(100).toFixed(2);
+  // Factor stays text: D() would round it to 2 decimals.
+  const rsvFactor = String(allocation.rsv_factor || '0');
+  const rsvPct = D(100).times(rsvFactor).toFixed(2);
+  const grossMarginPct = D(100).minus(D(100).times(rsvFactor)).toFixed(2);
 
   // Simulation calculations
   const simVal = D(simulatedUnitValue || '0');
@@ -172,7 +173,7 @@ export const CostAllocationDetailDrawer: React.FC<CostAllocationDetailDrawerProp
           />
 
           <div className={drawerStyles.progressTrack}>
-            {rsvFactor.gte(1) ? (
+            {Number(rsvFactor) >= 1 ? (
               <div className={drawerStyles.progressFillDanger} />
             ) : (
               <>

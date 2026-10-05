@@ -250,7 +250,7 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
     });
 
     const collectionPct = grossTotal.gt(0)
-      ? Math.round(collectedTotal.div(grossTotal).times(100).toNumber())
+      ? Math.round(collectedTotal.times(100).div(grossTotal).toNumber())
       : 0;
 
     let card1Title = isAr ? 'إجمالي قيمة العقود المباعة' : 'Gross Sold Contracts';

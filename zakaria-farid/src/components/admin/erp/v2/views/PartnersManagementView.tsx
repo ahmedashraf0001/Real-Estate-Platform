@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { usePropertyCosts } from '../../context/ERPWorkstationContext';
 import { Users, Coins, Receipt, Wallet, Building2, Plus } from 'lucide-react';
 import { 
   ERPPartnerProfile, 
@@ -69,6 +70,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   onConfirmCommitment,
   onSaveProperty
 }) => {
+  const propertyCosts = usePropertyCosts();
   // Master Workstation Tab Mode: 1: projects (مشاريع الشراكة), 2: directory (دليل الشركاء), 3: transactions (سجل الحركات)
   const [activeTab, setActiveTab] = useState<'projects' | 'directory' | 'transactions'>('projects');
 
@@ -111,9 +113,10 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       properties,
       contracts,
       partnerTransactions,
-      partnerCalls
+      partnerCalls,
+      propertyCosts
     );
-  }, [partnerProfiles, properties, contracts, partnerTransactions, partnerCalls]);
+  }, [partnerProfiles, properties, contracts, partnerTransactions, partnerCalls, propertyCosts]);
 
   // 4 Discrete KPI Cards derived strictly from canonicalMetrics.ts
   const kpis = useMemo(() => {
@@ -145,31 +148,17 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
     const injections = sortedTx.filter(t => t.type === 'CAPITAL_INJECTION');
     const distributions = sortedTx.filter(t => t.type === 'PROFIT_DISTRIBUTION');
 
-    const capPoints = injections.length >= 2
-      ? injections.slice(-6).map(t => Number(t.amount) || 0)
-      : [1000000, 1500000, 2000000, 2800000, 3500000, Number(kpis.totalCapital) || 4000000];
+    // Real data only: running totals of actual transactions; a flat line when there is no history.
+    const runningTotals = (txs: typeof sortedTx, finalValue: number) => {
+      if (txs.length < 2) return [finalValue, finalValue];
+      let acc = 0;
+      return txs.map(t => (acc += Number(t.amount) || 0)).slice(-6);
+    };
 
-    const distPoints = distributions.length >= 2
-      ? distributions.slice(-6).map(t => Number(t.amount) || 0)
-      : [0, 200000, 450000, 600000, 900000, Number(kpis.totalPayouts) || 1200000];
-
-    const duePoints = [
-      Math.max(0, Number(kpis.totalNetDue) * 0.4),
-      Math.max(0, Number(kpis.totalNetDue) * 0.55),
-      Math.max(0, Number(kpis.totalNetDue) * 0.7),
-      Math.max(0, Number(kpis.totalNetDue) * 0.8),
-      Math.max(0, Number(kpis.totalNetDue) * 0.9),
-      Number(kpis.totalNetDue)
-    ];
-
-    const countPoints = [
-      Math.max(1, kpis.activeCount - 3),
-      Math.max(1, kpis.activeCount - 2),
-      Math.max(1, kpis.activeCount - 2),
-      Math.max(1, kpis.activeCount - 1),
-      kpis.activeCount,
-      kpis.activeCount
-    ];
+    const capPoints = runningTotals(injections, Number(kpis.totalCapital) || 0);
+    const distPoints = runningTotals(distributions, Number(kpis.totalPayouts) || 0);
+    const duePoints = [Number(kpis.totalNetDue) || 0, Number(kpis.totalNetDue) || 0];
+    const countPoints = [kpis.activeCount, kpis.activeCount];
 
     return { capPoints, distPoints, duePoints, countPoints };
   }, [partnerTransactions, kpis]);

@@ -489,7 +489,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     list.sort((a, b) => {
       if (archiveSortBy === 'amount_desc') return D(b.tax_amount || '0').minus(D(a.tax_amount || '0')).toNumber();
       if (archiveSortBy === 'amount_asc') return D(a.tax_amount || '0').minus(D(b.tax_amount || '0')).toNumber();
-      if (archiveSortBy === 'rate_desc') return D(b.tax_rate || '0').minus(D(a.tax_rate || '0')).toNumber();
+      if (archiveSortBy === 'rate_desc') return Number(b.tax_rate || 0) - Number(a.tax_rate || 0);
       if (archiveSortBy === 'unit_asc') {
         const cA = contracts.find(c => c.contract_id === a.contract_id)?.unit_id || '';
         const cB = contracts.find(c => c.contract_id === b.contract_id)?.unit_id || '';
@@ -1089,11 +1089,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               value={archiveKpis.totalTax.formatEGP(isAr)}
               icon={<Landmark size={20} />}
               accentColor="gold"
-              progress={archiveKpis.totalTax.isZero() ? 0 : archiveKpis.remittedTax.div(archiveKpis.totalTax).times(100).toFixed(1)}
+              progress={archiveKpis.totalTax.isZero() ? 0 : archiveKpis.remittedTax.times(100).div(archiveKpis.totalTax).toFixed(1)}
               progressColor="#10b981"
               badge={{ text: `${archiveKpis.totalCount} ${isAr ? 'شقة وعقد' : 'tax records'}`, variant: 'gold' }}
               subtitleLabel={isAr ? 'المسدد فعلياً' : 'Settlement Ratio'}
-              subtitleValue={`${archiveKpis.totalTax.isZero() ? '0' : archiveKpis.remittedTax.div(archiveKpis.totalTax).times(100).toFixed(1)}% (${archiveKpis.remittedTax.formatEGP(isAr)})`}
+              subtitleValue={`${archiveKpis.totalTax.isZero() ? '0' : archiveKpis.remittedTax.times(100).div(archiveKpis.totalTax).toFixed(1)}% (${archiveKpis.remittedTax.formatEGP(isAr)})`}
             />
 
             <div className={styles.telemetryStack}>
@@ -1376,7 +1376,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 padding: '0.12rem 0.4rem',
                                 borderRadius: '4px'
                               }}>
-                                {D(t.tax_rate).times(100).toFixed(1)}%
+                                {D(100).times(t.tax_rate || '0').toFixed(1)}%
                               </span>
                             </div>
                           </td>
@@ -1574,7 +1574,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         {isAr ? 'النسبة:' : 'Rate:'}
                       </span>
                       <strong style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                        {D(t.tax_rate).times(100).toFixed(1)}%
+                        {D(100).times(t.tax_rate || '0').toFixed(1)}%
                       </strong>
                     </div>
                   </div>

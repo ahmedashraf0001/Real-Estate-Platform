@@ -76,7 +76,7 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
   const gross = D(contract.gross_contract_value || 0);
   const collected = D(contract.total_cash_collected || 0);
   const remaining = Decimal.max(0, gross.minus(collected));
-  const progress = gross.gt(0) ? Math.min(100, collected.div(gross).times(100).toNumber()) : 0;
+  const progress = gross.gt(0) ? Math.min(100, collected.times(100).div(gross).toNumber()) : 0;
   const installments = contractSchedules.filter(s => s.tranche_number > 0);
   const paidSchedules = contractSchedules.filter(s => s.status === 'Paid');
   const pending = contractSchedules.find(s => s.status === 'Defaulted') || contractSchedules.find(s => s.status === 'Pending' || s.status === 'Partially Paid');

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { usePropertyCosts } from '../../../context/ERPWorkstationContext';
 import { 
   Building2, 
   Coins, 
@@ -62,6 +63,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   onOpenCommitmentModal,
   onSaveProperty,
 }) => {
+  const propertyCosts = usePropertyCosts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilterId, setSelectedFilterId] = useState<'ALL' | string>('ALL');
 
@@ -91,7 +93,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   const buildingRowsData = useMemo(() => {
     return filteredBuildings.map(b => {
       const bBalance = checkBuildingEquityBalance(b);
-      const capInfo = computeDynamicBuildingCapital(b, transactions);
+      const capInfo = computeDynamicBuildingCapital(b, transactions, propertyCosts);
 
       // Milestone commitments
       const bCommitments = (commitments || []).filter(c => c.property_id === b.id);
@@ -122,7 +124,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
 
       // Funding status: consistently computed against requiredCapitalEgp
       const fundingRatio = requiredCapitalEgp.gt(0)
-        ? Number(actualPaidEgp.div(requiredCapitalEgp).times(100).toFixed(1))
+        ? Number(actualPaidEgp.times(100).div(requiredCapitalEgp).toFixed(1))
         : capInfo.fundingRatioPct;
 
       return {
@@ -139,7 +141,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         fundingRatio
       };
     });
-  }, [filteredBuildings, transactions, commitments, contracts]);
+  }, [filteredBuildings, transactions, commitments, contracts, propertyCosts]);
 
   // Overall totals across displayed rows
   const totals = useMemo(() => {

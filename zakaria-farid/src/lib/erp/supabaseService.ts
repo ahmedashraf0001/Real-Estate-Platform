@@ -39,7 +39,7 @@ import {
   ERPConstructionPurchaseOrder
 } from './types';
 import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
-import { D, generateUUID, isUUID, ensureUUID } from './math';
+import { D, generateUUID, isUUID, ensureUUID, ratio } from './math';
 import { CANONICAL_COA } from './ledger';
 import { prepareConstructionSettlement } from './constructionSettlement';
 
@@ -703,7 +703,7 @@ export class ERPSupabaseService {
         try {
           const manualTaxAmt = D(contract.tax_amount).toFixed(2);
           const basePrice = contract.base_price ? D(contract.base_price).toFixed(2) : contract.gross_contract_value;
-          const taxRate = D(basePrice).gt(0) ? D(manualTaxAmt).div(basePrice).toFixed(4) : '0.0000';
+          const taxRate = D(basePrice).gt(0) ? ratio(manualTaxAmt, basePrice, 6) : '0.000000';
 
           const taxRow = {
             tax_id: generateUUID(),
@@ -2185,8 +2185,8 @@ export class ERPSupabaseService {
     const baseAmt = D(payload.taxable_base || 0).toFixed(2);
     const taxAmt = D(payload.tax_amount || 0).toFixed(2);
     const rateVal = payload.tax_rate !== undefined && String(payload.tax_rate).trim() !== ''
-      ? D(payload.tax_rate).div(100).toFixed(4)
-      : (D(baseAmt).gt(0) ? D(taxAmt).div(baseAmt).toFixed(4) : '0.0000');
+      ? ratio(payload.tax_rate, 100, 6) // 2.5 -> '0.025000' (D(2.5).div(100) gave 0.03)
+      : (D(baseAmt).gt(0) ? ratio(taxAmt, baseAmt, 6) : '0.000000');
 
     const taxRow: ERPTaxRecord = {
       tax_id: taxId,

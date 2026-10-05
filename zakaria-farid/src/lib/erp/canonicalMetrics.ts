@@ -447,8 +447,8 @@ export interface HandoverCOGSResult {
   cogsAmount: Decimal;
   /** Whether an approved RSV factor was successfully found and applied */
   isAllocated: boolean;
-  /** The RSV factor applied (0 if unallocated) */
-  rsvFactor: Decimal;
+  /** The RSV factor applied, as exact text ('0' if unallocated) */
+  rsvFactor: string;
   /** Formatted string with 2 decimal places e.g. "2100000.00", or "" if unallocated */
   cogsFormatted: string;
 }
@@ -488,8 +488,18 @@ export function getHandoverCOGS(
   rsvFactorParam?: string | number | Decimal | null
 ): HandoverCOGSResult {
   let contractValue: Decimal;
-  let resolvedFactor: Decimal = D(0);
+  // Factor kept as text: a Decimal would round it to 2 decimals (0.4537 -> 0.45).
+  let resolvedFactor = '0';
   let isAllocated = false;
+
+  const acceptFactor = (raw: string | number | Decimal | null | undefined) => {
+    if (raw === undefined || raw === null || raw === '') return;
+    const text = raw instanceof Decimal ? raw.toString() : String(raw).trim();
+    if (Number(text) > 0) {
+      resolvedFactor = text;
+      isAllocated = true;
+    }
+  };
 
   if (
     typeof paramsOrContractValue === 'object' &&
@@ -501,56 +511,48 @@ export function getHandoverCOGS(
     contractValue = D(p.contractValue || 0);
 
     if (p.rsvFactor !== undefined && p.rsvFactor !== null && p.rsvFactor !== '') {
-      const f = D(p.rsvFactor);
-      if (f.gt(0)) {
-        resolvedFactor = f;
-        isAllocated = true;
-      }
+      acceptFactor(p.rsvFactor);
     } else if (p.costAllocations && Array.isArray(p.costAllocations) && p.costAllocations.length > 0) {
       const prop = p.property;
-      const targetProjName = (p.projectName || '').toLowerCase();
+      const targetProjName = (p.projectName || '').trim().toLowerCase();
 
       const matchingAlloc = p.costAllocations.find((ca) => {
         if (!ca || !ca.rsv_factor) return false;
-
-        // Match by explicit project name
-        if (targetProjName && ca.project_name && ca.project_name.toLowerCase() === targetProjName) {
-          return true;
-        }
-
-        // Match by property titles
-        if (prop && ca.project_name) {
-          const caName = ca.project_name.toLowerCase();
-          const arTitle = (prop.title_ar || '').toLowerCase();
-          const enTitle = (prop.title_en || '').toLowerCase();
-          if (arTitle.includes(caName) || enTitle.includes(caName) || caName.includes(arTitle) || caName.includes(enTitle)) {
-            return true;
-          }
-        }
 
         // Match by property ID if present on allocation
         if (prop && (ca as any).property_id && (ca as any).property_id === prop.id) {
           return true;
         }
 
+        const caName = (ca.project_name || '').trim().toLowerCase();
+        if (!caName) return false;
+
+        // Match by explicit project name
+        if (targetProjName && caName === targetProjName) {
+          return true;
+        }
+
+        // Match by property titles; empty titles never match (''.includes is always true)
+        if (prop) {
+          const titles = [prop.title_ar, prop.title_en]
+            .map(t => (t || '').trim().toLowerCase())
+            .filter(t => t.length > 0);
+          if (titles.some(t => t.includes(caName) || caName.includes(t))) {
+            return true;
+          }
+        }
+
         return false;
       });
 
-      if (matchingAlloc && matchingAlloc.rsv_factor && parseFloat(matchingAlloc.rsv_factor) > 0) {
-        resolvedFactor = D(matchingAlloc.rsv_factor);
-        isAllocated = true;
+      if (matchingAlloc) {
+        acceptFactor(matchingAlloc.rsv_factor);
       }
     }
   } else {
     // Positional invocation (contractValue, rsvFactor)
     contractValue = D(paramsOrContractValue || 0);
-    if (rsvFactorParam !== undefined && rsvFactorParam !== null && rsvFactorParam !== '') {
-      const f = D(rsvFactorParam);
-      if (f.gt(0)) {
-        resolvedFactor = f;
-        isAllocated = true;
-      }
-    }
+    acceptFactor(rsvFactorParam);
   }
 
   if (!isAllocated || contractValue.isZero() || contractValue.isNegative()) {

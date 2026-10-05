@@ -11,10 +11,27 @@ import {
   executeFullSubstitution
 } from '../partnersEngine';
 import { InvariantsValidator } from '../invariants';
-import { ERPPartnerProfile, ERPPartnerTransaction, ERPContract } from '../types';
+import { ERPPartnerProfile, ERPPartnerTransaction, ERPContract, ERPPropertyCostItem } from '../types';
 import { Property } from '@/lib/supabase/types';
 import { D } from '../math';
 import { PRIMARY_DEVELOPER_NAME } from '../partnersDirectory';
+
+/** One recorded cost item: partner capital owed is a share of recorded costs (user-confirmed 2026-10-05). */
+const recordedCosts = (propertyId: string, total: string): ERPPropertyCostItem[] => [{
+  item_id: `cost-${propertyId}`,
+  property_id: propertyId,
+  category: 'civil_structure',
+  phase: 'structural_skeleton',
+  item_name_ar: 'تكلفة مسجلة',
+  item_name_en: 'Recorded cost',
+  quantity: 1,
+  unit: 'lump',
+  unit_cost_egp: total,
+  total_cost_egp: total,
+  logged_date: '2026-01-01',
+  logged_by: 'test',
+  status: 'verified',
+} as ERPPropertyCostItem];
 
 describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)', () => {
 
@@ -130,7 +147,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       ]
     } as any;
 
-    it('accurately computes implied total capital from founder injection without float drift', () => {
+    it('computes required capital as share of recorded costs without float drift', () => {
       const transactions: ERPPartnerTransaction[] = [
         {
           id: 'tx-1',
@@ -147,7 +164,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions);
+      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '25000000.00'));
 
       // 50% founder share with 12.5M injected => implied total = 25,000,000.00
       assert.strictEqual(capitalInfo.founderInjectedEgp, '12500000.00');
@@ -199,7 +216,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions);
+      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '20000000.00'));
       assert.strictEqual(capitalInfo.impliedTotalCapitalEgp, '20000000.00');
 
       const ahmed = capitalInfo.partnerStatuses.find(p => p.partnerName === 'م. أحمد الشريف');
@@ -240,7 +257,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions);
+      const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '20000000.00'));
       const hany = capitalInfo.partnerStatuses.find(p => p.partnerName === 'د. هاني المنياوي');
       assert.ok(hany);
       assert.strictEqual(hany.requiredContributionEgp, '4000000.00');
@@ -249,7 +266,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(hany.hasArrears, false);
     });
 
-    it('safely handles zero founder injection without division-by-zero errors', () => {
+    it('safely handles a building with no recorded costs without division-by-zero errors', () => {
       const capitalInfo = computeDynamicBuildingCapital(testBuilding, []);
       assert.strictEqual(capitalInfo.founderInjectedEgp, '0.00');
       assert.strictEqual(capitalInfo.impliedTotalCapitalEgp, '0.00');
@@ -552,7 +569,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      // Founder injected 12,000,000 (their 60% share).
+      // Recorded costs 20,000,000.
       // Tarek required 40% = 8,000,000. But Tarek injected only 5,000,000 => arrears = 3,000,000.
       const mockTxs: ERPPartnerTransaction[] = [
         {
@@ -587,7 +604,9 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         mockProfiles,
         [mockBuilding],
         [],
-        mockTxs
+        mockTxs,
+        [],
+        recordedCosts('bldg-attr-1', '20000000.00')
       );
 
       const tarek = summaries.find(s => s.partnerName === 'د. طارق محمود');
@@ -909,7 +928,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
         }
       ];
 
-      const capInfo = computeDynamicBuildingCapital(testBldg, txs);
+      const capInfo = computeDynamicBuildingCapital(testBldg, txs, recordedCosts('prop-arrears-targeted', '30000000.00'));
       const inArrears: Array<{ partnerName: string; propertyId: string; buildingTitle: string; arrearsEgp: string }> = [];
 
       capInfo.partnerStatuses.forEach(p => {

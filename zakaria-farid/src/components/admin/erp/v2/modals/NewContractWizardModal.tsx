@@ -331,11 +331,11 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     const count = parseInt(numInstallments, 10) || 0;
     if (count <= 0) return [];
 
-    const dpPct = totalNominalValue > 0 ? (modalDpAmount / totalNominalValue) : 0;
+    if (modalDpAmount > totalNominalValue) return [];
     const generated = ContractsEngine.generateSchedule(
       'preview',
       D(totalNominalValue),
-      dpPct,
+      { amount: String(modalDpAmount || 0) },
       count,
       firstPaymentDate,
       installmentFrequency,

@@ -18,8 +18,8 @@ import {
   formatFaridWhatsAppLeadMessage 
 } from '@/lib/services/whatsappNotifier';
 import { NewContractWizardModal, NewContractWizardPayload } from '@/components/admin/erp/v2/modals/NewContractWizardModal';
-import { ContractsEngine } from '@/lib/erp/contracts';
-import { GeneralLedgerEngine } from '@/lib/erp/ledger';
+import { ContractsEngine, generateContractNumber } from '@/lib/erp/contracts';
+import { buildCalendarMonthPeriod } from '@/lib/erp/ledger';
 import { ERPSupabaseService } from '@/lib/erp/supabaseService';
 import { createClient } from '@/lib/supabase/client';
 import { generateUUID, D } from '@/lib/erp/math';
@@ -137,14 +137,8 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
 
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
 
-  const defaultActivePeriod: ERPAccountingPeriod = useMemo(() => ({
-    period_id: 'PRD-2026-FY',
-    fiscal_year: 2026,
-    period_number: 1,
-    start_date: '2026-01-01',
-    end_date: '2026-12-31',
-    status: 'OPEN'
-  }), []);
+  // The wizard needs a period only for display; contracts post no journal entry at creation.
+  const defaultActivePeriod: ERPAccountingPeriod = useMemo(() => buildCalendarMonthPeriod(), []);
 
   const handleContractCreatedFromLead = async (payload: NewContractWizardPayload) => {
     setIsSaving(true);
@@ -152,54 +146,34 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
       const supabase = createClient();
       const contractId = generateUUID();
       const contractValue = D(payload.totalNominalValue || payload.basePrice).toFixed(2);
-      const contractNumber = `ZF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      const dpDec = D(payload.downPaymentAmount || 0);
-      let effectiveDpPct = D(contractValue).gt(0) ? dpDec.div(D(contractValue)).toFixed(4) : '0.15';
+      const year = new Date().getFullYear();
+      const { data: existingRows } = await supabase
+        .from('erp_contracts')
+        .select('contract_number')
+        .like('contract_number', `ZF-${year}-%`);
+      const contractNumber = generateContractNumber(
+        (existingRows || []).map((r: { contract_number: string }) => r.contract_number),
+        year
+      );
+
+      // Exact down payment amount; it stays pending until actually collected (user-confirmed: no auto down payment).
+      let downPayment: string | { amount: string } = { amount: D(payload.downPaymentAmount || 0).toFixed(2) };
       let effectiveNumInstallments = payload.numInstallments || 0;
-      let intervalMonths: number | string = payload.installmentFrequency || 'QUARTERLY';
+      const intervalMonths: number | string = payload.installmentFrequency || 'QUARTERLY';
       if (payload.paymentPlanType === 'FULL_CASH') {
-        effectiveDpPct = '1.00';
+        downPayment = '1.00';
         effectiveNumInstallments = 0;
       }
 
       const schedules = ContractsEngine.generateSchedule(
         contractId,
         contractValue,
-        effectiveDpPct,
+        downPayment,
         effectiveNumInstallments,
         payload.firstPaymentDate,
         intervalMonths,
         payload.firstInstallmentDueDate
       );
-      const dpSchedule = schedules[0];
-      const dpAmount = dpSchedule ? dpSchedule.nominal_value : '0.00';
-
-      const dpEntry = (dpSchedule && D(dpAmount).gt(0))
-        ? GeneralLedgerEngine.validateAndCreateEntry({
-            entry_number: `JE-NEW-${contractNumber}`,
-            entry_date: payload.firstPaymentDate,
-            period: defaultActivePeriod,
-            description: `تحصيل دفعة الحجز والمقدم النقدي للعقد ${contractNumber} (${payload.buyerName})`,
-            source_module: 'SALES',
-            source_entity_id: contractId,
-            created_by: 'CFO_FARID',
-            lines: [
-              {
-                account_code: payload.destinationTreasury === 'BANK_102000' || payload.destinationTreasury === '102000' ? '102000' : '101000',
-                debit_amount: D(dpAmount).toFixed(2),
-                credit_amount: '0.00',
-                memo: isAr ? 'استلام دفعة الحجز والمقدم النقدي بالخزينة' : 'Down payment receipt in treasury'
-              },
-              {
-                account_code: '203000',
-                debit_amount: '0.00',
-                credit_amount: D(dpAmount).toFixed(2),
-                memo: isAr ? 'إثبات دفعة الحجز كإيراد تعاقدي مؤجل حتى التسليم' : 'Credit to deferred revenue'
-              }
-            ]
-          })
-        : undefined;
 
       const contractData = {
         contract_id: contractId,
@@ -212,14 +186,14 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
         buyer_phone: payload.buyerPhone || '',
         buyer_email: payload.buyerEmail || '',
         gross_contract_value: contractValue,
-        total_cash_collected: dpAmount,
+        total_cash_collected: '0.00',
         status: 'Active' as const,
         handover_status: 'Pending' as const,
         partner_splits: payload.partnerSplits,
         notes: `عقد بيع تم تحويله آلياً من عميل مهتم #${convertingLead?.id || ''}`
       };
 
-      await ERPSupabaseService.persistNewContract(supabase, contractData as any, schedules, dpEntry);
+      await ERPSupabaseService.persistNewContract(supabase, contractData as any, schedules);
 
       if (convertingLead) {
         await updateLeadStage(convertingLead.id, 'closed_won');
@@ -229,7 +203,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
       toast.success(
         isAr ? `🎉 تم تحويل العميل إلى عقد بيع بنجاح! رقم العقد: ${contractNumber}` : `🎉 Lead converted to Contract ${contractNumber}!`,
         {
-          description: isAr ? 'تم اعتماد العقد وترحيل دفعة الحجز وتحديث مرحلة العميل إلى تم التعاقد ✨' : 'Contract executed and lead moved to Closed Won ✨'
+          description: isAr ? 'تم اعتماد العقد وجدولة الأقساط. سجّل دفعة الحجز عند استلامها فعلياً.' : 'Contract created and schedule generated. Record the down payment when it is actually received.'
         }
       );
       setConvertingLead(null);

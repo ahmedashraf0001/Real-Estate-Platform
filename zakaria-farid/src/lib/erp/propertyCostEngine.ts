@@ -979,12 +979,12 @@ export function calculateBuiltPropertySellingPrice({
   const sellingPrice = cost.plus(profit);
   const sellingPricePerM2 = sellingPrice.dividedBy(area);
 
-  const profitMarginOnCost = cost.isZero() ? D(0) : profit.dividedBy(cost).times(100);
-  const grossMargin = sellingPrice.isZero() ? D(0) : profit.dividedBy(sellingPrice).times(100);
+  const profitMarginOnCost = cost.isZero() ? D(0) : profit.times(100).dividedBy(cost);
+  const grossMargin = sellingPrice.isZero() ? D(0) : profit.times(100).dividedBy(sellingPrice);
   
   const marketVariance = marketM2.isZero() 
     ? D(0) 
-    : sellingPricePerM2.minus(marketM2).dividedBy(marketM2).times(100);
+    : sellingPricePerM2.minus(marketM2).times(100).dividedBy(marketM2);
 
   return {
     totalLoggedCost: cost.toFixed(2),

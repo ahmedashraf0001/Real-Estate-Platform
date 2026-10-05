@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { usePropertyCosts } from '../../context/ERPWorkstationContext';
 import { 
   ArrowRightLeft, 
   UserMinus, 
@@ -65,6 +66,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
   initialSellerPartner,
   initialMode
 }) => {
+  const propertyCosts = usePropertyCosts();
   const [mode, setMode] = useState<ReallocationMode>(initialMode || 'full_buyout');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(property.id);
   const [fromPartner, setFromPartner] = useState<string>('');
@@ -120,8 +122,8 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
 
   // Dynamic capital status for arrears lookup
   const capitalInfo: DynamicBuildingCapitalInfo = useMemo(() => {
-    return computeDynamicBuildingCapital(activeProperty, partnerTransactions);
-  }, [activeProperty, partnerTransactions]);
+    return computeDynamicBuildingCapital(activeProperty, partnerTransactions, propertyCosts);
+  }, [activeProperty, partnerTransactions, propertyCosts]);
 
   // Filter eligible sellers
   const eligibleSellers = useMemo(() => {

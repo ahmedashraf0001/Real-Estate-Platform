@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { usePropertyCosts } from '../../../context/ERPWorkstationContext';
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -51,6 +52,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
   onOpenReallocation,
   onExportExcel
 }) => {
+  const propertyCosts = usePropertyCosts();
   const buildingProperties = useMemo(() => {
     return properties.filter(p => p.type === 'building' || (p as any).is_building);
   }, [properties]);
@@ -70,7 +72,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
         });
       }
 
-      const capInfo = computeDynamicBuildingCapital(b, transactions);
+      const capInfo = computeDynamicBuildingCapital(b, transactions, propertyCosts);
       capInfo.partnerStatuses.forEach(p => {
         if (p.hasArrears && D(p.arrearsEgp).gt(100)) {
           inArrears.push({
@@ -84,7 +86,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
     });
 
     return { imbalancedBuildings: imbalanced, partnersWithArrears: inArrears };
-  }, [buildingProperties, transactions]);
+  }, [buildingProperties, transactions, propertyCosts]);
 
   const hasUrgentAlerts = imbalancedBuildings.length > 0 || partnersWithArrears.length > 0;
 

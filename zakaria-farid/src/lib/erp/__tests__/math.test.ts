@@ -9,6 +9,7 @@ import {
   generateUUID,
   isUUID,
   ensureUUID,
+  ratio,
 } from '../math';
 
 describe('ERP Fixed-Point Math Engine & Decimal Utility Suite', () => {
@@ -163,6 +164,16 @@ describe('ERP Fixed-Point Math Engine & Decimal Utility Suite', () => {
       assert.strictEqual(D(100).timesRatio('7.5', 100).toFixed(2), '7.50');
       assert.strictEqual(D(100).timesRatio(D(1), D(3)).toFixed(2), '33.33');
       assert.throws(() => D(100).timesRatio(1, 0), /Division by zero/);
+    });
+
+    it('ratio returns an exact factor string', () => {
+      assert.strictEqual(ratio(4537, 10000), '0.453700');
+      assert.strictEqual(ratio(1, 3), '0.333333');
+      assert.strictEqual(ratio(2, 3, 4), '0.6667');
+      assert.strictEqual(ratio(D(125000), D(1000000), 8), '0.12500000');
+      assert.strictEqual(ratio(-1, 8), '-0.125000');
+      assert.strictEqual(ratio(5, 2, 0), '3');
+      assert.throws(() => ratio(1, 0), /Division by zero/);
     });
 
     it('div by fractional number/string uses full precision', () => {

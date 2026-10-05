@@ -296,7 +296,7 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
       const totalSales = '100000000.00';
       const alloc = RSVEngine.calculateAllocation('برج النخيل الفاخر', totalWip, totalSales);
 
-      assert.strictEqual(alloc.rsv_factor, '0.4500');
+      assert.strictEqual(alloc.rsv_factor, '0.450000');
 
       // Unit with 8,000,000 contract value gets 8M * 0.45 = 3.6M COGS
       const unitCogs = RSVEngine.computeUnitCOGS('8000000.00', alloc.rsv_factor);
