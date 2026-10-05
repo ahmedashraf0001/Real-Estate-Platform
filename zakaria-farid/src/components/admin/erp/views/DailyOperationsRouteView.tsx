@@ -53,7 +53,6 @@ export function DailyOperationsRouteView() {
       onOpenCashReceipt={() => erp.openCollect({})}
       onOpenCashTransfer={() => erp.setShowCashTransferModal(true)}
       onInspectContract={erp.handleInspectContract}
-      onInspectCheque={erp.handleInspectCheque}
       onInspectTransaction={(payload) => erp.setInspectorPayload(payload)}
       onOpenContractForProperty={erp.handleOpenContractForProperty}
       onOpenAuditForProperty={erp.handleOpenAuditForProperty}
@@ -66,7 +65,6 @@ export function DailyOperationsRouteView() {
       onAddCostAdjustment={erp.handleAddCostAdjustment}
       onRecordPayablePayment={erp.handleRecordCostPayablePayment}
       onSaveExpenseEntry={erp.handleSaveProjectExpense}
-      onOpenPartnerOperations={() => erp.setShowPartnerOperationsModal(true)}
       onOpenPartnerPayout={() => erp.setShowPartnerPayoutModal(true)}
       onOpenPartnerInjection={() => erp.setShowPartnerInjectionModal(true)}
       onExportExcel={erp.handleExportExcel}

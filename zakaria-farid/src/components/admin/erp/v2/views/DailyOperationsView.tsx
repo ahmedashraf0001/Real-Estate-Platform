@@ -108,7 +108,6 @@ export interface DailyOperationsViewProps {
   onOpenNewCheque?: () => void;
   onCollectItem: (item: ERPPDCRecord) => void;
   onInspectContract: (contract: ERPContract) => void;
-  onInspectCheque?: (cheque: ERPPDCRecord) => void;
   onInspectTransaction?: (payload: any) => void;
   onOpenCashReceipt?: () => void;
   onOpenContractForProperty?: (property: Property, unit?: BuildingUnitItem) => void;
@@ -122,7 +121,6 @@ export interface DailyOperationsViewProps {
   onAddCostAdjustment?: (updatedItem: ERPPropertyCostItem, adjustment: ERPPropertyCostAdjustment) => Promise<void>;
   onRecordPayablePayment?: (updatedItem: ERPPropertyCostItem, installmentId: string, amountPaid: string, paymentMethod: any) => Promise<void>;
   onSaveExpenseEntry: (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => Promise<void>;
-  onOpenPartnerOperations?: () => void;
   onOpenPartnerPayout?: () => void;
   onOpenPartnerInjection?: () => void;
   onOpenCashTransfer?: () => void;
@@ -152,7 +150,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   onAddCostAdjustment,
   onRecordPayablePayment,
   onSaveExpenseEntry,
-  onOpenPartnerOperations,
   onOpenPartnerPayout,
   onOpenPartnerInjection,
   onOpenCashTransfer,
@@ -362,7 +359,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       }
       case 'partner_injection': {
         if (onOpenPartnerInjection) onOpenPartnerInjection();
-        else if (onOpenPartnerOperations) onOpenPartnerOperations();
         break;
       }
       case 'pay_contractor': {
@@ -382,7 +378,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       }
       case 'partner_payout': {
         if (onOpenPartnerPayout) onOpenPartnerPayout();
-        else if (onOpenPartnerOperations) onOpenPartnerOperations();
         break;
       }
       case 'transfer': {

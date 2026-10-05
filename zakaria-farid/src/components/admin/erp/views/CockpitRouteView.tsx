@@ -27,11 +27,6 @@ export function CockpitRouteView() {
       const contract = erp.data.contracts.find(c => c.contract_id === inspect || c.contract_number === inspect);
       if (contract) {
         erp.handleInspectContract(contract);
-      } else {
-        const cheque = (erp.data.pdcRecords || []).filter(p => p.cheque_id === inspect || p.cheque_number === inspect)[0];
-        if (cheque) {
-          erp.handleInspectCheque(cheque);
-        }
       }
     }
 
@@ -65,7 +60,6 @@ export function CockpitRouteView() {
       partnerCalls={erp.data.partnerCalls}
       onOpenProjectExpense={() => erp.setShowProjectExpenseModal(true)}
       onInspectContract={erp.handleInspectContract}
-      onInspectCheque={erp.handleInspectCheque}
       onCollectItem={erp.setCollectingPDCItem}
       onOpenCollect={() => erp.openCollect({})}
       onOpenNewContract={erp.handleOpenGenericNewContract}

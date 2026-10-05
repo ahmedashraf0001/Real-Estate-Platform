@@ -8,7 +8,6 @@ import path from 'node:path';
 import { 
   ERPContract, 
   ERPInstallmentSchedule, 
-  ERPPDCRecord, 
   ERPTaxRecord, 
   ERPCostAllocation, 
   ERPRescissionRecord, 
@@ -95,16 +94,6 @@ describe('FIN-OS Operations Inspection Modal Redesign Suite (§4-Tier Modal Arch
     }
   ];
 
-  const sampleCheque: ERPPDCRecord = {
-    cheque_id: 'chq-9901',
-    contract_id: 'cnt-zkf-2026-101',
-    cheque_number: 'CHQ-882910',
-    bank_name: 'CIB Egypt',
-    drawer_name: 'Mahmoud El-Sayed',
-    nominal_value: '1000000.00',
-    due_date: '2026-07-15',
-    status: 'In Safe'
-  };
 
   const sampleTax: ERPTaxRecord = {
     tax_id: 'tax-rec-401',
@@ -314,45 +303,6 @@ describe('FIN-OS Operations Inspection Modal Redesign Suite (§4-Tier Modal Arch
       assert.ok(html.includes('إضافة ملحق'), 'Supplement action button present');
       assert.ok(html.includes('طباعة كشف الحساب'), 'Print action button present');
       assert.ok(html.includes('إغلاق الفاحص'), 'Close button present');
-    });
-  });
-
-  describe('3. Cheque & PDC Instrument Inspection Blueprint', () => {
-    it('renders 4-tier cheque layout with clearing status and bank settlement', () => {
-      const html = renderToStaticMarkup(
-        React.createElement(ZFInspectorDrawer, {
-          payload: {
-            type: 'cheque',
-            cheque: sampleCheque,
-            linkedContract: sampleContract
-          },
-          onClose: () => {},
-          onUpdateChequeStatus: () => {},
-          onInspectContract: () => {},
-          isAr: true
-        })
-      );
-
-      // Identity Ribbon
-      assert.ok(html.includes('#CHQ-882910'), 'Cheque reference number present');
-      assert.ok(html.includes('CIB Egypt'), 'Drawee bank present');
-      assert.ok(html.includes('في عهدة الخزينة'), 'Cheque status pill present');
-
-      // 4-Metric Strip
-      assert.ok(html.includes('القيمة الاسمية للشيك'), 'Nominal value label present');
-      assert.ok(html.includes('1,000,000.00 ج.م'), 'Cheque value formatted');
-      assert.ok(html.includes('تاريخ الاستحقاق'), 'Maturity label present');
-      assert.ok(html.includes('2026-07-15'), 'Maturity date present');
-
-      // Left Column Clearing Workflow
-      assert.ok(html.includes('مسار التحصيل والقيد المحاسبي'), 'Workflow title present');
-      assert.ok(html.includes('101000 الخزينة الموحدة'), 'Debit 101000 safe account present');
-      assert.ok(html.includes('105000 أوراق القبض'), 'Credit 105000 notes receivable present');
-
-      // Actions Footer
-      assert.ok(html.includes('إيداع برسم التحصيل البنكي'), 'Deposit at bank action present');
-      assert.ok(html.includes('تسجيل تحصيل فوري بالخزينة'), 'Instant safe settlement action present');
-      assert.ok(html.includes('فتح ملف العقد'), 'Linked contract jump button present');
     });
   });
 

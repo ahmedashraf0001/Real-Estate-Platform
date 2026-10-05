@@ -208,7 +208,6 @@ export interface ERPWorkstationContextValue {
   inspectorPayload: InspectorPayload | null;
   setInspectorPayload: React.Dispatch<React.SetStateAction<InspectorPayload | null>>;
   handleInspectContract: (contract: ERPContract) => void;
-  handleInspectCheque: (cheque: ERPPDCRecord) => void;
   handleInspectTax: (tax: ERPTaxRecord) => void;
   handleInspectRSV: (allocation: ERPCostAllocation) => void;
   handleInspectRescission: (rescission: ERPRescissionRecord) => void;
@@ -356,8 +355,6 @@ export interface ERPWorkstationContextValue {
   setInjectionInitialCommitmentId: (id: string | undefined) => void;
   showNewPartnerModal: boolean;
   setShowNewPartnerModal: (val: boolean) => void;
-  showPartnerOperationsModal: boolean;
-  setShowPartnerOperationsModal: (val: boolean) => void;
   dossierTargetPartner: PartnerFinancialSummary | null;
   setDossierTargetPartner: (partner: PartnerFinancialSummary | null) => void;
 
@@ -1097,22 +1094,6 @@ export function ERPWorkstationProvider({
     });
   }, [data.schedules, data.amendments, data.journalEntries]);
 
-  const handleInspectCheque = useCallback((cheque: ERPPDCRecord) => {
-    const linkedContract = data.contracts.find(c => c.contract_id === cheque.contract_id);
-    const linkedSchedule = data.schedules.find(s => s.schedule_id === cheque.schedule_id);
-    const clearingJournalEntry = data.journalEntries.find(j => 
-      j.source_entity_id === cheque.cheque_id || 
-      (cheque.cheque_number && j.description && j.description.includes(cheque.cheque_number))
-    );
-    setInspectorPayload({
-      type: 'cheque',
-      cheque,
-      linkedContract,
-      linkedSchedule,
-      clearingJournalEntry
-    });
-  }, [data.contracts, data.schedules, data.journalEntries]);
-
   const handleInspectTax = useCallback((tax: ERPTaxRecord) => {
     const linkedContract = data.contracts.find(c => c.contract_id === tax.contract_id);
     const remittanceJournalEntry = data.journalEntries.find(j => 
@@ -1319,7 +1300,6 @@ export function ERPWorkstationProvider({
   const [injectionInitialPropertyId, setInjectionInitialPropertyId] = useState<string | undefined>(undefined);
   const [injectionInitialCommitmentId, setInjectionInitialCommitmentId] = useState<string | undefined>(undefined);
   const [showNewPartnerModal, setShowNewPartnerModal] = useState<boolean>(false);
-  const [showPartnerOperationsModal, setShowPartnerOperationsModal] = useState<boolean>(false);
   const [dossierTargetPartner, setDossierTargetPartner] = useState<PartnerFinancialSummary | null>(null);
 
   // Financial Telemetry Derivations
@@ -2705,25 +2685,7 @@ export function ERPWorkstationProvider({
         }));
       }
 
-      const updatedDataset = await loadLiveData(true);
-      if (updatedDataset && inspectorPayload?.type === 'cheque' && inspectorPayload.cheque.cheque_id === chequeId) {
-        const updatedCheque = updatedDataset.pdcRecords.find(p => p.cheque_id === chequeId);
-        if (updatedCheque) {
-          const linkedContract = updatedDataset.contracts.find(c => c.contract_id === updatedCheque.contract_id);
-          const linkedSchedule = updatedDataset.schedules.find(s => s.schedule_id === updatedCheque.schedule_id);
-          const clearingJournalEntry = updatedDataset.journalEntries.find(j => 
-            j.source_entity_id === updatedCheque.cheque_id || 
-            (updatedCheque.cheque_number && j.description && j.description.includes(updatedCheque.cheque_number))
-          );
-          setInspectorPayload({
-            type: 'cheque',
-            cheque: updatedCheque,
-            linkedContract,
-            linkedSchedule,
-            clearingJournalEntry
-          });
-        }
-      }
+      await loadLiveData(true);
 
       const statusLabelsAr: Record<string, string> = {
         'Cleared': 'تم تحصيل القسط وتوريد قيمته بنجاح',
@@ -2758,7 +2720,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.pdcRecords, data.schedules, data.contracts, data.periods, activePeriod, isAr, supabase, loadLiveData, inspectorPayload, ensureActivePeriodOpen, handleConfirmBounceCheque]);
+  }, [data.pdcRecords, data.schedules, data.contracts, data.periods, activePeriod, isAr, supabase, loadLiveData, ensureActivePeriodOpen, handleConfirmBounceCheque]);
 
   // Handler: Contract Supplement
   const handleSaveContractSupplement = useCallback(async (supplementData: SupplementData) => {
@@ -4406,7 +4368,6 @@ export function ERPWorkstationProvider({
     inspectorPayload,
     setInspectorPayload,
     handleInspectContract,
-    handleInspectCheque,
     handleInspectTax,
     handleInspectRSV,
     handleInspectRescission,
@@ -4553,8 +4514,6 @@ export function ERPWorkstationProvider({
     setInjectionInitialCommitmentId,
     showNewPartnerModal,
     setShowNewPartnerModal,
-    showPartnerOperationsModal,
-    setShowPartnerOperationsModal,
     dossierTargetPartner,
     setDossierTargetPartner,
 

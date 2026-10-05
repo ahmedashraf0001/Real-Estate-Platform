@@ -94,7 +94,6 @@ interface CockpitViewProps {
   partnerCalls?: ERPPartnerCall[];
   onOpenProjectExpense?: () => void;
   onInspectContract: (contract: ERPContract) => void;
-  onInspectCheque: (cheque: ERPPDCRecord) => void;
   onCollectItem?: (item: ERPPDCRecord) => void;
   onOpenCollect?: () => void;
   onOpenNewCheque?: () => void;
@@ -121,7 +120,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   partnerCalls = [],
   onOpenProjectExpense,
   onInspectContract,
-  onInspectCheque,
   onCollectItem,
   onOpenCollect,
   onOpenNewCheque,
@@ -1353,9 +1351,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         hasSchedule: true,
         hasPdc: !!matchingPdc,
         onClick: () => {
-          if (matchingPdc && onInspectCheque) {
-            onInspectCheque(matchingPdc);
-          } else if (c && onInspectContract) {
+          if (c && onInspectContract) {
             onInspectContract(c);
           } else if (onNavigateTab) {
             onNavigateTab('contracts');
@@ -1402,9 +1398,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
           iconColor: '#2563eb',
           hasPdc: true,
           onClick: () => {
-            if (onInspectCheque) {
-              onInspectCheque(pdc);
-            } else if (onNavigateTab) {
+            if (onNavigateTab) {
               onNavigateTab('pdc');
             }
           },
@@ -1486,7 +1480,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
     events.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
     return events;
-  }, [schedules, contracts, propertyCosts, pdcRecords, isAr, statProjectFilter, isPropertyInProject, onInspectContract, onInspectCheque, onNavigateTab]);
+  }, [schedules, contracts, propertyCosts, pdcRecords, isAr, statProjectFilter, isPropertyInProject, onInspectContract, onNavigateTab]);
 
   const daysWithEvents = useMemo(() => {
     const days = new Set<number>();

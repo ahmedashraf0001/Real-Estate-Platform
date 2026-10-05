@@ -78,7 +78,6 @@ export interface HandInstallmentsVaultViewProps {
   onCollectDueToday?: () => void;
   onOpenNewCheque?: () => void;
   onOpenNewSupplement?: (contractId?: string) => void;
-  onInspectCheque: (item: ERPPDCRecord) => void;
   onBounceItem?: (item: ERPPDCRecord) => void | Promise<void>;
   onPDCStatusChange?: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => Promise<void>;
   onRecordPayablePayment?: (updatedItem: ERPPropertyCostItem) => Promise<void>;

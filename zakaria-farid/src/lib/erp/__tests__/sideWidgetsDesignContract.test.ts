@@ -696,8 +696,8 @@ describe('FIN-OS Side Widgets Canonical Design Contract Suite', () => {
         'allAgendaEvents must support PDC cheques with #eff6ff and #2563eb'
       );
       assert.ok(
-        cockpitContent.includes('onInspectCheque(pdc)') || cockpitContent.includes("onNavigateTab('pdc')"),
-        'PDC agenda event must have onInspectCheque or onNavigateTab click handler'
+        cockpitContent.includes("onNavigateTab('pdc')"),
+        'PDC agenda event must have onNavigateTab click handler'
       );
 
       // Urgent alerts 3 rows: squircles and soft micro-pill header badge

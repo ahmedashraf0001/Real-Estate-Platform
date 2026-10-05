@@ -55,7 +55,6 @@ import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
 import { NewPartnerProfileModal } from './v2/modals/NewPartnerProfileModal';
 import { PartnerCapitalInjectionModal } from './v2/modals/PartnerCapitalInjectionModal';
 import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
-import { PartnerOperationsModal } from './v2/modals/PartnerOperationsModal';
 
 const MODULE_TITLES_AR: Record<string, string> = {
   dashboard: 'لوحة القيادة',
@@ -999,7 +998,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
         onNavigateToTab={(tab) => erp.navigateToTab(tab)}
         onToggleHandover={erp.handleToggleContractHandover}
-        onUpdateChequeStatus={erp.handlePDCStatusChange}
         onInspectContract={erp.handleInspectContract}
         onRemitTax={erp.handleRemitTax}
         isMutating={erp.isMutating}
@@ -1346,28 +1344,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
       />
 
-      {/* PARTNER OPERATIONS 2-SIDED WORKBENCH MODAL */}
-      <PartnerOperationsModal
-        isOpen={erp.showPartnerOperationsModal}
-        onClose={() => erp.setShowPartnerOperationsModal(false)}
-        partners={erp.partnerSummaries}
-        partnerProfiles={erp.partnerProfiles}
-        partnerTransactions={erp.partnerTransactions}
-        properties={erp.data.properties}
-        contracts={erp.data.contracts}
-        isAr={erp.isAr}
-        isMutating={erp.isMutating}
-        onOpenNewPartnerModal={() => {
-          erp.setShowPartnerOperationsModal(false);
-          erp.setShowNewPartnerModal(true);
-        }}
-        onConfirmPayout={async (details) => {
-          await erp.handleConfirmPartnerPayout(details);
-        }}
-        onConfirmInjection={async (details) => {
-          await erp.handleConfirmPartnerInjection(details);
-        }}
-      />
     </div>
   );
 }

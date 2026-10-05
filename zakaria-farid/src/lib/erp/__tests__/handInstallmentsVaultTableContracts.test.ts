@@ -107,8 +107,7 @@ describe('HandInstallmentsVaultView Overview Row & Shell Contracts', () => {
         properties: mockProperties,
         isAr: true,
         onCollectItem: () => {},
-        onOpenNewCheque: () => {},
-        onInspectCheque: () => {}
+        onOpenNewCheque: () => {}
       })
     );
 
@@ -143,8 +142,7 @@ describe('HandInstallmentsVaultView Overview Row & Shell Contracts', () => {
         properties: mockProperties,
         isAr: true,
         onCollectItem: () => {},
-        onOpenNewCheque: () => {},
-        onInspectCheque: () => {}
+        onOpenNewCheque: () => {}
       })
     );
 
@@ -183,8 +181,7 @@ describe('HandInstallmentsVaultView Overview Row & Shell Contracts', () => {
         properties: mockProperties,
         isAr: true,
         onCollectItem: () => {},
-        onOpenNewCheque: () => {},
-        onInspectCheque: () => {}
+        onOpenNewCheque: () => {}
       })
     );
 
