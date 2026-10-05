@@ -51,6 +51,7 @@ import { ProjectShowcaseCard } from './properties/ProjectShowcaseCard';
 import { UnitsFloorMatrixTable } from './properties/UnitsFloorMatrixTable';
 import { PropertiesAnalyticsView } from './properties/PropertiesAnalyticsView';
 import { ERPPortfolioMapModal } from './properties/ERPPortfolioMapModal';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 
 import styles from './PropertiesPortfolioView.module.css';
 import shellStyles from '../ZFWorkstationShell.module.css';
@@ -564,6 +565,11 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
 
   return (
     <div className={styles.stageContainer}>
+      <ZFPageHeader
+        title={isAr ? 'العقارات والوحدات' : 'Properties & units'}
+        subtitle={isAr ? 'مخزون الوحدات وأسعارها وحالة البيع في كل مشروع.' : 'Unit inventory, prices and sales status for each project.'}
+      />
+
       {/* ─── 1. TOP EXECUTIVE INVENTORY & PRICING KPIS (100% REPLICA OF REFERENCE) ─── */}
       <PropertiesInventoryKpis
         totalUnitsCount={totalUnitsCount}
@@ -885,7 +891,7 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
                 <div className={styles.sideCardIconSquircle}>
                   <ShieldCheck size={16} />
                 </div>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--erp-text-title)' }}>
                   {isAr ? 'تعديل ضريبة الوحدة العقارية' : 'Edit Unit Property Tax'}
                 </h3>
               </div>

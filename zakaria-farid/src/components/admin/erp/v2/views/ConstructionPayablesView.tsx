@@ -51,6 +51,7 @@ import {
 import { D, Decimal, generateUUID } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
@@ -1008,20 +1009,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
 
   return (
     <div className={vStyles.containerQueryContext} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* ─── 1. HEADER ROW ─── */}
-      <div className={vStyles.headerRow}>
-        <div className={vStyles.titleArea}>
-          <h1 className={vStyles.pageTitle}>
-            {isAr ? 'مصاريف البناء ومستحقات المقاولين (AP)' : 'Construction WIP & Contractor Payables (AP)'}
-          </h1>
-          <p className={vStyles.subtitle}>
-            {isAr
-              ? 'متابعة جميع مصاريف المشاريع الإنشائية ومستحقات المقاولين (AP) مع إمكانية التصفية والتحليل'
-              : 'Monitor all construction project expenses and contractor obligations with filtering and analysis'}
-          </p>
-        </div>
-
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'تكاليف البناء ومستحقات المقاولين' : 'Construction costs & contractor dues'}
+        subtitle={isAr ? 'كل مصاريف المشاريع والمبالغ المستحقة للمقاولين، مع التصفية والتحليل.' : 'All project spend and amounts owed to contractors, with filters and analysis.'}
+      />
 
       {/* ─── 2. EXECUTIVE 4 DISCRETE FLOATING KPI CARDS ─── */}
       <ZFKpiGrid>

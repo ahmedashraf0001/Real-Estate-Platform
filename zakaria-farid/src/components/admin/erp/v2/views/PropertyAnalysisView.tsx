@@ -44,6 +44,7 @@ import { exportFeasibilityExcel, exportComprehensivePropertyAnalysisExcel } from
 import { ERPPalettePreset } from '@/lib/erp/erpPalettePresets';
 
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import { ERPApexChart } from '../charts/ERPApexChart';
 import { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets';
 import { ZFModalShell } from '../common/ZFModalShell';
@@ -1082,7 +1083,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const badgeText = isCurrent 
             ? (isAr ? 'العقار الخاضع للتحليل حالياً' : 'Property Under Analysis')
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
-          const badgeBg = isCurrent ? 'rgba(37, 99, 235, 0.12)' : '#f1f5f9';
+          const badgeBg = isCurrent ? 'color-mix(in srgb, var(--erp-accent) 12%, transparent)' : '#f1f5f9';
           const badgeColor = isCurrent ? currentAccent : '#64748b';
           const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
@@ -1340,7 +1341,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const badgeText = isCurrent 
             ? (isAr ? 'العقار الخاضع للتحليل حالياً' : 'Property Under Analysis')
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
-          const badgeBg = isCurrent ? 'rgba(37, 99, 235, 0.12)' : '#f1f5f9';
+          const badgeBg = isCurrent ? 'color-mix(in srgb, var(--erp-accent) 12%, transparent)' : '#f1f5f9';
           const badgeColor = isCurrent ? currentAccent : '#64748b';
           const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
@@ -1696,7 +1697,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const badgeText = isCurrent 
             ? (isAr ? 'العقار الخاضع للتحليل حالياً' : 'Property Under Analysis')
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
-          const badgeBg = isCurrent ? 'rgba(37, 99, 235, 0.12)' : '#f1f5f9';
+          const badgeBg = isCurrent ? 'color-mix(in srgb, var(--erp-accent) 12%, transparent)' : '#f1f5f9';
           const badgeColor = isCurrent ? currentAccent : '#64748b';
           const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
@@ -1803,39 +1804,31 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
 
   return (
     <div className={vStyles.containerQueryContext} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* HEADER ROW */}
-      <div className={vStyles.headerRow}>
-        <div className={vStyles.titleArea}>
-          <h1 className={vStyles.pageTitle}>
-            {isAr ? 'تحليل العقارات ودورة الحياة والجدوى' : 'Property Lifecycle & Investment Analysis'}
-          </h1>
-          <p className={vStyles.subtitle}>
-            {isAr 
-              ? 'متابعة دورة حياة العقار من الشراء والتراخيص والتنفيذ وحتى البيع والتسليم النهائي مع احتساب التكاليف والأرباح'
-              : 'End-to-end property lifecycle tracking, milestone auditing, real construction costs, RSV, and sales margins'}
-          </p>
-        </div>
-
-        <div className={vStyles.headerActions}>
-          <button 
-            type="button" 
-            className={vStyles.headerBtn}
-            onClick={viewMode === 'portfolio' ? () => { if (typeof window !== 'undefined') window.print(); } : handleExportPropertyReport}
-          >
-            <Printer size={14} />
-            <span>{viewMode === 'portfolio' ? (isAr ? 'طباعة تقرير المحفظة' : 'Print Portfolio') : (isAr ? 'طباعة تقرير العقار' : 'Print Dossier')}</span>
-          </button>
-          
-          <button 
-            type="button" 
-            className={`${vStyles.headerBtn} ${vStyles.headerBtnPrimary}`}
-            onClick={handleExportPropertyExcel}
-          >
-            <TableIcon size={14} />
-            <span>{isAr ? 'تصدير إكسل' : 'Export Excel'}</span>
-          </button>
-        </div>
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'تحليل العقارات' : 'Property analysis'}
+        subtitle={isAr ? 'رحلة كل عقار من الشراء والتراخيص والتنفيذ حتى البيع والتسليم، مع التكلفة الفعلية وهامش الربح.' : 'Each property from purchase, permits and construction to sale and margin.'}
+        actions={
+          <>
+            <button 
+              type="button" 
+              className={shellStyles.btnSecondary}
+              onClick={viewMode === 'portfolio' ? () => { if (typeof window !== 'undefined') window.print(); } : handleExportPropertyReport}
+            >
+              <Printer size={14} />
+              <span>{viewMode === 'portfolio' ? (isAr ? 'طباعة تقرير المحفظة' : 'Print Portfolio') : (isAr ? 'طباعة تقرير العقار' : 'Print Dossier')}</span>
+            </button>
+            
+            <button 
+              type="button" 
+              className={shellStyles.btnPrimary}
+              onClick={handleExportPropertyExcel}
+            >
+              <TableIcon size={14} />
+              <span>{isAr ? 'تصدير إكسل' : 'Export Excel'}</span>
+            </button>
+          </>
+        }
+      />
 
       {/* ========================================================================= */}
       {/* VIEW MODE 1: MACRO PORTFOLIO STUDIO */}
