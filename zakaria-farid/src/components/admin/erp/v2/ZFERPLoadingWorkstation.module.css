@@ -1,0 +1,82 @@
+.screen {
+  --ld-bg: var(--erp-bg-canvas, #f8fafc);
+  --ld-panel: var(--erp-bg-panel, #ffffff);
+  --ld-border: var(--erp-card-border, #e2e8f0);
+  --ld-bone: #eef2f6;
+  --ld-bone-hi: #f7f9fb;
+  --ld-title: var(--erp-text-title, #0f172a);
+  --ld-muted: var(--erp-text-muted, #64748b);
+  --ld-accent: var(--erp-accent, #946f23);
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center;
+  overflow: hidden;
+  background: var(--ld-bg);
+  font-family: 'ThmanyahSans', 'Cairo', system-ui, sans-serif;
+}
+.screen[data-theme='dark'] {
+  --ld-bg: #0b0f19;
+  --ld-panel: #111827;
+  --ld-border: #1f2937;
+  --ld-bone: #1a2230;
+  --ld-bone-hi: #222c3c;
+  --ld-title: #f1f5f9;
+  --ld-muted: #94a3b8;
+}
+
+.skeleton { position: absolute; inset: 0; display: flex; opacity: 0.9; }
+.rail { flex: 0 0 56px; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 14px 0;
+  background: var(--ld-panel); border-inline-end: 1px solid var(--ld-border); }
+.railLogo { width: 32px; height: 32px; border-radius: 10px; background: var(--ld-bone); margin-bottom: 10px; }
+.railItem { width: 20px; height: 20px; border-radius: 6px; background: var(--ld-bone); }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar { height: 52px; flex: 0 0 52px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; background: var(--ld-panel); border-bottom: 1px solid var(--ld-border); }
+.content { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; min-height: 0; }
+.header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--ld-panel); border: 1px solid var(--ld-border); border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px; }
+.panel { flex: 1; gap: 18px; padding: 20px; }
+
+.bone { display: block; border-radius: 6px;
+  background: linear-gradient(90deg, var(--ld-bone) 0%, var(--ld-bone-hi) 50%, var(--ld-bone) 100%);
+  background-size: 200% 100%; animation: ldShimmer 1.6s ease-in-out infinite; }
+.boneCrumb { width: 160px; height: 12px; }
+.boneTools { width: 120px; height: 24px; border-radius: 8px; }
+.boneTitle { width: 220px; height: 20px; }
+.boneSubtitle { width: 340px; max-width: 70%; height: 11px; }
+.boneLabel { width: 45%; height: 10px; }
+.boneValue { width: 70%; height: 22px; }
+.boneRow { width: 100%; height: 12px; }
+.boneRow:nth-child(2n) { width: 82%; }
+
+.brand { position: relative; z-index: 1; width: min(320px, calc(100vw - 32px));
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 28px 28px 24px; border-radius: 16px;
+  background: var(--ld-panel); border: 1px solid var(--ld-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -8px rgba(15, 23, 42, 0.12);
+  animation: ldIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px;
+  background: var(--ld-accent); color: var(--erp-on-accent, #ffffff);
+  font-size: 15px; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 14px; direction: ltr; }
+.name { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--ld-title); }
+.status { margin: 0 0 18px; font-size: 12.5px; color: var(--ld-muted); }
+.bar { position: relative; display: block; width: 160px; height: 3px; border-radius: 9999px; overflow: hidden;
+  background: color-mix(in srgb, var(--ld-accent) 15%, transparent); }
+.barFill { position: absolute; inset-block: 0; inset-inline-start: 0; width: 40%; border-radius: inherit;
+  background: var(--ld-accent); animation: ldSlide 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+[dir='rtl'] .barFill { animation-name: ldSlideRtl; }
+
+@keyframes ldShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@keyframes ldIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ldSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+@keyframes ldSlideRtl { 0% { transform: translateX(100%); } 100% { transform: translateX(-250%); } }
+
+@media (max-width: 900px) {
+  .rail { display: none; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bone, .barFill, .brand { animation: none; }
+  .barFill { width: 100%; opacity: 0.6; }
+}

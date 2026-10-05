@@ -1,0 +1,187 @@
+ROLE: LEAF
+TRACK: SURFACE_UI
+TASK: ui-loading-v1 — replace the ERP loading screen with a calm skeleton of the real workstation plus a small brand card.
+
+<files>
+REWRITE: src/components/admin/erp/v2/ZFERPLoadingWorkstation.tsx
+CREATE:  src/components/admin/erp/v2/ZFERPLoadingWorkstation.module.css
+DENIED: everything else. Callers (src/app/fin-os/loading.tsx, src/app/fin-os/[locale]/loading.tsx,
+AdminERPHub.tsx, ERPWorkstationShell.tsx:675) must keep compiling unchanged.
+</files>
+
+<why>
+Current screen (572 lines, inline styles): fake timer-driven progress % and fake "module ready" ticks, plus untrue claims
+("RLS Active", "0.00 Delta", "sovereign encryption", "FIN-OS v2.4"), green+accent gradient, octagon crest with glow pulse,
+hardcoded light hex colors. The screen is shown while real data loads (erp.isLoading), so progress is unknowable:
+use an indeterminate indicator, no percentage.
+</why>
+
+<api>
+Keep exactly:
+  export interface ZFERPLoadingWorkstationProps { isAr?: boolean; className?: string; }
+  export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps>
+  export default ZFERPLoadingWorkstation;
+Keep 'use client'. Keep the existing theme detection effect (data-theme attribute, then zf_theme cookie, MutationObserver)
+and apply the result as `data-theme={theme}` on the root element. Remove the stage/progress timers entirely.
+Imports: React, useState, useEffect, and `styles from './ZFERPLoadingWorkstation.module.css'`. No lucide icons.
+</api>
+
+<jsx>
+<div className={`${styles.screen} ${className}`} data-theme={theme} dir={isAr ? 'rtl' : 'ltr'}
+     role="status" aria-live="polite" aria-busy="true">
+  <div className={styles.skeleton} aria-hidden="true">
+    <div className={styles.rail}>
+      <span className={styles.railLogo} />
+      {6 x <span className={styles.railItem} />}
+    </div>
+    <div className={styles.main}>
+      <div className={styles.topbar}>
+        <span className={`${styles.bone} ${styles.boneCrumb}`} />
+        <span className={`${styles.bone} ${styles.boneTools}`} />
+      </div>
+      <div className={styles.content}>
+        <div className={styles.header}>
+          <span className={`${styles.bone} ${styles.boneTitle}`} />
+          <span className={`${styles.bone} ${styles.boneSubtitle}`} />
+        </div>
+        <div className={styles.kpis}>
+          {4 x <div className={styles.card}>
+                 <span className={`${styles.bone} ${styles.boneLabel}`} />
+                 <span className={`${styles.bone} ${styles.boneValue}`} />
+               </div>}
+        </div>
+        <div className={`${styles.card} ${styles.panel}`}>
+          {5 x <span className={`${styles.bone} ${styles.boneRow}`} />}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div className={styles.brand}>
+    <span className={styles.mark}>ZF</span>
+    <p className={styles.name}>{isAr ? 'زكريا فريد للتطوير العقاري' : 'Zakaria Farid Real Estate'}</p>
+    <p className={styles.status}>{isAr ? 'جارٍ تحميل البيانات المالية…' : 'Loading financial data…'}</p>
+    <span className={styles.bar}><span className={styles.barFill} /></span>
+  </div>
+</div>
+Use Array.from({ length: N }) with key={i} for the repeated items.
+</jsx>
+
+<css>
+Write this file exactly (you may reorder, not change values):
+
+.screen {
+  --ld-bg: var(--erp-bg-canvas, #f8fafc);
+  --ld-panel: var(--erp-bg-panel, #ffffff);
+  --ld-border: var(--erp-card-border, #e2e8f0);
+  --ld-bone: #eef2f6;
+  --ld-bone-hi: #f7f9fb;
+  --ld-title: var(--erp-text-title, #0f172a);
+  --ld-muted: var(--erp-text-muted, #64748b);
+  --ld-accent: var(--erp-accent, #946f23);
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center;
+  overflow: hidden;
+  background: var(--ld-bg);
+  font-family: 'ThmanyahSans', 'Cairo', system-ui, sans-serif;
+}
+.screen[data-theme='dark'] {
+  --ld-bg: #0b0f19;
+  --ld-panel: #111827;
+  --ld-border: #1f2937;
+  --ld-bone: #1a2230;
+  --ld-bone-hi: #222c3c;
+  --ld-title: #f1f5f9;
+  --ld-muted: #94a3b8;
+}
+
+.skeleton { position: absolute; inset: 0; display: flex; opacity: 0.9; }
+.rail { flex: 0 0 56px; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 14px 0;
+  background: var(--ld-panel); border-inline-end: 1px solid var(--ld-border); }
+.railLogo { width: 32px; height: 32px; border-radius: 10px; background: var(--ld-bone); margin-bottom: 10px; }
+.railItem { width: 20px; height: 20px; border-radius: 6px; background: var(--ld-bone); }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar { height: 52px; flex: 0 0 52px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; background: var(--ld-panel); border-bottom: 1px solid var(--ld-border); }
+.content { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; min-height: 0; }
+.header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--ld-panel); border: 1px solid var(--ld-border); border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px; }
+.panel { flex: 1; gap: 18px; padding: 20px; }
+
+.bone { display: block; border-radius: 6px;
+  background: linear-gradient(90deg, var(--ld-bone) 0%, var(--ld-bone-hi) 50%, var(--ld-bone) 100%);
+  background-size: 200% 100%; animation: ldShimmer 1.6s ease-in-out infinite; }
+.boneCrumb { width: 160px; height: 12px; }
+.boneTools { width: 120px; height: 24px; border-radius: 8px; }
+.boneTitle { width: 220px; height: 20px; }
+.boneSubtitle { width: 340px; max-width: 70%; height: 11px; }
+.boneLabel { width: 45%; height: 10px; }
+.boneValue { width: 70%; height: 22px; }
+.boneRow { width: 100%; height: 12px; }
+.boneRow:nth-child(2n) { width: 82%; }
+
+.brand { position: relative; z-index: 1; width: min(320px, calc(100vw - 32px));
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 28px 28px 24px; border-radius: 16px;
+  background: var(--ld-panel); border: 1px solid var(--ld-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -8px rgba(15, 23, 42, 0.12);
+  animation: ldIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px;
+  background: var(--ld-accent); color: var(--erp-on-accent, #ffffff);
+  font-size: 15px; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 14px; direction: ltr; }
+.name { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--ld-title); }
+.status { margin: 0 0 18px; font-size: 12.5px; color: var(--ld-muted); }
+.bar { position: relative; display: block; width: 160px; height: 3px; border-radius: 9999px; overflow: hidden;
+  background: color-mix(in srgb, var(--ld-accent) 15%, transparent); }
+.barFill { position: absolute; inset-block: 0; inset-inline-start: 0; width: 40%; border-radius: inherit;
+  background: var(--ld-accent); animation: ldSlide 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+[dir='rtl'] .barFill { animation-name: ldSlideRtl; }
+
+@keyframes ldShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@keyframes ldIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ldSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+@keyframes ldSlideRtl { 0% { transform: translateX(100%); } 100% { transform: translateX(-250%); } }
+
+@media (max-width: 900px) {
+  .rail { display: none; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bone, .barFill, .brand { animation: none; }
+  .barFill { width: 100%; opacity: 0.6; }
+}
+</css>
+
+<invariants>
+- No percentage, no stage text, no module ticks, no security/precision claims, no version string.
+- No inline style objects except none at all (all styling in the module CSS).
+- File should end up well under 120 lines.
+</invariants>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+1. npx tsc --noEmit (clean)
+2. grep -c "style={{" src/components/admin/erp/v2/ZFERPLoadingWorkstation.tsx   (expect 0)
+3. grep -n "RLS\|Delta\|v2.4\|setTimeout\|progress" src/components/admin/erp/v2/ZFERPLoadingWorkstation.tsx (expect 0 hits)
+4. npx eslint src/components/admin/erp/v2/ZFERPLoadingWorkstation.tsx (report errors count)
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths + line counts
+3. SPEC: any deviation from <jsx>/<css> + reason (or "none")
+4. GATES: each command + result
+5. NOTES: out-of-scope observations (do not fix)
+</structured_output_contract>
