@@ -39,7 +39,6 @@ import {
 import { Property } from '@/lib/supabase/types';
 import {
   ERPAccountingPeriod,
-  ERPConstructionPurchaseOrder,
   ERPContract,
   ERPJournalEntry,
   ERPPropertyCostItem,
@@ -70,14 +69,11 @@ import { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal
 import { EditPropertyCostModal } from '../modals/EditPropertyCostModal';
 import { CostAdjustmentModal } from '../modals/CostAdjustmentModal';
 import { ZFDirectExpenseModal } from '../modals/ZFDirectExpenseModal';
-import { ConstructionPurchaseOrderModal } from '../modals/ConstructionPurchaseOrderModal';
 import { toast } from 'sonner';
 
 export interface ConstructionPayablesViewProps {
   properties?: Property[];
   propertyCosts?: ERPPropertyCostItem[];
-  purchaseOrders?: ERPConstructionPurchaseOrder[];
-  onCreatePurchaseOrder?: (order: ERPConstructionPurchaseOrder) => Promise<void>;
   contracts?: ERPContract[];
   activePeriod: ERPAccountingPeriod;
   periods?: ERPAccountingPeriod[];
@@ -116,8 +112,6 @@ function formatCompactEGP(val: number | string | Decimal, isAr = true): string {
 export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> = ({
   properties = [],
   propertyCosts = [],
-  purchaseOrders = [],
-  onCreatePurchaseOrder,
   contracts = [],
   activePeriod,
   periods,
@@ -173,7 +167,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
   const [pageSize, setPageSize] = useState(10);
 
   // Modals & Drawers State
-  const [isPurchaseOrderModalOpen, setIsPurchaseOrderModalOpen] = useState(false);
   const [expensePurpose, setExpensePurpose] = useState<'claim' | 'site'>('claim');
   const [isNewExpenseModalOpen, setIsNewExpenseModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -1829,23 +1822,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
             <div className={vStyles.quickActionsList}>
               <button
                 type="button"
-                className={vStyles.quickActionRow}
-                onClick={() => setIsPurchaseOrderModalOpen(true)}
-                disabled={isMutating}
-              >
-                <div className={vStyles.quickActionLeading}>
-                  <div className={vStyles.quickActionIconSquircle}>
-                    <FileText size={16} />
-                  </div>
-                  <span className={vStyles.quickActionLabel}>
-                    {isAr ? 'أمر شراء جديد' : 'New Purchase Order'}
-                  </span>
-                </div>
-                <ChevronLeft size={16} className={vStyles.quickActionChevron} />
-              </button>
-
-              <button
-                type="button"
                 className={`${vStyles.quickActionRow} ${vStyles.quickActionRowActive}`}
                 onClick={() => {
                   setExpensePurpose('claim');
@@ -1884,21 +1860,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                 <ChevronLeft size={16} className={vStyles.quickActionChevron} />
               </button>
             </div>
-            {purchaseOrders.length > 0 && (
-              <div className={vStyles.purchaseOrdersList}>
-                <h4>{isAr ? 'مسودات أوامر الشراء' : 'Purchase Order Drafts'}</h4>
-                {purchaseOrders.slice(0, 5).map(order => (
-                  <div key={order.order_id}>
-                    <strong>{order.supplier_name}</strong>
-                    <span>{order.description}</span>
-                    <bdi>{formatIntegerEGP(order.amount_egp)} {isAr ? 'ج.م' : 'EGP'}</bdi>
-                    <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>
-                      {isAr ? 'مسودة' : 'Draft'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </ZFWidgetCard>
 
           {/* [CONST-WIDGET-02] Contractor Aging Side Widget (media_1790909310831.png) */}
@@ -2174,8 +2135,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         initialPaymentSource={expensePurpose === 'claim' ? '201000' : '101000'}
         purpose={expensePurpose}
       />
-
-      {onCreatePurchaseOrder && <ConstructionPurchaseOrderModal isOpen={isPurchaseOrderModalOpen} onClose={() => setIsPurchaseOrderModalOpen(false)} properties={properties} onSave={onCreatePurchaseOrder} isAr={isAr} />}
 
       {/* ─── 8. MODAL: CONTRACTOR AP SETTLEMENT MODAL ─── */}
       <CostPayableSettlementModal

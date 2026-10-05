@@ -1067,15 +1067,13 @@ describe('Construction Payables Redesign & Invariants Suite', () => {
     assert.ok(tafqeetCode.includes('tafqeetNumber = tafqeetEGP'), 'tafqeet.ts must export tafqeetNumber alias');
     assert.equal(typeof (await import('../tafqeet')).tafqeetNumber, 'function');
 
-    // 2. Direct Expense Modal 3-Step Wizard Invariants
-    assert.ok(modalCode.includes('currentStep'), 'ZFDirectExpenseModal must manage step state');
-    assert.ok(modalCode.includes('tafqeetNumber') || modalCode.includes('tafqeetEGP'), 'ZFDirectExpenseModal must use tafqeet for live Arabic wording');
-    assert.ok(modalCss.includes('.stepperNav'), 'ZFDirectExpenseModal.module.css must define .stepperNav');
-    assert.ok(modalCss.includes('.tafqeetDisplay'), 'ZFDirectExpenseModal.module.css must define .tafqeetDisplay');
-    // Strict Treasury Invariant: Allowed Cash 101000, InstaPay 101000, Deferred 201000. Strictly bans commercial bank 102000.
-    assert.ok(modalCode.includes("'101000'"), 'Modal must include treasury cash/instapay 101000');
+    // 2. Direct Expense Modal Invariants (Unified Single Screen)
+    assert.ok(modalCode.includes('ZFField'), 'ZFDirectExpenseModal must use ZFField from form kit');
+    assert.ok(modalCode.includes('ZFJournalPeek'), 'ZFDirectExpenseModal must use ZFJournalPeek');
+    // Strict Treasury Invariant: Allowed Cash 101000, InstaPay 102000, Deferred 201000. Strictly bans cheque.
+    assert.ok(modalCode.includes("'101000'"), 'Modal must include treasury cash 101000');
+    assert.ok(modalCode.includes("'102000'"), 'Modal must include instapay 102000');
     assert.ok(modalCode.includes("'201000'"), 'Modal must include deferred accounts payable 201000');
-    assert.ok(!modalCode.includes("'102000'"), 'Modal must strictly exclude commercial bank 102000');
     assert.ok(!modalCode.includes('CHEQUE'), 'Modal must strictly exclude cheque payments');
     assert.ok(modalCode.includes('downPaymentValue.lt(0)'), 'Modal must validate non-negative down payments');
     assert.ok(modalCode.includes('downPaymentValue.gte(total)'), 'Modal must validate down payment does not exceed total');

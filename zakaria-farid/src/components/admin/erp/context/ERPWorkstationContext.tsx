@@ -23,7 +23,6 @@ import {
   ERPTaxRecord,
   ERPCostAllocation,
   ERPPropertyCostItem,
-  ERPConstructionPurchaseOrder,
   ERPPartnerProfile,
   ERPPartnerTransaction,
   ERPAccountingPeriod,
@@ -412,7 +411,6 @@ export interface ERPWorkstationContextValue {
   handleDeletePropertyCostItem: (itemId: string) => Promise<void>;
   handleUpdatePropertyCostItem: (item: ERPPropertyCostItem) => Promise<void>;
   handleAddCostAdjustment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
-  handleCreateConstructionPurchaseOrder: (order: ERPConstructionPurchaseOrder) => Promise<void>;
   handleRecordCostPayablePayment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
   handleUpdatePropertySellingPrice: (propertyId: string, newPriceEgp: number) => Promise<void>;
   handleInternalTransfer: (details: {
@@ -738,12 +736,6 @@ export function ERPWorkstationProvider({
         ERPSupabaseService.loadPartnerProfiles(supabase),
         ERPSupabaseService.loadPartnerTransactions(supabase)
       ]);
-      if (!currentUserRef.current && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-        try {
-          const saved = JSON.parse(window.localStorage.getItem('fin_os_local_purchase_orders') || '[]');
-          dataset.purchaseOrders = Array.isArray(saved) ? saved.filter(order => order.order_id && order.property_id && order.status === 'DRAFT') : [];
-        } catch { dataset.purchaseOrders = []; }
-      }
 
       // Requirement 2(a): Ensure current month period exists; if not, auto-insert all 12 periods of the year
       const todayStr = new Date().toISOString().split('T')[0];
@@ -4232,19 +4224,6 @@ export function ERPWorkstationProvider({
     }
   }, [supabase, isAr]);
 
-  const handleCreateConstructionPurchaseOrder = useCallback(async (order: ERPConstructionPurchaseOrder) => {
-    setIsMutating(true);
-    try {
-      if (!currentUser && process.env.NODE_ENV === 'development') {
-        const orders = [...(data.purchaseOrders || []), order];
-        window.localStorage.setItem('fin_os_local_purchase_orders', JSON.stringify(orders));
-      } else {
-        await ERPSupabaseService.createConstructionPurchaseOrder(supabase, { ...order, created_by: currentUser?.id });
-      }
-      setData(prev => ({ ...prev, purchaseOrders: [order, ...(prev.purchaseOrders || [])] }));
-    } finally { setIsMutating(false); }
-  }, [supabase, currentUser, data.purchaseOrders]);
-
   const handleRecordCostPayablePayment = useCallback(async (updatedItem: ERPPropertyCostItem) => {
     setIsMutating(true);
     try {
@@ -4614,7 +4593,6 @@ export function ERPWorkstationProvider({
     handleDeletePropertyCostItem,
     handleUpdatePropertyCostItem,
     handleAddCostAdjustment,
-    handleCreateConstructionPurchaseOrder,
     handleRecordCostPayablePayment,
     handleUpdatePropertySellingPrice,
     handleInternalTransfer,
