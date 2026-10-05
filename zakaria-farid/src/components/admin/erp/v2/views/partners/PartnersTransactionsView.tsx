@@ -200,8 +200,7 @@ export const PartnersTransactionsView: React.FC<PartnersTransactionsViewProps> =
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
-        padding: '0.75rem 1rem',
-        boxShadow: 'none'
+        padding: '0.75rem 1rem'
       }}>
         {/* Type Filter Tabs */}
         <div style={{
@@ -238,7 +237,6 @@ export const PartnersTransactionsView: React.FC<PartnersTransactionsViewProps> =
                   fontWeight: isActive ? 800 : 600,
                   fontSize: '0.76rem',
                   cursor: 'pointer',
-                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.15s ease'
                 }}
@@ -384,8 +382,7 @@ export const PartnersTransactionsView: React.FC<PartnersTransactionsViewProps> =
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
-        overflowX: 'auto',
-        boxShadow: 'none'
+        overflowX: 'auto'
       }}>
         <table style={{
           width: '100%',

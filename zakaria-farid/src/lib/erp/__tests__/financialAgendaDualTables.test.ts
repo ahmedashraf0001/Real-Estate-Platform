@@ -298,7 +298,7 @@ describe('Financial Agenda Dual Tables & Zero-Cheque Architecture', () => {
     );
 
     assert.ok(
-      html.includes('أجندة التعاملات المالية والاستحقاقات (تدفقات الخزينة)'),
+      html.includes('أجندة المستحقات'),
       'Module title must reflect Financial Transactions & Dues Agenda'
     );
 

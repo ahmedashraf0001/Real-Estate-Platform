@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 
 // Shell & Tokens
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { ZFPageHeader } from '../common/ZFPageHeader';
 import styles from '../ZFWorkstationShell.module.css';
 
 // Modular Child Views
@@ -205,47 +206,20 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   };
 
   return (
-    <div className={styles.workstationBody} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. TOP HEADER (NO BREADCRUMB) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: '#0f172a' }}>
-            {isAr ? 'إدارة الشركاء ورؤوس أموال المشاريع' : 'Partners & Project Equity Management'}
-          </h1>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-            {isAr ? 'متابعة مساهمات الشركاء، أرباح المشاريع، وتوزيعات الحصص الرأسمالية' : 'Track partner capital, distributions, and project equity shares'}
-          </p>
-        </div>
-
-        {/* Global Header Actions: Single Primary CTA */}
-        {onOpenNewPartnerModal && (
-          <button
-            type="button"
-            onClick={onOpenNewPartnerModal}
-            disabled={isMutating}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: 'var(--erp-accent, #2563eb)',
-              border: 'none',
-              color: '#ffffff',
-              boxShadow: 'none'
-            }}
-          >
+    <div className={styles.workstationBody} dir={isAr ? 'rtl' : 'ltr'} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <ZFPageHeader
+        title={isAr ? 'الشركاء ورؤوس الأموال' : 'Partners & capital'}
+        subtitle={isAr ? 'مساهمات الشركاء في كل مشروع، حصصهم، والتوزيعات المصروفة لهم.' : 'Partner contributions per project, their shares, and payouts made.'}
+        actions={onOpenNewPartnerModal ? (
+          <button type="button" className={styles.btnPrimary} onClick={onOpenNewPartnerModal} disabled={isMutating}>
             <Plus size={14} />
-            <span>{isAr ? '+ إضافة شريك جديد' : '+ New Partner'}</span>
+            <span>{isAr ? 'إضافة شريك' : 'New partner'}</span>
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* 2. TOP 4 DISCRETE FLOATING KPI CARDS WITH SQUIRCLES AND SPARKLINES */}
-      <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
+      <ZFKpiGrid>
         <ZFKpiCard
           title={isAr ? 'إجمالي رأس المال المودع (المساهمات)' : 'Total Contributed Capital'}
           value={D(kpis.totalCapital).formatEGP(isAr)}
@@ -296,7 +270,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       </ZFKpiGrid>
 
       {/* 3. UNDERLINE NAVIGATION TABS */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #cbd5e1', marginBottom: '1.25rem', paddingBottom: '0.1rem', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #cbd5e1', paddingBottom: '0.1rem', overflowX: 'auto' }}>
         {[
           { id: 'projects', label: isAr ? 'مشاريع الشراكة وحصص العماير' : 'Project Equity & Capital', icon: <Building2 size={16} /> },
           { id: 'directory', label: isAr ? 'دليل وأرصدة الشركاء والممولين' : 'Partner Directory & Balances', icon: <Users size={16} /> },
@@ -312,8 +286,8 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                 padding: '0.5rem 0.25rem',
                 background: 'none',
                 border: 'none',
-                borderBottom: isActive ? '2.5px solid var(--erp-accent, #2563eb)' : '2.5px solid transparent',
-                color: isActive ? 'var(--erp-accent, #2563eb)' : '#64748b',
+                borderBottom: isActive ? '2.5px solid var(--erp-accent)' : '2.5px solid transparent',
+                color: isActive ? 'var(--erp-accent)' : '#64748b',
                 fontWeight: isActive ? 800 : 600,
                 fontSize: '0.875rem',
                 cursor: 'pointer',

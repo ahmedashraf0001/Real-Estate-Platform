@@ -54,6 +54,8 @@ import { GeneralLedgerSideWidgets } from './GeneralLedgerSideWidgets';
 import { BalanceSheetAnalyticsView } from './ledger/BalanceSheetAnalyticsView';
 import { IncomeStatementAnalyticsView } from './ledger/IncomeStatementAnalyticsView';
 import css from './GeneralLedgerView.module.css';
+import { ZFPageHeader } from '../common/ZFPageHeader';
+import shellStyles from '../ZFWorkstationShell.module.css';
 
 import { ERPLedgerAmount, ERPLedgerAmountProps } from '../common/ERPLedgerAmount';
 
@@ -1548,33 +1550,16 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       />
 
       {/* ─── 1. TOP HEADER & BREADCRUMB ─── */}
-      <div className={css.headerRow}>
-        <div className={css.headerLeading}>
-          <div className={css.titleGroup}>
-            <h1 className={css.pageTitle}>
-              {isAr ? 'حسابات الشركة ودفتر اليومية' : 'General Ledger & Journal Entries'}
-            </h1>
-          </div>
-          <p className={css.pageSubtitle}>
-            {isAr
-              ? 'راجع القيود، افتح حسابات الأستاذ، واستخرج القوائم من دفتر واحد.'
-              : 'Review entries, inspect accounts, and prepare statements from one ledger.'}
-          </p>
-        </div>
-        <div className={css.headerActions}>
-          {activeTab === 'journal' && (
-            <button
-              type="button"
-              className={css.primaryBtn}
-              onClick={handleOpenExpense}
-              disabled={isMutating || activePeriod.status === 'LOCKED'}
-            >
-              <Plus size={14} />
-              <span>{isAr ? '+ قيد جديد' : '+ New Entry'}</span>
-            </button>
-          )}
-        </div>
-      </div>
+      <ZFPageHeader
+        title={isAr ? 'الحسابات ودفتر اليومية' : 'Accounts & journal'}
+        subtitle={isAr ? 'راجع القيود، افتح حسابات الأستاذ، واستخرج القوائم المالية من دفتر واحد.' : 'Review entries, open ledger accounts, and prepare statements from one ledger.'}
+        actions={activeTab === 'journal' ? (
+          <button type="button" className={shellStyles.btnPrimary} onClick={handleOpenExpense} disabled={isMutating || activePeriod.status === 'LOCKED'}>
+            <Plus size={14} />
+            <span>{isAr ? 'قيد جديد' : 'New entry'}</span>
+          </button>
+        ) : undefined}
+      />
 
       {/* ─── 2. 4 BALANCED DISCRETE STAT CARDS GRID (FIN-OS Invariant Spec) ─── */}
       <ZFKpiGrid className={css.ledger5Kpis}>
@@ -1907,12 +1892,12 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           customActions: (
                             <button
                               type="button"
-                              className={css.primaryBtn}
+                              className={shellStyles.btnPrimary}
                               onClick={handleOpenExpense}
                               disabled={isMutating || activePeriod.status === 'LOCKED'}
                             >
                               <Plus size={13} />
-                              <span>{isAr ? '+ قيد جديد' : '+ New Entry'}</span>
+                              <span>{isAr ? 'قيد جديد' : 'New entry'}</span>
                             </button>
                           )
                         }
@@ -2477,8 +2462,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         border: 'none',
                         cursor: 'pointer',
                         background: trialBalanceViewMode === 'detailed' ? '#ffffff' : 'transparent',
-                        color: trialBalanceViewMode === 'detailed' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        boxShadow: trialBalanceViewMode === 'detailed' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                        color: trialBalanceViewMode === 'detailed' ? 'var(--erp-accent)' : '#64748b'
                       }}
                       onClick={() => setTrialBalanceViewMode('detailed')}
                     >
@@ -2495,8 +2479,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         border: 'none',
                         cursor: 'pointer',
                         background: trialBalanceViewMode === 'printable' ? '#ffffff' : 'transparent',
-                        color: trialBalanceViewMode === 'printable' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        boxShadow: trialBalanceViewMode === 'printable' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                        color: trialBalanceViewMode === 'printable' ? 'var(--erp-accent)' : '#64748b'
                       }}
                       onClick={() => setTrialBalanceViewMode('printable')}
                     >
@@ -2506,7 +2489,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   </div>
                   <button
                     type="button"
-                    className={css.secondaryBtn}
+                    className={shellStyles.btnSecondary}
                     onClick={() => setShowPrintPreview(true)}
                     title={isAr ? 'طباعة ميزان المراجعة' : 'Print Trial Balance'}
                   >
@@ -2515,7 +2498,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    className={css.secondaryBtn}
+                    className={shellStyles.btnSecondary}
                     onClick={handleExportExcelClick}
                     disabled={isExportingExcel}
                     title={isAr ? 'تصدير ميزان المراجعة إلى Excel' : 'Export to Excel'}

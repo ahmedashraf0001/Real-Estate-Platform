@@ -252,8 +252,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
-        padding: '0.75rem 1rem',
-        boxShadow: 'none'
+        padding: '0.75rem 1rem'
       }}>
         {/* Pills scrollable strip */}
         <div style={{
@@ -277,9 +276,9 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
               gap: '0.5rem',
               padding: '0.5rem 0.75rem',
               borderRadius: '20px',
-              border: selectedFilterId === 'ALL' ? '1px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-              background: selectedFilterId === 'ALL' ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))' : '#ffffff',
-              color: selectedFilterId === 'ALL' ? 'var(--erp-accent, #2563eb)' : '#334155',
+              border: selectedFilterId === 'ALL' ? '1px solid var(--erp-accent)' : '1px solid #cbd5e1',
+              background: selectedFilterId === 'ALL' ? 'var(--erp-accent-tint, color-mix(in srgb, var(--erp-accent) 8%, transparent))' : '#ffffff',
+              color: selectedFilterId === 'ALL' ? 'var(--erp-accent)' : '#334155',
               fontWeight: selectedFilterId === 'ALL' ? 800 : 600,
               fontSize: '0.75rem',
               cursor: 'pointer',
@@ -287,13 +286,13 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
               transition: 'all 0.15s ease'
             }}
           >
-            <Building2 size={14} color={selectedFilterId === 'ALL' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
+            <Building2 size={14} color={selectedFilterId === 'ALL' ? 'var(--erp-accent)' : '#64748b'} />
             <span>{isAr ? 'جميع المشروعات' : 'All Projects'}</span>
             <span style={{
               fontSize: '0.75rem',
               padding: '0.1rem 0.4rem',
               borderRadius: '10px',
-              background: selectedFilterId === 'ALL' ? 'var(--erp-accent, #2563eb)' : '#f1f5f9',
+              background: selectedFilterId === 'ALL' ? 'var(--erp-accent)' : '#f1f5f9',
               color: selectedFilterId === 'ALL' ? '#ffffff' : '#64748b',
               fontWeight: 700
             }}>
@@ -320,9 +319,9 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                   gap: '0.5rem',
                   padding: '0.5rem 0.75rem',
                   borderRadius: '20px',
-                  border: isSelected ? '1px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                  background: isSelected ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))' : '#ffffff',
-                  color: isSelected ? 'var(--erp-accent, #2563eb)' : '#334155',
+                  border: isSelected ? '1px solid var(--erp-accent)' : '1px solid #cbd5e1',
+                  background: isSelected ? 'var(--erp-accent-tint, color-mix(in srgb, var(--erp-accent) 8%, transparent))' : '#ffffff',
+                  color: isSelected ? 'var(--erp-accent)' : '#334155',
                   fontWeight: isSelected ? 800 : 600,
                   fontSize: '0.75rem',
                   cursor: 'pointer',
@@ -378,8 +377,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
-        overflow: 'hidden',
-        boxShadow: 'none'
+        overflow: 'hidden'
       }}>
         {/* Table Header Controls Bar */}
         <div style={{
@@ -594,26 +592,13 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                       <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <button
                           type="button"
+                          className={styles.btnSecondary}
                           onClick={(e) => {
                             e.stopPropagation();
                             onOpenReallocation(b);
                           }}
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '6px',
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            color: '#0f172a',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            whiteSpace: 'nowrap'
-                          }}
                         >
-                          <ArrowRightLeft size={11} color="var(--erp-accent, #2563eb)" />
+                          <ArrowRightLeft size={11} />
                           <span>{isAr ? 'إعادة هيكلة' : 'Reallocate'}</span>
                         </button>
                       </td>
@@ -667,8 +652,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
-        overflow: 'hidden',
-        boxShadow: 'none'
+        overflow: 'hidden'
       }}>
         {/* Activity Header */}
         <div style={{
