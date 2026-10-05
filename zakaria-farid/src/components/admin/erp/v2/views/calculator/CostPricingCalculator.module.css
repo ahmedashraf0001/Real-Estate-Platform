@@ -52,11 +52,6 @@
 
 /* Result panel */
 .result { display: flex; flex-direction: column; gap: 0.9rem; }
-.hero { display: flex; flex-direction: column; gap: 0.2rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--erp-border-subtle); }
-.heroLabel { font-size: 0.75rem; color: var(--erp-text-muted); }
-.heroValue { font-size: 1.7rem; font-weight: 800; line-height: 1.2; color: var(--erp-text-title); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; text-align: start; }
-.heroUnit { margin-inline-start: 0.35rem; font-size: 0.8rem; font-weight: 600; color: var(--erp-text-muted); }
-.heroSub { font-size: 0.75rem; color: var(--erp-text-muted); font-variant-numeric: tabular-nums; }
 .rows { display: flex; flex-direction: column; }
 .row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px dashed var(--erp-border-subtle); font-size: 0.8rem; }
 .row:last-child { border-bottom: 0; }
@@ -69,8 +64,6 @@
 .noticeDanger { background: color-mix(in srgb, var(--erp-danger) 8%, transparent); color: #b91c1c; }
 .noticeWarn { background: #fffbeb; color: #92400e; }
 .noticeInfo { background: var(--erp-border-subtle); color: var(--erp-text-body); }
-.actions { display: flex; flex-direction: column; gap: 0.4rem; }
-.saveBtn { width: 100%; }
 
 /* Cost composition bar (feasibility) */
 .stack { display: flex; height: 10px; overflow: hidden; border-radius: 9999px; background: var(--erp-border-subtle); }
@@ -101,4 +94,10 @@
 .empty { padding: 1.5rem 1rem; text-align: center; font-size: 0.78rem; color: var(--erp-text-muted); }
 
 @container middleSection (max-width: 980px) { .grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 760px) { .grid, .fields { grid-template-columns: minmax(0, 1fr); } .heroValue { font-size: 1.4rem; } }
+@media (max-width: 760px) { .grid, .fields { grid-template-columns: minmax(0, 1fr); } }
+
+.scenarioRow { cursor: pointer; }
+.scenarioRow:hover td { background: var(--erp-border-subtle); }
+.scenarioRow:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }
+.scenarioActive td, .scenarioActive:hover td { background: var(--erp-accent-subtle); }
+.scenarioActive td:first-child { font-weight: 700; color: var(--erp-accent); }
