@@ -744,6 +744,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         labelAr: formatFloorLabel(key, true),
         flats: flats.map(f => f.unitLabel || f.zoneTitle),
         sharedCount: shared.length,
+        templates: onFloor.map(z => z.templateId),
         sqm: allMeasured ? leaves.reduce((sum, z) => sum + z.sqm, 0) : null,
       };
     }).sort((a, b) => b.rank - a.rank);
@@ -757,16 +758,73 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   // Vector SVG Content Renderer
   const renderVectorSvgContent = () => {
-    /* ─── 1. BUILDING ELEVATION: one band per recorded level ─── */
+    /* ─── 1. BUILDING ELEVATION: drawn from the recorded levels and flats ─── */
     if (propertyType === 'building' && bldView.mode === 'elevation') {
-      const bldX = 150;
-      const bldW = 400;
+      const bldX = 140;
+      const bldW = 460;
       const bldRight = bldX + bldW;
-      const top = 36;
-      const rowH = buildingLevels.length > 0 ? Math.max(30, Math.min(56, 380 / buildingLevels.length)) : 56;
-      const height = top + buildingLevels.length * rowH + 40;
-      const groundIdx = buildingLevels.findIndex(l => l.key === 'bld_ground');
-      const gradeY = groundIdx >= 0 ? top + (groundIdx + 1) * rowH : null;
+      const floorH = 60;
+      const groundH = 60;
+      const basementH = 50;
+      const crownH = 40;
+      const coreW = 56;
+
+      const roofLevel = buildingLevels.find(l => l.key === 'bld_roof');
+      const groundLevel = buildingLevels.find(l => l.key === 'bld_ground');
+      const basementLevel = buildingLevels.find(l => l.key === 'bld_basement');
+      const typical = buildingLevels.filter(l => l !== roofLevel && l !== groundLevel && l !== basementLevel);
+
+      const roofY = crownH + 10;
+      const groundY = roofY + typical.length * floorH;
+      const gradeY = groundY + (groundLevel ? groundH : 0);
+      const height = gradeY + (basementLevel ? basementH : 0) + 30;
+
+      const summaryOf = (level: typeof buildingLevels[number]) => [
+        level.flats.length > 0
+          ? (isAr ? `${level.flats.length} ${level.flats.length === 1 ? 'شقة' : 'شقق'}` : `${level.flats.length} ${level.flats.length === 1 ? 'flat' : 'flats'}`)
+          : '',
+        level.sharedCount > 0 ? (isAr ? `${level.sharedCount} مساحات` : `${level.sharedCount} spaces`) : '',
+        level.sqm ? `${level.sqm.toFixed(0)} m²` : '',
+      ].filter(Boolean).join(' • ');
+
+      const infoCard = (level: typeof buildingLevels[number], y: number, strong = false) => (
+        <g transform={`translate(${bldRight + 16}, ${y})`}>
+          <rect width="150" height="34" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity={strong ? 0.6 : 0.3} strokeWidth={strong ? 1.2 : 1} />
+          <text x={isAr ? 142 : 8} y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
+            {isAr ? level.labelAr : level.labelEn}
+          </text>
+          <text x={isAr ? 142 : 8} y="26" fontSize="7.5" fill="var(--gold-primary)" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
+            {summaryOf(level)}
+          </text>
+          <text x={isAr ? 8 : 142} y="20" fontSize="8" fill="var(--gold-primary)" textAnchor={isAr ? 'start' : 'end'}>
+            {isAr ? '‹' : '›'}
+          </text>
+        </g>
+      );
+
+      // One facade bay per flat: big balcony window + smaller window, mirrored on the far side of the core.
+      const renderBay = (flat: string, x: number, w: number, mirrored: boolean, y: number) => {
+        const bigW = Math.max(24, w * 0.46);
+        const smallW = Math.max(16, w * 0.3);
+        const bigX = mirrored ? w - bigW - 8 : 8;
+        const smallX = mirrored ? 10 : w - smallW - 10;
+        const balX = mirrored ? w - bigW - 14 : 2;
+        const balW = bigW + 12;
+        return (
+          <g key={flat} transform={`translate(${x}, ${y + 4})`}>
+            <rect x={bigX} y="4" width={bigW} height={floorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            <line x1={bigX + bigW / 2} y1="4" x2={bigX + bigW / 2} y2={floorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
+            <rect x={balX} y={floorH - 22} width={balW} height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            {[0.25, 0.5, 0.75].map(f => (
+              <line key={f} x1={balX + balW * f} y1={floorH - 22} x2={balX + balW * f} y2={floorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+            ))}
+            <rect x={balX} y={floorH - 10} width={balW} height="4" fill="var(--gold-primary)" />
+            <rect x={smallX} y="8" width={smallW} height={floorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            <line x1={smallX + smallW / 2} y1="8" x2={smallX + smallW / 2} y2={floorH - 12} stroke="#7FB4D8" strokeWidth="1" />
+            <text x={w / 2} y="2" fontSize="6.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800" fontFamily="monospace">{flat}</text>
+          </g>
+        );
+      };
 
       return (
         <svg
@@ -779,83 +837,140 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             <pattern id="pubElevGrid" width="12" height="12" patternUnits="userSpaceOnUse">
               <path d="M 12 0 L 0 0 0 12" fill="none" stroke="var(--cad-grid-color)" strokeWidth="0.5" />
             </pattern>
-            <linearGradient id="pubElevGlassGrad" x1="0" y1="0" x2="0" y2="1">
+            <pattern id="pubElevMajorGrid" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="var(--cad-grid-color)" strokeOpacity="0.8" strokeWidth="0.8" />
+            </pattern>
+            <pattern id="pubElevGroundHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="var(--gold-primary)" strokeOpacity="0.35" strokeWidth="1" />
+            </pattern>
+            <linearGradient id="pubElevGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="rgba(127, 180, 216, 0.35)" />
-              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.08)" />
+              <stop offset="40%" stopColor="rgba(127, 180, 216, 0.15)" />
+              <stop offset="60%" stopColor="rgba(221, 167, 82, 0.08)" />
+              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.25)" />
+            </linearGradient>
+            <linearGradient id="pubElevBalconyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(127, 180, 216, 0.28)" />
+              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.06)" />
+            </linearGradient>
+            <linearGradient id="pubElevLobbyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(221, 167, 82, 0.22)" />
+              <stop offset="100%" stopColor="rgba(221, 167, 82, 0.04)" />
             </linearGradient>
           </defs>
 
           <rect width="760" height={height} fill="var(--cad-stage-bg)" />
           <rect width="760" height={height} fill="url(#pubElevGrid)" />
+          <rect width="760" height={height} fill="url(#pubElevMajorGrid)" opacity="0.4" />
 
-          {buildingLevels.map((level, idx) => {
-            const y = top + idx * rowH;
-            const isRoofLevel = level.key === 'bld_roof';
-            const isGroundLevel = level.key === 'bld_ground';
-            const isBasementLevel = level.key === 'bld_basement';
-            const bays = level.flats.length;
-            const bayW = bays > 0 ? (bldW - 32) / bays : 0;
-            const summary = [
-              bays > 0 ? (isAr ? `${bays} ${bays === 1 ? 'شقة' : 'شقق'}` : `${bays} ${bays === 1 ? 'flat' : 'flats'}`) : '',
-              level.sharedCount > 0 ? (isAr ? `${level.sharedCount} مساحات` : `${level.sharedCount} spaces`) : '',
-              level.sqm ? `${level.sqm.toFixed(0)} m²` : '',
-            ].filter(Boolean).join(' • ');
+          {/* Level lines on the left */}
+          {[roofY, ...typical.map((_, i) => roofY + (i + 1) * floorH)].map((y, i) => (
+            <g key={`datum-${i}`} className="fp-datum-group">
+              <line x1="20" y1={y} x2={bldX - 8} y2={y} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
+              <circle cx="34" cy={y} r="4" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
+              <line x1="30" y1={y} x2="38" y2={y} stroke="var(--gold-primary)" strokeWidth="1" />
+              <line x1="34" y1={y - 4} x2="34" y2={y + 4} stroke="var(--gold-primary)" strokeWidth="1" />
+            </g>
+          ))}
 
-            return (
-              <g
-                key={level.key}
-                role="button"
-                tabIndex={0}
-                className="pub-elev-floor-row"
-                style={{ cursor: 'pointer' }}
-                onClick={() => setBldView({ mode: 'floor', floorKey: level.key })}
-              >
-                <rect
-                  x={bldX}
-                  y={y}
-                  width={bldW}
-                  height={rowH}
-                  fill={isBasementLevel ? 'var(--cad-core-bg)' : idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(221, 167, 82, 0.03)'}
-                  stroke="var(--gold-primary)"
-                  strokeOpacity={isRoofLevel ? 0.25 : 0.45}
-                  strokeWidth="1"
-                  strokeDasharray={isBasementLevel || isRoofLevel ? '5 3' : undefined}
-                />
-                <rect x={bldX - 4} y={y + rowH - 3} width={bldW + 8} height="3" fill="var(--gold-primary)" opacity="0.85" />
+          {/* Building shell */}
+          <rect x={bldX} y={roofY} width={bldW} height={gradeY - roofY} fill="rgba(255, 255, 255, 0.015)" stroke="var(--gold-primary)" strokeOpacity="0.55" strokeWidth="1.5" />
 
-                {bays > 0 && level.flats.map((flat, b) => (
-                  <g key={`${level.key}-${flat}`} transform={`translate(${bldX + 16 + b * bayW}, ${y + 6})`}>
-                    <rect x="6" y="0" width={Math.max(10, bayW - 12)} height={rowH - 16} rx="2" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                    <text x={bayW / 2} y={(rowH - 16) / 2 + 3} fontSize="8" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">
-                      {flat}
-                    </text>
-                  </g>
-                ))}
-
-                {isGroundLevel && (
-                  <rect x={bldX + bldW / 2 - 18} y={y + 10} width="36" height={rowH - 13} fill="url(#pubElevGlassGrad)" stroke="var(--gold-primary)" strokeWidth="1.2" />
-                )}
-
-                <g transform={`translate(${bldRight + 16}, ${y + rowH / 2 - 15})`}>
-                  <rect width="170" height="30" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.35" strokeWidth="1" />
-                  <text x={isAr ? 120 : 8} y="13" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700" textAnchor={isAr ? 'end' : 'start'} style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
-                    {isAr ? level.labelAr : level.labelEn}
-                  </text>
-                  {summary && (
-                    <text x={isAr ? 120 : 8} y="24" fontSize="7.5" fill="var(--gold-primary)" textAnchor={isAr ? 'end' : 'start'} style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
-                      {summary}
-                    </text>
-                  )}
-                  <text x={isAr ? 10 : 162} y="19" fontSize="8" fill="var(--gold-primary)" textAnchor={isAr ? 'start' : 'end'}>
-                    {isAr ? '‹ عرض' : 'Inspect ›'}
-                  </text>
+          {/* Roof crown */}
+          {roofLevel && (
+            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: roofLevel.key })}>
+              {roofLevel.templates.includes('bld.roof_terrace') && (
+                <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
+                  <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+                  {[20, 40, 60, 80, 100, 120].map(px => (
+                    <line key={`perg-${px}`} x1={px} y1="0" x2={px} y2="24" stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeWidth="1" />
+                  ))}
+                  <line x1="0" y1="0" x2="140" y2="0" stroke="var(--gold-primary)" strokeWidth="2" />
                 </g>
+              )}
+              {(roofLevel.templates.includes('bld.roof_service') || roofLevel.templates.includes('bld.staircase')) && (
+                <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
+                  <rect width="80" height="32" rx="2" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                  <line x1="20" y1="10" x2="60" y2="10" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+                  <line x1="20" y1="16" x2="60" y2="16" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+                  <line x1="20" y1="22" x2="60" y2="22" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+                </g>
+              )}
+              {roofLevel.templates.includes('bld.roof_service') && (
+                <g transform={`translate(${bldRight - 110}, ${roofY - 22})`}>
+                  <rect x="0" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
+                  <rect x="42" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
+                  <line x1="34" y1="13" x2="42" y2="13" stroke="#7FB4D8" strokeWidth="1.5" />
+                </g>
+              )}
+              <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="var(--gold-primary)" />
+              <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
+              {infoCard(roofLevel, roofY - 40)}
+            </g>
+          )}
+
+          {/* Typical floors: one bay per recorded flat, stair core in the middle */}
+          {typical.map((level, idx) => {
+            const y = roofY + idx * floorH;
+            const n = level.flats.length;
+            const leftCount = Math.ceil(n / 2);
+            const rightCount = n - leftCount;
+            const sideW = (bldW - coreW) / 2 - 12;
+            const leftW = leftCount > 0 ? sideW / leftCount : 0;
+            const rightW = rightCount > 0 ? sideW / rightCount : 0;
+            return (
+              <g key={level.key} role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: level.key })}>
+                <rect x={bldX} y={y} width={bldW} height={floorH} fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(221, 167, 82, 0.02)'} stroke="none" />
+                <rect x={bldX - 4} y={y + floorH - 3} width={bldW + 8} height="4" fill="var(--gold-primary)" opacity="0.9" />
+
+                {level.flats.slice(0, leftCount).map((flat, b) => renderBay(flat, bldX + 8 + b * leftW, leftW, false, y))}
+
+                <g transform={`translate(${bldX + bldW / 2 - coreW / 2}, ${y + 4})`}>
+                  <rect width={coreW} height={floorH - 8} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.2" />
+                  {[14, 28, 42].map(px => (
+                    <line key={px} x1={px} y1="0" x2={px} y2={floorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
+                  ))}
+                </g>
+
+                {level.flats.slice(leftCount).map((flat, b) => renderBay(flat, bldX + bldW / 2 + coreW / 2 + 4 + b * rightW, rightW, true, y))}
+
+                {infoCard(level, y + floorH / 2 - 17)}
               </g>
             );
           })}
 
-          {gradeY !== null && (
-            <line x1={bldX - 60} y1={gradeY} x2={bldRight + 20} y2={gradeY} stroke="var(--gold-primary)" strokeWidth="1.5" />
+          {/* Ground floor: lobby and entrance */}
+          {groundLevel && (
+            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: groundLevel.key })}>
+              <rect x={bldX} y={groundY} width={bldW} height={groundH} fill="url(#pubElevLobbyGrad)" stroke="none" />
+              <g transform={`translate(${bldX + bldW / 2 - 40}, ${groundY + 12})`}>
+                <rect x="0" y="0" width="80" height={groundH - 12} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="18" y="10" width="44" height={groundH - 22} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                <line x1="40" y1="10" x2="40" y2={groundH - 12} stroke="var(--gold-primary)" strokeWidth="1.2" />
+              </g>
+              <g transform={`translate(${bldX + 20}, ${groundY + 16})`}>
+                <rect width="130" height={groundH - 16} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                <line x1="65" y1="0" x2="65" y2={groundH - 16} stroke="#7FB4D8" strokeWidth="1" />
+              </g>
+              <g transform={`translate(${bldRight - 150}, ${groundY + 16})`}>
+                <rect width="130" height={groundH - 16} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                <line x1="65" y1="0" x2="65" y2={groundH - 16} stroke="#7FB4D8" strokeWidth="1" />
+              </g>
+              {infoCard(groundLevel, groundY + groundH / 2 - 17, true)}
+            </g>
+          )}
+
+          {/* Grade */}
+          <rect x={bldX - 6} y={gradeY - 4} width={bldW + 12} height="5" fill="var(--gold-primary)" />
+          <line x1="20" y1={gradeY} x2={bldX - 8} y2={gradeY} stroke="var(--gold-primary)" strokeWidth="1.2" />
+
+          {/* Basement, only when recorded */}
+          {basementLevel && (
+            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: basementLevel.key })}>
+              <rect x={bldX - 10} y={gradeY + 1} width={bldW + 20} height={basementH} fill="url(#pubElevGroundHatch)" opacity="0.3" />
+              <rect x={bldX} y={gradeY + 1} width={bldW} height={basementH} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="6 3" />
+              {infoCard(basementLevel, gradeY + 8)}
+            </g>
           )}
         </svg>
       );

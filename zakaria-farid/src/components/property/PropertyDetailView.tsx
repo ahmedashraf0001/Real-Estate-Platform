@@ -45,7 +45,6 @@ import {
   LocateFixed,
   RefreshCw,
   Clock,
-  Landmark,
   Send,
   Film,
   Play,
@@ -545,21 +544,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         time: formatDuration((roadDistanceKm / 45) * 60 + 8),
         icon: Train
       },
-      isNearby ? {
+      // Walking only when it is actually close; no invented "nearby services" times.
+      ...(isNearby ? [{
         mode: isAr ? 'سيراً على الأقدام' : 'Walking',
         sub: isAr 
           ? `${roadDistanceKm.toFixed(1)} كم مسار مشي مباشر` 
           : `${roadDistanceKm.toFixed(1)} km direct walking route`,
         time: formatDuration((roadDistanceKm / 4.8) * 60),
         icon: Footprints
-      } : {
-        mode: isAr ? 'أهم الخدمات والمحاور' : 'Nearby Hubs & Services',
-        sub: isAr 
-          ? 'مدارس، مراكز تجارية، ومستشفيات قريبة' 
-          : 'Minutes to local retail, schools & medical',
-        time: isAr ? '5 - 10 دقائق' : '5–10 mins',
-        icon: Landmark
-      }
+      }] : [])
     ];
   }, [roadDistanceKm, isAr]);
 
@@ -1531,7 +1524,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         </div>
         )}
 
-        {/* 6. Similar Architectural Statements */}
+        {/* 6. Similar Architectural Statements (only when there are some) */}
+        {similarProperties.length > 0 && (
         <section className="similar-section">
           <div className="similar-header">
             <span className="eyebrow-gold">{isAr ? 'صروح معمارية مقترحة' : 'RECOMMENDED PROPERTIES'}</span>
@@ -1549,6 +1543,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             ))}
           </div>
         </section>
+        )}
       </div>
 
       {/* Mobile Sticky Bottom Lead Bar (portaled: the page-transition wrapper's filter breaks position:fixed) */}
