@@ -89,9 +89,6 @@
 .tableNote { padding: 0.6rem 1rem; border-top: 1px solid var(--erp-border-subtle); font-size: 0.7rem; color: var(--erp-text-muted); }
 
 /* Side widget: cost breakdown */
-/* Beats the shell's [class*="Header"] side-widget rule (0,2,0), which matches ZFPanel's module class names. */
-.sidePanel.sidePanel.sidePanel,
-.sidePanelBody.sidePanelBody.sidePanelBody { flex-direction: column; justify-content: flex-start; align-items: stretch; }
 .sidePanelBody > button { align-self: flex-start; }
 .breakdown { display: flex; flex-direction: column; gap: 0.6rem; }
 .bdRow { display: flex; flex-direction: column; gap: 0.25rem; }

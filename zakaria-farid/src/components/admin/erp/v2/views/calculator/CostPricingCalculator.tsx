@@ -31,6 +31,7 @@ import {
 import { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
 import { ZFKpiCard, ZFKpiGrid } from '../../ZFKpiCard';
 import { ZFWorkstationSideWidgets } from '../../common/ZFWorkstationSideWidgets';
+import { useERPWorkstationContext } from '../../../context/ERPWorkstationContext';
 import shellStyles from '../../ZFWorkstationShell.module.css';
 import s from './CostPricingCalculator.module.css';
 
@@ -105,6 +106,12 @@ export function CostPricingCalculator({
   }, [propertyId, properties]);
 
   const property = properties.find((p) => p.id === propertyId) ?? null;
+  const erpCtx = useERPWorkstationContext();
+  const setHasSideWidgets = erpCtx?.setHasSideWidgets;
+  const showSideWidgets = mode === 'built' && Boolean(property);
+  useEffect(() => {
+    setHasSideWidgets?.(showSideWidgets);
+  }, [setHasSideWidgets, showSideWidgets]);
   const area = property?.area_sqm || 0;
   const list = property?.price_egp || 0;
 
@@ -951,10 +958,9 @@ export function CostPricingCalculator({
       </>
     )}
 
-      {mode === 'built' && property && (
+      {showSideWidgets && property && (
         <ZFWorkstationSideWidgets>
           <ZFPanel
-            className={s.sidePanel}
             bodyClassName={s.sidePanelBody}
             icon={<PieChart size={15} />}
             title={isAr ? 'توزيع التكاليف' : 'Cost breakdown'}

@@ -7741,7 +7741,7 @@
   margin-inline-end: auto;
 }
 
-:global([class*="sideWidgetsContent"]) :global([class*="Header" i]) {
+:global([class*="sideWidgetsContent"]) :global([class*="Header" i]:not([class*="ZFPageHeader-module"])) {
   display: flex;
   align-items: center;
   justify-content: space-between;

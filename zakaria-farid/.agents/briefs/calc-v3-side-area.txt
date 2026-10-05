@@ -1,0 +1,84 @@
+ROLE: LEAF
+TRACK: SURFACE_UI
+TASK: calc-v3-side-area — (A) hide the empty side area on the calculator's feasibility tab, (B) stop the shell's side-widget
+"Header" rule from matching ZFPanel, (C) remove the local workaround that (B) makes unnecessary.
+
+<files>
+ALLOWED:
+- src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx
+- src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css
+- src/components/admin/erp/v2/ZFWorkstationShell.module.css   (ONE selector only, see B)
+DENIED: everything else, including ERPWorkstationContext.tsx and ZFWorkstationSideWidgets.tsx.
+</files>
+
+<A_feasibility_side_area>
+Symptom: on the "دراسة جدوى" (feasibility) mode the shell still shows the side area with only its title bar
+"أدوات الجدوى وهيكلة التكاليف" and no content, because the side widgets are rendered only when mode === 'built'.
+The shell decides via context: `hasSideWidgets` (ERPWorkstationContext.tsx:634) honours an override set with
+`setHasSideWidgets(val)`; the override resets automatically on tab change (line 628-631).
+Fix in CostPricingCalculator.tsx:
+  import { useERPWorkstationContext } from '../../../context/ERPWorkstationContext';
+  (verify the relative path from src/components/admin/erp/v2/views/calculator/ to src/components/admin/erp/context/ — it is
+   three levels up: '../../../context/ERPWorkstationContext'.)
+  Inside the component, after the `property` const:
+    const erpCtx = useERPWorkstationContext();
+    const setHasSideWidgets = erpCtx?.setHasSideWidgets;
+    const showSideWidgets = mode === 'built' && Boolean(property);
+    useEffect(() => {
+      setHasSideWidgets?.(showSideWidgets);
+    }, [setHasSideWidgets, showSideWidgets]);
+  Use useERPWorkstationContext (nullable), NOT useERPWorkstation (throws outside the provider).
+  Change the existing side widgets condition `{mode === 'built' && property && (<ZFWorkstationSideWidgets>...` to
+  `{showSideWidgets && property && (` — keep its contents unchanged.
+</A_feasibility_side_area>
+
+<B_shell_selector>
+ZFWorkstationShell.module.css line ~7744:
+  :global([class*="sideWidgetsContent"]) :global([class*="Header" i]) { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+It matches every element whose class contains "ZFPageHeader-module__" (all ZFPanel parts: panel, panelBody, panelHeader...),
+turning ZFPanel's section and body into centered flex rows.
+Replace ONLY the selector with:
+  :global([class*="sideWidgetsContent"]) :global([class*="Header" i]:not([class*="ZFPageHeader-module"]))
+Keep the declarations identical. Touch no other line in this file.
+</B_shell_selector>
+
+<C_remove_workaround>
+In CostPricingCalculator.module.css remove these lines (added as a workaround):
+  /* Beats the shell's [class*="Header"] side-widget rule ... */  (the comment line)
+  .sidePanel.sidePanel.sidePanel,
+  .sidePanelBody.sidePanelBody.sidePanelBody { ... }
+Keep `.sidePanelBody > button { align-self: flex-start; }` (the body is a flex column with stretch, so the ghost
+button would otherwise go full width).
+In the TSX, remove `className={s.sidePanel}` from that ZFPanel; keep `bodyClassName={s.sidePanelBody}`.
+</C_remove_workaround>
+
+<invariants>
+- No change to calculations, other state, strings, or other views.
+- To disable nothing via no-op callbacks (L12): only call setHasSideWidgets when it exists.
+</invariants>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals
+  and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report.
+- Do NOT commit. Do NOT run git add.
+</execution_rules>
+
+<gates>
+1. npx tsc --noEmit (clean)
+2. grep -n "sidePanel\b\|sidePanel\.sidePanel" src/components/admin/erp/v2/views/calculator/CostPricingCalculator.module.css  (expect 0 hits)
+3. grep -n 'ZFPageHeader-module' src/components/admin/erp/v2/ZFWorkstationShell.module.css  (expect exactly 1 hit)
+4. git diff --stat  (expect exactly the 3 allowed files under src/)
+</gates>
+
+<structured_output_contract>
+5 lines:
+1. STATUS: done | partial | blocked
+2. FILES: paths + line counts changed
+3. PARTS: A/B/C each done/skipped + reason
+4. GATES: each command + result
+5. NOTES: out-of-scope observations (do not fix)
+</structured_output_contract>
