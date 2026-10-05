@@ -119,12 +119,12 @@ export const OSFolderActiveIcon: React.FC<OSFileIconProps> = ({
     >
       <defs>
         <linearGradient id={`blue-back-${uniqueId}`} x1="3" y1="4" x2="21" y2="18" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="var(--erp-accent)" />
-          <stop offset="100%" stopColor="var(--erp-accent-hover)" />
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1d4ed8" />
         </linearGradient>
         <linearGradient id={`blue-front-${uniqueId}`} x1="3" y1="8" x2="21" y2="20" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="color-mix(in srgb, var(--erp-accent) 70%, transparent)" />
-          <stop offset="100%" stopColor="var(--erp-accent)" />
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="100%" stopColor="#2563eb" />
         </linearGradient>
       </defs>
 
@@ -136,7 +136,7 @@ export const OSFolderActiveIcon: React.FC<OSFileIconProps> = ({
       <path
         d="M3 9.5C3 8.39543 3.89543 7.5 5 7.5H19C20.1046 7.5 21 8.39543 21 9.5V17C21 18.1046 20.1046 19 19 19H5C3.89543 19 3 18.1046 3 17V9.5Z"
         fill={`url(#blue-front-${uniqueId})`}
-        stroke="var(--erp-accent-hover)"
+        stroke="#1d4ed8"
         strokeWidth="0.5"
       />
     </svg>
@@ -192,7 +192,7 @@ export const OSFileIcon: React.FC<OSFileIconProps> = ({
       />
 
       {/* Text lines */}
-      <line x1="8" y1="11" x2="16" y2="11" stroke="var(--erp-accent)" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="8" y1="11" x2="16" y2="11" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" />
       <line x1="8" y1="14" x2="14" y2="14" stroke="#64748b" strokeWidth="1.2" strokeLinecap="round" />
       <line x1="8" y1="17" x2="12" y2="17" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
     </svg>

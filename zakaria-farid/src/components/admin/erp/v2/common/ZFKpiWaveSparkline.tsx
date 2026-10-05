@@ -34,7 +34,7 @@ export const getSparklinePalette = (accent?: ZFKpiAccentColor, customColor?: str
     case 'slate':
       return { stroke: '#475569', fill: '#64748b' };
     case 'blue':
-      return { stroke: 'var(--erp-accent)', fill: 'var(--erp-accent)' };
+      return { stroke: '#2563eb', fill: '#3b82f6' };
     case 'accent':
     default:
       return { stroke: 'var(--erp-accent, #2563eb)', fill: 'var(--erp-accent, #2563eb)' };
