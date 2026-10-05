@@ -62,10 +62,9 @@ import { prepareConstructionSettlement } from '@/lib/erp/constructionSettlement'
 import { 
   ERPPalettePreset, 
   ERP_PALETTE_PRESETS,
-  DEFAULT_PALETTE_PRESET, 
-  getPresetById, 
-  FIN_OS_PALETTE_STORAGE_KEY 
+  getPresetById 
 } from '@/lib/erp/erpPalettePresets';
+import { useAccentPreset } from '@/lib/theme/accentPalette';
 
 export type ERPWorkspaceTab = 
   | 'dashboard' 
@@ -457,18 +456,7 @@ export function ERPWorkstationProvider({
   currentUserRef.current = currentUser;
 
   // Accent Palette Customization State & Runtime Injection
-  const [activePreset, setActivePreset] = useState<ERPPalettePreset>(DEFAULT_PALETTE_PRESET);
-
-  // Read persisted preset on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedId = localStorage.getItem(FIN_OS_PALETTE_STORAGE_KEY);
-      if (savedId) {
-        const found = getPresetById(savedId);
-        setActivePreset(found);
-      }
-    }
-  }, []);
+  const [activePreset, selectAccentPreset] = useAccentPreset();
 
   // Helper to inject all theme tokens and legacy aliases onto document root (scoped to /fin-os)
   const applyPaletteTokens = useCallback((preset: ERPPalettePreset) => {
@@ -501,13 +489,9 @@ export function ERPWorkstationProvider({
   }, [activePreset, applyPaletteTokens]);
 
   const selectPresetById = useCallback((id: string) => {
-    const next = getPresetById(id);
-    setActivePreset(next);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(FIN_OS_PALETTE_STORAGE_KEY, next.id);
-      applyPaletteTokens(next);
-    }
-  }, [applyPaletteTokens]);
+    selectAccentPreset(id);
+    applyPaletteTokens(getPresetById(id));
+  }, [selectAccentPreset, applyPaletteTokens]);
 
   // Authentication check & session refresh
   useEffect(() => {

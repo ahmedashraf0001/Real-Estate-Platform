@@ -283,7 +283,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               fontSize: '12.5px',
               fontWeight: 800,
               background: 'var(--admin-accent)',
-              color: '#FFFFFF',
+              color: 'var(--admin-on-accent)',
               textDecoration: 'none',
               boxShadow: 'none',
               transition: 'all 150ms ease'

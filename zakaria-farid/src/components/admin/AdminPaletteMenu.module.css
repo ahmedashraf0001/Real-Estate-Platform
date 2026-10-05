@@ -1,0 +1,162 @@
+.container {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08));
+  color: var(--admin-text-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.trigger:hover,
+.triggerOpen {
+  background: var(--admin-accent-tint);
+  border-color: var(--admin-accent-border);
+  color: var(--admin-accent);
+}
+
+[data-theme="light"] .trigger {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: var(--admin-text-body);
+}
+
+[data-theme="light"] .trigger:hover,
+[data-theme="light"] .triggerOpen {
+  background: var(--admin-accent-tint);
+  border-color: var(--admin-accent-border);
+  color: var(--admin-accent);
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  width: 264px;
+  padding: 0.5rem;
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  z-index: 60;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.4rem 0.45rem;
+  border-bottom: 1px solid var(--admin-card-border-subtle, var(--admin-card-border));
+  margin-bottom: 0.35rem;
+}
+
+.headerTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--admin-text-muted);
+}
+
+.resetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  background: var(--admin-card-bg-subtle);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.resetBtn:hover {
+  color: var(--admin-accent);
+  border-color: var(--admin-accent-border);
+}
+
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  gap: 0.6rem;
+  padding: 0 0.6rem;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: start;
+  transition: all 0.12s ease;
+  box-sizing: border-box;
+}
+
+.optionRow:hover {
+  background: var(--admin-card-bg-subtle);
+}
+
+.optionRowActive {
+  background: var(--admin-accent-subtle);
+}
+
+.optionRowActive:hover {
+  background: var(--admin-accent-subtle);
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--swatch);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.optionName {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--admin-text-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.checkIcon {
+  color: var(--admin-accent);
+  flex-shrink: 0;
+}
+
+.footerNote {
+  font-size: 0.7rem;
+  color: var(--admin-text-dim);
+  padding: 0.45rem 0.4rem 0.15rem;
+  border-top: 1px solid var(--admin-card-border-subtle, var(--admin-card-border));
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}

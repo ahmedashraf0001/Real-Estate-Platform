@@ -740,7 +740,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .tier-pill-btn.active {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: transparent;
           box-shadow: none;
         }
@@ -758,7 +758,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .tier-pill-btn.active {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: transparent;
           box-shadow: none;
         }
@@ -1296,7 +1296,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .action-btn:hover {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: transparent;
           transform: translateY(-1px);
         }
@@ -1309,7 +1309,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .action-btn:hover {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: transparent;
         }
 

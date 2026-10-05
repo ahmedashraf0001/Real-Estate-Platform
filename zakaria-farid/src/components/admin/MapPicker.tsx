@@ -760,7 +760,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
         .sanctum-map-search-btn {
           background: var(--admin-accent);
-          color: #ffffff;
+          color: var(--admin-on-accent);
           border: 1px solid var(--admin-accent);
           box-shadow: 0 2px 8px var(--admin-accent-tint);
         }
@@ -1161,7 +1161,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
         .mode-btn.active {
           background: var(--admin-accent);
-          color: #ffffff;
+          color: var(--admin-on-accent);
           font-weight: 700;
           box-shadow: 0 2px 8px var(--admin-accent-tint);
         }

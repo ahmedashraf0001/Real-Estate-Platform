@@ -17,6 +17,7 @@
   --admin-accent-subtle: rgba(59, 130, 246, 0.18);
   --admin-accent-tint: rgba(59, 130, 246, 0.10);
   --admin-accent-border: rgba(59, 130, 246, 0.35);
+  --admin-on-accent: #ffffff;
   --admin-kpi-border: var(--admin-card-border);
   --admin-advisory-bg: #1a2232;
   --admin-advisory-border: var(--admin-accent-border);
@@ -75,6 +76,7 @@
   --admin-accent-subtle: #eff6ff;
   --admin-accent-tint: rgba(37, 99, 235, 0.08);
   --admin-accent-border: rgba(37, 99, 235, 0.25);
+  --admin-on-accent: #ffffff;
   --admin-kpi-border: var(--admin-card-border);
   --admin-advisory-bg: #ffffff;
   --admin-advisory-border: var(--admin-accent-border);

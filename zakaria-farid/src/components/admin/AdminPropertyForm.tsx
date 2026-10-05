@@ -1382,7 +1382,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                         fontSize: '0.8rem',
                         fontWeight: 800,
                         background: 'var(--admin-accent)',
-                        color: '#FFFFFF',
+                        color: 'var(--admin-on-accent)',
                         border: 'none',
                         boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
                         cursor: 'pointer',
@@ -1547,7 +1547,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             }
             .step2-lang-btn.active {
               background: var(--admin-accent);
-              color: #FFFFFF;
+              color: var(--admin-on-accent);
               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
 
@@ -1788,7 +1788,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       alignItems: 'center',
                       gap: 6,
                       background: 'var(--admin-accent)',
-                      color: '#FFFFFF',
+                      color: 'var(--admin-on-accent)',
                       border: 'none',
                       padding: '8px 16px',
                       borderRadius: 8,
@@ -2192,7 +2192,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       fontSize: '12px',
                       fontWeight: 800,
                       background: 'var(--admin-accent)',
-                      color: '#FFFFFF',
+                      color: 'var(--admin-on-accent)',
                       textDecoration: 'none',
                       boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)'
                     }}

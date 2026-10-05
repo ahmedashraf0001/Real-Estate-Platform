@@ -90,3 +90,46 @@ describe('FIN-OS Curated Palette Customization System', () => {
     assert.equal(FIN_OS_PALETTE_STORAGE_KEY, 'fin_os_accent_preset_v1');
   });
 });
+
+describe('dark mode tokens', () => {
+  it('every preset has border, onAccent and dark.{accent,hover,subtle,tint,border,onAccent} as non-empty strings', () => {
+    for (const preset of ERP_PALETTE_PRESETS) {
+      assert.ok(preset.border && typeof preset.border === 'string' && preset.border.length > 0);
+      assert.ok(preset.onAccent && typeof preset.onAccent === 'string' && preset.onAccent.length > 0);
+      assert.ok(preset.dark);
+      assert.ok(preset.dark.accent && typeof preset.dark.accent === 'string' && preset.dark.accent.length > 0);
+      assert.ok(preset.dark.hover && typeof preset.dark.hover === 'string' && preset.dark.hover.length > 0);
+      assert.ok(preset.dark.subtle && typeof preset.dark.subtle === 'string' && preset.dark.subtle.length > 0);
+      assert.ok(preset.dark.tint && typeof preset.dark.tint === 'string' && preset.dark.tint.length > 0);
+      assert.ok(preset.dark.border && typeof preset.dark.border === 'string' && preset.dark.border.length > 0);
+      assert.ok(preset.dark.onAccent && typeof preset.dark.onAccent === 'string' && preset.dark.onAccent.length > 0);
+    }
+  });
+
+  it('every preset.dark.accent is a 6-digit hex and has contrast >= 3.0 against #1a2232', () => {
+    for (const preset of ERP_PALETTE_PRESETS) {
+      assert.match(preset.dark.accent, /^#[0-9a-fA-F]{6}$/, `Invalid dark.accent hex in ${preset.id}`);
+      const ratio = getContrastRatio(preset.dark.accent, '#1a2232');
+      assert.ok(
+        ratio >= 3.0,
+        `Preset ${preset.id} dark.accent (${preset.dark.accent}) has contrast ratio ${ratio.toFixed(2)}:1 against #1a2232, which is below 3.0:1`
+      );
+    }
+  });
+
+  it('every preset: contrast(dark.onAccent, dark.accent) >= 3.0 and contrast(onAccent, accent) >= 4.5', () => {
+    for (const preset of ERP_PALETTE_PRESETS) {
+      const darkRatio = getContrastRatio(preset.dark.onAccent, preset.dark.accent);
+      assert.ok(
+        darkRatio >= 3.0,
+        `Preset ${preset.id} dark onAccent vs dark accent contrast ${darkRatio.toFixed(2)}:1 is below 3.0:1`
+      );
+      const lightRatio = getContrastRatio(preset.onAccent, preset.accent);
+      assert.ok(
+        lightRatio >= 4.5,
+        `Preset ${preset.id} onAccent vs accent contrast ${lightRatio.toFixed(2)}:1 is below 4.5:1`
+      );
+    }
+  });
+});
+

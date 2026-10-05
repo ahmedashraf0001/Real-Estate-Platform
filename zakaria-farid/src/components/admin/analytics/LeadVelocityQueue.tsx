@@ -527,13 +527,13 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
 
         .phone-btn:hover {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: var(--admin-accent);
         }
 
         .velocity-grid.is-light .phone-btn:hover {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: var(--admin-accent);
         }
 
@@ -552,7 +552,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
 
         .crm-btn:hover {
           background: var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           border-color: var(--admin-accent);
         }
 

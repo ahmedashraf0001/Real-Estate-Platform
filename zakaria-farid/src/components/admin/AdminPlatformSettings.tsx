@@ -1514,7 +1514,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           border-radius: 8px;
           background: var(--admin-accent);
           border: 1px solid var(--admin-accent);
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           font-size: 0.82rem;
           font-weight: 700;
           display: inline-flex;
@@ -1871,7 +1871,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           border-radius: 6px;
           background: var(--admin-accent);
           border: none;
-          color: #FFFFFF;
+          color: var(--admin-on-accent);
           font-size: 0.76rem;
           font-weight: 700;
           cursor: pointer;
@@ -2076,7 +2076,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         :global([data-theme="light"]) .admin-settings-root .btn-solid-gold {
           background: var(--admin-accent) !important;
           border: 1px solid var(--admin-accent) !important;
-          color: #FFFFFF !important;
+          color: var(--admin-on-accent) !important;
           font-weight: 800;
           box-shadow: none !important;
         }
@@ -2323,7 +2323,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
         :global([data-theme="light"]) .admin-settings-root .btn-confirm {
           background: var(--admin-accent) !important;
           border: none !important;
-          color: #FFFFFF !important;
+          color: var(--admin-on-accent) !important;
           font-weight: 800;
         }
 

@@ -139,7 +139,7 @@ export default async function AnalyticsPage({ params }: Props) {
               fontSize: '12.5px',
               fontWeight: 800,
               background: 'var(--admin-accent)',
-              color: '#FFFFFF',
+              color: 'var(--admin-on-accent)',
               textDecoration: 'none',
               minHeight: '44px',
               boxShadow: 'none',

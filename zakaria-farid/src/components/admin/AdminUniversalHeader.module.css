@@ -176,7 +176,7 @@
   padding: 7px 12px;
   border-radius: 8px;
   background: var(--admin-accent);
-  color: #FFFFFF;
+  color: var(--admin-on-accent);
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
@@ -194,7 +194,7 @@
 
 [data-theme="light"] .newPropBtn {
   background: var(--admin-accent);
-  color: #FFFFFF;
+  color: var(--admin-on-accent);
   box-shadow: none;
 }
 
