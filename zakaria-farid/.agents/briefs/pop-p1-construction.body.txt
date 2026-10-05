@@ -1,0 +1,114 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign beyond this spec.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first, gates once at the end. Always finish with the report (`caveman` skill).
+- Do NOT git add/commit/stash/checkout/restore. Touch ONLY the files in <files>. Keep UTF-8 Arabic byte-exact.
+- READ FIRST: src/components/admin/erp/v2/common/ZFForm.tsx + ZFForm.module.css (form kit to use),
+  src/components/admin/erp/v2/common/ZFModalShell.tsx, src/components/admin/erp/v2/common/ZFPageHeader.tsx (ZFSegmented),
+  src/components/admin/erp/v2/modals/ZFCashTransferModal.tsx (clean example).
+</execution_rules>
+
+<files>
+src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx  (+ ZFDirectExpenseModal.module.css: delete unused classes or the file)
+PART B (purchase-order removal, user decision 2026-10-05):
+src/components/admin/erp/v2/modals/ConstructionPurchaseOrderModal.tsx (+ .module.css)  -> DELETE
+src/components/admin/erp/v2/views/ConstructionPayablesView.tsx       -> remove PO action, PO list, PO modal state/mount, props purchaseOrders / onCreatePurchaseOrder
+src/components/admin/erp/views/*RouteView.tsx that pass purchaseOrders / onCreatePurchaseOrder -> stop passing them
+src/components/admin/erp/context/ERPWorkstationContext.tsx           -> remove handleCreateConstructionPurchaseOrder (type + impl + value), the
+   'fin_os_local_purchase_orders' localStorage load, and purchaseOrders from the dataset/state ONLY IF nothing else reads it
+src/lib/erp/types.ts / supabaseService.ts -> leave ERPConstructionPurchaseOrder type and service function in place (DB table untouched)
+tests under src/lib/erp/__tests__/ that pin the PO UI or the old expense wizard text -> update/delete ONLY those assertions; list each.
+grep -rn "PurchaseOrder\|purchaseOrders\|أمر شراء" src  -> after PART B only types.ts / supabaseService.ts (and tests you list) may remain.
+</files>
+
+<part_a_expense_popup>
+The popup records construction spend. Today 'claim' (مستخلص مقاول) and 'site' (مصروف موقع) are the same 3-step wizard with
+different titles. Replace the 3-step wizard with ONE screen whose fields depend on the kind.
+
+KEEP: props interface, all state used by the submit, period resolution/lock check, createDirectConstructionExpense,
+buildConstructionExpenseJournalLines, GeneralLedgerEngine entry creation, onSaveEntry, keepOpen behaviour, reset-on-open
+effect (prevIsOpenRef pattern), toasts on error. DELETE: currentStep/stepper/handleStepNext, step headings, success screen JSX
+(use toast + keepOpen reset), ZFCustomSelect usage (use native selects), quantity/unit inputs (keep state defaults '1' /
+'مقطوعية' so the payload is unchanged), tafqeet usage if only the old JSX used it, the 'FIN-OS Invariant 0.9' texts.
+
+Kind: const [kind, setKind] = useState<'claim' | 'site'>(purpose ?? 'site'); reset it to (purpose ?? 'site') in the
+reset-on-open effect. Everywhere the old code used `purpose` for behaviour (supplier required, notes section tag), use `kind`.
+Payment methods: kind 'site' offers CASH_101000 and INSTAPAY_102000 only (if paymentMethod is DEFERRED when kind becomes
+'site', set it to CASH_101000). kind 'claim' offers CASH_101000, INSTAPAY_102000, DEFERRED_201000.
+
+Shell: maxWidth="640px"
+  icon: kind === 'claim' ? <HardHat size={18} /> : <ReceiptText size={18} />
+  title: purpose === undefined ? (isAr ? 'تسجيل تكلفة بناء' : 'Record construction cost')
+         : kind === 'claim' ? (isAr ? 'مستخلص مقاول' : 'Contractor bill') : (isAr ? 'مصروف موقع' : 'Site expense')
+  subtitle: kind === 'claim'
+     ? (isAr ? 'مبلغ لمقاول عن أعمال تمت. يُضاف لتكلفة المشروع ويُدفع الآن أو يُسجل مستحقاً عليه.' : 'Money owed to a contractor for completed work. Added to project cost; paid now or recorded as owed.')
+     : (isAr ? 'مشتريات ومصاريف دُفعت في الموقع. تُضاف لتكلفة المشروع وتُخصم من الخزينة أو إنستاباي.' : 'Purchases and costs paid on site. Added to project cost and paid from the safe or InstaPay.')
+
+Body: <form id="zf-cost-form" className={zfForm.form} onSubmit={handleSubmit}>
+ 0. purpose === undefined -> <ZFSegmented value={kind} onChange={setKind} ariaLabel={isAr ? 'النوع' : 'Type'} options={[
+      { id: 'claim', label: isAr ? 'مستخلص مقاول' : 'Contractor bill', icon: <HardHat size={14} /> },
+      { id: 'site', label: isAr ? 'مصروف موقع' : 'Site expense', icon: <ReceiptText size={14} /> }]} />
+ 1. row: ZFField 'المشروع'/'Project' required -> <select className={zfForm.control}> over underConstructionProperties (title_ar / title_en)
+       | ZFField 'التاريخ'/'Date' required, error = isTargetPeriodLocked ? (isAr ? 'الفترة المحاسبية لهذا التاريخ مقفلة' : 'This date is in a closed period') : undefined
+         -> <input type="date" className={zfForm.control}> entryDate
+ 2. kind 'claim': row: ZFField 'المقاول'/'Contractor' required -> input supplier | ZFField 'رقم المستخلص'/'Bill no.' -> mono input invoiceRef (placeholder isAr ? 'اختياري' : 'Optional')
+    kind 'site':  row: ZFField 'المورد أو المحل'/'Supplier or shop' -> input supplier (placeholder 'اختياري'/'Optional') | ZFField 'رقم الفاتورة'/'Invoice no.' -> mono input invoiceRef (optional)
+ 3. ZFField 'البيان'/'Description' required -> input itemName, placeholder: claim isAr ? 'مثال: مستخلص 3 – خرسانة الدور الثاني' : 'e.g. Bill 3 – 2nd floor concrete';
+    site isAr ? 'مثال: أسمنت ورمل لصبة السقف' : 'e.g. Cement and sand for the roof slab'
+ 4. row: ZFField 'المبلغ'/'Amount' required -> <ZFMoneyInput ref={amountInputRef} value={amount} …/>
+       | ZFField 'البند'/'Cost type' -> select category with these option texts (values unchanged):
+         civil_structure 'خرسانات وحديد ومباني'/'Structure', finishing_interior 'تشطيبات'/'Finishing', mep_infrastructure 'كهرباء وسباكة وتكييف'/'MEP',
+         land_allocation 'الأرض'/'Land', permits_engineering 'تراخيص وتصميم وإشراف'/'Permits & design', labor_subcontractor 'مصنعيات'/'Labour',
+         taxes_fees 'ضرائب ورسوم'/'Taxes & fees'
+ 5. ZFField 'مرحلة التنفيذ'/'Stage' -> select phase with the 6 existing phase labels (Arabic/English as in phaseItems, without icons).
+ 6. ZFField kind 'claim' ? 'الدفع'/'Payment' : 'دُفع من'/'Paid from' -> ZFChoices value={paymentMethod} onChange={setPaymentMethod}:
+      CASH_101000 label isAr ? 'نقداً الآن' : 'Cash now' (site: 'نقداً'/'Cash'), sub isAr ? 'من الخزينة' : 'From the safe', icon <Wallet size={16} />
+      INSTAPAY_102000 label isAr ? 'إنستاباي الآن' : 'InstaPay now' (site: 'إنستاباي'/'InstaPay'), sub isAr ? 'من حساب إنستاباي' : 'From InstaPay', icon <Smartphone size={16} />
+      DEFERRED_201000 (claim only) label isAr ? 'لاحقاً' : 'Later', sub isAr ? 'يُسجل مستحقاً للمقاول' : 'Recorded as owed to the contractor', icon <Clock size={16} />
+ 7. paymentMethod INSTAPAY -> ZFField 'رقم عملية إنستاباي'/'InstaPay reference' (optional) -> mono input instapayRef
+    paymentMethod DEFERRED ->
+      ZFField 'تاريخ الاستحقاق'/'Due date' required -> date input firstDueDate
+      <label> checkbox scheduleNow + text isAr ? 'تقسيط المبلغ على دفعات' : 'Split into installments'
+      scheduleNow -> <div className={zfForm.row3}>: ZFField 'دفعة مقدمة'/'Down payment' hint isAr ? 'تُدفع الآن من الخزينة' : 'Paid now from the safe' -> ZFMoneyInput downPayment
+        | ZFField 'عدد الدفعات'/'Installments' -> input type number min 1 step 1 installmentsCount
+        | ZFField 'كل'/'Every' -> select frequencyMonths: 1 'شهر'/'month', 2 'شهرين'/'2 months', 3 '3 شهور'/'3 months'
+        then <ZFFacts items={[{ label: isAr ? 'قيمة كل دفعة' : 'Each installment', value: money(installmentValue) }, { label: isAr ? 'الباقي بعد المقدم' : 'Balance after down payment', value: money(remaining) }]} />
+ 8. ZFField 'ملاحظات'/'Notes' (optional) -> <textarea className={zfForm.control} rows={2}> notes
+ 9. Effect (one):
+     isTargetPeriodLocked -> <ZFEffect tone="danger">…closed-period text…</ZFEffect>
+     !total.gt(0) -> <ZFEffect>{isAr ? 'أدخل المبلغ لمعرفة ما سيُسجل.' : 'Enter an amount to see what will be recorded.'}</ZFEffect>
+     CASH -> isAr ? <>سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong> ويُخصم من الخزينة.</> : EN
+     INSTAPAY -> same with 'ويُخصم من حساب إنستاباي.'
+     DEFERRED, no down -> isAr ? <>سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong> ويُسجل مستحقاً {supplier ? <>لـ <strong>{supplier}</strong> </> : null}بتاريخ {firstDueDate}.</> : EN
+     DEFERRED with down > 0 -> isAr ? <>سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong>: يُدفع <strong>{money(down)}</strong> الآن من الخزينة والباقي <strong>{money(remaining)}</strong> مستحق للمقاول.</> : EN
+10. total.gt(0) -> <ZFJournalPeek isAr lines={…} /> built by calling buildConstructionExpenseJournalLines with the SAME arguments the
+    submit uses (category, total, paymentSource, down, '101000', memo preview) inside a useMemo; map each line to
+    { code: line.account_code (or the field that holds the code), name: line.account_name ?? line.description ?? '', debit, credit }.
+    Read the function's return type to pick the right fields.
+Footer: <ZFFormFooter aside={<label> checkbox keepOpen + {isAr ? 'إضافة بند آخر بعد الحفظ' : 'Add another after saving'}</label>}>
+   <button type="button" className={shellStyles.btnSecondary} onClick={onClose}>{isAr ? 'إلغاء' : 'Cancel'}</button>
+   <button type="submit" form="zf-cost-form" className={shellStyles.btnPrimary} disabled={isSubmitting || isTargetPeriodLocked}>
+     {isSubmitting ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : kind === 'claim' ? (isAr ? 'حفظ المستخلص' : 'Save bill') : (isAr ? 'حفظ المصروف' : 'Save expense')}</button>
+handleSubmit: run ALL old validations from both steps in order (property, date, lock, supplier for claim, itemName, amount,
+quantity, due date, down payment) and toast the first failure, then the old save logic unchanged.
+money(x) = Number(x).toLocaleString('en-US', { maximumFractionDigits: 2 }) + (isAr ? ' ج.م' : ' EGP').
+No inline style objects.
+</part_a_expense_popup>
+
+<part_b>
+In ConstructionPayablesView.tsx the quick actions list has 'أمر شراء جديد' plus 'قيد مستخلص' and 'مصروف موقع'. Remove only the
+PO entry, the PO list block (`purchaseOrders.length > 0 && …`), the PO modal mount and its open state, and the two props.
+Leave the other actions as they are.
+</part_b>
+
+<gates>
+npx tsc --noEmit
+npx eslint src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx src/components/admin/erp/v2/views/ConstructionPayablesView.tsx
+npx tsx --test src/lib/erp/__tests__/*.test.ts 2>&1 | tail -5   (8 failures pre-exist; list NEW failures and what you changed)
+grep -c "style={{" src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx -> report (target 0)
+grep -rn "PurchaseOrder\|purchaseOrders\|أمر شراء" src -> list
+</gates>
+
+<structured_output_contract>
+STATUS | part A done/partial | part B files touched | tests changed (file:assertion old->new) | GATES + first failing line | OPEN. Caveman, <=30 lines.
+</structured_output_contract>

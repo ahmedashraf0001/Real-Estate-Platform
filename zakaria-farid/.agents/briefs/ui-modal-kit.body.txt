@@ -1,0 +1,36 @@
+FIN-OS POPUP REBUILD RULES (apply to every file your brief assigns)
+
+REFERENCE — read these committed files first and copy their structure and tone:
+  src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx   (form popup with facts, choices, effect, journal peek, done state)
+  src/components/admin/erp/v2/modals/NewPartnerProfileModal.tsx         (multi-section form popup)
+  src/components/admin/erp/v2/modals/ZFCashTransferModal.tsx            (small form popup)
+Kit: src/components/admin/erp/v2/common/ZFForm.tsx (+ .module.css): ZFField, ZFMoneyInput, ZFChoices, ZFFacts, ZFEffect,
+ZFJournalPeek, ZFFormFooter, ZFFormDone, zfForm (classes: form, row, row3, section, sectionTitle, control, mono, money).
+Shell: ZFModalShell (popups) / ZFDrawerShell (side drawers). Buttons: shellStyles.btnPrimary / btnSecondary / btnDanger / btnGhost / btnSm.
+
+WHAT TO DO PER POPUP
+1. KEEP all business logic: props, state feeding the save handlers, validation, period locks, payloads, print/voucher logic,
+   computed values. Replace the rendered JSX; delete state/helpers/imports only the old JSX used. No inline style objects
+   in the new JSX (exception: a width % for a progress/share bar).
+2. Data-entry popups -> <form id className={zfForm.form}> with ZFField for every input; selects/text/date use
+   className={zfForm.control}; amounts use ZFMoneyInput; 2–4 mutually exclusive options (method, type, mode) use
+   ZFChoices; a party's balances use ZFFacts; ONE ZFEffect sentence says in plain words what saving will do (amount, from
+   where, to where, for whom); a JE preview, if the popup had one, becomes ZFJournalPeek with the SAME account codes/names.
+   Footer: ZFFormFooter with btnSecondary 'إلغاء'/'Cancel' + one submit (btnPrimary, or btnDanger when it rescinds,
+   deletes, voids or reverses) using form="<form id>".
+3. Read-only popups/drawers (dossiers, details, inspectors, ledgers, maps): keep their content and tables, but render
+   headings as <h4 className={zfForm.sectionTitle}>, groups as zfForm.section, key/value groups as ZFFacts, notes as
+   ZFEffect; buttons with shell classes; tables keep their markup but drop inline colors/shadows/gradients.
+4. Wizards with steps: keep steps ONLY when a step depends on a choice made earlier and the popup has > 10 fields;
+   otherwise flatten into one form with sections. Say in the report which you kept and why.
+5. Title: short noun phrase (2–4 words), no parentheses, no account codes, no 'معتمد/رسمي/تنفيذي/ذكي/موحد/متكامل',
+   no English in an Arabic title. Subtitle: one plain sentence saying what the popup is for (<= 110 chars). Rewrite only
+   by DELETING words/fragments from the existing title/subtitle; if nothing usable is left, use the popup's action in
+   plain words (e.g. 'تسليم وحدة', 'تعديل تكلفة').
+6. Remove everywhere: emoji, badges with literal text, 'Invariant', 'Delta', 'IFRS', 'Audited', 'RLS', 'INV-…' tags,
+   account-code pills outside JE previews/account selects, gradients, colored card backgrounds, decorative hero blocks,
+   numbered circles on section titles, the BANK payment option (cash + InstaPay only; keep type unions).
+7. Width: ZFModalShell maxWidth '480px' (<= 6 fields), '640px' (forms), '880px' (wide tables), 'min(1100px, 94vw)' (wizards with tables, ledgers).
+8. Money in text: Number(x).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج.م' (EN ' EGP').
+
+Report per popup: kept-steps or flattened, what was removed, anything you could not map.

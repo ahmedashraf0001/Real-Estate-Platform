@@ -1,0 +1,64 @@
+FIN-OS PAGE STYLE RULES (apply ONLY inside the files your brief assigns; mechanical, no redesign)
+
+Shared pieces you will use:
+  import { ZFPageHeader, ZFSegmented } from '<rel>/common/ZFPageHeader';
+     (<rel> = '..' from src/components/admin/erp/v2/views/*.tsx, '../..' from views/<sub>/*.tsx,
+      './v2' from src/components/admin/erp/*.tsx)
+  import shellStyles from '<rel>/ZFWorkstationShell.module.css';   (only if the file has no import of that CSS yet;
+     if it already imports it under another name e.g. `styles`, use that name instead of shellStyles)
+  ZFPageHeader props: title, subtitle?, actions?   — renders <h1>, one muted line, trailing actions.
+  ZFSegmented props: options [{ id, label, count?, icon? }], value, onChange, ariaLabel?
+  Button classes in ZFWorkstationShell.module.css: btnPrimary (accent), btnSecondary (white + border),
+     btnDanger (red), btnGhost (quiet), btnSm (small modifier, combine: `${s.btnSecondary} ${s.btnSm}`).
+
+RULE H — page header. Replace the block your brief names with exactly the <ZFPageHeader .../> given. Any
+  breadcrumb (<ZFErpBreadcrumb .../>) and badge <span>s next to the title disappear with the block. Remove
+  imports that become unused (ZFErpBreadcrumb, icons only used there).
+
+RULE B — buttons. For every <button> (or <a>/<Link> drawn as a button) in the file that has an INLINE style
+  with a solid or gradient background AND a text label:
+    background is accent/gold (var(--erp-accent...), color-mix of accent, or a gradient containing one) -> className primary
+    background red (#dc2626, #b91c1c, #ef4444, or gradient containing one)                             -> className danger
+    background white/#ffffff/#f8fafc/transparent WITH a 1px solid border                              -> className secondary
+  Then delete these keys from that inline style: display, alignItems, justifyContent, gap, padding, paddingInline,
+  paddingBlock, borderRadius, background, backgroundColor, color, border, fontSize, fontWeight, boxShadow,
+  transition, cursor, fontFamily, lineHeight, height. Keep every other key (width, flex, margin*, minWidth,
+  opacity, alignSelf...). Remove the style prop if it becomes empty. Icon color props inside those buttons
+  (e.g. <Plus color="#ffffff" />) -> remove the color prop.
+  Merge with an existing className via template string. Disabled logic, onClick, aria stay untouched.
+  DO NOT apply RULE B to: tab/segment toggles (buttons with an active/selected state in a group), icon-only
+  buttons, whole-row/card click targets, close (X) buttons, pagination, chart controls, table sort headers.
+  Label clean-up: when the button already renders a <Plus .../> icon, drop a leading '+ ' / '+' from its text.
+
+RULE G — gradients. In inline styles of non-chart elements: `background: 'linear-gradient(...)'` or
+  `'radial-gradient(...)'` -> the FIRST color stop of that gradient as a flat color. Do not touch gradients inside
+  <svg>/<linearGradient>, ApexCharts options, skeleton shimmer, or map markers.
+
+RULE S — shadows. In inline styles: delete `boxShadow` on static cards, panels, badges, tiles, list items and
+  buttons. KEEP boxShadow when the same style object (or element) is position 'absolute'/'fixed'/'sticky', or is a
+  dropdown/popover/tooltip/menu, or the value starts with '0 0 0 ' (focus ring).
+
+RULE R — radius. Inline `borderRadius` of '14px' | '16px' | '18px' | '20px' | '24px' | '1rem' | '1.25rem' on a
+  CONTAINER that has a border or a background (card, panel, tile, bar) -> '12px'. Pills (999px / 9999px / 50%)
+  and small badges untouched.
+
+RULE F — type. In inline styles: fontWeight 900 -> 800. Inline-styled <h2>/<h3> (or a div/span used as a card
+  title, i.e. the first text in a card header) with fontSize from '0.85rem' to '1.15rem' -> fontSize '0.88rem',
+  fontWeight 700, color 'var(--erp-text-title)'.
+
+RULE C — leftover accent literals. In inline styles and JSX color/stroke/fill props (NOT in ApexCharts option
+  objects, NOT in `colors: [...]` / `const ...colors = [...]` arrays, NOT in useState defaults):
+    '#2563eb' '#3b82f6' '#946f23' '#d4af37' '#b8903e' '#b48c36' '#c5a059'  -> 'var(--erp-accent)'
+    '#1d4ed8' '#1e40af' '#7c5c1b' '#78581c'                                -> 'var(--erp-accent-hover)'
+    '#eff6ff' '#fdf8ee'                                                     -> 'var(--erp-accent-subtle)'
+    '#dbeafe' -> 'color-mix(in srgb, var(--erp-accent) 14%, transparent)'
+    '#bfdbfe' -> 'color-mix(in srgb, var(--erp-accent) 28%, transparent)'
+    rgba(37, 99, 235, A) | rgba(59, 130, 246, A) | rgba(212, 175, 55, A) | rgba(184, 144, 62, A) |
+    rgba(148, 111, 35, A) | rgba(180, 130, 30, A)  -> `color-mix(in srgb, var(--erp-accent) <A*100 rounded>%, transparent)`
+  Semantic colors (greens, reds, ambers, slate greys) stay as they are.
+
+RULE K — stacking. Remove inline `marginBottom` from <ZFKpiGrid> and from top-level page sections; the page
+  container already spaces sections. If the page root element has inline `maxWidth: '100vw'`, change it to '100%'.
+
+NEVER: change data logic, handlers, props, texts other than those your brief gives, file encoding (UTF-8 Arabic
+must survive byte-exact), or files not assigned. No new dependencies. No CSS-module edits unless your brief says so.

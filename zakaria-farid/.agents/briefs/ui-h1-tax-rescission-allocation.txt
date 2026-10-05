@@ -1,0 +1,103 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first, gates once at the end. Always finish with the report (`caveman` skill).
+- Do NOT git add/commit/stash/checkout/restore. Touch ONLY the 3 files below. Keep UTF-8 Arabic byte-exact.
+- FIRST read .agents/briefs/ui-rules.body.txt fully. Apply RULES H, B, G, S, R, F, C, K to all 3 files.
+</execution_rules>
+
+<files>
+src/components/admin/erp/v2/views/ApartmentTaxesView.tsx       (shell CSS is imported as `styles`)
+src/components/admin/erp/v2/views/ContractRescissionsView.tsx   (shell CSS is imported as `styles`)
+src/components/admin/erp/v2/views/CostAllocationView.tsx        (shell CSS is imported as `styles`)
+</files>
+
+<headers>
+1. ApartmentTaxesView — replace from the line `{/* 1. Header & Stage Breadcrumb */}` up to (not including) the line
+   `{/* 2. DUAL MODE SEGMENTED BAR ...`, i.e. the whole `<div className={styles.stageHeader}>…</div>`, with:
+     <ZFPageHeader
+       title={isAr ? 'الضرائب والرسوم والتراخيص' : 'Taxes, Fees & Permits'}
+       subtitle={isAr ? 'رسوم التراخيص والتأمينات والضرائب المحمّلة على تكلفة المباني، وأرشيف ضريبة التصرفات العقارية.' : 'Permit fees, insurance and taxes added to building cost, plus the property disposition tax archive.'}
+       actions={onOpenCostModal ? (
+         <button type="button" className={styles.btnPrimary} onClick={() => onOpenCostModal()} disabled={isMutating}>
+           <Plus size={14} />
+           <span>{isAr ? 'تسجيل رسم أو ترخيص' : 'New fee or permit'}</span>
+         </button>
+       ) : undefined}
+     />
+   Then in the DUAL MODE bar right below:
+   a. The outer bar <div style={{…}}>: replace its style with
+      { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }
+   b. Replace the inner toggle <div> that holds the two mode buttons (capitalized_costs / disposition_archive) with:
+      <ZFSegmented
+        ariaLabel={isAr ? 'نوع السجل' : 'Register type'}
+        value={activeMode}
+        onChange={setActiveMode}
+        options={[
+          { id: 'capitalized_costs', label: isAr ? 'ضرائب وتراخيص المباني' : 'Building taxes & permits', count: allStatutoryCosts.length, icon: <HardHat size={14} /> },
+          { id: 'disposition_archive', label: isAr ? 'ضريبة التصرفات العقارية (٢.٥٪)' : 'Disposition tax (2.5%)', count: taxRecords.length, icon: <Receipt size={14} /> },
+        ]}
+      />
+   c. The button in that bar that calls setIsRecordModalOpen(true) -> className styles.btnSecondary (RULE B keys
+      removed). Label: isAr ? 'تسجيل ضريبة تصرفات' : 'Record disposition tax'.
+   d. The helper line with <ShieldCheck …/> in that bar: keep the element, set its text style to
+      { fontSize: '0.74rem', color: 'var(--erp-text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }.
+
+2. ContractRescissionsView — replace the `{!hideHeader && ( <div className={styles.stageHeader}> … </div> )}` block
+   (starts after `{/* 1. Header & Stage Breadcrumb */}`) with:
+     {!hideHeader && (
+       <ZFPageHeader
+         title={isAr ? 'فسخ العقود والتسويات' : 'Contract rescissions'}
+         subtitle={isAr ? 'تسجيل فسخ العقد، خصم غرامة الفسخ، رد المستحق للعميل، وإعادة الوحدة للبيع.' : 'Record a rescission, deduct the penalty, refund the client, and return the unit to sale.'}
+         actions={(
+           <>
+             {onOpenRescissionModal && (
+               <button type="button" className={styles.btnDanger} onClick={<KEEP the existing onClick arrow function exactly>}>
+                 <RotateCcw size={14} />
+                 <span>{isAr ? 'تسجيل فسخ عقد' : 'New rescission'}</span>
+               </button>
+             )}
+             <button type="button" className={styles.btnSecondary} onClick={onNavigateToContracts}>
+               <span>{isAr ? 'عقود البيع' : 'Sales contracts'}</span>
+               <ArrowRight size={14} />
+             </button>
+           </>
+         )}
+       />
+     )}
+   If onNavigateToContracts is optional in the props type, render that second button only when it is defined.
+
+3. CostAllocationView — replace from `{/* 1. Header & Stage Breadcrumb */}` up to (not including)
+   `{/* 2. 4 DISCRETE FLOATING STAT CARDS */}` with:
+     <ZFPageHeader
+       title={isAr ? 'توزيع تكاليف البناء على الوحدات' : 'Construction cost allocation'}
+       subtitle={isAr ? 'توزيع تكلفة كل مبنى على وحداته حسب القيمة البيعية، لمعرفة تكلفة الوحدة وربحها عند التسليم.' : "Spread each building's cost over its units by sales value to get unit cost and profit at handover."}
+       actions={(
+         <button type="button" className={styles.btnPrimary} onClick={onOpenNewAllocation}>
+           <Plus size={14} />
+           <span>{isAr ? 'توزيع جديد' : 'New allocation'}</span>
+         </button>
+       )}
+     />
+   If the original button was conditional or had disabled logic, keep that logic.
+</headers>
+
+<verify>
+grep -c "ZFErpBreadcrumb" on the 3 files -> 0 each.
+grep -cE "linear-gradient|radial-gradient" on the 3 files -> report counts (only svg/chart ones may remain; list them).
+grep -cE "#2563eb|#946f23|#d4af37|#b8903e|rgba\(37, 99, 235|rgba\(184, 144, 62|rgba\(212, 175, 55" on the 3 files,
+  excluding `var(--erp-...` fallbacks -> report remaining lines and why.
+grep -c "fontWeight: 900" -> 0.
+</verify>
+
+<gates>
+npx tsc --noEmit
+npx eslint src/components/admin/erp/v2/views/ApartmentTaxesView.tsx src/components/admin/erp/v2/views/ContractRescissionsView.tsx src/components/admin/erp/v2/views/CostAllocationView.tsx
+  (report only errors you introduced; compare with `git stash`-free method: just list errors and their lines)
+npx tsx --test src/lib/erp/__tests__/*.test.ts 2>&1 | tail -5   (report pass/fail counts; 8 failures pre-exist)
+</gates>
+
+<structured_output_contract>
+STATUS | per file: header done, #buttons converted, #gradients removed, #shadows removed, #colors replaced |
+verify grep results | GATES pass/fail + first failing line | OPEN. Caveman, <=25 lines.
+</structured_output_contract>

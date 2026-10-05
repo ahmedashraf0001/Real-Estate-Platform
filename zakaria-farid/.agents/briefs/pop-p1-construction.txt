@@ -1,0 +1,1 @@
+Read and execute the full brief in .agents/briefs/pop-p1-construction.body.txt (cwd = zakaria-farid). It is the complete task; follow it exactly, including execution_rules, gates and structured_output_contract.

@@ -1,0 +1,29 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first, gates once at the end. Always finish with the report (caveman skill).
+- Do NOT git add/commit/stash/checkout/restore. Touch ONLY the files below (+ their own .module.css: delete unused classes or the file if unused). Keep UTF-8 Arabic byte-exact.
+- FIRST read .agents/briefs/ui-modal-kit.body.txt fully and the reference files it names. Apply it to every file below.
+- Tests under src/lib/erp/__tests__ that read these files' source: update ONLY assertions pinning removed text/markup; list each.
+</execution_rules>
+
+<files>
+src/components/admin/erp/v2/modals/NewContractWizardModal.tsx
+src/components/admin/erp/NewChequeModal.tsx
+src/components/admin/erp/v2/modals/ContractEscalationModal.tsx
+src/components/admin/erp/v2/modals/RescissionSettlementModal.tsx
+src/components/admin/erp/v2/modals/HandoverExecutionModal.tsx
+src/components/admin/erp/v2/modals/ZFContractInspectionModal.tsx
+src/components/admin/erp/v2/views/installments/InstallmentDetailDrawer.tsx
+</files>
+
+<gates>
+npx tsc --noEmit
+npx eslint <the files above>   (list only errors)
+npx tsx --test src/lib/erp/__tests__/*.test.ts 2>&1 | tail -5   (8 failures pre-exist; list NEW failing tests + what you changed)
+grep -c "style={{" per file -> report
+</gates>
+
+<structured_output_contract>
+STATUS | per popup: flattened/kept-steps, removed items, unmapped | tests changed | GATES + first failing line | OPEN. Caveman, <=30 lines.
+</structured_output_contract>
