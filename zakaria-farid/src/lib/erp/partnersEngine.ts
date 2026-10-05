@@ -649,6 +649,14 @@ export class PartnersEngine {
     partners.forEach(p => partnerNameSet.add(p.name));
     transactions.forEach(t => partnerNameSet.add(t.partner_name));
     partnerCalls.forEach(c => partnerNameSet.add(c.partner_name));
+    // Partners named only in a building's equity splits (no profile or transaction yet) are still partners.
+    properties.forEach(p => {
+      ((p.partner_splits as any[]) || []).forEach(s => {
+        const name = (s?.partner_name || s?.partnerName || '').trim();
+        // Founder name variants collapse into PRIMARY_DEVELOPER_NAME (added below).
+        if (name && !s?.is_archived && !name.includes(PRIMARY_DEVELOPER_NAME)) partnerNameSet.add(name);
+      });
+    });
     partnerNameSet.add(PRIMARY_DEVELOPER_NAME);
 
     // Build summaries

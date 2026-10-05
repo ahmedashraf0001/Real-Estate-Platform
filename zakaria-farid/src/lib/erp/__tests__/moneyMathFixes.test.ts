@@ -227,3 +227,21 @@ describe('Balance figures read from the GL', () => {
     });
   });
 });
+
+describe('Partner list includes partners named only in building splits', () => {
+  it('lists a split partner with no profile or transaction yet', async () => {
+    const { PartnersEngine } = await import('../partnersEngine');
+    const building = {
+      id: 'b-split', type: 'building', area_sqm: 100, title_ar: 'عمارة',
+      partner_splits: [
+        { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: 50 },
+        { partner_name: 'اشرف متولي', share_percentage: 50 },
+      ],
+    } as unknown as Property;
+    const names = PartnersEngine.calculatePartnerSummaries([], [building], [], [], []).map(s => s.partnerName);
+    assert.ok(names.includes('اشرف متولي'));
+    assert.strictEqual(names.filter(n => n === PRIMARY_DEVELOPER_NAME).length, 1);
+    const ashraf = PartnersEngine.calculatePartnerSummaries([], [building], [], [], []).find(s => s.partnerName === 'اشرف متولي')!;
+    assert.strictEqual(ashraf.holdings[0].sharePct, 50);
+  });
+});
