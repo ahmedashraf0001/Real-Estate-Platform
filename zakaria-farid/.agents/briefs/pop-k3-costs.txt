@@ -5,6 +5,7 @@ ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exac
 - Do NOT git add/commit/stash/checkout/restore. Touch ONLY the files below (+ their own .module.css: delete unused classes or the file if unused). Keep UTF-8 Arabic byte-exact.
 - FIRST read .agents/briefs/ui-modal-kit.body.txt fully and the reference files it names. Apply it to every file below.
 - Tests under src/lib/erp/__tests__ that read these files' source: update ONLY assertions pinning removed text/markup; list each.
+- JE previews: ERPJournalLine has only account_code/debit_amount/credit_amount/memo. Names come from CANONICAL_COA[code].account_name_ar / account_name_en (import { CANONICAL_COA } from @/lib/erp/ledger). Run npx tsc --noEmit after EACH file, not only at the end.
 </execution_rules>
 
 <files>
