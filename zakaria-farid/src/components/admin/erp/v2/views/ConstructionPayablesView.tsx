@@ -167,7 +167,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
   const [pageSize, setPageSize] = useState(10);
 
   // Modals & Drawers State
-  const [expensePurpose, setExpensePurpose] = useState<'claim' | 'site'>('claim');
   const [isNewExpenseModalOpen, setIsNewExpenseModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [inspectCostItem, setInspectCostItem] = useState<ERPPropertyCostItem | null>(null);
@@ -1820,13 +1819,11 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
             isAr={isAr}
           >
             <div className={vStyles.quickActionsList}>
+              {/* One entry point: the form itself switches between contractor bill and site expense. */}
               <button
                 type="button"
                 className={`${vStyles.quickActionRow} ${vStyles.quickActionRowActive}`}
-                onClick={() => {
-                  setExpensePurpose('claim');
-                  setIsNewExpenseModalOpen(true);
-                }}
+                onClick={() => setIsNewExpenseModalOpen(true)}
                 disabled={isMutating}
               >
                 <div className={vStyles.quickActionLeading}>
@@ -1834,30 +1831,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     <Receipt size={16} />
                   </div>
                   <span className={vStyles.quickActionLabelActive}>
-                    {isAr ? 'قيد مستخلص' : 'Record Contractor Claim'}
+                    {isAr ? 'تسجيل تكلفة بناء' : 'Record construction cost'}
                   </span>
                 </div>
                 <ChevronLeft size={16} className={vStyles.quickActionChevronActive} />
-              </button>
-
-              <button
-                type="button"
-                className={vStyles.quickActionRow}
-                onClick={() => {
-                  setExpensePurpose('site');
-                  setIsNewExpenseModalOpen(true);
-                }}
-                disabled={isMutating}
-              >
-                <div className={vStyles.quickActionLeading}>
-                  <div className={vStyles.quickActionIconSquircle}>
-                    <Wallet size={16} />
-                  </div>
-                  <span className={vStyles.quickActionLabel}>
-                    {isAr ? 'مصروف موقع' : 'Site Expense'}
-                  </span>
-                </div>
-                <ChevronLeft size={16} className={vStyles.quickActionChevron} />
               </button>
             </div>
           </ZFWidgetCard>
@@ -2132,8 +2109,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         activePeriod={activePeriod}
         periods={periods}
         onSaveEntry={onSaveExpenseEntry}
-        initialPaymentSource={expensePurpose === 'claim' ? '201000' : '101000'}
-        purpose={expensePurpose}
+        initialPaymentSource="101000"
       />
 
       {/* ─── 8. MODAL: CONTRACTOR AP SETTLEMENT MODAL ─── */}
