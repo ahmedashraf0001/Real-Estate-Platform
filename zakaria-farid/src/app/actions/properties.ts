@@ -160,8 +160,22 @@ export async function saveProperty(
         if (amErr) console.error('Amenity insert error:', amErr);
       }
 
+      // Replace images with the form's current list (added, removed or reordered).
+      const { error: imgDelErr } = await supabase.from('property_images').delete().eq('property_id', propertyId);
+      if (imgDelErr) throw imgDelErr;
+      if (previewUrls.length > 0) {
+        const imgRows = previewUrls.map((url: string, i: number) => ({
+          property_id: propertyId,
+          url,
+          sort_order: i,
+        }));
+        const { error: imgErr } = await supabase.from('property_images').insert(imgRows);
+        if (imgErr) throw imgErr;
+      }
+
       revalidatePath('/admin');
       revalidatePath('/');
+      revalidatePath('/[locale]/properties/[slug]', 'page');
       return { success: true, propertyId, slug: payload.slug };
     } else {
       const newProp = writeRes.data;
