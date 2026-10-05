@@ -376,7 +376,7 @@ export function createInitialERPState(): ERPStoreState {
     // Initial Partner Capital Contribution: Dr Bank 102000 / Cr Partner Capital 301000 (100M EGP)
     GeneralLedgerEngine.validateAndCreateEntry({
       entry_number: 'JE-2026-INIT-001',
-      entry_date: '2026-01-02',
+      entry_date: '2026-03-02',
       period: currentPeriod,
       description: 'Founding Partner Capital Injection for Egyptian Luxury Developments',
       source_module: 'CAPITAL_CALL',
@@ -400,7 +400,7 @@ export function createInitialERPState(): ERPStoreState {
     // Incurred Construction WIP: Dr 150000/151000 / Cr Accounts Payable 201000 (45M EGP)
     GeneralLedgerEngine.validateAndCreateEntry({
       entry_number: 'JE-2026-WIP-002',
-      entry_date: '2026-01-10',
+      entry_date: '2026-03-10',
       period: currentPeriod,
       description: 'Capitalized Direct Construction & Land Development WIP',
       source_module: 'WIP_ALLOCATION',
@@ -428,7 +428,7 @@ export function createInitialERPState(): ERPStoreState {
     }),
 
     // Advance Payment for Contract 1: Dr 101000 (Safe Vault) / Cr 203000 (3.6M EGP)
-    ContractsEngine.createAdvancePaymentEntry(contract1, '3600000.00', currentPeriod, '2026-01-15', true, 'TELLER_1'),
+    ContractsEngine.createAdvancePaymentEntry(contract1, '3600000.00', currentPeriod, '2026-03-15', true, 'TELLER_1'),
 
     // Handover Entry for Contract 2 (Penthouse) Model B Net Recognition (Invariant 4.17):
     // Dr 203000 (17.5M), Dr 103000 (17.5M), Cr 401000 (35M), Dr 502000 (15.75M), Cr 151000 (15.75M)

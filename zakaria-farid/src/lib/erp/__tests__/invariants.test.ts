@@ -450,7 +450,7 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
       deliveredContract,
       '500000.00',
       period,
-      '2026-10-01',
+      '2026-09-28',
       true, // isVaultCash
       'CFO_FARID'
     );

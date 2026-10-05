@@ -439,7 +439,8 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
         paymentMethod: 'INSTAPAY_102000',
         propertyTitle: 'برج الأوركيد',
         receiptRef: 'REC-CAP-001',
-        currentPeriod: TEST_PERIOD
+        currentPeriod: TEST_PERIOD,
+        date: '2026-09-15'
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);
@@ -454,7 +455,8 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
         paymentMethod: 'BANK_102000',
         propertyTitle: 'برج الأوركيد',
         receiptRef: 'REC-CAP-001-BANK',
-        currentPeriod: TEST_PERIOD
+        currentPeriod: TEST_PERIOD,
+        date: '2026-09-15'
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);
@@ -469,7 +471,8 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
         paymentMethod: 'CASH_101000',
         propertyTitle: 'برج الأوركيد',
         receiptRef: 'PAY-DIST-001',
-        currentPeriod: TEST_PERIOD
+        currentPeriod: TEST_PERIOD,
+        date: '2026-09-15'
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);

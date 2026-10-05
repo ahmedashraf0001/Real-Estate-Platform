@@ -240,9 +240,12 @@ describe('ERP Invariant 0.9 & Fiscal Period Posting Suite', () => {
       }
     });
 
-    it('resolvePeriodForDate falls back to activePeriod when date is out of range or unprovided', () => {
-      const fallback = resolvePeriodForDate('2028-01-01', fullYear2026Periods, openPeriod);
-      assert.equal(fallback.period_id, openPeriod.period_id);
+    it('resolvePeriodForDate uses the own month of the date when no listed period contains it', () => {
+      const own = resolvePeriodForDate('2028-01-01', fullYear2026Periods, openPeriod);
+      assert.equal(own.period_id, 'prd-2028-01');
+      assert.equal(own.start_date, '2028-01-01');
+      assert.equal(own.end_date, '2028-01-31');
+      assert.equal(own.status, 'OPEN');
 
       const fallbackEmpty = resolvePeriodForDate('2026-05-01', [], openPeriod);
       assert.equal(fallbackEmpty.period_id, openPeriod.period_id);

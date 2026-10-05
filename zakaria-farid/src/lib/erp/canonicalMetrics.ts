@@ -574,6 +574,41 @@ export function getHandoverCOGS(
   };
 }
 
+export interface GlBalanceSheetKpis {
+  /** 203000 credit - debit: advances not yet recognised */
+  deferredRevenue: string;
+  /** 401000 credit - debit: revenue recognised at handover */
+  realizedRevenue: string;
+  /** 103000 debit - credit: unpaid balance of delivered contracts */
+  accountsReceivable: string;
+}
+
+/**
+ * Balance-sheet figures read from the general ledger (user-confirmed: the GL is the single
+ * source of truth; schedule dues are off-ledger). Rescinded contracts are already unwound in the GL.
+ */
+export function glBalanceSheetKpis(entries: ERPJournalEntry[] = []): GlBalanceSheetKpis {
+  const debit: Record<string, Decimal> = {};
+  const credit: Record<string, Decimal> = {};
+  for (const entry of entries) {
+    for (const line of entry.lines || []) {
+      const code = line.account_code;
+      debit[code] = (debit[code] || D(0)).plus(line.debit_amount || 0);
+      credit[code] = (credit[code] || D(0)).plus(line.credit_amount || 0);
+    }
+  }
+  const net = (code: string, creditNormal: boolean) => {
+    const dr = debit[code] || D(0);
+    const cr = credit[code] || D(0);
+    return (creditNormal ? cr.minus(dr) : dr.minus(cr)).toFixed(2);
+  };
+  return {
+    deferredRevenue: net('203000', true),
+    realizedRevenue: net('401000', true),
+    accountsReceivable: net('103000', false),
+  };
+}
+
 // ============================================================================
 // 5. CLIENT OPERATING CASH & BALANCE SHEET METRICS
 // ============================================================================
@@ -1053,6 +1088,7 @@ export const CanonicalMetrics = {
   getConstructionWIP,
   getRawConstructionCosts,
   getHandoverCOGS,
+  glBalanceSheetKpis,
   getAccountsReceivable,
   getPartnerFinancing,
   getPartnerDrawings,

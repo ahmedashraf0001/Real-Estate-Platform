@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { ContractsEngine, generateContractNumber } from '../contracts';
 import { RescissionEngine, resolveRescissionCost } from '../rescission';
 import { computeDynamicBuildingCapital } from '../partnersEngine';
-import { getHandoverCOGS } from '../canonicalMetrics';
+import { getHandoverCOGS, glBalanceSheetKpis } from '../canonicalMetrics';
+import { GeneralLedgerEngine, resolvePeriodForDate, buildCalendarMonthPeriod } from '../ledger';
 import { RSVEngine } from '../rsv';
 import { PRIMARY_DEVELOPER_NAME } from '../partnersDirectory';
 import type {
@@ -170,5 +171,59 @@ describe('Partner capital owed = share x recorded costs', () => {
     assert.deepStrictEqual([f.requiredContributionEgp, f.paidContributionEgp, f.arrearsEgp], ['600000.00', '0.00', '600000.00']);
     assert.strictEqual(info.impliedTotalCapitalEgp, '1000000.00');
     assert.strictEqual(info.fundingRatioPct, 30);
+  });
+});
+
+describe('Entries land in the period that contains their date', () => {
+  const april: ERPAccountingPeriod = { period_id: 'prd-2026-04', fiscal_year: 2026, period_number: 4, start_date: '2026-04-01', end_date: '2026-04-30', status: 'OPEN' };
+  const lines = [
+    { account_code: '101000', debit_amount: '100.00', credit_amount: '0.00' },
+    { account_code: '203000', debit_amount: '0.00', credit_amount: '100.00' },
+  ];
+
+  it('rejects an entry dated outside its period', () => {
+    assert.throws(() => GeneralLedgerEngine.validateAndCreateEntry({
+      entry_number: 'JE-T-1', entry_date: '2026-03-15', period: april, description: 't',
+      source_module: 'SALES', created_by: 't', lines,
+    }), /outside period/);
+  });
+
+  it('accepts an entry dated inside its period', () => {
+    const e = GeneralLedgerEngine.validateAndCreateEntry({
+      entry_number: 'JE-T-2', entry_date: '2026-04-30', period: april, description: 't',
+      source_module: 'SALES', created_by: 't', lines,
+    });
+    assert.strictEqual(e.period_id, 'prd-2026-04');
+  });
+
+  it('resolves a date with no listed period to its own month, never another', () => {
+    const p = resolvePeriodForDate('2027-01-10', [april], april);
+    assert.deepStrictEqual([p.period_id, p.start_date, p.end_date, p.status], ['prd-2027-01', '2027-01-01', '2027-01-31', 'OPEN']);
+  });
+
+  it('builds leap-year February correctly regardless of time zone', () => {
+    const p = buildCalendarMonthPeriod('2024-02-10');
+    assert.deepStrictEqual([p.period_id, p.end_date], ['prd-2024-02', '2024-02-29']);
+  });
+});
+
+describe('Balance figures read from the GL', () => {
+  it('advance then handover: deferred 0, realized 1,000,000, AR 900,000', () => {
+    const entries = [
+      { entry_id: 'a', lines: [
+        { account_code: '101000', debit_amount: '100000.00', credit_amount: '0.00' },
+        { account_code: '203000', debit_amount: '0.00', credit_amount: '100000.00' },
+      ] },
+      { entry_id: 'h', lines: [
+        { account_code: '203000', debit_amount: '100000.00', credit_amount: '0.00' },
+        { account_code: '103000', debit_amount: '900000.00', credit_amount: '0.00' },
+        { account_code: '401000', debit_amount: '0.00', credit_amount: '1000000.00' },
+      ] },
+    ] as unknown as ERPJournalEntry[];
+    assert.deepStrictEqual(glBalanceSheetKpis(entries), {
+      deferredRevenue: '0.00',
+      realizedRevenue: '1000000.00',
+      accountsReceivable: '900000.00',
+    });
   });
 });

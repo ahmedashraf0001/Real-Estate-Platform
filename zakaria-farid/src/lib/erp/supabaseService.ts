@@ -912,6 +912,8 @@ export class ERPSupabaseService {
         }
       }
       if (lineError) {
+        // Never leave a journal header without its lines (an entry with no lines breaks the ledger).
+        await supabase.from('erp_journal_entries').delete().eq('entry_id', entryId);
         if (!strict && this.isSchemaCacheError(lineError)) return;
         throw lineError;
       }
@@ -953,7 +955,10 @@ export class ERPSupabaseService {
       }
     }
 
-    // 1. Update Schedule
+    // 1. Ledger first (strict): if the entry cannot be saved, the installment is not marked paid.
+    await this.persistJournalEntry(supabase, journalEntry, true);
+
+    // 2. Update Schedule
     const { error: schError } = await supabase
       .from('erp_installment_schedules')
       .update({
@@ -992,9 +997,6 @@ export class ERPSupabaseService {
     } catch {
       // Ignore if no direct PDC link
     }
-
-    // 4. Insert Journal Entry
-    await this.persistJournalEntry(supabase, journalEntry);
   }
 
   /**
@@ -1145,6 +1147,9 @@ export class ERPSupabaseService {
     rescissionRecord.rescission_id = rescissionId;
     rescissionRecord.contract_id = cleanContractId;
 
+    // 0. Ledger first (strict): a rescission without its journal entry must not be saved.
+    await this.persistJournalEntry(supabase, journalEntry, true);
+
     // 1. Insert Rescission Record
     const { error: rescError } = await supabase
       .from('erp_rescissions')
@@ -1199,9 +1204,6 @@ export class ERPSupabaseService {
     } catch (pdcErr) {
       console.warn('Notice while voiding uncollected PDCs for rescinded contract:', pdcErr);
     }
-
-    // 4. Insert Journal Entry
-    await this.persistJournalEntry(supabase, journalEntry);
 
     // 5. Restore property listing status to active and update building_units.status to available
     try {

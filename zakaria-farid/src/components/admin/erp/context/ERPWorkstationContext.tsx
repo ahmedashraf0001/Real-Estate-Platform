@@ -11,7 +11,7 @@ import { ContractsEngine, generateContractNumber } from '@/lib/erp/contracts';
 import { EscalationEngine } from '@/lib/erp/escalation';
 import { RescissionEngine, resolveRescissionCost } from '@/lib/erp/rescission';
 import { RSVEngine } from '@/lib/erp/rsv';
-import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
+import { getAvailableCash, getConstructionWIP, glBalanceSheetKpis } from '@/lib/erp/canonicalMetrics';
 import { D, Decimal, generateUUID, isUUID, ensureUUID } from '@/lib/erp/math';
 import { 
   ERPContract, 
@@ -368,7 +368,6 @@ export interface ERPWorkstationContextValue {
     paymentDate: string;
     notes?: string;
   }) => Promise<void>;
-  handleCollectPayment: (details?: { receiptDate?: string; destinationTreasury?: 'SAFE_101000' | 'BANK_102000'; paymentMethod?: 'CASH' | 'INSTAPAY'; notes?: string }) => Promise<void>;
   handleConfirmHandover: (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => Promise<void>;
   handleToggleContractHandover: (contract: ERPContract) => Promise<void>;
   handlePDCStatusChange: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => Promise<void>;
@@ -860,7 +859,7 @@ export function ERPWorkstationProvider({
 
   const persistJournalEntryGuarded = useCallback(async (entry: ERPJournalEntry) => {
     assertCashOutflowAllowed(entry.lines || []);
-    return ERPSupabaseService.persistJournalEntry(supabase, entry);
+    return ERPSupabaseService.persistJournalEntry(supabase, entry, true);
   }, [assertCashOutflowAllowed, supabase]);
 
   // Real-Time WebSocket Sync Hook
@@ -1348,19 +1347,10 @@ export function ERPWorkstationProvider({
       .toFixed(2);
   }, [data.partnerCalls]);
 
-  const deferredRevenue = useMemo(() => {
-    return data.contracts
-      .filter(c => c.handover_status !== 'Delivered')
-      .reduce((acc, c) => acc.plus(c.total_cash_collected), D(0))
-      .toFixed(2);
-  }, [data.contracts]);
-
-  const realizedRevenue = useMemo(() => {
-    return data.contracts
-      .filter(c => c.handover_status === 'Delivered')
-      .reduce((acc, c) => acc.plus(c.gross_contract_value), D(0))
-      .toFixed(2);
-  }, [data.contracts]);
+  // Balance figures come from the GL (user-confirmed single source of truth); rescissions are unwound there.
+  const glKpis = useMemo(() => glBalanceSheetKpis(data.journalEntries), [data.journalEntries]);
+  const deferredRevenue = glKpis.deferredRevenue;
+  const realizedRevenue = glKpis.realizedRevenue;
 
   const trancheStats = useMemo(() => {
     let pending = 0;
@@ -1381,11 +1371,11 @@ export function ERPWorkstationProvider({
     return {
       cashBank: trueLiquidCash,
       totalWip: totalWipIncurred,
-      accountsReceivable: D(totalGrossContractValue).minus(totalCollectedCash).toFixed(2),
+      accountsReceivable: glKpis.accountsReceivable,
       deferredRevenue: deferredRevenue,
       realizedRevenue: realizedRevenue
     };
-  }, [data.journalEntries, totalWipIncurred, totalGrossContractValue, totalCollectedCash, deferredRevenue, realizedRevenue]);
+  }, [data.journalEntries, totalWipIncurred, glKpis, deferredRevenue, realizedRevenue]);
 
   const totalTaxLiabilities = useMemo(() => {
     return data.taxRecords
@@ -1820,15 +1810,8 @@ export function ERPWorkstationProvider({
       const supersededIds = contractSchedules.filter(s => s.status === 'Pending').map(s => s.schedule_id);
       const newSchedules = result.allSchedules.filter(s => s.status === 'Pending');
 
-      await ERPSupabaseService.persistEscalation(
-        supabase,
-        contract.contract_id,
-        result.amendment,
-        result.updatedContract.gross_contract_value,
-        supersededIds,
-        newSchedules
-      );
-
+      // Build (and validate) the post-handover entry BEFORE saving anything, so a closed period or bad
+      // date leaves the contract untouched.
       let adjustingEntry: ERPJournalEntry | undefined;
       if (contract.handover_status === 'Delivered') {
         const deltaD = D(delta);
@@ -1859,6 +1842,18 @@ export function ERPWorkstationProvider({
             }
           ]
         });
+      }
+
+      await ERPSupabaseService.persistEscalation(
+        supabase,
+        contract.contract_id,
+        result.amendment,
+        result.updatedContract.gross_contract_value,
+        supersededIds,
+        newSchedules
+      );
+
+      if (adjustingEntry) {
         await persistJournalEntryGuarded(adjustingEntry);
       }
 
@@ -2070,7 +2065,7 @@ export function ERPWorkstationProvider({
     notes?: string;
   }) => {
     const { rescission, amount, sourceAccount, paymentDate, notes } = params;
-    const targetPeriod = resolvePeriodForDate(paymentDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(paymentDate);
     if (!ensureActivePeriodOpen(isAr ? 'سداد المسترد للعميل' : 'Customer Refund Payout', targetPeriod)) {
       return;
     }
@@ -2144,156 +2139,9 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.contracts, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen, loadLiveData]);
+  }, [data.contracts, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen, loadLiveData, resolveAndEnsurePeriodForDate]);
 
 
-  // Handler: Collect Payment
-  const handleCollectPayment = useCallback(async (details?: {
-    receiptDate?: string;
-    destinationTreasury?: 'SAFE_101000' | 'BANK_102000';
-    paymentMethod?: 'CASH' | 'INSTAPAY';
-    notes?: string;
-  }) => {
-    if (!showPayModal) return;
-    const payDate = details?.receiptDate || new Date().toISOString().split('T')[0];
-    const targetPeriod = await resolveAndEnsurePeriodForDate(payDate);
-    if (!ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod)) return;
-
-    setIsMutating(true);
-    try {
-      const { contract, schedule } = showPayModal;
-      const amount = schedule.nominal_value;
-      const isInstaPay = details?.paymentMethod === 'INSTAPAY' || details?.destinationTreasury === 'BANK_102000';
-      // User-confirmed 2026-10-04: Payments are direct cash (Main Safe 101000) or InstaPay transfer (102000)
-      const targetAccount = isInstaPay ? '102000' : '101000';
-      const notes = details?.notes || '';
-
-      const isDelivered = contract.handover_status === 'Delivered';
-      const creditAccount = isDelivered ? '103000' : '203000';
-
-      const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const uniqueTime = Date.now().toString(36).toUpperCase().slice(-4);
-      const prefix = isInstaPay ? 'JE-IP' : 'JE-RCP';
-      const entryNumber = `${prefix}-${contract.contract_number}-T${schedule.tranche_number}-${uniqueTime}${randSuffix}`;
-
-      const entry = GeneralLedgerEngine.validateAndCreateEntry({
-        entry_number: entryNumber,
-        entry_date: payDate,
-        period: targetPeriod,
-        description: isAr 
-          ? (isInstaPay
-              ? (schedule.tranche_number === 0
-                  ? `تحصيل دفعة مقدم التعاقد (قسط 0) عبر إنستاباي بالخزينة الرئيسية - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`
-                  : `تحصيل القسط رقم ${schedule.tranche_number} عبر إنستاباي بالخزينة الرئيسية - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`)
-              : (schedule.tranche_number === 0
-                  ? `تحصيل دفعة مقدم التعاقد (قسط 0) نقداً بالخزينة - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`
-                  : `تحصيل القسط رقم ${schedule.tranche_number} نقداً بالخزينة - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`))
-          : `Installment #${schedule.tranche_number} collected via ${isInstaPay ? 'InstaPay' : 'Cash'} into Treasury - Contract ${contract.contract_number}`,
-        source_module: 'SALES',
-        source_entity_id: contract.contract_id,
-        created_by: 'CFO_FARID',
-        lines: [
-          {
-            account_code: targetAccount,
-            debit_amount: amount,
-            credit_amount: '0.00',
-            memo: isAr 
-              ? (isInstaPay 
-                  ? `تحصيل إلكتروني فوري (إنستاباي) بالخزينة الرئيسية للعقد ${contract.contract_number}`
-                  : `توريد نقدي لخزينة الشركة الرئيسية للعقد ${contract.contract_number}`)
-              : `Collection into Treasury Safe (${isInstaPay ? 'InstaPay' : 'Cash'}) for Contract ${contract.contract_number}`
-          },
-          {
-            account_code: creditAccount,
-            debit_amount: '0.00',
-            credit_amount: amount,
-            memo: isDelivered 
-              ? (isAr ? 'تسوية مديونية باقي ثمن الشقة على العميل' : 'Settlement of Customer Accounts Receivable') 
-              : (isAr ? 'إثبات إيراد تعاقدي مؤجل لحين التسليم' : 'Credit to Deferred Contract Revenue')
-          }
-        ]
-      });
-
-      await ERPSupabaseService.persistTranchePayment(supabase, contract.contract_id, schedule.schedule_id, amount, entry);
-
-      const updatedDataset = await loadLiveData(true);
-
-      if (updatedDataset && inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
-        const updatedContract = updatedDataset.contracts.find(c => c.contract_id === contract.contract_id) || contract;
-        const updatedSchedules = updatedDataset.schedules.filter(s => s.contract_id === contract.contract_id);
-        const updatedEntries = updatedDataset.journalEntries.filter(e => 
-          e.lines.some(l => l.contract_id === contract.contract_id)
-        );
-        const updatedAmendments = updatedDataset.amendments?.filter(a => a.contract_id === contract.contract_id) || [];
-        setInspectorPayload({
-          type: 'contract',
-          contract: updatedContract,
-          schedules: updatedSchedules,
-          amendments: updatedAmendments,
-          latestJournalEntry: updatedEntries[0],
-          allJournalEntries: updatedEntries
-        });
-      }
-
-      const localizedBuyer = isAr ? localizeBuyerName(contract.buyer_name || 'عميل مباشر') : (contract.buyer_name || 'Direct Client');
-
-      toast.success(
-        isInstaPay
-          ? (isAr ? `تم تحصيل القسط #${schedule.tranche_number} عبر إنستاباي` : `Installment #${schedule.tranche_number} via InstaPay`)
-          : (isAr ? `تم توريد القسط #${schedule.tranche_number} للخزينة` : `Installment #${schedule.tranche_number} into Safe`),
-        {
-          description: (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                <span style={{
-                  background: 'rgba(5, 150, 105, 0.1)',
-                  color: '#047857',
-                  border: '1px solid rgba(5, 150, 105, 0.22)',
-                  padding: '0.12rem 0.55rem',
-                  borderRadius: '6px',
-                  fontWeight: 900,
-                  fontSize: '0.84rem',
-                  fontVariantNumeric: 'tabular-nums'
-                }}>
-                  +{D(amount).formatEGP(isAr)}
-                </span>
-                <span style={{
-                  background: '#f8fafc',
-                  color: '#475569',
-                  border: '1px solid #e2e8f0',
-                  padding: '0.12rem 0.5rem',
-                  borderRadius: '6px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  fontFamily: 'monospace'
-                }}>
-                  #{contract.contract_number}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                <span>{isAr ? 'العميل:' : 'Client:'}</span>
-                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
-                <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{isAr ? 'تم ترحيل القيد لليومية بنجاح' : 'Posted to GL'}</span>
-              </div>
-            </div>
-          ),
-          duration: 5000
-        }
-      );
-    } catch (err: unknown) {
-      const msg = (err as Error).message;
-      if (msg.includes('Invariant 0.9')) {
-        const payDate = details?.receiptDate || new Date().toISOString().split('T')[0];
-        const targetPeriod = resolvePeriodForDate(payDate, data.periods, activePeriod);
-        ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod);
-      } else {
-        toast.error(isAr ? 'فشل تحصيل القسط' : 'Failed to collect installment', { description: msg });
-      }
-    } finally {
-      setIsMutating(false);
-    }
-  }, [showPayModal, data.periods, activePeriod, isAr, supabase, loadLiveData, inspectorPayload, ensureActivePeriodOpen]);
 
   // Handler: Confirm Handover
   const handleConfirmHandover = useCallback(async (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => {
@@ -2481,10 +2329,11 @@ export function ERPWorkstationProvider({
         });
       }
 
-      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Bounced');
+      // Ledger first, then the status.
       if (bounceEntry) {
         await persistJournalEntryGuarded(bounceEntry);
       }
+      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Bounced');
 
       if (schedule) {
         const schUpdatePayload: Record<string, unknown> = {
@@ -2595,8 +2444,8 @@ export function ERPWorkstationProvider({
           ]
         });
 
-        await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
         await persistJournalEntryGuarded(entry);
+        await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
 
         setData(prev => ({
           ...prev,
@@ -2667,8 +2516,8 @@ export function ERPWorkstationProvider({
           );
           await ERPSupabaseService.persistPDCStatus(supabase, chequeId, 'Cleared');
         } else {
-          await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
           await persistJournalEntryGuarded(entry);
+          await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
         }
 
         setData(prev => ({
@@ -2926,8 +2775,8 @@ export function ERPWorkstationProvider({
           );
           await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
         } else {
-          await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
           await persistJournalEntryGuarded(entry);
+          await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
         }
         newEntries.push(entry);
       }
@@ -3010,12 +2859,18 @@ export function ERPWorkstationProvider({
       ? String(rawSchedId).slice(4)
       : rawSchedId;
 
-    const schedule = data.schedules.find(s => 
+    const schedule = data.schedules.find(s =>
       (cleanSchedId && s.schedule_id === cleanSchedId) ||
       (item.schedule_id && s.schedule_id === item.schedule_id) ||
-      (s.contract_id === item.contract_id && s.due_date === item.due_date && (s.status === 'Pending' || s.status === 'Partially Paid')) ||
-      (s.contract_id === item.contract_id && (s.status === 'Pending' || s.status === 'Partially Paid'))
+      (s.contract_id === item.contract_id && s.due_date === item.due_date && (s.status === 'Pending' || s.status === 'Partially Paid'))
     );
+    // Never apply money to "any pending tranche": the installment must be identified exactly.
+    if (contract && !schedule) {
+      toast.error(isAr
+        ? 'تعذر تحديد القسط المطلوب تحصيله. افتح القسط من جدول العقد وحاول مرة أخرى.'
+        : 'Could not identify which installment to collect. Open it from the contract schedule and try again.');
+      return;
+    }
 
     const isRealPDC = Boolean(
       item.cheque_id && 
@@ -3083,9 +2938,8 @@ export function ERPWorkstationProvider({
       const newScheduleStatus: InstallmentStatus = isFullyPaid ? 'Paid' : 'Partially Paid';
       const newPaidDate = isFullyPaid ? date : (schedule?.paid_date || null);
 
-      if (isFullyPaid && isRealPDC) {
-        await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
-      }
+      // Ledger first: if the entry cannot be saved, nothing is marked paid.
+      await persistJournalEntryGuarded(entry);
 
       if (schedule) {
         await supabase
@@ -3099,14 +2953,23 @@ export function ERPWorkstationProvider({
       }
 
       if (contract) {
-        const newTotalCash = D(contract.total_cash_collected || '0').plus(amount).toFixed(2);
+        // Add to the stored total (not the in-memory copy, which may be stale).
+        const { data: freshRow } = await supabase
+          .from('erp_contracts')
+          .select('total_cash_collected')
+          .eq('contract_id', contract.contract_id)
+          .single();
+        const baseTotal = freshRow?.total_cash_collected ?? contract.total_cash_collected ?? '0';
+        const newTotalCash = D(baseTotal).plus(amount).toFixed(2);
         await supabase
           .from('erp_contracts')
           .update({ total_cash_collected: newTotalCash })
           .eq('contract_id', contract.contract_id);
       }
 
-      await persistJournalEntryGuarded(entry);
+      if (isFullyPaid && isRealPDC) {
+        await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+      }
 
       setData(prev => ({
         ...prev,
@@ -3299,8 +3162,9 @@ export function ERPWorkstationProvider({
 
       // Outside the persistence try: an insufficient balance must abort the whole remittance.
       assertCashOutflowAllowed(entry.lines || []);
-      await supabase.from('erp_tax_records').update({ remittance_status: 'Remitted to ETA' }).eq('tax_id', taxId);
+      // Ledger first: the tax is marked remitted only after its entry is saved.
       await persistJournalEntryGuarded(entry);
+      await supabase.from('erp_tax_records').update({ remittance_status: 'Remitted to ETA' }).eq('tax_id', taxId);
 
       setData(prev => ({
         ...prev,
@@ -3960,7 +3824,8 @@ export function ERPWorkstationProvider({
 
   // Handler: Atomically save the project cost record and balanced journal entry.
   const handleSaveProjectExpense = useCallback(async (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => {
-    const targetPeriod = resolvePeriodForDate(entry.entry_date, data.periods, activePeriod);
+    // The entry's own period must exist in the database before posting (created on demand).
+    const targetPeriod = await resolveAndEnsurePeriodForDate(entry.entry_date);
     if (!ensureActivePeriodOpen(isAr ? 'تسجيل مصروف مشروع' : 'Project Expense', targetPeriod)) return;
     setIsMutating(true);
     try {
@@ -3994,7 +3859,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, data.periods, activePeriod, loadLiveData, isAr, ensureActivePeriodOpen]);
+  }, [supabase, data.periods, activePeriod, loadLiveData, isAr, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate]);
 
   // Handler: Comprehensive Arabic Excel Export
   const handleExportExcel = useCallback(() => {
@@ -4205,7 +4070,7 @@ export function ERPWorkstationProvider({
         assertCashOutflowAllowed([{ account_code: account, debit_amount: '0', credit_amount: paymentDelta.toFixed(2) }]);
       }
       const paymentDate = paidInstallment?.payment_date || new Date().toISOString().slice(0, 10);
-      const period = resolvePeriodForDate(paymentDate, data.periods, activePeriod);
+      const period = await resolveAndEnsurePeriodForDate(paymentDate);
       let result: { item: ERPPropertyCostItem; journal: ERPJournalEntry };
       if (!currentUser && process.env.NODE_ENV === 'development') {
         const settlement = prepareConstructionSettlement(original, updatedItem, period);
@@ -4222,7 +4087,7 @@ export function ERPWorkstationProvider({
       toast.error(isAr ? 'فشل حفظ سداد مستحقات المقاول' : 'Failed to save contractor settlement', { description: err instanceof Error ? err.message : String(err) });
       throw err;
     } finally { setIsMutating(false); }
-  }, [supabase, isAr, data.propertyCosts, data.periods, activePeriod, currentUser]);
+  }, [supabase, isAr, data.propertyCosts, data.periods, activePeriod, currentUser, resolveAndEnsurePeriodForDate]);
 
   const handleUpdatePropertySellingPrice = useCallback(async (propertyId: string, newPriceEgp: number) => {
     setIsMutating(true);
@@ -4525,7 +4390,6 @@ export function ERPWorkstationProvider({
     handleExecuteEscalation,
     handleExecuteRescission,
     handlePayRefund,
-    handleCollectPayment,
     handleConfirmHandover,
     handleToggleContractHandover,
     handlePDCStatusChange,

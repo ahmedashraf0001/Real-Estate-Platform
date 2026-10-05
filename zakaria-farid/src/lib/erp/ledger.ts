@@ -346,7 +346,8 @@ export function resolvePeriodForDate(
   const cleanDate = dateStr.slice(0, 10);
   const matched = periods.find(p => p.start_date <= cleanDate && cleanDate <= p.end_date);
   if (matched) return matched;
-  return fallbackPeriod || periods.find(p => p.status === 'OPEN') || periods[periods.length - 1];
+  // Never fall back to another month: the date's own calendar month (created on demand by the caller).
+  return buildCalendarMonthPeriod(cleanDate);
 }
 
 /**
@@ -418,6 +419,15 @@ export class GeneralLedgerEngine {
     if (params.period.status !== 'OPEN') {
       throw new Error(
         `ERP Invariant 0.9 Violation: Cannot post journal entry into ${params.period.status} fiscal period (Period ${params.period.period_number}/${params.period.fiscal_year}).`
+      );
+    }
+
+    // Period Date Invariant (user-confirmed 2026-10-05): an entry belongs to the period containing its date.
+    const entryDay = (params.entry_date || '').slice(0, 10);
+    if (entryDay && params.period.start_date && params.period.end_date &&
+        (entryDay < params.period.start_date || entryDay > params.period.end_date)) {
+      throw new Error(
+        `ERP Invariant 0.9 Violation: Entry date ${entryDay} is outside period ${params.period.fiscal_year}-${params.period.period_number} (${params.period.start_date} to ${params.period.end_date}).`
       );
     }
 
@@ -563,11 +573,13 @@ export class GeneralLedgerEngine {
 
 /** Builds an OPEN calendar-month period for the given date (defaults to today). Used only when no DB periods exist. */
 export function buildCalendarMonthPeriod(dateStr?: string): ERPAccountingPeriod {
-  const base = dateStr ? new Date(dateStr.slice(0, 10) + 'T00:00:00') : new Date();
-  const y = base.getFullYear();
-  const m = base.getMonth() + 1;
+  // Parse YYYY-MM-DD as text so the month never shifts with the local time zone.
+  const today = new Date();
+  const parts = (dateStr || '').slice(0, 10).split('-').map(Number);
+  const y = parts[0] > 0 ? parts[0] : today.getFullYear();
+  const m = parts[1] >= 1 && parts[1] <= 12 ? parts[1] : today.getMonth() + 1;
   const mm = String(m).padStart(2, '0');
-  const lastDay = new Date(y, m, 0).getDate();
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return {
     period_id: `prd-${y}-${mm}`,
     fiscal_year: y,
