@@ -156,3 +156,9 @@ The platform combines a public-facing property showcase with a comprehensive bac
 - Feasibility mode stays, simplified: land cost, built area, construction cost per m² (finish-tier presets, editable), extra costs %, expected sale price per m² → total cost, revenue, profit, margin, return on cost, break-even price per m². No steel/concrete quantity breakdown.
 
 - [user-confirmed 2026-10-05] Purchase orders are removed from the ERP (the draft PO popup, its sidebar action and list). Contractor bills and site expenses are the only ways to record construction spend.
+
+## Money math (2026-10-05) [user-confirmed]
+- [user-confirmed 2026-10-05] Rounding to piastres is half-up (0.005 → 0.01), applied once at the end of a calculation. Percentages and ratios (RSV factor, partner share %, penalty %, down-payment %) are applied at full precision, never pre-rounded to 2 decimals.
+- [user-confirmed 2026-10-05] No hardcoded cost ratios (the old 45% of contract value / list price). Unit cost for cancellations and partner figures = cost actually recorded for the property/unit (its RSV share for building units). If no cost is recorded, show "cost not recorded" and block the cancellation posting until costs exist.
+- [user-confirmed 2026-10-05] A journal entry is posted into the accounting period that contains its entry date (created automatically if missing); posting is refused if that period is closed.
+- [user-confirmed 2026-10-05] Partner capital owed = partner share % × costs actually recorded for the building so far (not derived from the founder's payments).

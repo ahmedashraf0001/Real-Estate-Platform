@@ -7,8 +7,56 @@
 const B_ZERO = BigInt(0);
 const B_ONE = BigInt(1);
 const B_TWO = BigInt(2);
-const B_FIFTY = BigInt(50);
 const B_HUNDRED = BigInt(100);
+const B_TEN = BigInt(10);
+
+/**
+ * Exact decimal parse of a number or numeric string into n / scale (scale = 10^k), keeping every digit.
+ * Accepts grouping commas, a sign and an exponent ("1.5e2"). Returns null for anything non-numeric.
+ */
+function toScaled(value: number | string): { n: bigint; scale: bigint } | null {
+  let text: string;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return null;
+    text = String(value);
+  } else {
+    text = value.trim().replace(/,/g, '');
+  }
+  const m = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(text);
+  if (!m || (!m[2] && !m[3])) return null;
+  const negative = m[1] === '-';
+  const whole = m[2] || '0';
+  const frac = m[3] || '';
+  const exp = m[4] ? parseInt(m[4], 10) : 0;
+
+  let n = BigInt(whole + frac);
+  let fracDigits = frac.length - exp;
+  if (fracDigits < 0) {
+    n *= B_TEN ** BigInt(-fracDigits);
+    fracDigits = 0;
+  }
+  return { n: negative ? -n : n, scale: B_TEN ** BigInt(fracDigits) };
+}
+
+/** num / den rounded half away from zero (half-up on magnitude). */
+function roundHalfUpDiv(num: bigint, den: bigint): bigint {
+  if (den === B_ZERO) {
+    throw new Error('ERP Math Error: Division by zero');
+  }
+  const negative = (num < B_ZERO) !== (den < B_ZERO);
+  const absNum = num < B_ZERO ? -num : num;
+  const absDen = den < B_ZERO ? -den : den;
+  const q = (absNum * B_TWO + absDen) / (absDen * B_TWO);
+  return negative ? -q : q;
+}
+
+/** n / scale form of any operand: Decimal uses its cents over 100. */
+function operand(value: number | string | Decimal): { n: bigint; scale: bigint } {
+  if (value instanceof Decimal) {
+    return { n: value.toCents(), scale: B_HUNDRED };
+  }
+  return toScaled(value) ?? { n: B_ZERO, scale: B_ONE };
+}
 
 export class Decimal {
   private readonly cents: bigint;
@@ -18,45 +66,18 @@ export class Decimal {
       this.cents = value.cents;
     } else if (typeof value === 'bigint') {
       this.cents = value * B_HUNDRED;
-    } else if (typeof value === 'number') {
-      // Clean string conversion to avoid IEEE 754 precision issues
-      this.cents = Decimal.parseToCents(value.toFixed(2));
-    } else if (typeof value === 'string') {
-      this.cents = Decimal.parseToCents(value);
+    } else if (typeof value === 'number' || typeof value === 'string') {
+      // Exact decimal text, rounded half-up to piastres; non-numeric input stays 0.
+      const scaled = toScaled(value);
+      this.cents = scaled ? roundHalfUpDiv(scaled.n * B_HUNDRED, scaled.scale) : B_ZERO;
     } else {
       this.cents = B_ZERO;
     }
   }
 
-  private static parseToCents(valStr: string): bigint {
-    const trimmed = valStr.trim();
-    if (!trimmed || trimmed === '0' || trimmed === '0.0' || trimmed === '0.00') {
-      return B_ZERO;
-    }
-
-    const isNegative = trimmed.startsWith('-');
-    const clean = (isNegative ? trimmed.slice(1) : trimmed).replace(/,/g, '');
-    const parts = clean.split('.');
-
-    const wholeStr = parts[0] || '0';
-    let fracStr = parts[1] || '00';
-
-    if (fracStr.length === 1) {
-      fracStr = fracStr + '0';
-    } else if (fracStr.length > 2) {
-      // Truncate/round to 2 decimals
-      fracStr = fracStr.slice(0, 2);
-    }
-
-    try {
-      const wholeBig = BigInt(wholeStr);
-      const fracBig = BigInt(fracStr);
-      const totalCents = wholeBig * B_HUNDRED + fracBig;
-
-      return isNegative ? -totalCents : totalCents;
-    } catch {
-      return B_ZERO;
-    }
+  /** Raw integer piastres. */
+  toCents(): bigint {
+    return this.cents;
   }
 
   static fromCents(cents: bigint): Decimal {
@@ -92,31 +113,28 @@ export class Decimal {
   }
 
   /**
-   * Exact integer multiplication followed by integer division by 100 (standard round-half-up).
+   * Exact multiplication; the factor keeps all its digits and the result is rounded half-up once.
    */
   times(factor: number | string | Decimal): Decimal {
-    const f = factor instanceof Decimal ? factor : new Decimal(factor);
-    const raw = this.cents * f.cents;
-    const sign = raw < B_ZERO ? -B_ONE : B_ONE;
-    const absRaw = raw < B_ZERO ? -raw : raw;
-    const rounded = (absRaw + B_FIFTY) / B_HUNDRED; // back to single cents scale
-    return Decimal.fromCents(sign * rounded);
+    const f = operand(factor);
+    return Decimal.fromCents(roundHalfUpDiv(this.cents * f.n, f.scale));
   }
 
   /**
-   * Divide by an integer count or factor, with standard integer math.
+   * Exact division; the divisor keeps all its digits and the result is rounded half-up once.
    */
   div(divisor: number | string | Decimal): Decimal {
-    const d = divisor instanceof Decimal ? divisor : new Decimal(divisor);
-    if (d.cents === B_ZERO) {
-      throw new Error('ERP Math Error: Division by zero');
-    }
-    const scaled = this.cents * B_HUNDRED;
-    const sign = (scaled < B_ZERO && d.cents > B_ZERO) || (scaled > B_ZERO && d.cents < B_ZERO) ? -B_ONE : B_ONE;
-    const absScaled = scaled < B_ZERO ? -scaled : scaled;
-    const absD = d.cents < B_ZERO ? -d.cents : d.cents;
-    const rounded = (absScaled + (absD / B_TWO)) / absD;
-    return Decimal.fromCents(sign * rounded);
+    const d = operand(divisor);
+    return Decimal.fromCents(roundHalfUpDiv(this.cents * d.scale, d.n));
+  }
+
+  /**
+   * Apply a percentage or share without pre-rounding the ratio, e.g. amount.timesRatio(33.33, 100).
+   */
+  timesRatio(numerator: number | string | Decimal, denominator: number | string | Decimal): Decimal {
+    const a = operand(numerator);
+    const b = operand(denominator);
+    return Decimal.fromCents(roundHalfUpDiv(this.cents * a.n * b.scale, a.scale * b.n));
   }
 
   dividedBy(divisor: number | string | Decimal): Decimal {
