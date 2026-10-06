@@ -1268,6 +1268,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
           onClose={() => {
             erp.setShowPartnerPayoutModal(false);
             erp.setPayoutInitialPartner(undefined);
+            erp.setPayoutInitialPropertyId(undefined);
           }}
           partners={erp.partnerSummaries}
           properties={erp.data.properties}
@@ -1275,6 +1276,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
           transactions={erp.partnerTransactions}
           commitments={erp.data.partnerCommitments}
           initialPartnerName={erp.payoutInitialPartner}
+          initialPropertyId={erp.payoutInitialPropertyId}
           activePeriod={erp.activePeriod}
           periods={erp.data.periods}
           isAr={erp.isAr}

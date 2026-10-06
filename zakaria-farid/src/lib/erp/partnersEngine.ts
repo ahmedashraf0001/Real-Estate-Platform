@@ -1230,5 +1230,73 @@ export function computeProjectPayoutPosition(params: {
   };
 }
 
+export interface DistributionReadyProject {
+  propertyId: string;
+  propertyTitle: string;
+  totalContractValue: string;
+  totalCollected: string;
+  partners: Array<{ partnerName: string; sharePct: number } & ProjectPayoutPosition>;
+  /** Cash still to pay across the project's partners, after debt offsets. */
+  totalCashToPay: string;
+  /** Unpaid capital that the distribution settles. */
+  totalOffset: string;
+}
+
+/**
+ * Projects whose money can be distributed (user-confirmed 2026-10-06): the property is sold
+ * (listing marked sold, or every building unit contracted) and the live contracts on it are fully collected.
+ * Only partners with an undistributed share are listed; projects with nothing left to distribute are skipped.
+ */
+export function getDistributionReadyProjects(params: {
+  properties: Property[];
+  contracts: ERPContract[];
+  transactions?: ERPPartnerTransaction[];
+  commitments?: ERPPartnerCommitment[];
+}): DistributionReadyProject[] {
+  const { properties, contracts, transactions = [], commitments = [] } = params;
+  const ready: DistributionReadyProject[] = [];
+
+  properties.forEach(property => {
+    const live = contracts.filter(c => (c.property_id === property.id || c.unit_id === property.id) && c.status !== 'Rescinded');
+    if (live.length === 0) return;
+    const gross = live.reduce((sum, c) => sum.plus(c.gross_contract_value || 0), D(0));
+    const collected = live.reduce((sum, c) => sum.plus(c.total_cash_collected || 0), D(0));
+    if (!gross.gt(0) || collected.lt(gross)) return;
+
+    const units = property.building_units || [];
+    const isSold = property.listing_status === 'sold' ||
+      (units.length > 0 && units.every(u => u.status === 'contracted'));
+    if (!isSold) return;
+
+    const names = new Set<string>([PRIMARY_DEVELOPER_NAME]);
+    ((property.partner_splits as any[]) || []).forEach(s => {
+      const name = (s?.partner_name || s?.partnerName || '').trim();
+      if (name && !s?.is_archived && !isSamePartner(name, PRIMARY_DEVELOPER_NAME)) names.add(name);
+    });
+
+    const partners: DistributionReadyProject['partners'] = [];
+    names.forEach(partnerName => {
+      const sharePct = resolvePartnerSharePct(property, partnerName);
+      if (sharePct <= 0) return;
+      const position = computeProjectPayoutPosition({ partnerName, property, contracts, transactions, commitments });
+      if (!D(position.grossAvailable).gt(0)) return;
+      partners.push({ partnerName, sharePct, ...position });
+    });
+    if (partners.length === 0) return;
+
+    ready.push({
+      propertyId: property.id,
+      propertyTitle: property.title_ar || property.title_en || 'مشروع عقاري',
+      totalContractValue: gross.toFixed(2),
+      totalCollected: collected.toFixed(2),
+      partners,
+      totalCashToPay: partners.reduce((sum, p) => sum.plus(p.cashAvailable), D(0)).toFixed(2),
+      totalOffset: partners.reduce((sum, p) => sum.plus(p.offsetNow), D(0)).toFixed(2)
+    });
+  });
+
+  return ready;
+}
+
 export const calculateProjectPartnershipCards = PartnersEngine.getProjectPartnershipCards;
 export const aggregateProjectPartnershipCards = PartnersEngine.getProjectPartnershipCards;

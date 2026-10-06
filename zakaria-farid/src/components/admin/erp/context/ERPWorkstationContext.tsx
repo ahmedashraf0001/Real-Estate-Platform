@@ -345,6 +345,8 @@ export interface ERPWorkstationContextValue {
   setShowPartnerPayoutModal: (val: boolean) => void;
   payoutInitialPartner: string | undefined;
   setPayoutInitialPartner: (partner: string | undefined) => void;
+  payoutInitialPropertyId: string | undefined;
+  setPayoutInitialPropertyId: (propertyId: string | undefined) => void;
   showPartnerInjectionModal: boolean;
   setShowPartnerInjectionModal: (val: boolean) => void;
   injectionInitialPartner: string | undefined;
@@ -1301,6 +1303,7 @@ export function ERPWorkstationProvider({
 
   const [showPartnerPayoutModal, setShowPartnerPayoutModal] = useState<boolean>(false);
   const [payoutInitialPartner, setPayoutInitialPartner] = useState<string | undefined>(undefined);
+  const [payoutInitialPropertyId, setPayoutInitialPropertyId] = useState<string | undefined>(undefined);
   const [showPartnerInjectionModal, setShowPartnerInjectionModal] = useState<boolean>(false);
   const [injectionInitialPartner, setInjectionInitialPartner] = useState<string | undefined>(undefined);
   const [injectionInitialPropertyId, setInjectionInitialPropertyId] = useState<string | undefined>(undefined);
@@ -4418,6 +4421,8 @@ export function ERPWorkstationProvider({
     setShowPartnerPayoutModal,
     payoutInitialPartner,
     setPayoutInitialPartner,
+    payoutInitialPropertyId,
+    setPayoutInitialPropertyId,
     showPartnerInjectionModal,
     setShowPartnerInjectionModal,
     injectionInitialPartner,

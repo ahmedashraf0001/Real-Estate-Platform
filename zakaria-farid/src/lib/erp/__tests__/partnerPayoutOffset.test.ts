@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { D } from '../math';
-import { PartnersEngine, computeProjectPayoutPosition, resolvePartnerSharePct } from '../partnersEngine';
+import { PartnersEngine, computeProjectPayoutPosition, resolvePartnerSharePct, getDistributionReadyProjects } from '../partnersEngine';
 import { PRIMARY_DEVELOPER_NAME } from '../partnersDirectory';
 import type { ERPContract, ERPPartnerCommitment, ERPPartnerTransaction, ERPAccountingPeriod } from '../types';
 import type { Property } from '@/lib/supabase/types';
@@ -163,5 +163,43 @@ describe('createPayoutJournalEntry with a debt offset', () => {
     });
     assert.deepEqual(entry.lines.map(l => l.account_code).sort(), ['102000', '303000']);
     balanced(entry.lines);
+  });
+});
+
+describe('getDistributionReadyProjects', () => {
+  const sold = { ...building, listing_status: 'sold' } as unknown as Property;
+
+  it('lists a sold, fully collected project with each partner offset and cash', () => {
+    const ready = getDistributionReadyProjects({
+      properties: [sold],
+      contracts: [contract('c1', 'prop-a', 1_000_000, 1_000_000)],
+      commitments: [commitment('m1', 'prop-a', 100_000, 0, '2026-01-01')]
+    });
+    assert.equal(ready.length, 1);
+    const ashraf = ready[0].partners.find(p => p.partnerName === PARTNER)!;
+    assert.equal(ashraf.offsetNow, '100000.00');
+    assert.equal(ashraf.cashAvailable, '400000.00');
+    assert.equal(ready[0].totalCashToPay, '900000.00');
+    assert.equal(ready[0].totalOffset, '100000.00');
+  });
+
+  it('skips projects not fully collected, not sold, or already distributed', () => {
+    const partly = getDistributionReadyProjects({ properties: [sold], contracts: [contract('c1', 'prop-a', 1_000_000, 999_999)] });
+    const unsold = getDistributionReadyProjects({ properties: [{ ...building, listing_status: 'active' } as unknown as Property], contracts: [contract('c1', 'prop-a', 1_000_000, 1_000_000)] });
+    const founderPaid = { ...payout('prop-a', 500_000), partner_name: PRIMARY_DEVELOPER_NAME } as ERPPartnerTransaction;
+    const done = getDistributionReadyProjects({
+      properties: [sold],
+      contracts: [contract('c1', 'prop-a', 1_000_000, 1_000_000)],
+      transactions: [payout('prop-a', 500_000), founderPaid]
+    });
+    assert.equal(partly.length, 0);
+    assert.equal(unsold.length, 0);
+    assert.equal(done.length, 0);
+  });
+
+  it('treats a building with every unit contracted as sold', () => {
+    const allContracted = { ...building, listing_status: 'active', building_units: [{ id: 'u1', status: 'contracted' }, { id: 'u2', status: 'contracted' }] } as unknown as Property;
+    const ready = getDistributionReadyProjects({ properties: [allContracted], contracts: [contract('c1', 'prop-a', 800_000, 800_000)] });
+    assert.equal(ready.length, 1);
   });
 });

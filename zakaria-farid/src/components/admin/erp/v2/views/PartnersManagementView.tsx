@@ -13,7 +13,8 @@ import {
 import { Property } from '@/lib/supabase/types';
 import { 
   PartnersEngine, 
-  PartnerFinancialSummary 
+  PartnerFinancialSummary,
+  getDistributionReadyProjects
 } from '@/lib/erp/partnersEngine';
 import { D } from '@/lib/erp/math';
 import { getPartnerFinancing, getPartnerDrawings } from '@/lib/erp/canonicalMetrics';
@@ -31,6 +32,7 @@ import { PartnersDirectoryView } from './partners/PartnersDirectoryView';
 import { PartnersTransactionsView } from './partners/PartnersTransactionsView';
 import { PartnerDossierDrawer } from './partners/PartnerDossierDrawer';
 import { PartnersSideWidgets } from './partners/PartnersSideWidgets';
+import { DistributionReadyPanel } from './partners/DistributionReadyPanel';
 
 // Modals
 import { PartnerReallocationModal } from '../modals/PartnerReallocationModal';
@@ -46,7 +48,7 @@ export interface PartnersManagementViewProps {
   isAr?: boolean;
   isMutating?: boolean;
   onOpenNewPartnerModal?: () => void;
-  onOpenPayout?: (initialPartnerName?: string) => void;
+  onOpenPayout?: (initialPartnerName?: string, initialPropertyId?: string) => void;
   onOpenInjection?: (initialPartnerName?: string, initialPropertyId?: string, commitmentId?: string) => void;
   onOpenDossier?: (partner: PartnerFinancialSummary) => void;
   onOpenReallocation?: (property: Property) => void;
@@ -117,6 +119,14 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       propertyCosts
     );
   }, [partnerProfiles, properties, contracts, partnerTransactions, partnerCalls, propertyCosts]);
+
+  // Sold, fully collected projects with money still to distribute (user-confirmed 2026-10-06)
+  const distributionReady = useMemo(() => getDistributionReadyProjects({
+    properties,
+    contracts,
+    transactions: partnerTransactions,
+    commitments: partnerCommitments
+  }), [properties, contracts, partnerTransactions, partnerCommitments]);
 
   // 4 Discrete KPI Cards derived strictly from canonicalMetrics.ts
   const kpis = useMemo(() => {
@@ -203,6 +213,13 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
             <span>{isAr ? 'إضافة شريك' : 'New partner'}</span>
           </button>
         ) : undefined}
+      />
+
+      <DistributionReadyPanel
+        projects={distributionReady}
+        isAr={isAr}
+        isMutating={isMutating}
+        onPay={(partnerName, propertyId) => onOpenPayout?.(partnerName, propertyId)}
       />
 
       {/* 2. TOP 4 DISCRETE FLOATING KPI CARDS WITH SQUIRCLES AND SPARKLINES */}
