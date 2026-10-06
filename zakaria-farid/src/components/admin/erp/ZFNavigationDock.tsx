@@ -90,7 +90,7 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   pdcSafeCount,
   propertiesCount,
   isAr = true,
-  isCollapsed = false,
+  isCollapsed: isCollapsedSetting = false,
   isMobileOpen = false,
   onCloseMobile,
   onToggleDock,
@@ -99,6 +99,8 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   isResizing = false,
   quickMenu,
 }) => {
+  // The phone drawer always shows labels; the desktop collapse setting must not shrink it to icons.
+  const isCollapsed = isCollapsedSetting && !isMobileOpen;
   const pathname = usePathname() || '';
   const router = useRouter();
 
@@ -407,6 +409,8 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
                   className={styles.quickMenuItem}
                   onClick={() => {
                     setIsQuickMenuOpen(false);
+                    // On phones the dock is a drawer above the page; close it so the opened form is visible.
+                    if (onCloseMobile) onCloseMobile();
                     item.onSelect();
                   }}
                 >

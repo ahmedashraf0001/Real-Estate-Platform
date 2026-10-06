@@ -105,6 +105,10 @@
 @media (max-width: 640px) {
   .stepSub { display: none; }
   .stepLabel { font-size: 0.74rem; }
+  /* Only the current step keeps its label on phones; the others show their number, so labels never overlap. */
+  .step:not(.stepActive) .stepTexts { display: none; }
+  .step:not(.stepActive) { flex: 0 1 auto; }
+  .step.stepActive { flex: 1 1 auto; }
   .totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .total:nth-child(3) { border-inline-start: 0; }
   .total:nth-child(n + 3) { border-top: 1px solid var(--erp-border-subtle, #e2e8f0); }
