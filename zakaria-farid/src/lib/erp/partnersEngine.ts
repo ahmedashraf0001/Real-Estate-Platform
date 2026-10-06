@@ -12,6 +12,7 @@ import {
   PartnerRole,
   ERPPartnerTransaction, 
   ERPPartnerCall, 
+  ERPPartnerCommitment,
   ERPContract, 
   ERPJournalEntry,
   ERPAccountingPeriod,
@@ -917,7 +918,7 @@ export class PartnersEngine {
 
       // Primary developer
       const primPayouts = transactions
-        .filter(t => (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
+        .filter(t => (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) && t.property_id === prop.id && t.type === 'PROFIT_DISTRIBUTION')
         .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
       const { salesShare: primSales, colShare: primCollections } = computePartnerShares(PRIMARY_DEVELOPER_NAME, primaryShare);
@@ -940,7 +941,7 @@ export class PartnersEngine {
         if (name && name !== PRIMARY_DEVELOPER_NAME && !name.includes('زكريا فريد')) {
           const pct = Number(s.sharePct ?? s.share_percentage ?? 0) || 0;
           const payouts = transactions
-            .filter(t => t.partner_name === name && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
+            .filter(t => t.partner_name === name && t.property_id === prop.id && t.type === 'PROFIT_DISTRIBUTION')
             .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
           const { salesShare: partnerSales, colShare } = computePartnerShares(name, pct);
@@ -992,12 +993,16 @@ export class PartnersEngine {
 
   /**
    * Creates a balanced double-entry journal entry for a partner profit payout / dividend (INV-4.1).
-   * Debit: 303000 (Partner Profit Distributions & Withdrawals)
-   * Credit: 101000 (Cash Vault) or 102000 (Operating Bank / InstaPay)
+   * Debit: 303000 (Partner Profit Distributions & Withdrawals) = cash amount + debt offset
+   * Credit: 301000 (Partner Capital) = debt offset, when the payout first settles unpaid capital commitments
+   * Credit: 101000 (Cash Vault) or 102000 (InstaPay) = cash amount, when any cash is paid
    */
   static createPayoutJournalEntry(params: {
     partnerName: string;
+    /** Cash paid out. */
     amount: string | number;
+    /** Unpaid capital settled from the partner's share (non-cash). */
+    debtOffsetAmount?: string | number;
     paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000' | 'CASH' | 'INSTAPAY' | 'INSTAPAY_101000';
     propertyTitle?: string;
     receiptRef?: string;
@@ -1007,6 +1012,7 @@ export class PartnersEngine {
     routingAccount?: '101000' | '102000';
   }): ERPJournalEntry {
     const amt = D(params.amount).toFixed(2);
+    const offset = D(params.debtOffsetAmount || 0);
     const creditAccount = params.routingAccount
       ? params.routingAccount
       : ((params.paymentMethod === 'CASH_101000' || params.paymentMethod === 'CASH') ? '101000' : '102000');
@@ -1026,22 +1032,28 @@ export class PartnersEngine {
       entry_number: `JE-${year}-DIST-${Math.floor(1000 + Math.random() * 9000)}`,
       entry_date: entryDate,
       period: periodObj,
-      description: `صرف دفعة أرباح للشريك: ${params.partnerName}${params.propertyTitle ? ' من مشروع ' + params.propertyTitle : ''} [سند رقم: ${ref}]`,
+      description: `صرف دفعة أرباح للشريك: ${params.partnerName}${params.propertyTitle ? ' من مشروع ' + params.propertyTitle : ''}${offset.gt(0) ? ' مع خصم مديونية ضخ رأس المال' : ''} [سند رقم: ${ref}]`,
       source_module: 'CAPITAL_CALL',
       created_by: params.loggedBy || 'SYSTEM_CHIEF_ACCOUNTANT',
       lines: [
         {
           account_code: '303000',
-          debit_amount: amt,
+          debit_amount: D(amt).plus(offset).toFixed(2),
           credit_amount: '0.00',
           memo: `توزيعات أرباح ومسحوبات الشريك: ${params.partnerName}`
         },
-        {
+        ...(offset.gt(0) ? [{
+          account_code: '301000',
+          debit_amount: '0.00',
+          credit_amount: offset.toFixed(2),
+          memo: `سداد مديونية ضخ رأس مال الشريك ${params.partnerName} خصماً من أرباحه`
+        }] : []),
+        ...(D(amt).gt(0) ? [{
           account_code: creditAccount,
           debit_amount: '0.00',
           credit_amount: amt,
           memo: `سداد أرباح من ${paymentLabel} - إشعار رقم #${ref}`
-        }
+        }] : [])
       ]
     });
   }
@@ -1101,6 +1113,121 @@ export class PartnersEngine {
       ]
     });
   }
+}
+
+/** True when a recorded name belongs to the given partner (founder name variants collapse into PRIMARY_DEVELOPER_NAME). */
+export function isSamePartner(recordedName: string | undefined, partnerName: string): boolean {
+  const name = (recordedName || '').trim();
+  if (partnerName === PRIMARY_DEVELOPER_NAME) return name.includes(PRIMARY_DEVELOPER_NAME);
+  return name === partnerName.trim();
+}
+
+/** A partner's equity share % on one property. The founder gets whatever the other active partners leave from 100%. */
+export function resolvePartnerSharePct(property: Property, partnerName: string): number {
+  const splits = ((property.partner_splits as any[]) || []).filter(s => !s?.is_archived);
+  const found = splits.find(s => isSamePartner(s.partnerName || s.partner_name, partnerName));
+  if (found) return Number(found.sharePct ?? found.share_percentage ?? 0) || 0;
+  if (partnerName !== PRIMARY_DEVELOPER_NAME) return 0;
+  const othersPct = splits.reduce((sum, s) => {
+    const name = s.partnerName || s.partner_name;
+    return isSamePartner(name, PRIMARY_DEVELOPER_NAME) ? sum : sum + (Number(s.sharePct ?? s.share_percentage ?? 0) || 0);
+  }, 0);
+  return Math.max(0, 100 - othersPct);
+}
+
+/** The partner's share of cash collected on a property's live contracts, honouring contract-level splits. */
+export function partnerCollectionsShareOnProperty(
+  property: Property,
+  partnerName: string,
+  contracts: ERPContract[]
+): Decimal {
+  const sharePct = resolvePartnerSharePct(property, partnerName);
+  return contracts
+    .filter(c => (c.property_id === property.id || c.unit_id === property.id) && c.status !== 'Rescinded')
+    .reduce((sum, c) => {
+      if (c.partner_splits && c.partner_splits.length > 0) {
+        const cSplit = c.partner_splits.find(s => isSamePartner(s.partner_name || (s as any).partnerName, partnerName));
+        if (!cSplit) return sum;
+        let cAmt = D(cSplit.cash_share || 0);
+        if (D(cSplit.share_amount || 0).isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
+          cAmt = D(c.total_cash_collected || 0).timesRatio(cSplit.share_percentage.replace('%', '').trim(), 100);
+        }
+        return sum.plus(cAmt);
+      }
+      return sum.plus(D(c.total_cash_collected || 0).timesRatio(sharePct, 100));
+    }, D(0));
+}
+
+export interface ProjectPayoutPosition {
+  /** Partner's share of cash collected on the project. */
+  collectionsShare: string;
+  /** Profit already paid out to the partner from this project (cash and debt offsets). */
+  paidOut: string;
+  /** Unpaid registered capital commitments on this project. */
+  commitmentDebt: string;
+  /** collectionsShare − paidOut (may be negative after an overpayment). */
+  grossAvailable: string;
+  /** Debt that the next payout settles first, from the partner's share. */
+  offsetNow: string;
+  /** What can still be paid in cash after the offset. */
+  cashAvailable: string;
+  /** Debt left on the partner after the offset. */
+  debtAfter: string;
+  /** How offsetNow is spread over the commitments, oldest due date first. */
+  offsetAllocations: Array<{ commitmentId: string; milestoneName: string; amount: string }>;
+}
+
+/**
+ * Payout position of one partner on one project (user-confirmed 2026-10-06).
+ * Available = collections share − payouts on this project − unpaid registered commitments on this project.
+ * The debt is settled first from the share; if the share does not cover it, the rest stays as debt.
+ */
+export function computeProjectPayoutPosition(params: {
+  partnerName: string;
+  property: Property;
+  contracts?: ERPContract[];
+  transactions?: ERPPartnerTransaction[];
+  commitments?: ERPPartnerCommitment[];
+}): ProjectPayoutPosition {
+  const { partnerName, property, contracts = [], transactions = [], commitments = [] } = params;
+
+  const collectionsShare = partnerCollectionsShareOnProperty(property, partnerName, contracts);
+  const paidOut = transactions
+    .filter(t => isSamePartner(t.partner_name, partnerName) && t.property_id === property.id &&
+      (t.type === 'PROFIT_DISTRIBUTION' || t.type === 'CAPITAL_RETURN'))
+    .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
+
+  const openCommitments = commitments
+    .filter(c => isSamePartner(c.partner_name, partnerName) && c.property_id === property.id &&
+      c.status !== 'CANCELLED' && c.status !== 'PAID')
+    .map(c => ({ c, unpaid: D(c.committed_amount || 0).minus(c.paid_amount || 0) }))
+    .filter(x => x.unpaid.gt(0))
+    .sort((a, b) => String(a.c.due_date || '').localeCompare(String(b.c.due_date || '')));
+  const commitmentDebt = openCommitments.reduce((sum, x) => sum.plus(x.unpaid), D(0));
+
+  const grossAvailable = collectionsShare.minus(paidOut);
+  const positiveGross = grossAvailable.gt(0) ? grossAvailable : D(0);
+  const offsetNow = positiveGross.lt(commitmentDebt) ? positiveGross : commitmentDebt;
+
+  const offsetAllocations: ProjectPayoutPosition['offsetAllocations'] = [];
+  let left = offsetNow;
+  for (const { c, unpaid } of openCommitments) {
+    if (!left.gt(0)) break;
+    const take = left.lt(unpaid) ? left : unpaid;
+    offsetAllocations.push({ commitmentId: c.commitment_id, milestoneName: c.milestone_name, amount: take.toFixed(2) });
+    left = left.minus(take);
+  }
+
+  return {
+    collectionsShare: collectionsShare.toFixed(2),
+    paidOut: paidOut.toFixed(2),
+    commitmentDebt: commitmentDebt.toFixed(2),
+    grossAvailable: grossAvailable.toFixed(2),
+    offsetNow: offsetNow.toFixed(2),
+    cashAvailable: positiveGross.minus(offsetNow).toFixed(2),
+    debtAfter: commitmentDebt.minus(offsetNow).toFixed(2),
+    offsetAllocations
+  };
 }
 
 export const calculateProjectPartnershipCards = PartnersEngine.getProjectPartnershipCards;

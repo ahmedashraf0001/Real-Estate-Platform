@@ -195,7 +195,8 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         projectTitle: t.property_title || (isAr ? 'مشروع استثماري' : 'Project'),
         partnerName: t.partner_name,
         amount: t.amount,
-        method: t.payment_method === 'CASH_101000' ? (isAr ? 'كاش (خزينة 101000)' : 'Cash (Safe 101000)') :
+        method: t.payment_method === 'DEBT_OFFSET' ? (isAr ? 'خصم من الأرباح' : 'Offset from profit') :
+                t.payment_method === 'CASH_101000' ? (isAr ? 'كاش (خزينة 101000)' : 'Cash (Safe 101000)') :
                 t.payment_method === 'INSTAPAY_102000' ? (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)') : (isAr ? 'بنكي 102000' : 'Bank 102000')
       });
     });

@@ -347,7 +347,9 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                           <strong>{D(t.amount).formatEGP(isAr)}</strong>
                         </td>
                         <td>
-                          {t.payment_method === 'CASH_101000'
+                          {t.payment_method === 'DEBT_OFFSET'
+                            ? (isAr ? 'خصم من الأرباح' : 'Offset from profit')
+                            : t.payment_method === 'CASH_101000'
                             ? (isAr ? 'خزينة نقداً' : 'Cash')
                             : (isAr ? 'إنستاباي' : 'InstaPay')}
                         </td>

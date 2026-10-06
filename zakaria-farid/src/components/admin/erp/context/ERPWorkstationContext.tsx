@@ -39,7 +39,8 @@ import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { 
   PartnersEngine, 
-  PartnerFinancialSummary 
+  PartnerFinancialSummary,
+  computeProjectPayoutPosition
 } from '@/lib/erp/partnersEngine';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
@@ -390,7 +391,7 @@ export interface ERPWorkstationContextValue {
     date?: string;
     notes?: string;
   }) => Promise<ERPTaxRecord | null>;
-  handleConfirmPartnerPayout: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; payoutDate: string; receiptRef: string; memo: string }) => Promise<void>;
+  handleConfirmPartnerPayout: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; payoutDate: string; receiptRef: string; memo: string }) => Promise<boolean>;
   handleConfirmPartnerInjection: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; commitmentId?: string; injectionDate: string; receiptRef: string; memo: string; role?: 'equity_partner' | 'land_partner' | 'silent_financier'; phone?: string; nationalId?: string; projectSharePct?: number }) => Promise<void>;
   handleCreatePartnerCommitment: (payload: { propertyId: string; partnerName: string; milestoneName: string; milestonePhase?: string; committedAmount: string; dueDate: string; notes?: string }) => Promise<void>;
   handleRegisterNewPartner: (profileData: NewPartnerSubmitPayload) => Promise<void>;
@@ -3308,7 +3309,7 @@ export function ERPWorkstationProvider({
     }
   }, [supabase, isAr, data.contracts, currentUser, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate]);
 
-  // Handler: Confirm Partner Payout
+  // Handler: Confirm Partner Payout (user-confirmed 2026-10-06: per project, unpaid commitments are settled first from the share)
   const handleConfirmPartnerPayout = useCallback(async (details: {
     partnerName: string;
     amount: string;
@@ -3318,104 +3319,147 @@ export function ERPWorkstationProvider({
     payoutDate: string;
     receiptRef: string;
     memo: string;
-  }) => {
+  }): Promise<boolean> => {
+    const property = data.properties.find(p => p.id === details.propertyId);
+    if (!property) {
+      toast.error(isAr ? 'اختر المشروع الذي تُصرف منه الأرباح' : 'Choose the project the payout comes from');
+      return false;
+    }
     const targetPeriod = await resolveAndEnsurePeriodForDate(details.payoutDate);
     if (!ensureActivePeriodOpen(isAr ? 'صرف أرباح الشركاء' : 'Partner Dividend Payout', targetPeriod)) {
-      return;
+      return false;
     }
     setIsMutating(true);
     try {
+      const position = computeProjectPayoutPosition({
+        partnerName: details.partnerName,
+        property,
+        contracts: data.contracts,
+        transactions: partnerTransactions,
+        commitments: data.partnerCommitments
+      });
+      const cashAmt = D(details.amount || 0);
+      const offsetAmt = D(position.offsetNow);
+      if (!cashAmt.gt(0) && !offsetAmt.gt(0)) {
+        throw new Error(isAr ? 'لا يوجد مبلغ للصرف.' : 'Nothing to pay out.');
+      }
+      if (D(position.commitmentDebt).gt(0) && cashAmt.gt(position.cashAvailable)) {
+        throw new Error(isAr
+          ? `على الشريك مديونية ضخ. أقصى مبلغ نقدي بعد خصمها: ${D(position.cashAvailable).formatEGP(true)}.`
+          : `The partner owes capital. Maximum cash after the offset: ${D(position.cashAvailable).toFixed(2)} EGP.`);
+      }
+
       const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
-      let cashBalance = D(0);
-      for (const jEntry of data.journalEntries) {
-        for (const line of jEntry.lines) {
-          if (line.account_code === routingAccount) {
-            cashBalance = cashBalance.plus(line.debit_amount).minus(line.credit_amount);
+      if (cashAmt.gt(0)) {
+        let cashBalance = D(0);
+        for (const jEntry of data.journalEntries) {
+          for (const line of jEntry.lines) {
+            if (line.account_code === routingAccount) {
+              cashBalance = cashBalance.plus(line.debit_amount).minus(line.credit_amount);
+            }
           }
+        }
+        if (cashBalance.lt(cashAmt)) {
+          const accNameAr = routingAccount === '101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+          const accNameEn = routingAccount === '101000' ? 'Safe (101000)' : 'InstaPay (102000)';
+          throw new Error(
+            isAr
+              ? `عفواً! رصيد ${accNameAr} غير كافٍ لصرف الأرباح. الرصيد المتاح: ${cashBalance.formatEGP(true)}، والمطلوب صرفه: ${cashAmt.formatEGP(true)} (معيار INV-4.5).`
+              : `ERP Invariant 4.5 Violation: Insufficient balance in ${accNameEn} (${cashBalance.toFixed(2)} EGP). Cannot disburse ${cashAmt.toFixed(2)} EGP.`
+          );
         }
       }
 
-      const payoutAmt = D(details.amount);
-      if (cashBalance.lt(payoutAmt)) {
-        const accNameAr = routingAccount === '101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)';
-        const accNameEn = routingAccount === '101000' ? 'Safe (101000)' : 'InstaPay (102000)';
-        throw new Error(
-          isAr
-            ? `عفواً! رصيد ${accNameAr} غير كافٍ لصرف الأرباح. الرصيد المتاح: ${cashBalance.formatEGP(true)}، والمطلوب صرفه: ${payoutAmt.formatEGP(true)} (معيار INV-4.5).`
-            : `ERP Invariant 4.5 Violation: Insufficient balance in ${accNameEn} (${cashBalance.toFixed(2)} EGP). Cannot disburse ${payoutAmt.toFixed(2)} EGP.`
-        );
-      }
-
+      const propertyTitle = details.propertyTitle || property.title_ar || property.title_en;
       const entry = PartnersEngine.createPayoutJournalEntry({
         partnerName: details.partnerName,
-        amount: details.amount,
+        amount: cashAmt.toFixed(2),
+        debtOffsetAmount: offsetAmt.toFixed(2),
         paymentMethod: details.paymentMethod,
-        propertyTitle: details.propertyTitle,
+        propertyTitle,
         receiptRef: details.receiptRef,
         date: details.payoutDate,
         currentPeriod: targetPeriod,
         loggedBy: 'CHIEF_EXECUTIVE',
         routingAccount
       });
+      await persistJournalEntryGuarded(entry);
 
-      try {
-        await persistJournalEntryGuarded(entry);
-      } catch (dbErr) {
-        console.error('Journal entry failed to persist (partner payout):', dbErr);
-        throw dbErr;
-      }
-
-      const newTx: ERPPartnerTransaction = {
-        id: `pt-tx-${Date.now()}`,
-        transaction_number: `PT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+      const newTxNumber = () => `PT-${details.payoutDate.slice(0, 4)}-${generateUUID().slice(0, 6).toUpperCase()}`;
+      const baseTx = {
         partner_name: details.partnerName,
-        type: 'PROFIT_DISTRIBUTION',
-        amount: details.amount,
-        property_id: details.propertyId,
-        property_title: details.propertyTitle,
-        payment_method: details.paymentMethod,
+        property_id: property.id,
+        property_title: propertyTitle,
         journal_entry_number: entry.entry_number,
         date: details.payoutDate,
-        status: 'COMPLETED',
-        memo: details.memo,
+        status: 'COMPLETED' as const,
         receipt_ref: details.receiptRef
       };
-
-      try {
-        await ERPSupabaseService.persistPartnerTransaction(supabase, {
-          transaction_id: ensureUUID(newTx.id),
-          partner_name: newTx.partner_name,
-          property_id: newTx.property_id && isUUID(newTx.property_id) ? newTx.property_id : undefined,
-          property_title: newTx.property_title,
-          type: newTx.type,
-          amount: newTx.amount,
-          date: newTx.date,
-          routing_account: routingAccount,
-          journal_entry_id: isUUID(entry.entry_id) ? entry.entry_id : undefined,
-          notes: newTx.memo
+      const offsetMemo = isAr ? 'خصم مديونية ضخ رأس المال من الأرباح' : 'Capital debt settled from profit';
+      const newTxs: ERPPartnerTransaction[] = [];
+      if (cashAmt.gt(0)) {
+        newTxs.push({ ...baseTx, id: generateUUID(), transaction_number: newTxNumber(), type: 'PROFIT_DISTRIBUTION', amount: cashAmt.toFixed(2), payment_method: details.paymentMethod, memo: details.memo });
+      }
+      if (offsetAmt.gt(0)) {
+        // The offset is both a distribution to the partner and the capital he owed, paid with it.
+        newTxs.push({ ...baseTx, id: generateUUID(), transaction_number: newTxNumber(), type: 'PROFIT_DISTRIBUTION', amount: offsetAmt.toFixed(2), payment_method: 'DEBT_OFFSET', memo: offsetMemo });
+        position.offsetAllocations.forEach(a => {
+          newTxs.push({ ...baseTx, id: generateUUID(), transaction_number: newTxNumber(), type: 'CAPITAL_INJECTION', amount: a.amount, commitment_id: a.commitmentId, payment_method: 'DEBT_OFFSET', memo: `${offsetMemo} — ${a.milestoneName}` });
         });
-      } catch (ptErr) {
-        console.error('Secondary record failed to persist (partner transaction):', ptErr);
-        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
-      setPartnerTransactions(prev => [newTx, ...prev]);
+      const savedTxs: ERPPartnerTransaction[] = [];
+      for (const tx of newTxs) {
+        try {
+          await ERPSupabaseService.persistPartnerTransaction(supabase, {
+            transaction_id: tx.id,
+            partner_name: tx.partner_name,
+            property_id: tx.property_id,
+            property_title: tx.property_title,
+            commitment_id: tx.commitment_id,
+            type: tx.type,
+            amount: tx.amount,
+            date: tx.date,
+            routing_account: tx.payment_method === 'DEBT_OFFSET' ? 'DEBT_OFFSET' : routingAccount,
+            journal_entry_id: isUUID(entry.entry_id) ? entry.entry_id : undefined,
+            notes: tx.memo
+          });
+          savedTxs.push(tx);
+        } catch (ptErr) {
+          console.error('Secondary record failed to persist (partner transaction):', ptErr);
+          toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
+        }
+      }
+
+      const savedOffsets = savedTxs.filter(t => t.type === 'CAPITAL_INJECTION' && t.commitment_id);
+      setPartnerTransactions(prev => [...savedTxs, ...prev]);
       setData(prev => ({
         ...prev,
-        journalEntries: [entry, ...prev.journalEntries]
+        journalEntries: [entry, ...prev.journalEntries],
+        partnerCommitments: (prev.partnerCommitments || []).map(comm => {
+          const settled = savedOffsets
+            .filter(t => t.commitment_id === comm.commitment_id)
+            .reduce((sum, t) => sum.plus(t.amount), D(0));
+          if (!settled.gt(0)) return comm;
+          const newPaid = D(comm.paid_amount || 0).plus(settled);
+          return {
+            ...comm,
+            paid_amount: newPaid.toFixed(2),
+            status: newPaid.gte(comm.committed_amount) ? 'PAID' as const : 'PARTIALLY_PAID' as const
+          };
+        })
       }));
 
-      toast.success(
-        isAr 
-          ? `تم صرف دفعة أرباح للشريك: ${details.partnerName}` 
-          : `Profit dividend paid to ${details.partnerName}`,
-        {
-          description: isAr 
-            ? `المبلغ: ${D(details.amount).formatEGP(true)} • تم إثبات قيد اليومية #${entry.entry_number}` 
-            : `Amount: ${D(details.amount).formatEGP(false)} • Journal #${entry.entry_number}`,
-          duration: 5000
-        }
-      );
+      const parts = [
+        cashAmt.gt(0) ? (isAr ? `نقداً: ${cashAmt.formatEGP(true)}` : `Cash: ${cashAmt.formatEGP(false)}`) : '',
+        offsetAmt.gt(0) ? (isAr ? `خصم مديونية: ${offsetAmt.formatEGP(true)}` : `Debt offset: ${offsetAmt.formatEGP(false)}`) : '',
+        isAr ? `قيد #${entry.entry_number}` : `Journal #${entry.entry_number}`
+      ].filter(Boolean);
+      toast.success(isAr ? `تم صرف أرباح الشريك: ${details.partnerName}` : `Profit paid to ${details.partnerName}`, {
+        description: parts.join(' • '),
+        duration: 5000
+      });
+      return true;
     } catch (err: unknown) {
       console.error('Partner payout error:', err);
       const msg = (err as Error).message;
@@ -3427,10 +3471,11 @@ export function ERPWorkstationProvider({
           description: msg
         });
       }
+      return false;
     } finally {
       setIsMutating(false);
     }
-  }, [data.journalEntries, data.periods, isAr, activePeriod, supabase, ensureActivePeriodOpen]);
+  }, [data.properties, data.contracts, data.partnerCommitments, data.journalEntries, data.periods, partnerTransactions, isAr, activePeriod, supabase, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, persistJournalEntryGuarded]);
 
   // Handler: Confirm Partner Capital Injection
   const handleConfirmPartnerInjection = useCallback(async (details: {

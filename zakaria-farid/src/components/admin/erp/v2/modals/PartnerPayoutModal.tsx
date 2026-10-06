@@ -1,16 +1,25 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect, react-hooks/purity */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Banknote,
   Wallet,
   Smartphone
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
-import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
+import {
+  PartnerFinancialSummary,
+  computeProjectPayoutPosition,
+  resolvePartnerSharePct,
+  isSamePartner
+} from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
-import type { ERPAccountingPeriod } from '@/lib/erp/types';
+import type {
+  ERPAccountingPeriod,
+  ERPContract,
+  ERPPartnerCommitment,
+  ERPPartnerTransaction
+} from '@/lib/erp/types';
 import { resolvePeriodForDate } from '@/lib/erp/ledger';
 import { ZFModalShell } from '../common/ZFModalShell';
 import {
@@ -26,16 +35,23 @@ import {
 import shellStyles from '../ZFWorkstationShell.module.css';
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
+type PayoutMethod = 'CASH_101000' | 'INSTAPAY_102000';
+
 interface PartnerPayoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   partners: PartnerFinancialSummary[];
   properties?: Property[];
+  contracts?: ERPContract[];
+  transactions?: ERPPartnerTransaction[];
+  commitments?: ERPPartnerCommitment[];
   initialPartnerName?: string;
+  initialPropertyId?: string;
   activePeriod?: ERPAccountingPeriod;
   periods?: ERPAccountingPeriod[];
   isAr?: boolean;
   isMutating?: boolean;
+  /** Resolves false when nothing was recorded; the modal then stays open. */
   onConfirmPayout: (details: {
     partnerName: string;
     amount: string;
@@ -45,15 +61,24 @@ interface PartnerPayoutModalProps {
     payoutDate: string;
     receiptRef: string;
     memo: string;
-  }) => Promise<void>;
+  }) => Promise<boolean | void>;
 }
 
+/**
+ * Partner payout, one project at a time (user-confirmed 2026-10-06).
+ * Unpaid capital commitments on the project are settled first from the partner's share;
+ * only what is left can be paid in cash.
+ */
 export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   isOpen,
   onClose,
   partners,
   properties = [],
+  contracts = [],
+  transactions = [],
+  commitments = [],
   initialPartnerName,
+  initialPropertyId,
   activePeriod,
   periods,
   isAr = true,
@@ -61,71 +86,79 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   onConfirmPayout
 }) => {
   const isLockedToPartner = Boolean(initialPartnerName && initialPartnerName.trim());
-  const [selectedPartnerName, setSelectedPartnerName] = useState<string>(initialPartnerName?.trim() || (partners[0]?.partnerName || ''));
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>(initialPartnerName?.trim() || partners[0]?.partnerName || '');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(initialPropertyId || '');
   const [amount, setAmount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [payoutDate, setPayoutDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [receiptRef, setReceiptRef] = useState<string>(`PAY-${Date.now().toString().slice(-6)}`);
+  const [paymentMethod, setPaymentMethod] = useState<PayoutMethod>('CASH_101000');
+  const [payoutDate, setPayoutDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [receiptRef, setReceiptRef] = useState<string>(() => `PAY-${Date.now().toString().slice(-6)}`);
   const [memo, setMemo] = useState<string>('');
 
-  useEffect(() => {
-    if (initialPartnerName && initialPartnerName.trim()) {
-      setSelectedPartnerName(initialPartnerName.trim());
-    } else if (partners.length > 0 && !selectedPartnerName) {
-      setSelectedPartnerName(partners[0].partnerName);
-    }
-  }, [initialPartnerName, partners, selectedPartnerName]);
+  const partnerName = (isLockedToPartner ? initialPartnerName!.trim() : selectedPartnerName) || '';
+  const money = (v: string | number) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`;
 
-  const targetPeriod = useMemo(() => {
-    return resolvePeriodForDate(payoutDate, periods || (activePeriod ? [activePeriod] : []), activePeriod);
-  }, [payoutDate, periods, activePeriod]);
+  // Projects this partner has a stake or a commitment in
+  const partnerProperties = useMemo(() => properties.filter(p =>
+    resolvePartnerSharePct(p, partnerName) > 0 ||
+    commitments.some(c => c.property_id === p.id && isSamePartner(c.partner_name, partnerName))
+  ), [properties, commitments, partnerName]);
 
-  const effectivePartnerName = (isLockedToPartner ? initialPartnerName!.trim() : selectedPartnerName) || '';
-  const currentPartner = partners.find(p => p.partnerName === effectivePartnerName) || partners.find(p => p.partnerName === selectedPartnerName) || partners[0];
-  const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+  const propertyId = partnerProperties.some(p => p.id === selectedPropertyId)
+    ? selectedPropertyId
+    : (partnerProperties[0]?.id || '');
+  const property = partnerProperties.find(p => p.id === propertyId);
 
-  const numAmount = parseFloat(amount) || 0;
-  const isAmountValid = numAmount > 0;
+  const position = useMemo(() => property
+    ? computeProjectPayoutPosition({ partnerName, property, contracts, transactions, commitments })
+    : null, [partnerName, property, contracts, transactions, commitments]);
+
+  const targetPeriod = useMemo(
+    () => resolvePeriodForDate(payoutDate, periods || (activePeriod ? [activePeriod] : []), activePeriod),
+    [payoutDate, periods, activePeriod]
+  );
   const isTargetPeriodLocked = targetPeriod ? targetPeriod.status !== 'OPEN' : false;
 
-  const isCash = paymentMethod === 'CASH_101000';
-  const selectedAccountCode = isCash ? '101000' : '102000';
+  const cash = D(parseFloat(amount) || 0);
+  const offset = D(position?.offsetNow || 0);
+  const cashAvailable = D(position?.cashAvailable || 0);
+  const hasDebt = D(position?.commitmentDebt || 0).gt(0);
+  const cashOverLimit = cash.gt(cashAvailable);
+  const blocksOverLimit = cashOverLimit && hasDebt;
+  const canSubmit = Boolean(partnerName && property) && (cash.gt(0) || offset.gt(0)) &&
+    !blocksOverLimit && !isMutating && !isTargetPeriodLocked;
 
-  const moneyFormatted = `${Number(numAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`;
-  const netBalanceNum = currentPartner ? D(currentPartner.netCurrentBalance).toNumber() : 0;
-  const availFormatted = `${Number(netBalanceNum).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`;
+  const isCash = paymentMethod === 'CASH_101000';
+  const cashAccountName = isCash ? (isAr ? 'الخزينة' : 'Safe') : (isAr ? 'إنستاباي' : 'InstaPay');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!effectivePartnerName || !isAmountValid || isMutating || isTargetPeriodLocked) return;
-
-    await onConfirmPayout({
-      partnerName: effectivePartnerName,
-      amount: D(numAmount).toFixed(2),
+    if (!canSubmit || !property) return;
+    const ok = await onConfirmPayout({
+      partnerName,
+      amount: cash.toFixed(2),
       paymentMethod,
-      propertyId: selectedPropertyId || undefined,
-      propertyTitle: selectedProperty ? (selectedProperty.title_ar || selectedProperty.title_en) : undefined,
+      propertyId: property.id,
+      propertyTitle: property.title_ar || property.title_en,
       payoutDate,
       receiptRef,
-      memo: memo || (isAr ? `صرف دفعة أرباح للشريك: ${effectivePartnerName}` : `Partner payout: ${effectivePartnerName}`)
+      memo: memo || (isAr ? `صرف أرباح للشريك: ${partnerName}` : `Partner payout: ${partnerName}`)
     });
-
-    onClose();
+    if (ok !== false) onClose();
   };
+
+  const submitLabel = isMutating
+    ? (isAr ? 'جارٍ الحفظ…' : 'Saving…')
+    : (!cash.gt(0) && offset.gt(0))
+      ? (isAr ? 'خصم المديونية من الأرباح' : 'Settle debt from profit')
+      : (isAr ? 'تأكيد الصرف' : 'Confirm payout');
 
   const footer = (
     <ZFFormFooter>
       <button type="button" className={shellStyles.btnSecondary} onClick={onClose}>
         {isAr ? 'إلغاء' : 'Cancel'}
       </button>
-      <button
-        type="submit"
-        form="zf-payout-form"
-        className={shellStyles.btnPrimary}
-        disabled={!effectivePartnerName || !isAmountValid || isMutating || isTargetPeriodLocked}
-      >
-        {isMutating ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'تأكيد الصرف' : 'Confirm payout')}
+      <button type="submit" form="zf-payout-form" className={shellStyles.btnPrimary} disabled={!canSubmit}>
+        {submitLabel}
       </button>
     </ZFFormFooter>
   );
@@ -137,8 +170,8 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
       title={isAr ? 'صرف أرباح لشريك' : 'Partner payout'}
       subtitle={
         isAr
-          ? 'صرف مبلغ لشريك من أرباحه أو رصيده المستحق.'
-          : 'Pay a partner from their profit share or balance.'
+          ? 'يُصرف من نصيب الشريك في مشروع واحد. مديونية الضخ تُخصم أولاً.'
+          : 'Paid from the partner\'s share in one project. Unpaid capital is settled first.'
       }
       icon={<Banknote size={18} />}
       isAr={isAr}
@@ -146,56 +179,69 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
       footer={footer}
     >
       <form id="zf-payout-form" className={zfForm.form} onSubmit={handleSubmit}>
-        {/* 1. Partner */}
-        <ZFField label={isAr ? 'الشريك' : 'Partner'} required>
-          <select
-            className={zfForm.control}
-            value={effectivePartnerName}
-            onChange={e => setSelectedPartnerName(e.target.value)}
-            disabled={isLockedToPartner}
-          >
-            {partners.map(p => {
-              const isOwner = p.isPermanent || p.partnerName === PRIMARY_DEVELOPER_NAME || p.partnerName.includes('زكريا فريد');
-              const suffix = isOwner ? (isAr ? ' — المالك' : ' — owner') : '';
-              return (
-                <option key={p.partnerName} value={p.partnerName}>
-                  {p.partnerName}{suffix}
+        <div className={zfForm.row}>
+          <ZFField label={isAr ? 'الشريك' : 'Partner'} required>
+            <select
+              className={zfForm.control}
+              value={partnerName}
+              onChange={e => { setSelectedPartnerName(e.target.value); setAmount(''); }}
+              disabled={isLockedToPartner}
+            >
+              {partners.map(p => {
+                const isOwner = p.isPermanent || p.partnerName === PRIMARY_DEVELOPER_NAME;
+                return (
+                  <option key={p.partnerName} value={p.partnerName}>
+                    {p.partnerName}{isOwner ? (isAr ? ' — المالك' : ' — owner') : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </ZFField>
+          <ZFField label={isAr ? 'المشروع' : 'Project'} required>
+            <select
+              className={zfForm.control}
+              value={propertyId}
+              onChange={e => { setSelectedPropertyId(e.target.value); setAmount(''); }}
+              disabled={partnerProperties.length === 0}
+            >
+              {partnerProperties.length === 0 && (
+                <option value="">{isAr ? 'لا يوجد مشروع للشريك' : 'No project for this partner'}</option>
+              )}
+              {partnerProperties.map(p => (
+                <option key={p.id} value={p.id}>
+                  {isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar)}
                 </option>
-              );
-            })}
-          </select>
-        </ZFField>
+              ))}
+            </select>
+          </ZFField>
+        </div>
 
-        {/* 2. Facts */}
-        {currentPartner && (
+        {position && (
           <ZFFacts
             items={[
+              { label: isAr ? 'نصيبه من التحصيلات' : 'Share of collections', value: money(position.collectionsShare) },
+              { label: isAr ? 'صُرف له قبل كده' : 'Paid before', value: money(position.paidOut) },
               {
-                label: isAr ? 'نصيبه من التحصيلات' : 'Share of collections',
-                value: `${Number(currentPartner.totalCollectionsShare).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`
+                label: isAr ? 'مديونية ضخ رأس المال' : 'Unpaid capital',
+                value: money(position.commitmentDebt),
+                tone: hasDebt ? 'neg' : undefined
               },
               {
-                label: isAr ? 'أرباح مصروفة سابقاً' : 'Paid before',
-                value: `${Number(currentPartner.totalDistributionsPaid).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`
-              },
-              {
-                label: isAr ? 'المتاح للصرف' : 'Available',
-                value: `${Number(currentPartner.netCurrentBalance).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`,
-                tone: D(currentPartner.netCurrentBalance).lt(0) ? 'neg' : D(currentPartner.netCurrentBalance).gt(0) ? 'pos' : undefined
+                label: isAr ? 'المتاح نقداً' : 'Available in cash',
+                value: money(position.cashAvailable),
+                tone: cashAvailable.gt(0) ? 'pos' : undefined
               }
             ]}
           />
         )}
 
-        {/* 3. Row: Amount & Date */}
         <div className={zfForm.row}>
-          <ZFField label={isAr ? 'المبلغ' : 'Amount'} required>
+          <ZFField label={isAr ? 'المبلغ النقدي' : 'Cash amount'} required={!offset.gt(0)}>
             <ZFMoneyInput
               value={amount}
               onChange={e => setAmount(e.target.value)}
               unit={isAr ? 'ج.م' : 'EGP'}
               autoFocus
-              required
             />
           </ZFField>
           <ZFField label={isAr ? 'التاريخ' : 'Date'} required>
@@ -209,45 +255,17 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
           </ZFField>
         </div>
 
-        {/* 4. Project (optional) */}
-        <ZFField label={isAr ? 'المشروع' : 'Project'}>
-          <select
-            className={zfForm.control}
-            value={selectedPropertyId}
-            onChange={e => setSelectedPropertyId(e.target.value)}
-          >
-            <option value="">{isAr ? 'توزيع عام' : 'General payout'}</option>
-            {properties.map(p => (
-              <option key={p.id} value={p.id}>
-                {isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar)}
-              </option>
-            ))}
-          </select>
-        </ZFField>
-
-        {/* 5. Paid by */}
         <ZFField label={isAr ? 'طريقة الصرف' : 'Paid by'}>
-          <ZFChoices<'CASH_101000' | 'INSTAPAY_102000'>
-            value={paymentMethod === 'BANK_102000' ? 'CASH_101000' : paymentMethod}
+          <ZFChoices<PayoutMethod>
+            value={paymentMethod}
             onChange={setPaymentMethod}
             options={[
-              {
-                id: 'CASH_101000',
-                label: isAr ? 'نقداً' : 'Cash',
-                sub: isAr ? 'من الخزينة' : 'From the safe',
-                icon: <Wallet size={16} />
-              },
-              {
-                id: 'INSTAPAY_102000',
-                label: isAr ? 'إنستاباي' : 'InstaPay',
-                sub: isAr ? 'من حساب إنستاباي' : 'From InstaPay',
-                icon: <Smartphone size={16} />
-              }
+              { id: 'CASH_101000', label: isAr ? 'نقداً' : 'Cash', sub: isAr ? 'من الخزينة' : 'From the safe', icon: <Wallet size={16} /> },
+              { id: 'INSTAPAY_102000', label: isAr ? 'إنستاباي' : 'InstaPay', sub: isAr ? 'من حساب إنستاباي' : 'From InstaPay', icon: <Smartphone size={16} /> }
             ]}
           />
         </ZFField>
 
-        {/* 6. Row: Receipt Ref & Notes */}
         <div className={zfForm.row}>
           <ZFField label={isAr ? 'رقم الإيصال' : 'Receipt no.'}>
             <input
@@ -268,7 +286,6 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
           </ZFField>
         </div>
 
-        {/* 7. Effects (render all that apply, in order) */}
         {isTargetPeriodLocked && (
           <ZFEffect tone="danger">
             {isAr
@@ -276,46 +293,51 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               : 'The accounting period for this date is closed. Pick another date.'}
           </ZFEffect>
         )}
-        {numAmount > Math.max(0, netBalanceNum) && (
+        {offset.gt(0) && (
           <ZFEffect tone="warn">
-            {isAr
-              ? `المبلغ أكبر من المتاح للصرف (${availFormatted}). سيصبح رصيد الشريك بالسالب.`
-              : `Amount is more than the available ${availFormatted}. The partner balance will go negative.`}
-          </ZFEffect>
-        )}
-        {numAmount > 0 ? (
-          <ZFEffect>
             {isAr ? (
-              <>
-                سيُصرف <strong>{moneyFormatted}</strong> لـ <strong>{effectivePartnerName}</strong> من {isCash ? 'الخزينة' : 'حساب إنستاباي'}.
-              </>
+              <>هيتخصم <strong>{money(offset.toFixed(2))}</strong> من نصيبه لسداد مديونية الضخ أولاً.</>
             ) : (
-              <>
-                <strong>{moneyFormatted}</strong> will be paid to <strong>{effectivePartnerName}</strong> from {isCash ? 'the safe' : 'InstaPay'}.
-              </>
+              <><strong>{money(offset.toFixed(2))}</strong> of his share settles his unpaid capital first.</>
             )}
           </ZFEffect>
-        ) : (
+        )}
+        {position && D(position.debtAfter).gt(0) && (
+          <ZFEffect tone="danger">
+            {isAr
+              ? `نصيبه مش مكفي. هيفضل عليه ${money(position.debtAfter)} مديونية ضخ.`
+              : `His share is not enough. ${money(position.debtAfter)} of unpaid capital stays on him.`}
+          </ZFEffect>
+        )}
+        {cashOverLimit && (
+          <ZFEffect tone={hasDebt ? 'danger' : 'warn'}>
+            {hasDebt
+              ? (isAr ? `أقصى مبلغ نقدي بعد خصم المديونية: ${money(cashAvailable.toFixed(2))}.` : `Maximum cash after the offset: ${money(cashAvailable.toFixed(2))}.`)
+              : (isAr ? `المبلغ أكبر من المتاح (${money(cashAvailable.toFixed(2))}). رصيد الشريك هيبقى بالسالب.` : `Amount is more than the available ${money(cashAvailable.toFixed(2))}. The partner balance will go negative.`)}
+          </ZFEffect>
+        )}
+        {cash.gt(0) && !blocksOverLimit && (
           <ZFEffect>
-            {isAr ? 'أدخل المبلغ لمعرفة ما سيُسجل.' : 'Enter an amount to see what will be recorded.'}
+            {isAr ? (
+              <>هيتصرف <strong>{money(cash.toFixed(2))}</strong> لـ <strong>{partnerName}</strong> من {cashAccountName}.</>
+            ) : (
+              <><strong>{money(cash.toFixed(2))}</strong> will be paid to <strong>{partnerName}</strong> from {cashAccountName}.</>
+            )}
+          </ZFEffect>
+        )}
+        {!position && (
+          <ZFEffect>
+            {isAr ? 'الشريك ده مالوش نصيب في أي مشروع.' : 'This partner has no stake in any project.'}
           </ZFEffect>
         )}
 
-        {/* 8. Journal peek */}
-        {numAmount > 0 && (
+        {(cash.gt(0) || offset.gt(0)) && (
           <ZFJournalPeek
             isAr={isAr}
             lines={[
-              {
-                code: '303000',
-                name: isAr ? 'توزيعات أرباح ومسحوبات الشركاء' : 'Partner Distributions',
-                debit: numAmount
-              },
-              {
-                code: selectedAccountCode,
-                name: isAr ? (selectedAccountCode === '101000' ? 'الخزينة' : 'إنستاباي') : (selectedAccountCode === '101000' ? 'Safe' : 'InstaPay'),
-                credit: numAmount
-              }
+              { code: '303000', name: isAr ? 'توزيعات أرباح ومسحوبات الشركاء' : 'Partner Distributions', debit: cash.plus(offset).toNumber() },
+              ...(offset.gt(0) ? [{ code: '301000', name: isAr ? 'رأس مال الشركاء' : 'Partner Capital', credit: offset.toNumber() }] : []),
+              ...(cash.gt(0) ? [{ code: isCash ? '101000' : '102000', name: cashAccountName, credit: cash.toNumber() }] : [])
             ]}
           />
         )}

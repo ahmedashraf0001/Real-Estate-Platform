@@ -283,7 +283,8 @@ export interface ERPPartnerTransaction {
   property_id?: string;
   property_title?: string;
   commitment_id?: string;
-  payment_method: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
+  /** DEBT_OFFSET: settled from the partner's profit share, no cash moved. */
+  payment_method: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000' | 'DEBT_OFFSET';
   journal_entry_number?: string;
   date: string;
   status: 'COMPLETED' | 'PENDING';

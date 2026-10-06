@@ -1909,7 +1909,7 @@ export class ERPSupabaseService {
         property_id: (row.property_id as string) || undefined,
         property_title: (row.property_title as string) || undefined,
         commitment_id: (row.commitment_id as string) || undefined,
-        payment_method: row.routing_account === '101000' 
+        payment_method: row.routing_account === 'DEBT_OFFSET' ? 'DEBT_OFFSET' as const : row.routing_account === '101000' 
           ? (String(row.notes || '').toLowerCase().includes('instapay') || String(row.notes || '').includes('إنستاباي') ? 'INSTAPAY_102000' : 'CASH_101000') 
           : 'BANK_102000',
         journal_entry_number: undefined,
