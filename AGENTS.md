@@ -90,3 +90,8 @@ Before dispatching a subagent for a gate retry on an existing work order:
 
 ## 6. Mandatory Reporting Contract
 Subagent completion reports must strictly follow the 5-line report contract in Section 6 of `/home/lyr1csan/project/AGENTS.md#report-contract`. (Applies to: all)
+
+---
+
+## 7. Business-rule skills
+- **Partner payouts, capital-debt offset, ready-to-distribute alert, off-plan final pricing**: read `zakaria-farid/.claude/skills/erp-partner-payout-pricing/SKILL.md` before touching any of them. Rules: `PROJECT_SPEC.md` → "Partner payouts and final pricing (2026-10-06)".
