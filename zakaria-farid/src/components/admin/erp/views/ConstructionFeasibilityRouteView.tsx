@@ -18,6 +18,7 @@ export function ConstructionFeasibilityRouteView() {
       onOpenAuditForProperty={erp.handleOpenAuditForProperty}
       onOpenContractForProperty={erp.handleOpenContractForProperty}
       onUpdateSellingPrice={erp.handleUpdatePropertySellingPrice}
+      loadPriceHistory={erp.loadPropertyPriceHistory}
       onNavigateToTab={(tab) => erp.navigateToTab(tab)}
       isAr={erp.isAr}
     />

@@ -36,7 +36,9 @@ import {
   PropertyCostCategory,
   PropertyLifecyclePhase,
   ERPUnitEstimate,
-  ERPConstructionPurchaseOrder
+  ERPConstructionPurchaseOrder,
+  ERPPropertyPriceHistoryEntry,
+  PropertyPriceStage
 } from './types';
 import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
 import { D, generateUUID, isUUID, ensureUUID, ratio } from './math';
@@ -1687,22 +1689,66 @@ export class ERPSupabaseService {
   }
 
   /**
-   * Update Property Catalog Selling Price (from Calculator).
+   * Change a property's selling price through `record_property_price` (user-confirmed 2026-10-06).
+   * finalize = true: off-plan only, once — marks construction complete, prices available units, logs a 'final' row.
+   * Errors are thrown, never swallowed.
    */
-  static async updatePropertySellingPrice(
+  static async recordPropertyPrice(
     supabase: SupabaseClient,
-    propertyId: string,
-    newPriceEgp: number
-  ): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('properties')
-        .update({ price_egp: newPriceEgp })
-        .eq('id', propertyId);
-      if (error) throw error;
-    } catch (err) {
-      console.warn('Silent fallback on property price_egp update:', err);
+    params: {
+      propertyId: string;
+      priceEgp: number;
+      finalize?: boolean;
+      unitPrices?: Record<string, number>;
+      costBasisEgp?: string | number;
+      note?: string;
     }
+  ): Promise<{ stage: PropertyPriceStage; units_repriced: number }> {
+    const { data, error } = await supabase.rpc('record_property_price', {
+      p_property_id: params.propertyId,
+      p_price_egp: params.priceEgp,
+      p_finalize: Boolean(params.finalize),
+      p_unit_prices: params.unitPrices || {},
+      p_cost_basis_egp: params.costBasisEgp != null ? Number(params.costBasisEgp) : null,
+      p_note: params.note || null
+    });
+    if (!error) return data as { stage: PropertyPriceStage; units_repriced: number };
+
+    // Before the price-history migration is applied: a plain revision still works.
+    const missingFn = (error as { code?: string }).code === 'PGRST202' || String(error.message || '').includes('record_property_price');
+    if (missingFn && !params.finalize) {
+      const { error: updErr } = await supabase.from('properties').update({ price_egp: params.priceEgp }).eq('id', params.propertyId);
+      if (updErr) throw updErr;
+      return { stage: 'revised', units_repriced: 0 };
+    }
+    throw error;
+  }
+
+  /** Price history of one property, newest first. Empty before the migration is applied. */
+  static async loadPropertyPriceHistory(
+    supabase: SupabaseClient,
+    propertyId: string
+  ): Promise<ERPPropertyPriceHistoryEntry[]> {
+    const { data, error } = await supabase
+      .from('erp_property_price_history')
+      .select('history_id, property_id, price_egp, stage, cost_basis_egp, area_m2, units_repriced, note, created_at')
+      .eq('property_id', propertyId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      if (this.isSchemaCacheError(error)) return [];
+      throw error;
+    }
+    return (data || []).map(row => ({
+      history_id: row.history_id as string,
+      property_id: row.property_id as string,
+      price_egp: D((row.price_egp as string | number) || 0).toFixed(2),
+      stage: row.stage as PropertyPriceStage,
+      cost_basis_egp: row.cost_basis_egp != null ? D(row.cost_basis_egp as string | number).toFixed(2) : undefined,
+      area_m2: row.area_m2 != null ? Number(row.area_m2) : undefined,
+      units_repriced: Number(row.units_repriced || 0),
+      note: (row.note as string) || undefined,
+      created_at: row.created_at as string
+    }));
   }
 
   /**

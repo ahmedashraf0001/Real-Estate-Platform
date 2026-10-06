@@ -17,9 +17,11 @@ import {
   ArrowLeftRight,
   Table2,
   Target,
+  Flag,
+  History,
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
-import { ERPPropertyCostItem, PropertyCostCategory } from '@/lib/erp/types';
+import { ERPPropertyCostItem, ERPPropertyPriceHistoryEntry, PropertyCostCategory } from '@/lib/erp/types';
 import { calculatePropertyAuditMetrics } from '@/lib/erp/propertyCostEngine';
 import {
   priceBuiltProperty,
@@ -32,6 +34,8 @@ import { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
 import { ZFKpiCard, ZFKpiGrid } from '../../ZFKpiCard';
 import { ZFWorkstationSideWidgets } from '../../common/ZFWorkstationSideWidgets';
 import { useERPWorkstationContext } from '../../../context/ERPWorkstationContext';
+import { ZFModalShell } from '../../common/ZFModalShell';
+import { ZFFacts, ZFEffect, ZFFormFooter } from '../../common/ZFForm';
 import shellStyles from '../../ZFWorkstationShell.module.css';
 import s from './CostPricingCalculator.module.css';
 
@@ -40,7 +44,13 @@ export interface CostPricingCalculatorProps {
   propertyCosts?: ERPPropertyCostItem[];
   initialPropertyId?: string;
   onOpenAuditForProperty?: (p: Property) => void;
-  onUpdateSellingPrice?: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  /** Resolves false when the price was not saved. finalize: off-plan final price (user-confirmed 2026-10-06). */
+  onUpdateSellingPrice?: (
+    propertyId: string,
+    newPriceEgp: number,
+    options?: { finalize?: boolean; unitPrices?: Record<string, number>; costBasisEgp?: string }
+  ) => Promise<boolean | void>;
+  loadPriceHistory?: (propertyId: string) => Promise<ERPPropertyPriceHistoryEntry[]>;
   onNavigateToTab?: (tab: string) => void;
   isAr: boolean;
 }
@@ -76,6 +86,7 @@ export function CostPricingCalculator({
   initialPropertyId,
   onOpenAuditForProperty,
   onUpdateSellingPrice,
+  loadPriceHistory,
   onNavigateToTab,
   isAr,
 }: CostPricingCalculatorProps) {
@@ -166,6 +177,27 @@ export function CostPricingCalculator({
   }, [propertyId, property, audit.costPerSqm]);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<ERPPropertyPriceHistoryEntry[]>([]);
+  const [historyVersion, setHistoryVersion] = useState(0);
+
+  useEffect(() => {
+    if (!loadPriceHistory || !propertyId) return;
+    let cancelled = false;
+    loadPriceHistory(propertyId)
+      .then(rows => { if (!cancelled) setPriceHistory(rows); })
+      .catch(() => { if (!cancelled) setPriceHistory([]); });
+    return () => { cancelled = true; };
+  }, [loadPriceHistory, propertyId, historyVersion]);
+
+  // Off-plan properties carry an initial price until construction ends and the final price is approved.
+  const isPriceFinal = Boolean(property?.price_finalized_at);
+  const isInitialPrice = property?.completion_status === 'off_plan' && !isPriceFinal;
+  const currentPriceLabel = isInitialPrice
+    ? (isAr ? 'السعر المبدئي' : 'Initial price')
+    : isPriceFinal
+      ? (isAr ? 'السعر النهائي' : 'Final price')
+      : (isAr ? 'السعر الحالي' : 'Current price');
 
   const [landCost, setLandCost] = useState('0');
   const [builtArea, setBuiltArea] = useState('1000');
@@ -198,6 +230,17 @@ export function CostPricingCalculator({
     () => priceUnitsAtRate(units, chosenPerSqm),
     [units, chosenPerSqm]
   );
+  // Final pricing touches available units only; reserved and contracted units keep their price.
+  const availableUnitPrices = useMemo(() => {
+    const map: Record<string, number> = {};
+    unitRows.forEach(r => {
+      const unit = units.find(u => u.unit_id === r.unit_id);
+      if (unit?.status === 'available' && n(r.newPrice) > 0) map[r.unit_id] = Math.round(n(r.newPrice));
+    });
+    return map;
+  }, [unitRows, units]);
+  const availableUnitsCount = Object.keys(availableUnitPrices).length;
+  const lockedUnitsCount = units.filter(u => u.status !== 'available').length;
 
   const feas = useMemo(
     () =>
@@ -369,7 +412,7 @@ export function CostPricingCalculator({
             {mode === 'built' && onUpdateSellingPrice && property && (
               <button
                 type="button"
-                className={shellStyles.btnPrimary}
+                className={isInitialPrice ? shellStyles.btnSecondary : shellStyles.btnPrimary}
                 title={isAr ? 'يحدّث سعر العقار في الكتالوج والموقع.' : 'Updates the property price in the catalog and website.'}
                 disabled={
                   isSaving ||
@@ -380,7 +423,10 @@ export function CostPricingCalculator({
                   if (!property) return;
                   setIsSaving(true);
                   try {
-                    await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice)));
+                    await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice)), {
+                      costBasisEgp: audit.totalLoggedCost
+                    });
+                    setHistoryVersion(v => v + 1);
                   } finally {
                     setIsSaving(false);
                   }
@@ -392,10 +438,23 @@ export function CostPricingCalculator({
                     ? isAr
                       ? 'جارٍ الحفظ…'
                       : 'Saving…'
+                    : isInitialPrice
+                    ? (isAr ? 'حفظ السعر المبدئي' : 'Save initial price')
                     : isAr
                     ? 'حفظ السعر'
                     : 'Save price'}
                 </span>
+              </button>
+            )}
+            {mode === 'built' && onUpdateSellingPrice && property && isInitialPrice && (
+              <button
+                type="button"
+                className={shellStyles.btnPrimary}
+                disabled={isSaving || n(result.totalPrice) <= 0}
+                onClick={() => setIsFinalizeOpen(true)}
+              >
+                <Flag size={14} />
+                <span>{isAr ? 'إنهاء الإنشاء واعتماد السعر النهائي' : 'Finish construction & set final price'}</span>
               </button>
             )}
           </>
@@ -431,7 +490,7 @@ export function CostPricingCalculator({
                 <span className={s.factValue}>{area} {isAr ? 'م²' : 'm²'}</span>
               </div>
               <div className={s.fact}>
-                <span className={s.factLabel}>{isAr ? 'السعر الحالي' : 'Current price'}</span>
+                <span className={s.factLabel}>{currentPriceLabel}</span>
                 <span className={s.factValue}>{fmt(list)} {cur}</span>
               </div>
               <div className={s.fact}>
@@ -995,7 +1054,100 @@ export function CostPricingCalculator({
               </button>
             )}
           </ZFPanel>
+          {priceHistory.length > 0 && (
+            <ZFPanel
+              bodyClassName={s.sidePanelBody}
+              icon={<History size={15} />}
+              title={isAr ? 'سجل الأسعار' : 'Price history'}
+            >
+              <div className={s.breakdown}>
+                {priceHistory.map(h => (
+                  <div key={h.history_id} className={s.bdHead}>
+                    <span className={s.bdName}>
+                      {h.stage === 'final'
+                        ? (isAr ? 'نهائي' : 'Final')
+                        : h.stage === 'initial'
+                          ? (isAr ? 'مبدئي' : 'Initial')
+                          : (isAr ? 'تعديل' : 'Revised')}
+                      {' · '}
+                      {h.created_at.slice(0, 10)}
+                    </span>
+                    <span className={s.bdValue}>{fmt(h.price_egp)}</span>
+                  </div>
+                ))}
+              </div>
+            </ZFPanel>
+          )}
         </ZFWorkstationSideWidgets>
+      )}
+
+      {isFinalizeOpen && property && onUpdateSellingPrice && (
+        <ZFModalShell
+          isOpen
+          onClose={() => setIsFinalizeOpen(false)}
+          title={isAr ? 'إنهاء الإنشاء واعتماد السعر النهائي' : 'Finish construction & set the final price'}
+          subtitle={isAr ? property.title_ar : property.title_en || property.title_ar}
+          icon={<Flag size={18} />}
+          isAr={isAr}
+          maxWidth="560px"
+          footer={
+            <ZFFormFooter>
+              <button type="button" className={shellStyles.btnSecondary} onClick={() => setIsFinalizeOpen(false)}>
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                className={shellStyles.btnPrimary}
+                disabled={isSaving || audit.itemsCount === 0 || n(result.totalPrice) <= 0}
+                onClick={async () => {
+                  setIsSaving(true);
+                  try {
+                    const ok = await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice)), {
+                      finalize: true,
+                      unitPrices: availableUnitPrices,
+                      costBasisEgp: audit.totalLoggedCost
+                    });
+                    if (ok !== false) {
+                      setIsFinalizeOpen(false);
+                      setHistoryVersion(v => v + 1);
+                    }
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+              >
+                {isSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'اعتماد السعر النهائي' : 'Approve final price')}
+              </button>
+            </ZFFormFooter>
+          }
+        >
+          <ZFFacts
+            items={[
+              { label: isAr ? 'التكلفة الفعلية' : 'Actual cost', value: `${fmt(audit.totalLoggedCost)} ${cur}` },
+              { label: isAr ? 'السعر المبدئي' : 'Initial price', value: `${fmt(list)} ${cur}` },
+              { label: isAr ? 'السعر النهائي' : 'Final price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'سعر المتر' : 'Per m²', value: `${fmt(chosenPerSqm)} ${perSqm}` }
+            ]}
+          />
+          {audit.itemsCount === 0 ? (
+            <ZFEffect tone="danger">
+              {isAr
+                ? 'مفيش تكاليف مسجلة للعقار ده. سجّل تكاليف البناء الأول عشان السعر النهائي يتحسب على التكلفة الفعلية.'
+                : 'No costs are recorded for this property. Record construction costs first so the final price rests on actual cost.'}
+            </ZFEffect>
+          ) : (
+            <ZFEffect tone="warn">
+              {isAr
+                ? `العقار هيتحول لـ "جاهز" والسعر هيتقفل كسعر نهائي. ${availableUnitsCount} وحدة متاحة هيتغير سعرها${lockedUnitsCount > 0 ? `، و${lockedUnitsCount} وحدة محجوزة أو متعاقد عليها هتفضل بسعرها` : ''}. العقود الموقعة مش هتتغير.`
+                : `The property becomes "ready" and this price is locked as final. ${availableUnitsCount} available units will be repriced${lockedUnitsCount > 0 ? `; ${lockedUnitsCount} reserved or contracted units keep their price` : ''}. Signed contracts do not change.`}
+            </ZFEffect>
+          )}
+          {n(result.profit) < 0 && (
+            <ZFEffect tone="danger">
+              {isAr ? 'السعر ده أقل من التكلفة الفعلية: العقار هيتباع بخسارة.' : 'This price is below actual cost: the property sells at a loss.'}
+            </ZFEffect>
+          )}
+        </ZFModalShell>
       )}
     </div>
   );

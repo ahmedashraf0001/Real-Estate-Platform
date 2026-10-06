@@ -622,7 +622,7 @@ export interface PropertyAnalysisViewProps {
   isAr?: boolean;
   isMutating?: boolean;
   activePreset?: ERPPalettePreset;
-  onUpdateSellingPrice?: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  onUpdateSellingPrice?: (propertyId: string, newPriceEgp: number) => Promise<boolean | void>;
   onOpenAuditForProperty?: (property: Property) => void;
   onOpenContractForProperty?: (property: Property, unit?: BuildingUnitItem) => void;
   onInspectContract?: (contract: ERPContract) => void;

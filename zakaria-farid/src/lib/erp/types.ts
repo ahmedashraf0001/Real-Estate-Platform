@@ -595,3 +595,18 @@ export interface ERPConstructionPurchaseOrder {
   created_by?: string;
   created_at?: string;
 }
+
+/** Stage of a property selling-price change (user-confirmed 2026-10-06). */
+export type PropertyPriceStage = 'initial' | 'revised' | 'final';
+
+export interface ERPPropertyPriceHistoryEntry {
+  history_id: string;
+  property_id: string;
+  price_egp: string;
+  stage: PropertyPriceStage;
+  cost_basis_egp?: string;
+  area_m2?: number;
+  units_repriced: number;
+  note?: string;
+  created_at: string;
+}

@@ -25,6 +25,7 @@ import {
   ERPPropertyCostItem,
   ERPPartnerProfile,
   ERPPartnerTransaction,
+  ERPPropertyPriceHistoryEntry,
   ERPAccountingPeriod,
   ERPNotification
 } from '@/lib/erp/types';
@@ -410,7 +411,12 @@ export interface ERPWorkstationContextValue {
   handleUpdatePropertyCostItem: (item: ERPPropertyCostItem) => Promise<void>;
   handleAddCostAdjustment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
   handleRecordCostPayablePayment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
-  handleUpdatePropertySellingPrice: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  handleUpdatePropertySellingPrice: (
+    propertyId: string,
+    newPriceEgp: number,
+    options?: { finalize?: boolean; unitPrices?: Record<string, number>; costBasisEgp?: string }
+  ) => Promise<boolean>;
+  loadPropertyPriceHistory: (propertyId: string) => Promise<ERPPropertyPriceHistoryEntry[]>;
   handleInternalTransfer: (details: {
     from: '101000' | '102000';
     to: '101000' | '102000';
@@ -4137,31 +4143,72 @@ export function ERPWorkstationProvider({
     } finally { setIsMutating(false); }
   }, [supabase, isAr, data.propertyCosts, data.periods, activePeriod, currentUser, resolveAndEnsurePeriodForDate]);
 
-  const handleUpdatePropertySellingPrice = useCallback(async (propertyId: string, newPriceEgp: number) => {
+  const loadPropertyPriceHistory = useCallback(
+    (propertyId: string) => ERPSupabaseService.loadPropertyPriceHistory(supabase, propertyId),
+    [supabase]
+  );
+
+  // Handler: change a property's selling price from the calculator (user-confirmed 2026-10-06).
+  // finalize: off-plan only — construction complete, final price, available units repriced. Contracts never change.
+  const handleUpdatePropertySellingPrice = useCallback(async (
+    propertyId: string,
+    newPriceEgp: number,
+    options?: { finalize?: boolean; unitPrices?: Record<string, number>; costBasisEgp?: string }
+  ): Promise<boolean> => {
     setIsMutating(true);
     try {
-      await ERPSupabaseService.updatePropertySellingPrice(supabase, propertyId, newPriceEgp);
+      const result = await ERPSupabaseService.recordPropertyPrice(supabase, {
+        propertyId,
+        priceEgp: newPriceEgp,
+        finalize: options?.finalize,
+        unitPrices: options?.unitPrices,
+        costBasisEgp: options?.costBasisEgp
+      });
+      const finalizedAt = new Date().toISOString();
       setData(prev => ({
         ...prev,
-        properties: prev.properties.map(p => p.id === propertyId ? { ...p, price_egp: newPriceEgp } : p)
+        properties: prev.properties.map(p => {
+          if (p.id !== propertyId) return p;
+          if (!options?.finalize) return { ...p, price_egp: newPriceEgp };
+          return {
+            ...p,
+            price_egp: newPriceEgp,
+            completion_status: 'ready',
+            construction_completed_at: finalizedAt,
+            price_finalized_at: finalizedAt,
+            building_units: p.building_units?.map(u =>
+              u.status === 'available' && options.unitPrices?.[u.unit_id] != null
+                ? { ...u, price_egp: options.unitPrices[u.unit_id] }
+                : u
+            )
+          };
+        })
       }));
+      const priceText = isAr ? `${newPriceEgp.toLocaleString('en-US')} ج.م` : `${newPriceEgp.toLocaleString('en-US')} EGP`;
       toast.success(
-        isAr ? 'تم تحديث سعر بيع العقار بنجاح' : 'Property selling price updated',
+        options?.finalize
+          ? (isAr ? 'تم اعتماد السعر النهائي وإنهاء الإنشاء' : 'Final price approved, construction complete')
+          : (isAr ? 'تم تحديث سعر بيع العقار' : 'Property selling price updated'),
         {
-          description: isAr ? `السعر الجديد: ${newPriceEgp.toLocaleString('ar-EG')} ج.م` : `New price: ${newPriceEgp.toLocaleString('en-US')} EGP`,
-          duration: 4000
+          description: options?.finalize
+            ? (isAr ? `السعر النهائي: ${priceText} • ${result.units_repriced} وحدة متاحة اتسعّرت` : `Final price: ${priceText} • ${result.units_repriced} available units repriced`)
+            : (isAr ? `السعر الجديد: ${priceText}` : `New price: ${priceText}`),
+          duration: 5000
         }
       );
+      return true;
     } catch (err) {
-      console.warn('Fallback updating property price:', err);
-      setData(prev => ({
-        ...prev,
-        properties: prev.properties.map(p => p.id === propertyId ? { ...p, price_egp: newPriceEgp } : p)
-      }));
-      toast.success(
-        isAr ? 'تم تحديث سعر بيع العقار' : 'Property price updated',
-        { duration: 3000 }
-      );
+      console.error('Property price update failed:', err);
+      const msg = String((err as Error)?.message || '');
+      const reason = msg.includes('PRICE_ALREADY_FINAL')
+        ? (isAr ? 'السعر النهائي للعقار ده اتعمد قبل كده.' : 'This property already has a final price.')
+        : msg.includes('FINAL_PRICE_ONLY_FOR_OFF_PLAN')
+          ? (isAr ? 'السعر النهائي للعقارات تحت الإنشاء بس.' : 'Final pricing is only for under-construction properties.')
+          : msg.includes('record_property_price')
+            ? (isAr ? 'سجل الأسعار لسه ما اتفعّلش في قاعدة البيانات.' : 'Price history is not enabled in the database yet.')
+            : msg;
+      toast.error(isAr ? 'فشل حفظ السعر' : 'Failed to save the price', { description: reason });
+      return false;
     } finally {
       setIsMutating(false);
     }
@@ -4472,6 +4519,7 @@ export function ERPWorkstationProvider({
     handleAddCostAdjustment,
     handleRecordCostPayablePayment,
     handleUpdatePropertySellingPrice,
+    loadPropertyPriceHistory,
     handleInternalTransfer,
   };
 

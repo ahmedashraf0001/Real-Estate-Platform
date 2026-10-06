@@ -85,6 +85,10 @@ export interface Property {
   longitude: number | null;
   completion_status: CompletionStatus;
   completion_percentage?: number | null;
+  /** Set when construction of an off-plan property is marked complete. */
+  construction_completed_at?: string | null;
+  /** Set when the final price is approved after construction (user-confirmed 2026-10-06). */
+  price_finalized_at?: string | null;
   listing_status: ListingStatus;
   is_featured: boolean;
   is_archived?: boolean | null;
