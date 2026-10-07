@@ -43,3 +43,5 @@ zakaria-farid/graphify-out/
 # Local agent tooling (nested repos, not part of the app)
 .agents/liquid-glass-skill/
 .agents/plugins/
+
+.agents/runs/
