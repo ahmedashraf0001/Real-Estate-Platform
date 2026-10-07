@@ -568,8 +568,7 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
           icon={<Wallet size={16} />}
           accentColor="emerald"
           delta={{
-            value: `+${activeKPIs.collectionPct}%`,
-            isPositive: true,
+            value: `${activeKPIs.collectionPct}%`,
             label: activeKPIs.card2DeltaLabel
           }}
           subtitleLabel={isAr ? 'نسبة التحصيل' : 'Collection rate'}

@@ -1115,7 +1115,7 @@ describe('Construction Payables Redesign & Invariants Suite', () => {
     assert.ok(viewCode.includes("'مركز التكلفة'") || viewCode.includes("'Cost Center'"), 'Inspection modal must display Cost Center fact');
     assert.ok(viewCode.includes("'مرحلة التنفيذ'") || viewCode.includes("'Construction Phase'"), 'Inspection modal must display Construction Phase fact');
     assert.ok(viewCode.includes("'تاريخ التعاقد'") || viewCode.includes("'Contract Date'"), 'Inspection modal must display Contract Date fact');
-    assert.ok(viewCode.includes("'الرقم الضريبي'") || viewCode.includes("'Tax ID'"), 'Inspection modal must display Tax ID fact');
+    assert.ok(!viewCode.includes("'Tax ID'") && !viewCode.includes('492-810-332'), 'Inspection modal must hide Tax ID when the contractor data model has no tax ID');
 
     // Full-row inspection replaces repetitive inline action buttons.
     assert.ok(viewCode.includes('className={vStyles.canonicalRow}'));

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { previousPeriodDelta } from '@/lib/erp/realDisplayValues';
 import { 
   TrendingUp, 
   Wallet, 
@@ -331,16 +332,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     return parts.year === prevYear;
   }, [parseDateParts, statPeriodFilter, prevMonthYear, prevMonth, prevQuarterYear, prevQuarter, prevYear]);
 
-  const formatDelta = useCallback((current: Decimal, prior: Decimal): string | null => {
-    if (prior.isZero()) {
-      if (current.isZero()) return '0.0%';
-      return '+100.0%';
-    }
-    const diff = current.minus(prior);
-    const pct = diff.times(100).dividedBy(prior.abs());
-    const sign = pct.gte(0) ? '+' : '';
-    return `${sign}${pct.toFixed(1)}%`;
-  }, []);
+  const formatDelta = previousPeriodDelta;
 
   // 1. Available Cash (Canonical metric: real ledger aggregation for accounts 101000 & 102000)
   const { cashNum, cashDelta, safeCashFormatted, bankCashFormatted } = useMemo(() => {

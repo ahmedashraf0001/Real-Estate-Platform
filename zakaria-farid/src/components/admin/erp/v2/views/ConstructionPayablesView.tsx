@@ -2333,10 +2333,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'تاريخ التعاقد / التسجيل' : 'Contract Date'}</span>
                       <span className={vStyles.inspectFactVal}>{inspectCostItem.logged_date || (inspectCostItem.created_at ? inspectCostItem.created_at.slice(0, 10) : '—')}</span>
                     </div>
-                    <div className={vStyles.inspectFactItem}>
-                      <span className={vStyles.inspectFactLabel}>{isAr ? 'الرقم الضريبي / السجل' : 'Tax ID'}</span>
-                      <span className={vStyles.inspectFactVal}>{(inspectCostItem as any).tax_id || (isAr ? '492-810-332 (مسجل ضريبياً)' : '492-810-332 (Tax Registered)')}</span>
-                    </div>
                     <div className={vStyles.inspectFactItemWide}>
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'ملاحظات ومواصفات البند' : 'Notes & Specifications'}</span>
                       <span className={vStyles.inspectFactVal} style={{ fontWeight: 400, color: '#475569' }}>

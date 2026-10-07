@@ -33,6 +33,9 @@ import { toast } from 'sonner';
 
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem, ERPCostAllocation, ERPJournalEntry, ERPInstallmentSchedule } from '@/lib/erp/types';
+import { monthlySeries, previousPeriodDelta } from '@/lib/erp/realDisplayValues';
+import { getLocalTodayStr } from '@/lib/erp/installmentsVaultProjection';
+import { calculateCostItemEffectiveTotals } from '@/lib/erp/propertyCostEngine';
 import { Decimal } from '@/lib/erp/math';
 import { 
   calculateSinglePropertyAnalysis, 
@@ -772,6 +775,23 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
       journalEntries
     });
   }, [filteredProperties, propertyCosts, contracts, costAllocations, journalEntries]);
+
+  // Compare this calendar month with the previous month in the filtered portfolio.
+  const displaySeries = useMemo(() => {
+    const propertyIds = new Set(filteredProperties.map(property => property.id));
+    const referenceDate = getLocalTodayStr();
+    return [
+      filteredProperties.map(property => ({ date: property.created_at, amount: 1 })),
+      propertyCosts.filter(cost => propertyIds.has(cost.property_id)).map(cost => ({ date: cost.logged_date, amount: calculateCostItemEffectiveTotals(cost).netEffectiveCost })),
+      macroAnalysis.propertiesList.flatMap(property => property.associatedContracts)
+        .filter(contract => contract.status !== 'Rescinded')
+        .map(contract => ({ date: contract.contract_date, amount: contract.gross_contract_value || '0' })),
+    ].map(rows => {
+      const series = monthlySeries(rows, referenceDate, 8);
+      const delta = previousPeriodDelta(series[7], series[6]);
+      return { series, delta };
+    });
+  }, [filteredProperties, propertyCosts, macroAnalysis.propertiesList]);
 
   // Selected Property Deep Analysis
   const selectedProperty = useMemo(() => {
@@ -1940,9 +1960,9 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           unitLabel={isAr ? 'عقار' : 'units'}
           icon={<Building2 size={16} />}
           accentColor="accent"
-          showSparkline={true}
-          sparklineData={[10, 12, 14, 15, 17, 19, macroAnalysis.totalPropertiesCount || 20]}
-          delta={{ value: '+8.4%', isPositive: true, label: isAr ? 'نمو المحفظة' : 'portfolio growth' }}
+          showSparkline={displaySeries[0].series.filter(value => value !== 0).length >= 2}
+          sparklineData={displaySeries[0].series}
+          delta={displaySeries[0].delta ? { value: displaySeries[0].delta, isPositive: !displaySeries[0].delta.startsWith('-'), label: isAr ? 'مقارنة بالشهر السابق' : 'vs previous month' } : undefined}
           subtitleLabel={isAr ? 'الوحدات المصفاة' : 'Filtered in view'}
           subtitleValue={`${filteredProperties.length} ${isAr ? 'عقار' : 'units'}`}
         />
@@ -1953,9 +1973,9 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           value={formatCompactEGP(macroAnalysis.totalInvestedCapital, isAr)}
           icon={<Coins size={16} />}
           accentColor="accent"
-          showSparkline={true}
-          sparklineData={[30, 38, 45, 52, 60, 68, 75]}
-          delta={{ value: '+12.1%', isPositive: true, label: isAr ? 'رأس مال منفق' : 'invested' }}
+          showSparkline={displaySeries[1].series.filter(value => value !== 0).length >= 2}
+          sparklineData={displaySeries[1].series}
+          delta={displaySeries[1].delta ? { value: displaySeries[1].delta, isPositive: !displaySeries[1].delta.startsWith('-'), label: isAr ? 'مقارنة بالشهر السابق' : 'vs previous month' } : undefined}
           subtitleLabel={isAr ? 'تكاليف الأرض والإنشاءات' : 'Land + Incurred WIP'}
           subtitleValue={formatCompactEGP(macroAnalysis.totalConstructionWip, isAr)}
         />
@@ -1966,9 +1986,9 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           value={formatCompactEGP(macroAnalysis.totalContractedSales, isAr)}
           icon={<FileCheck size={16} />}
           accentColor="accent"
-          showSparkline={true}
-          sparklineData={[40, 52, 63, 71, 80, 89, 96]}
-          delta={{ value: '+15.3%', isPositive: true, label: isAr ? 'مبيعات تعاقدية' : 'contracted' }}
+          showSparkline={displaySeries[2].series.filter(value => value !== 0).length >= 2}
+          sparklineData={displaySeries[2].series}
+          delta={displaySeries[2].delta ? { value: displaySeries[2].delta, isPositive: !displaySeries[2].delta.startsWith('-'), label: isAr ? 'مقارنة بالشهر السابق' : 'vs previous month' } : undefined}
           subtitleLabel={isAr ? 'إجمالي القيمة التقديرية' : 'Expected Total RSV'}
           subtitleValue={formatCompactEGP(macroAnalysis.totalExpectedSales, isAr)}
         />
@@ -1979,9 +1999,8 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           value={formatCompactEGP(macroAnalysis.totalExpectedProfit, isAr)}
           icon={<TrendingUp size={16} />}
           accentColor="accent"
-          showSparkline={true}
-          sparklineData={[15, 19, 23, 27, 31, 35, 40]}
-          delta={{ value: `${macroAnalysis.averageGrossMarginPct.toFixed(1)}%`, isPositive: macroAnalysis.averageGrossMarginPct.gte(0), label: isAr ? 'متوسط الهامش' : 'margin' }}
+          showSparkline={false}
+          delta={{ value: `${macroAnalysis.averageGrossMarginPct.toFixed(1)}%`, label: isAr ? 'متوسط الهامش' : 'margin' }}
           subtitleLabel={isAr ? 'متوسط هامش الربح' : 'Avg Margin %'}
           subtitleValue={`${macroAnalysis.averageGrossMarginPct.toFixed(1)}%`}
         />

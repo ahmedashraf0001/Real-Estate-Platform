@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ERPPDCRecord, ERPContract, ERPInstallmentSchedule, ERPPropertyCostItem, ERPPayableInstallment } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
+import { monthlySeries } from '@/lib/erp/realDisplayValues';
 import { D, Decimal } from '@/lib/erp/math';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { MoneyCell } from '@/components/erp/MoneyCell';
@@ -175,6 +176,22 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
     const glCash = getAvailableCash(glJournalEntries || []).totalCash;
     return glCash.plus(agendaKPIs.netScheduledFlow);
   }, [glJournalEntries, agendaKPIs.netScheduledFlow]);
+
+  // Current balances grouped by contractual due month, not historical balances.
+  const kpiSeries = useMemo(() => {
+    const inflows = projectedItems.map(item => ({ date: item.dueDate, amount: item.remainingAmount }));
+    const outflows = projectedOutflows.map(item => ({ date: item.dueDate, amount: item.totalAmount }));
+    const net = [
+      ...inflows,
+      ...projectedOutflows.map(item => ({ date: item.dueDate, amount: D(0).minus(D(item.remainingAmount)) })),
+      ...(glJournalEntries || []).map(entry => ({ date: entry.entry_date, amount: getAvailableCash([entry]).totalCash })),
+    ];
+    const urgent = [
+      ...projectedItems.filter(item => item.status === 'overdue' || item.status === 'due_today').map(item => ({ date: item.dueDate, amount: item.remainingAmount })),
+      ...projectedOutflows.filter(item => item.status === 'overdue' || item.status === 'due_today').map(item => ({ date: item.dueDate, amount: item.remainingAmount })),
+    ];
+    return [inflows, outflows, net, urgent].map(rows => monthlySeries(rows, todayStr, 8));
+  }, [projectedItems, projectedOutflows, glJournalEntries, todayStr]);
 
   // 5. TODAY'S AGENDA REAL DUES
   const todayAgendaItems = useMemo(() => {
@@ -880,11 +897,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Wallet size={16} />}
           accentColor="emerald"
-          showSparkline={true}
-          sparklineData={[15, 24, 18, 32, 45, 38, 52, 60]}
+          showSparkline={kpiSeries[0].filter(value => value !== 0).length >= 2}
+          sparklineData={kpiSeries[0]}
           delta={{
             value: `${agendaKPIs.inflowsCollectionRate}%`,
-            isPositive: true
+            label: isAr ? 'معدل التحصيل' : 'Collection rate'
           }}
           subtitleLabel={isAr ? 'المحصل' : 'Collected'}
           subtitleValue={`${agendaKPIs.inflowsClearedCount} / ${agendaKPIs.inflowsCount} ${isAr ? 'دفعة' : 'records'}`}
@@ -903,11 +920,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Coins size={16} />}
           accentColor="amber"
-          showSparkline={true}
-          sparklineData={[20, 18, 25, 22, 30, 35, 32, 45]}
+          showSparkline={kpiSeries[1].filter(value => value !== 0).length >= 2}
+          sparklineData={kpiSeries[1]}
           delta={{
             value: `${agendaKPIs.outflowsSettlementRate}%`,
-            isPositive: true
+            label: isAr ? 'معدل التسوية' : 'Settlement rate'
           }}
           subtitleLabel={isAr ? 'المسدد' : 'Settled'}
           subtitleValue={`${agendaKPIs.outflowsPaidCount} / ${agendaKPIs.outflowsCount} ${isAr ? 'مستحق' : 'payables'}`}
@@ -926,11 +943,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Layers size={16} />}
           accentColor={projectedLiquidity.gte(0) ? 'blue' : 'rose'}
-          showSparkline={true}
-          sparklineData={[25, 30, 24, 38, 45, 48, 52, 60]}
+          showSparkline={kpiSeries[2].filter(value => value !== 0).length >= 2}
+          sparklineData={kpiSeries[2]}
           delta={{
             value: isAr ? (projectedLiquidity.gte(0) ? 'فائض سيولة' : 'عجز سيولة') : (projectedLiquidity.gte(0) ? 'Surplus' : 'Deficit'),
-            isPositive: projectedLiquidity.gte(0)
+            isPositive: undefined
           }}
           subtitleLabel={isAr ? 'صافي المجدول' : 'Net scheduled'}
           subtitleValue={agendaKPIs.netScheduledFlow.formatEGP(isAr)}
@@ -949,11 +966,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<AlertCircle size={16} />}
           accentColor={agendaKPIs.urgentCount > 0 ? 'rose' : 'slate'}
-          showSparkline={true}
-          sparklineData={[10, 14, 8, 16, 11, 20, 15, 12]}
+          showSparkline={kpiSeries[3].filter(value => value !== 0).length >= 2}
+          sparklineData={kpiSeries[3]}
           delta={{
             value: `${agendaKPIs.urgentCount}`,
-            isPositive: agendaKPIs.urgentCount === 0
+            isPositive: undefined
           }}
           subtitleLabel={isAr ? 'الحالات العاجلة' : 'Urgent Items'}
           subtitleValue={`${agendaKPIs.urgentCount} ${isAr ? 'استحقاق مطلوب' : 'urgent items'}`}

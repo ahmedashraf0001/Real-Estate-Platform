@@ -10,6 +10,7 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 ## Commits on this branch
 | Commit | What |
 |---|---|
+| `TBD` | ui-c3-real-display-values: real monthly KPI series and previous-month deltas; neutral rates; hide unavailable contractor tax ID; RED-first helper/source tests |
 | `9df51cd` | Rules + skill + AGENTS.md pointer |
 | `37c3551` | Stage 1: payout is per project; unpaid commitments are offset first (Dr 303000 / Cr 301000, `DEBT_OFFSET` partner transactions, commitment `paid_amount` raised oldest-first); modal resets on open and stays open on failure; card payouts scoped to their project |
 | `1d77992` | Stage 2: `getDistributionReadyProjects` + `DistributionReadyPanel` at the top of the partners page (sold + fully collected) |
