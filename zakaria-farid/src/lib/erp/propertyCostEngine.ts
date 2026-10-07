@@ -898,7 +898,8 @@ export function calculatePropertyAuditMetrics(
   const byPhase: { [key in PropertyLifecyclePhase]?: { total: string; count: number } } = {};
 
   propertyCosts.forEach(item => {
-    const cost = D(item.total_cost_egp || 0);
+    // Net of refunds/supplements (user-confirmed 2026-10-07): same basis as construction WIP.
+    const cost = D(calculateCostItemEffectiveTotals(item).netEffectiveCost);
     totalLogged = totalLogged.plus(cost);
 
     if (!byCategory[item.category]) {
