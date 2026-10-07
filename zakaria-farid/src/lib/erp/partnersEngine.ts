@@ -734,11 +734,10 @@ export class PartnersEngine {
               );
               if (cSplit) {
                 let sAmt = D(cSplit.share_amount || 0);
-                let cAmt = D(cSplit.cash_share || 0);
+                const cAmt = contractSplitCollectedShare(c, cSplit);
                 if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
                   const pct = cSplit.share_percentage.replace('%', '').trim();
                   sAmt = D(c.gross_contract_value || 0).timesRatio(pct, 100);
-                  cAmt = D(c.total_cash_collected || 0).timesRatio(pct, 100);
                 }
                 contractSalesShare = contractSalesShare.plus(sAmt);
                 collectionsShare = collectionsShare.plus(cAmt);
@@ -899,11 +898,10 @@ export class PartnersEngine {
             );
             if (cSplit) {
               let sAmt = D(cSplit.share_amount || 0);
-              let cAmt = D(cSplit.cash_share || 0);
+              const cAmt = contractSplitCollectedShare(c, cSplit);
               if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
                 const pct = cSplit.share_percentage.replace('%', '').trim();
                 sAmt = D(c.gross_contract_value || 0).timesRatio(pct, 100);
-                cAmt = D(c.total_cash_collected || 0).timesRatio(pct, 100);
               }
               salesShare = salesShare.plus(sAmt);
               colShare = colShare.plus(cAmt);
@@ -1136,6 +1134,23 @@ export function resolvePartnerSharePct(property: Property, partnerName: string):
 }
 
 /** The partner's share of cash collected on a property's live contracts, honouring contract-level splits. */
+/**
+ * A partner's share of the cash actually collected on one contract.
+ * `cash_share` is written as 0 at contract creation and never maintained, so the share is derived from
+ * collected cash × the split percentage (or share_amount / gross when no percentage is stored).
+ */
+export function contractSplitCollectedShare(
+  contract: Pick<ERPContract, 'total_cash_collected' | 'gross_contract_value'>,
+  split: { share_percentage?: string; share_amount?: string; cash_share?: string }
+): Decimal {
+  const collected = D(contract.total_cash_collected || 0);
+  const pct = String(split.share_percentage || '').replace('%', '').trim();
+  if (pct && !D(pct).isZero()) return collected.timesRatio(pct, 100);
+  const gross = D(contract.gross_contract_value || 0);
+  if (!D(split.share_amount || 0).isZero() && !gross.isZero()) return collected.timesRatio(split.share_amount || 0, gross);
+  return D(split.cash_share || 0);
+}
+
 export function partnerCollectionsShareOnProperty(
   property: Property,
   partnerName: string,
@@ -1148,11 +1163,7 @@ export function partnerCollectionsShareOnProperty(
       if (c.partner_splits && c.partner_splits.length > 0) {
         const cSplit = c.partner_splits.find(s => isSamePartner(s.partner_name || (s as any).partnerName, partnerName));
         if (!cSplit) return sum;
-        let cAmt = D(cSplit.cash_share || 0);
-        if (D(cSplit.share_amount || 0).isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
-          cAmt = D(c.total_cash_collected || 0).timesRatio(cSplit.share_percentage.replace('%', '').trim(), 100);
-        }
-        return sum.plus(cAmt);
+        return sum.plus(contractSplitCollectedShare(c, cSplit));
       }
       return sum.plus(D(c.total_cash_collected || 0).timesRatio(sharePct, 100));
     }, D(0));

@@ -203,3 +203,34 @@ describe('getDistributionReadyProjects', () => {
     assert.equal(ready.length, 1);
   });
 });
+
+describe('collections share from contract splits as the app writes them', () => {
+  // Contracts are created with cash_share '0.00' that is never updated; the share must come from collected cash.
+  const realContract = {
+    ...contract('c-real', 'prop-a', 2_083_333, 2_083_333),
+    partner_splits: [
+      { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: '50%', share_amount: '1041666.50', cash_share: '0.00' },
+      { partner_name: PARTNER, share_percentage: '50%', share_amount: '1041666.50', cash_share: '0.00' }
+    ]
+  } as unknown as ERPContract;
+
+  it('uses collected cash × split percentage, not the stale cash_share', () => {
+    const pos = computeProjectPayoutPosition({ partnerName: PARTNER, property: building, contracts: [realContract] });
+    assert.equal(pos.collectionsShare, '1041666.50');
+    assert.equal(pos.cashAvailable, '1041666.50');
+  });
+
+  it('half collected gives half the share; partner cards agree', () => {
+    const half = { ...realContract, total_cash_collected: '1041666.50' } as unknown as ERPContract;
+    const pos = computeProjectPayoutPosition({ partnerName: PARTNER, property: building, contracts: [half] });
+    assert.equal(pos.collectionsShare, '520833.25');
+    const card = PartnersEngine.getProjectPartnershipCards([building], [half], [])[0].partners.find(p => p.name === PARTNER);
+    assert.equal(card?.collectionsShare, '520833.25');
+  });
+
+  it('a sold, fully collected project with such a contract is ready to distribute', () => {
+    const sold = { ...building, listing_status: 'sold' } as unknown as Property;
+    const ready = getDistributionReadyProjects({ properties: [sold], contracts: [realContract], transactions: [], commitments: [] });
+    assert.equal(ready.length, 1);
+  });
+});
