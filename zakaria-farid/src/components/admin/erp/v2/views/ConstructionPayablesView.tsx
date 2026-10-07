@@ -61,6 +61,7 @@ import {
   isItemWithinGracePeriod,
   getRemainingGraceHours,
   generatePayableInstallmentSchedule,
+  PROPERTY_LIFECYCLE_PHASES,
   sortPayableItems,
   PayableSortField
 } from '@/lib/erp/propertyCostEngine';
@@ -209,7 +210,16 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     return isAr ? 'أخرى وتراخيص' : 'Permits & Other';
   }, [isAr]);
 
-  const effectivePropertyCosts = propertyCosts;
+  const effectivePropertyCosts = useMemo(() => {
+    const seen = new Set<string>();
+    return propertyCosts.filter(item => {
+      const id = item.item_id || item.id;
+      if (!id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [propertyCosts]);
   const [payablesMode, setPayablesMode] = useState<'contractors' | 'site'>('contractors');
   const telemetry = useMemo(() => getConstructionPayablesTelemetry(
     selectedProjectFilter === 'all' ? effectivePropertyCosts : effectivePropertyCosts.filter(item => item.property_id === selectedProjectFilter), todayStr
@@ -2314,7 +2324,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     </div>
                     <div className={vStyles.inspectFactItem}>
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'مرحلة التنفيذ' : 'Construction Phase'}</span>
-                      <span className={vStyles.inspectFactVal}>{inspectCostItem.phase || (isAr ? 'مرحلة التنفيذ' : 'Execution')}</span>
+                      <span className={vStyles.inspectFactVal}>{(() => {
+                        const phase = PROPERTY_LIFECYCLE_PHASES.find(p => p.key === inspectCostItem.phase);
+                        return phase ? (isAr ? phase.shortAr : phase.nameEn.replace(/^\d+\.\s*/, '')) : (isAr ? 'مرحلة التنفيذ' : 'Execution');
+                      })()}</span>
                     </div>
                     <div className={vStyles.inspectFactItem}>
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'تاريخ التعاقد / التسجيل' : 'Contract Date'}</span>

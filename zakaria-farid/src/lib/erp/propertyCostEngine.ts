@@ -8,6 +8,7 @@ import {
 } from './types';
 import { Property } from '@/lib/supabase/types';
 import { D, Decimal, generateUUID } from './math';
+import { toLocalDateStr } from './installmentsVaultProjection';
 
 export interface CategoryMeta {
   key: PropertyCostCategory;
@@ -1224,11 +1225,11 @@ export function generatePayableInstallmentSchedule(params: {
       installment_number: 0,
       title_ar: 'الدفعة المقدمة الإنشائية',
       title_en: 'Construction Advance Payment',
-      due_date: new Date().toISOString().split('T')[0],
+      due_date: toLocalDateStr(new Date()),
       amount_egp: dp.toFixed(2),
       paid_amount_egp: dp.toFixed(2), // Down payment is considered paid at contract
       status: 'PAID',
-      payment_date: new Date().toISOString().split('T')[0]
+      payment_date: toLocalDateStr(new Date())
     });
   }
 
@@ -1245,7 +1246,7 @@ export function generatePayableInstallmentSchedule(params: {
 
       const targetMonth = (startMonth - 1) + (i * frequencyMonths);
       const dueDateObj = new Date(startYear, targetMonth, startDay || 1);
-      const dueDateStr = dueDateObj.toISOString().split('T')[0];
+      const dueDateStr = toLocalDateStr(dueDateObj);
 
       installments.push({
         installment_id: generateUUID(),

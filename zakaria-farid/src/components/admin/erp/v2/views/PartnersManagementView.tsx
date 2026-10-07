@@ -325,7 +325,6 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
           onOpenPayout={onOpenPayout || (() => {})}
           onOpenReallocation={handleOpenReallocation}
           onOpenDossier={handleOpenDossierByName}
-          onOpenCommitmentModal={handleOpenCommitmentModal}
           onSaveProperty={onSaveProperty}
         />
       )}
@@ -374,6 +373,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
         commitments={partnerCommitments}
         isAr={isAr}
         onOpenNewPartner={onOpenNewPartnerModal}
+        onOpenCommitmentModal={handleOpenCommitmentModal}
         onOpenInjection={(pName, propId) => onOpenInjection?.(pName, propId || selectedBuildingId)}
         onOpenPayout={() => onOpenPayout?.()}
         onOpenReallocation={handleOpenReallocation}

@@ -14,7 +14,8 @@ import {
   Building2,
   ArrowRightLeft,
   Zap,
-  BookOpen
+  BookOpen,
+  CalendarPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import { Property } from '@/lib/supabase/types';
@@ -34,6 +35,7 @@ export interface PartnersSideWidgetsProps {
   commitments?: ERPPartnerCommitment[];
   isAr?: boolean;
   onOpenNewPartner?: () => void;
+  onOpenCommitmentModal?: () => void;
   onOpenInjection?: (partnerName?: string, propertyId?: string) => void;
   onOpenPayout?: () => void;
   onOpenReallocation?: (property: Property) => void;
@@ -47,6 +49,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
   commitments = [],
   isAr = true,
   onOpenNewPartner,
+  onOpenCommitmentModal,
   onOpenInjection,
   onOpenPayout,
   onOpenReallocation,
@@ -440,6 +443,52 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                   </div>
                 </div>
                 {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
+              </button>
+            )}
+
+            {onOpenCommitmentModal && (
+              <button
+                type="button"
+                onClick={() => onOpenCommitmentModal()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  background: 'var(--erp-bg-panel)',
+                  border: '1px solid var(--erp-border)',
+                  color: 'var(--erp-text-title)',
+                  cursor: 'pointer',
+                  textAlign: isAr ? 'right' : 'left',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '7px',
+                    background: 'var(--erp-accent-subtle)',
+                    border: '1px solid var(--erp-accent-tint)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--erp-accent)',
+                    flexShrink: 0
+                  }}>
+                    <CalendarPlus size={14} />
+                  </div>
+                  <div>
+                    <strong style={{ color: 'var(--erp-text-title)', display: 'block', fontSize: '0.75rem' }}>
+                      {isAr ? 'التزام رأس مال جديد' : 'New capital commitment'}
+                    </strong>
+                    <span style={{ color: 'var(--erp-text-muted)', fontSize: '0.75rem' }}>
+                      {isAr ? 'تسجيل التزام تمويل مشروع' : 'Register project funding commitment'}
+                    </span>
+                  </div>
+                </div>
+                {isAr ? <ChevronLeft size={14} color="var(--erp-text-muted)" /> : <ChevronRight size={14} color="var(--erp-text-muted)" />}
               </button>
             )}
 

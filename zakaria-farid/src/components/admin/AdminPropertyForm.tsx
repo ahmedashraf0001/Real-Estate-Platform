@@ -479,7 +479,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   const initialBuildingConfig = property ? hydrateBuildingConfig(property.building_units) : { totalFloors: '', unitsPerFloor: '' };
 
-  const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, watch, setValue, trigger, setError, clearErrors, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: property ? {
       title_en: property.title_en || '',
@@ -525,6 +525,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const currentLat = watch('latitude');
   const currentLng = watch('longitude');
   const hasMapPin = typeof currentLat === 'number' && !isNaN(currentLat) && typeof currentLng === 'number' && !isNaN(currentLng) && currentLat !== 0 && currentLng !== 0;
+  const validateMapPin = () => {
+    if (hasMapPin) return true;
+    setError('latitude', { type: 'manual', message: isAr ? 'يرجى تحديد موقع العقار على الخريطة في الخطوة 2 قبل النشر' : 'Map pin coordinates (latitude & longitude) are required before publishing.' });
+    goToStep(2);
+    return false;
+  };
   const photoCount = previewUrls.length;
 
   const steps = [
@@ -753,10 +759,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     if (isSaved) {
       return;
     }
-    if (!hasMapPin) {
-      toast.error(isAr ? 'يرجى تحديد موقع العقار على الخريطة في الخطوة 2 قبل النشر' : 'Map pin coordinates (latitude & longitude) are required before publishing.');
-      return;
-    }
+    if (!validateMapPin()) return;
     setSaving(true);
     try {
       const payloadBase = {
@@ -1319,9 +1322,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 );
 
                 return (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: selectedPartnerToAdd === '__custom__' ? '1fr 1fr auto' : '2fr auto',
+                  <div className={`${styles.partnerAddRow} ${selectedPartnerToAdd === '__custom__' ? styles.partnerAddRowCustom : ''}`} style={{
                     gap: '0.65rem',
                     alignItems: 'center',
                     marginTop: '0.25rem',
@@ -1933,9 +1934,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 onChange={(lat, lng) => {
                   setValue('latitude', lat, { shouldValidate: true });
                   setValue('longitude', lng, { shouldValidate: true });
+                  clearErrors('latitude');
                 }}
                 isAr={isAr}
               />
+              {errors.latitude && <p className={styles.errMsg} role="alert">{errors.latitude.message}</p>}
             </div>
           </div>
 
@@ -2716,9 +2719,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 <button
                   type="button"
                   className={styles.btnPublish}
-                  disabled={saving || !hasMapPin}
+                  disabled={saving}
                   id="admin-property-save"
-                  onClick={handleSubmit(onSubmit)}
+                  onClick={() => { if (validateMapPin()) void handleSubmit(onSubmit)(); }}
                 >
                   {saving ? (
                     <Loader2 size={16} className={styles.spinner} />

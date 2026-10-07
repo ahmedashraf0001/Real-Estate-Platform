@@ -22,6 +22,7 @@ import { ERPContract, ERPPartnerTransaction, ERPPartnerCommitment } from '@/lib/
 import { 
   computeDynamicBuildingCapital, 
   checkBuildingEquityBalance,
+  countDistinctProjectPartners,
   PartnerFinancialSummary
 } from '@/lib/erp/partnersEngine';
 import { D } from '@/lib/erp/math';
@@ -42,7 +43,6 @@ export interface PartnersProjectsViewProps {
   onOpenPayout: (partnerName?: string) => void;
   onOpenReallocation: (property: Property, sellerName?: string) => void;
   onOpenDossier: (partnerName: string) => void;
-  onOpenCommitmentModal?: (propertyId?: string, partnerName?: string) => void;
   onSaveProperty?: (property: Property) => Promise<void> | void;
 }
 
@@ -60,7 +60,6 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   onOpenPayout,
   onOpenReallocation,
   onOpenDossier,
-  onOpenCommitmentModal,
   onSaveProperty,
 }) => {
   const propertyCosts = usePropertyCosts();
@@ -169,7 +168,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   }, [buildingRowsData]);
 
   const totalsPartnersCount = useMemo(() => {
-    return buildingRowsData.reduce((sum, r) => sum + r.partnersCount, 0);
+    return countDistinctProjectPartners(buildingRowsData.map(r => r.building));
   }, [buildingRowsData]);
 
   // Recent activity feed across projects (combining transactions and property reallocations)

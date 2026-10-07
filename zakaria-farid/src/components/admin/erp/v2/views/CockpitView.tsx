@@ -53,7 +53,6 @@ import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics
 import { formatCompactEGP } from '@/lib/erp/propertyAnalysisEngine';
 import { computeProjectStatusMetrics, calculateProjectSalesValue } from '@/lib/erp/projectStatusHelper';
 import { ERPApexChart } from '../charts/ERPApexChart';
-import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFSearchBar } from '../common/ZFSearchBar';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
@@ -1671,7 +1670,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 1: Available Cash */}
             <ZFKpiCard
               title={isAr ? 'الرصيد النقدي المتاح' : 'Available Liquidity'}
-              value={<AnimatedCounter value={cashNum} duration={800} />}
+              value={cashNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Wallet size={16} />}
               accentColor="accent"
@@ -1699,7 +1698,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 2: Total Sales Contracts */}
             <ZFKpiCard
               title={isAr ? 'إجمالي المبيعات التعاقدية' : 'Gross Contract Value'}
-              value={<AnimatedCounter value={grossContractsNum} duration={800} />}
+              value={grossContractsNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<FileText size={16} />}
               accentColor="accent"
@@ -1729,7 +1728,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 3: Scheduled Receivables */}
             <ZFKpiCard
               title={isAr ? 'تحصيلات مجدولة (خارج الدفاتر)' : 'Scheduled collections (off-ledger)'}
-              value={<AnimatedCounter value={safePdcNum} duration={800} />}
+              value={safePdcNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Receipt size={16} />}
               accentColor="accent"
@@ -1759,7 +1758,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 4: Upcoming Payables & Expenses */}
             <ZFKpiCard
               title={isAr ? 'التزامات ومصروفات قادمة' : 'Upcoming Payables'}
-              value={<AnimatedCounter value={pendingContractorsNum} duration={800} />}
+              value={pendingContractorsNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<HardHat size={16} />}
               accentColor="accent"

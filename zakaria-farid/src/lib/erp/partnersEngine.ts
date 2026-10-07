@@ -26,6 +26,13 @@ import { PRIMARY_DEVELOPER_NAME } from './partnersDirectory';
 import { GeneralLedgerEngine, buildCalendarMonthPeriod } from './ledger';
 import { calculatePropertyAuditMetrics } from './propertyCostEngine';
 
+export function countDistinctProjectPartners(properties: Pick<Property, 'partner_splits'>[]): number {
+  return new Set(properties.flatMap(property => (property.partner_splits || [])
+    .filter(partner => !partner.is_archived)
+    .map(partner => partner.partner_name.trim())
+    .filter(Boolean))).size;
+}
+
 /** Costs actually recorded for a property (user-confirmed basis for partner capital and cost shares). */
 export function recordedPropertyCost(property: Property, propertyCosts: ERPPropertyCostItem[] = []): Decimal {
   return D(calculatePropertyAuditMetrics(property.id, property.area_sqm || 0, propertyCosts).totalLoggedCost);

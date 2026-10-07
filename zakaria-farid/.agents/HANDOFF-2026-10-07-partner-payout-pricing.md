@@ -25,6 +25,8 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 
 | `TBD` | fin-b4-price-basis: full project sales value versus net adjusted cost; live contract-value portfolio sales; whole-building card price; reviewer takeover after stopped agy fix1, 5/5 task tests, build exit 0, tsc exit 0, npm test exit 1 (821 total / 814 pass / 7 exact baseline fail), 10 viewed fixture screenshots at 1280/390; no commit |
 
+| `TBD` | ui-small-fixes: mobile wizard controls, inline map-pin error, exact first-paint KPIs, deduplicated payables, localized phase, local installment dates, distinct partner total, commitment quick action; reviewer implemented directly, 2/2 task tests, build exit 0, tsc exit 0, npm test exit 1 (825 total / 818 pass / 7 exact baseline fail), 8 viewed fixture screenshots at 1280/390; no DB access or commit |
+
 ## Verified on the real DB (2026-10-07, real session)
 - Ready panel: both partners show 1,041,666.50 on the Gouna building.
 - Final price: building is now `ready` at 12,499,900. A `final` history row was written with cost 4,900,000. The contract is unchanged. `units_repriced` = 0 because building units are not stored (`building_units = []`); the app builds 6 placeholder units in `supabaseService.ts`.
