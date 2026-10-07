@@ -126,6 +126,9 @@ export async function saveProperty(
 
     // Building units configuration handling (R3)
     const totalFloors = (payload.total_floors !== undefined && payload.total_floors !== '' && payload.total_floors !== null) ? Number(payload.total_floors) : undefined;
+    const residentialFloors = typeof totalFloors === 'number' && !isNaN(totalFloors)
+      ? Math.min(14, Math.max(1, totalFloors - 1))
+      : undefined;
     const unitsPerFloor = (payload.units_per_floor !== undefined && payload.units_per_floor !== '' && payload.units_per_floor !== null) ? Number(payload.units_per_floor) : undefined;
     const isCreateBuilding = !isEditing && (cleanPayload.type === 'building' || payload.type === 'building');
 
@@ -182,9 +185,9 @@ export async function saveProperty(
         const prevUnitsPerFloor = prevFloors > 0 ? Math.max(...Object.values(prevFloorCounts), 0) : 0;
         const prevConfig = prevFloors * prevUnitsPerFloor;
 
-        const hasNewConfig = typeof totalFloors === 'number' && !isNaN(totalFloors) && totalFloors > 0 &&
+        const hasNewConfig = typeof residentialFloors === 'number' && !isNaN(residentialFloors) && residentialFloors > 0 &&
                              typeof unitsPerFloor === 'number' && !isNaN(unitsPerFloor) && unitsPerFloor > 0;
-        const newConfig = hasNewConfig ? totalFloors * unitsPerFloor : 0;
+        const newConfig = hasNewConfig ? residentialFloors * unitsPerFloor : 0;
         const configChanged = hasNewConfig && newConfig !== prevConfig;
 
         if (configChanged) {
@@ -205,10 +208,10 @@ export async function saveProperty(
             };
           }
 
-          const count = totalFloors * unitsPerFloor;
+          const count = residentialFloors * unitsPerFloor;
           const regeneratedUnits = buildBuildingUnits({
             propertyId,
-            totalFloors,
+            totalFloors: residentialFloors,
             unitsPerFloor,
             areaSqm: Number(cleanPayload.area_sqm || payload.area_sqm || existingProp?.area_sqm || 0),
             priceEgp: Number(cleanPayload.price_egp || payload.price_egp || existingProp?.price_egp || 0),
@@ -222,9 +225,9 @@ export async function saveProperty(
         }
       }
     } else if (isCreateBuilding) {
-      if (typeof totalFloors === 'number' && !isNaN(totalFloors) && totalFloors > 0 &&
+      if (typeof residentialFloors === 'number' && !isNaN(residentialFloors) && residentialFloors > 0 &&
           typeof unitsPerFloor === 'number' && !isNaN(unitsPerFloor) && unitsPerFloor > 0) {
-        cleanPayload.total_units_count = totalFloors * unitsPerFloor;
+        cleanPayload.total_units_count = residentialFloors * unitsPerFloor;
       }
       delete cleanPayload.building_units;
     }
@@ -265,12 +268,12 @@ export async function saveProperty(
 
     if (!isEditing && writeRes.data) {
       const newProp = writeRes.data;
-      if (isCreateBuilding && typeof totalFloors === 'number' && !isNaN(totalFloors) && totalFloors > 0 &&
+      if (isCreateBuilding && typeof residentialFloors === 'number' && !isNaN(residentialFloors) && residentialFloors > 0 &&
           typeof unitsPerFloor === 'number' && !isNaN(unitsPerFloor) && unitsPerFloor > 0) {
-        const count = totalFloors * unitsPerFloor;
+        const count = residentialFloors * unitsPerFloor;
         const units = buildBuildingUnits({
           propertyId: newProp.id,
-          totalFloors,
+          totalFloors: residentialFloors,
           unitsPerFloor,
           areaSqm: Number(cleanPayload.area_sqm || payload.area_sqm || 0),
           priceEgp: Number(cleanPayload.price_egp || payload.price_egp || 0),

@@ -192,7 +192,7 @@ it('R3 regression: production create saves returned-id units, strips transient c
         } }; },
       };
     } };
-    const result = await loadSaveProperty(client)({ type: 'building', total_floors: 2, units_per_floor: 2, area_sqm: 600, price_egp: 1000001 }, false);
+    const result = await loadSaveProperty(client)({ type: 'building', total_floors: 3, units_per_floor: 2, area_sqm: 600, price_egp: 1000001 }, false);
     assert.equal(inserted.total_units_count, 4);
     assert.ok(!('total_floors' in inserted) && !('units_per_floor' in inserted));
     assert.equal(updated.total_units_count, 4);

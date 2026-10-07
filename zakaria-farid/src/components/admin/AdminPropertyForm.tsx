@@ -215,7 +215,7 @@ function inferSubtype(property: Property | undefined): FormValues['subtype'] {
   return 'standard';
 }
 
-function hydrateBuildingConfig(units?: BuildingUnitItem[] | null): { totalFloors: number | ''; unitsPerFloor: number | '' } {
+export function hydrateBuildingConfig(units?: BuildingUnitItem[] | null): { totalFloors: number | ''; unitsPerFloor: number | '' } {
   if (!units || !Array.isArray(units) || units.length === 0) {
     return { totalFloors: '', unitsPerFloor: '' };
   }
@@ -228,7 +228,7 @@ function hydrateBuildingConfig(units?: BuildingUnitItem[] | null): { totalFloors
   }
   const maxPerFloor = maxFloor > 0 ? Math.max(...Object.values(floorCounts), 0) : 0;
   return {
-    totalFloors: maxFloor > 0 ? maxFloor : '',
+    totalFloors: maxFloor > 0 ? maxFloor + 1 : '',
     unitsPerFloor: maxPerFloor > 0 ? maxPerFloor : ''
   };
 }

@@ -67,8 +67,8 @@ describe('fin-b2b-audit-fixes: A1 contract guard, A2 legacy availability, A3 pia
     const res = await saveProperty(
       {
         // Notice: `type` is completely omitted in client payload!
-        total_floors: 3,
-        units_per_floor: 2, // 3x2 = 6, changed from stored 2x2 = 4
+        total_floors: 4,
+        units_per_floor: 2, // (4-1)x2 = 6, changed from stored 2x2 = 4
         area_sqm: 600,
         price_egp: 1000001,
       },
@@ -142,8 +142,8 @@ describe('fin-b2b-audit-fixes: A1 contract guard, A2 legacy availability, A3 pia
     const res = await saveProperty(
       {
         // Notice: `type` is completely omitted in client payload!
-        total_floors: 3,
-        units_per_floor: 2, // 3x2 = 6, changed from stored 2x2 = 4
+        total_floors: 4,
+        units_per_floor: 2, // (4-1)x2 = 6, changed from stored 2x2 = 4
         area_sqm: 600,
         price_egp: 1000001,
       },
@@ -205,7 +205,7 @@ describe('fin-b2b-audit-fixes: A1 contract guard, A2 legacy availability, A3 pia
     const res = await saveProperty(
       {
         type: 'building',
-        total_floors: 2,
+        total_floors: 3,
         units_per_floor: 2,
         // Injected malicious/client-supplied units
         building_units: [
