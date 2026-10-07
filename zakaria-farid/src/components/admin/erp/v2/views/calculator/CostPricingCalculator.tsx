@@ -225,7 +225,17 @@ export function CostPricingCalculator({
 
   const listPerSqm = area > 0 ? Math.round(list / area) : 0;
 
-  const units = useMemo(() => property?.building_units ?? [], [property?.building_units]);
+  const contracts = erpCtx?.data.contracts;
+  // A unit with a live contract is contracted even when the stored unit still says available.
+  const units = useMemo(() => {
+    const raw = property?.building_units ?? [];
+    const contractedIds = new Set(
+      (contracts ?? [])
+        .filter(c => c.status !== 'Rescinded' && c.property_id === property?.id && c.building_unit_id)
+        .map(c => c.building_unit_id as string)
+    );
+    return raw.map(u => (u.status === 'available' && contractedIds.has(u.unit_id) ? { ...u, status: 'contracted' as const } : u));
+  }, [property?.building_units, property?.id, contracts]);
   const unitRows = useMemo(
     () => priceUnitsAtRate(units, chosenPerSqm),
     [units, chosenPerSqm]
