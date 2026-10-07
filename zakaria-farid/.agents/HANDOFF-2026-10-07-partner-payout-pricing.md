@@ -10,6 +10,7 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 ## Commits on this branch
 | Commit | What |
 |---|---|
+| `TBD` | unit-area-split: shared generation uses two-decimal unit areas with last-unit remainder; card shows stored building total plus unit range with RTL isolation; Codex direct implementation, 0 agy rounds, 9/9 targeted tests, build/tsc exit 0, npm test exit 1 (866 total / 859 pass / 7 exact baseline fail), 6 fresh viewed fixture screenshots at 1280/390; R3 affected-building read-only count BLOCKED awaiting approved data source; no migration/backfill/commit |
 | `TBD` | ui-c3-real-display-values: real monthly KPI series and previous-month deltas; neutral rates; hide unavailable contractor tax ID; RED-first helper/source tests |
 | `9df51cd` | Rules + skill + AGENTS.md pointer |
 | `37c3551` | Stage 1: payout is per project; unpaid commitments are offset first (Dr 303000 / Cr 301000, `DEBT_OFFSET` partner transactions, commitment `paid_amount` raised oldest-first); modal resets on open and stays open on failure; card payouts scoped to their project |

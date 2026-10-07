@@ -100,7 +100,7 @@ for (const type of ['building', 'apartment']) {
       assert.equal(defaults.total_floors, 4);
       assert.equal(defaults.units_per_floor, 2);
       assert.equal(stored.building_units.length, 6);
-      assert.deepEqual(stored.building_units.map((unit: any) => unit.area_sqm), [67, 67, 67, 67, 67, 67]);
+      assert.deepEqual(stored.building_units.map((unit: any) => unit.area_sqm), [66.67, 66.67, 66.67, 66.67, 66.67, 66.65]);
     }
   });
 }

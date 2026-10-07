@@ -285,8 +285,8 @@ export function computeProjectStatusMetrics(
 }
 
 /**
- * Builds canonical floor-major building units with exact integer-split prices.
- * Invariant: Last unit absorbs integer remainder so sum of unit prices equals priceEgp exactly.
+ * Builds canonical floor-major building units with exact prices and two-decimal areas.
+ * Invariant: Last unit absorbs each remainder so totals equal priceEgp and areaSqm exactly.
  */
 export function buildBuildingUnits(params: {
   propertyId: string;
@@ -308,7 +308,9 @@ export function buildBuildingUnits(params: {
   const lastUnitPrice = count > 1
     ? totalDec.minus(D(baseUnitPrice).times(count - 1)).toNumber()
     : totalDec.toNumber();
-  const unitArea = count > 0 ? Math.round(areaSqm / count) : 0;
+  const totalArea = D(areaSqm);
+  const unitArea = totalArea.dividedBy(count);
+  const lastUnitArea = totalArea.minus(unitArea.times(count - 1));
 
   const units: BuildingUnitItem[] = [];
   let n = 1;
@@ -321,7 +323,7 @@ export function buildBuildingUnits(params: {
         unit_id: `${propertyId}-apt-${n}`,
         unit_number: `${floor}${letter}`,
         floor,
-        area_sqm: unitArea,
+        area_sqm: (isLast ? lastUnitArea : unitArea).toNumber(),
         bedrooms: 3,
         bathrooms: 2,
         price_egp: unitPrice,
