@@ -1,0 +1,31 @@
+TASK fin-c2-partner-id-lines (FINANCIAL_CORE: journal line tagging, no amount changes)
+
+GOAL
+Partner equity journal lines are saved with partner_id NULL. Live repro: payout JE-2026-DIST-1749 lines 303000 and 101000 have partner_id NULL. Capital-injection lines (301000) are the same. Without partner_id, per-partner equity can only be found by parsing Arabic memos.
+
+READ FIRST
+- zakaria-farid/src/lib/erp/partnersEngine.ts: createPayoutJournalEntry (~1005) and createCapitalInjectionJournalEntry (~1071). Their params carry partnerName only.
+- zakaria-farid/src/lib/erp/store.ts ~370-395: another CAPITAL_CALL entry builder.
+- zakaria-farid/src/lib/erp/ledger.ts ~413 and ~478: line type has partner_id?, kept only when isUUID.
+- zakaria-farid/src/lib/erp/supabaseService.ts ~846: persistence writes partner_id when isUUID, else null.
+- All callers of the builders above (graphify query / grep): the payout modal and the capital-injection / commitment flows in zakaria-farid/src/components/admin/erp/. Find where the partner's UUID (erp partner profile id) is available at the call site.
+
+REQUIRED
+R1. Add an optional partnerId?: string param to each builder. Put partner_id on the partner equity lines only: 303000 and 301000 (including the 301000 debt-offset line in payouts). Cash/bank lines (101000, 102000) stay without partner_id.
+R2. Pass the real partner UUID from every production caller. If a caller has only a name, look the id up from the partner profiles already loaded in context; never invent ids. If no UUID exists (legacy founder name only), leave it undefined; report each such caller.
+R3. No change to amounts, accounts, entry numbers, descriptions, or memos. Keep existing exports and signatures backward compatible.
+R4. No backfill of existing rows. No migration (partner_id column already exists on erp_journal_lines).
+
+TESTS (RED first), new file zakaria-farid/src/lib/erp/__tests__/partnerIdLines.test.ts importing production code:
+T1. createPayoutJournalEntry with partnerId (a UUID) and a debt offset: 303000 and 301000 lines carry partner_id; the cash line does not; debits = credits.
+T2. createCapitalInjectionJournalEntry with partnerId: the 301000 line carries partner_id; cash/bank line does not.
+T3. Without partnerId both builders behave exactly as before (partner_id undefined on all lines).
+T4. The persistence mapper (supabaseService ~846 path, smallest seam) writes partner_id for those lines.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+- Report every caller changed, file:line.
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.
