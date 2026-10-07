@@ -1,0 +1,112 @@
+TASK ui-small-fixes (SURFACE_UI: bug fixes only, no redesign)
+
+GOAL
+Fix the small UI defects found in the admin lifecycle audit (zakaria-farid/.agents/audits/SIM-2026-10-07-admin-lifecycle.md, B5, B9, B10). Keep the existing FIN-OS layout and style. Change only what each item needs. Do not remove or merge any page, widget or button.
+
+REQUIRED
+R1. B9: on the add-property wizard at 375-390px width, the "الخطوة التالية" button is clipped off the left edge (measured x -58..51). Clicking its visible edge hits another button. The manual partner-name input in the partners row is cut off at the left edge.
+    - File: zakaria-farid/src/components/admin/AdminPropertyForm.tsx and its CSS module.
+    - Find the offending rule with computed styles up 3-4 ancestors and fix that rule only.
+    - Both controls must be fully inside the viewport at 390px, with no horizontal page scroll.
+R2. B9: publishing without a map pin fails with no visible error. Show the validation error inline on the step that owns the map, using the form's existing error style, and move the user to that step. Find the guard near AdminPropertyForm.tsx ~737.
+R3. B5: on first paint, the dashboard (zakaria-farid/src/components/admin/erp/v2/views/CockpitView.tsx) shows KPI values that differ from the values after load. For example cash 4,641,375 whose shown parts sum to 4,731,306, which then becomes 4,731,305.
+    - Find why: partial dataset, a stale cache, or mock defaults.
+    - Fix it so KPIs show the existing loading/skeleton state until the live data is loaded, and never a wrong number.
+    - Report the root cause with file:line.
+R4. B10: React duplicate key `c1729fd2-…` in zakaria-farid/src/components/admin/erp/v2/views/ConstructionPayablesView.tsx (~1628 / ~2365). An item with installments is rendered twice in one list.
+    - Fix the cause: dedupe the source list, or make the key unique when the same item legitimately appears twice. Say which.
+    - No console duplicate-key error may remain.
+R5. B10: the payable drawer shows the raw enum "masonry_roughing" for the phase. Show the localized phase name from the existing phase metadata (see PropertyLifecycleAuditModal.tsx:63 for the names). Reuse the existing lookup; do not add a new table.
+R6. B10: a construction installment due date is saved one day early. The form preview showed 2026-11-06 and the saved first tranche was 2026-11-05.
+    - This is a UTC conversion of a local date. Find it in the installment schedule builder (grep toISOString near payable_installments / due_date in zakaria-farid/src/lib/erp/propertyCostEngine.ts and the cost modals).
+    - Build date-only strings from local Y-M-D, not toISOString.
+    - Add a unit test with the expected dates.
+R7. B10: the partners page header says "الإجمالي 4 شريك" while there are 3 distinct partners, because one partner is counted once per project. Count distinct partner names (trimmed). Find the count in zakaria-farid/src/components/admin/erp/v2/views/PartnersManagementView.tsx or partners/*.
+
+R8. B6 (user-approved 2026-10-07): capital commitments cannot be created because nothing opens NewPartnerCommitmentModal. handleOpenCommitmentModal exists in zakaria-farid/src/components/admin/erp/v2/views/PartnersManagementView.tsx (~105, passed at ~328), and PartnersProjectsView.tsx (~45/63) accepts onOpenCommitmentModal but never calls it.
+    - Add ONE button "التزام رأس مال جديد" / "New capital commitment" to the partners side-rail quick actions (the list with add partner / inject / payout / export, in PartnersSideWidgets.tsx or wherever that list lives). Use the exact same button component, style and icon size as its siblings, with a lucide icon that fits.
+    - Wire it to handleOpenCommitmentModal.
+    - Do not change any other layout.
+    - Remove the unused onOpenCommitmentModal prop from PartnersProjectsView only if nothing else uses it; grep it and report.
+
+OUT OF SCOPE
+- The hardcoded contractor tax id text and the vault KPI deltas (left for the user to decide).
+- Any visual restyle. No new colors outside token files.
+
+TESTS
+- R6: a unit test in zakaria-farid/src/lib/erp/__tests__/ that imports the production schedule builder. First due date '2026-11-06' with monthly frequency and 3 installments gives due dates ['2026-11-06','2026-12-06','2027-01-06']. Run it with TZ=Africa/Cairo. If the builder takes a Date, construct it the way the modal does.
+- R7: if the count lives in a pure function, test it with 2 projects sharing one partner and expect distinct = 3. Otherwise extract the smallest pure function and test it.
+- UI items: screenshots at 1280 and 390 of the add-property wizard step showing R1, the dashboard after load, and the payable drawer showing R5.
+
+ACCEPTANCE
+- tsc clean. npm test: only the 7 baseline failures (new tests pass).
+- No duplicate-key console error on the construction payables page.
+
+VISUAL RULES (verbatim, binding)
+FIN-OS PAGE STYLE RULES (apply ONLY inside the files your brief assigns; mechanical, no redesign)
+
+Shared pieces you will use:
+  import { ZFPageHeader, ZFSegmented } from '<rel>/common/ZFPageHeader';
+     (<rel> = '..' from src/components/admin/erp/v2/views/*.tsx, '../..' from views/<sub>/*.tsx,
+      './v2' from src/components/admin/erp/*.tsx)
+  import shellStyles from '<rel>/ZFWorkstationShell.module.css';   (only if the file has no import of that CSS yet;
+     if it already imports it under another name e.g. `styles`, use that name instead of shellStyles)
+  ZFPageHeader props: title, subtitle?, actions?   — renders <h1>, one muted line, trailing actions.
+  ZFSegmented props: options [{ id, label, count?, icon? }], value, onChange, ariaLabel?
+  Button classes in ZFWorkstationShell.module.css: btnPrimary (accent), btnSecondary (white + border),
+     btnDanger (red), btnGhost (quiet), btnSm (small modifier, combine: `${s.btnSecondary} ${s.btnSm}`).
+
+RULE H — page header. Replace the block your brief names with exactly the <ZFPageHeader .../> given. Any
+  breadcrumb (<ZFErpBreadcrumb .../>) and badge <span>s next to the title disappear with the block. Remove
+  imports that become unused (ZFErpBreadcrumb, icons only used there).
+
+RULE B — buttons. For every <button> (or <a>/<Link> drawn as a button) in the file that has an INLINE style
+  with a solid or gradient background AND a text label:
+    background is accent/gold (var(--erp-accent...), color-mix of accent, or a gradient containing one) -> className primary
+    background red (#dc2626, #b91c1c, #ef4444, or gradient containing one)                             -> className danger
+    background white/#ffffff/#f8fafc/transparent WITH a 1px solid border                              -> className secondary
+  Then delete these keys from that inline style: display, alignItems, justifyContent, gap, padding, paddingInline,
+  paddingBlock, borderRadius, background, backgroundColor, color, border, fontSize, fontWeight, boxShadow,
+  transition, cursor, fontFamily, lineHeight, height. Keep every other key (width, flex, margin*, minWidth,
+  opacity, alignSelf...). Remove the style prop if it becomes empty. Icon color props inside those buttons
+  (e.g. <Plus color="#ffffff" />) -> remove the color prop.
+  Merge with an existing className via template string. Disabled logic, onClick, aria stay untouched.
+  DO NOT apply RULE B to: tab/segment toggles (buttons with an active/selected state in a group), icon-only
+  buttons, whole-row/card click targets, close (X) buttons, pagination, chart controls, table sort headers.
+  Label clean-up: when the button already renders a <Plus .../> icon, drop a leading '+ ' / '+' from its text.
+
+RULE G — gradients. In inline styles of non-chart elements: `background: 'linear-gradient(...)'` or
+  `'radial-gradient(...)'` -> the FIRST color stop of that gradient as a flat color. Do not touch gradients inside
+  <svg>/<linearGradient>, ApexCharts options, skeleton shimmer, or map markers.
+
+RULE S — shadows. In inline styles: delete `boxShadow` on static cards, panels, badges, tiles, list items and
+  buttons. KEEP boxShadow when the same style object (or element) is position 'absolute'/'fixed'/'sticky', or is a
+  dropdown/popover/tooltip/menu, or the value starts with '0 0 0 ' (focus ring).
+
+RULE R — radius. Inline `borderRadius` of '14px' | '16px' | '18px' | '20px' | '24px' | '1rem' | '1.25rem' on a
+  CONTAINER that has a border or a background (card, panel, tile, bar) -> '12px'. Pills (999px / 9999px / 50%)
+  and small badges untouched.
+
+RULE F — type. In inline styles: fontWeight 900 -> 800. Inline-styled <h2>/<h3> (or a div/span used as a card
+  title, i.e. the first text in a card header) with fontSize from '0.85rem' to '1.15rem' -> fontSize '0.88rem',
+  fontWeight 700, color 'var(--erp-text-title)'.
+
+RULE C — leftover accent literals. In inline styles and JSX color/stroke/fill props (NOT in ApexCharts option
+  objects, NOT in `colors: [...]` / `const ...colors = [...]` arrays, NOT in useState defaults):
+    '#2563eb' '#3b82f6' '#946f23' '#d4af37' '#b8903e' '#b48c36' '#c5a059'  -> 'var(--erp-accent)'
+    '#1d4ed8' '#1e40af' '#7c5c1b' '#78581c'                                -> 'var(--erp-accent-hover)'
+    '#eff6ff' '#fdf8ee'                                                     -> 'var(--erp-accent-subtle)'
+    '#dbeafe' -> 'color-mix(in srgb, var(--erp-accent) 14%, transparent)'
+    '#bfdbfe' -> 'color-mix(in srgb, var(--erp-accent) 28%, transparent)'
+    rgba(37, 99, 235, A) | rgba(59, 130, 246, A) | rgba(212, 175, 55, A) | rgba(184, 144, 62, A) |
+    rgba(148, 111, 35, A) | rgba(180, 130, 30, A)  -> `color-mix(in srgb, var(--erp-accent) <A*100 rounded>%, transparent)`
+  Semantic colors (greens, reds, ambers, slate greys) stay as they are.
+
+RULE K — stacking. Remove inline `marginBottom` from <ZFKpiGrid> and from top-level page sections; the page
+  container already spaces sections. If the page root element has inline `maxWidth: '100vw'`, change it to '100%'.
+
+NEVER: change data logic, handlers, props, texts other than those your brief gives, file encoding (UTF-8 Arabic
+must survive byte-exact), or files not assigned. No new dependencies. No CSS-module edits unless your brief says so.
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.

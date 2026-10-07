@@ -1,0 +1,70 @@
+TASK fin-b1-cost-journals (FINANCIAL_CORE, money)
+
+GOAL
+Cost-item edits, cost adjustments and cost-item deletes must keep the general ledger equal to the cost sub-ledger. Today none of them posts a journal entry. The audit found the GL 20,000 above the sub-ledger after one edit (zakaria-farid/.agents/audits/SIM-2026-10-07-admin-lifecycle.md, B1 and B7).
+
+BINDING RULES (PROJECT_SPEC.md, "Partner payouts and final pricing", [user-confirmed 2026-10-07])
+- Edit: when the amount changes, post ONE entry for the difference only, construction WIP (the item's category account) against payables 201000. The original entry stays. Edits that do not change the amount post nothing.
+- Adjustment: post ONE entry for the adjustment amount only. A supplement posts Dr category account / Cr 201000. A refund posts Dr 201000 / Cr category account.
+- Delete (24h window): post ONE entry reversing the item, Dr 201000 / Cr category account, for the item's current net effective cost. Block the delete if paid amount > 0.
+
+READ FIRST
+- zakaria-farid/src/lib/erp/propertyCostEngine.ts: buildConstructionExpenseJournalLines (line ~117), getPropertyCostAccountCode (~107), calculateCostItemEffectiveTotals (~1062), and the adjustment builders around ~1129 / ~1543.
+- zakaria-farid/src/lib/erp/supabaseService.ts: updatePropertyCostItem (~1594), addPropertyCostAdjustment (~1634), deletePropertyCostItem (~1680), persistJournalEntry.
+- zakaria-farid/src/components/admin/erp/context/ERPWorkstationContext.tsx: persistJournalEntryGuarded (~869), handleDeletePropertyCostItem (~4052), handleUpdatePropertyCostItem (~4073), handleAddCostAdjustment (~4092). How other handlers pick the accounting period and block closed periods (for example around lines 1867 and 2127).
+- zakaria-farid/src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx ~370-395: how the original JE-WIP entry is built (GeneralLedgerEngine.validateAndCreateEntry, source_module 'WIP_ALLOCATION', source_entity_id = property id).
+- zakaria-farid/src/components/admin/erp/v2/modals/EditPropertyCostModal.tsx: how edit, delete and adjustments are triggered and how errors reach the user.
+
+REQUIRED
+R1. In propertyCostEngine.ts add and export ONE pure function:
+    buildCostCorrectionJournalLines(params: { category: PropertyCostCategory; delta: string | number; memo: string }): ConstructionExpenseJournalLine[]
+    - delta > 0: [Dr getPropertyCostAccountCode(category) delta, Cr '201000' delta].
+    - delta < 0: [Dr '201000' |delta|, Cr category account |delta|].
+    - delta == 0: [].
+    - Amounts are strings with toFixed(2) via D(). No float math.
+    Use this one function for edit, adjustment and delete. Do not add a second builder.
+R2. Edit (handleUpdatePropertyCostItem):
+    - Look up the original item in state.
+    - delta = D(new total_cost_egp).minus(original total_cost_egp).
+    - Reject the save with a clear Arabic/English error when the new total is below the item's paid amount (paid_amount_egp).
+    - If delta != 0: build the entry, then save the row with updatePropertyCostItem, then persist the entry with persistJournalEntryGuarded.
+    - If persisting the journal fails: restore the row to the original item with updatePropertyCostItem, then rethrow.
+    - entry_number: `JE-WIP-EDIT-${item_id.slice(0,8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`.
+    - source_module 'WIP_ALLOCATION', source_entity_id property_id.
+    - The period is today's period, from the same helper other handlers use. A closed period blocks the save.
+R3. Adjustment (handleAddCostAdjustment):
+    - The new adjustment is the one present in updatedItem.adjustments and absent from the state item. Match by its id field; read the type for the exact name.
+    - delta = +amount for a supplement and -amount for a refund. Read the adjustment type field and its exact enum values in types.ts.
+    - Same order and rollback as R2.
+    - entry_number `JE-WIP-ADJ-${adjustment id .slice(0,8).toUpperCase()}`.
+R4. Delete (handleDeletePropertyCostItem):
+    - If D(paid_amount_egp).gt(0), throw a clear Arabic/English error and delete nothing.
+    - Otherwise persist the reversal entry first, with delta = -net effective cost from calculateCostItemEffectiveTotals, then delete the row.
+    - If the delete fails after the journal was posted, post the opposite correction (delta = +net) and rethrow.
+    - entry_number `JE-WIP-DEL-${item_id.slice(0,8).toUpperCase()}`.
+R5. Remove the silent fallbacks:
+    - The catch blocks in handleUpdatePropertyCostItem and handleDeletePropertyCostItem currently change local state as if the save succeeded. Replace them with toast.error (message + description) and rethrow, matching handleAddCostAdjustment's catch.
+    - Local state changes only after success. Also add the posted journal entry to local journal state the way other handlers do after persistJournalEntryGuarded (read how, for example, at ~2127).
+R6. EditPropertyCostModal: keep the layout. Make sure a thrown error leaves the modal open and is shown (it may already be so; verify). No visual changes.
+
+OUT OF SCOPE
+- No UI layout changes. No new pages, buttons or widgets. Do not touch the 24h lock rule.
+- No migrations, no RPCs, no DB access.
+- Do not backfill or repair existing ledger data.
+
+TESTS (RED first). New file zakaria-farid/src/lib/erp/__tests__/costCorrectionJournals.test.ts, node:test via `npx tsx --test`. Import production code only.
+T1. buildCostCorrectionJournalLines({category:'civil_structure', delta:'-20000', memo:'m'}) deep-equals [{account_code:'201000', debit_amount:'20000.00', credit_amount:'0.00', memo:'m'}, {account_code:'151000', debit_amount:'0.00', credit_amount:'20000.00', memo:'m'}].
+T2. delta '1234.565' gives Dr 151000 '1234.57' (or what D().toFixed(2) gives; assert the real value) and Cr 201000 with the same amount. Debit sum equals credit sum.
+T3. delta 0 gives [].
+T4. A different category maps to its own account: pick any other PROPERTY_COST_CATEGORIES entry and assert account_code === its accountCode.
+T5. Entries built for edit/adjust/delete pass GeneralLedgerEngine.validateAndCreateEntry, i.e. they balance. Build one for delta -20000 and assert no throw and totals equal.
+If the handlers can be driven without React, also test R2-R4 ordering and rollback with a stub supabase client that records calls and fails on demand. If that is not practical, say so in the report; do not write a fake test.
+
+ACCEPTANCE
+- grep -n "buildCostCorrectionJournalLines" zakaria-farid/src finds the definition, the tests, and calls in all three handlers.
+- grep -n "Fallback updating property cost item\|Fallback deleting property cost item" zakaria-farid/src gives 0 hits.
+- tsc clean. npm test: only the 7 baseline failures.
+- Manual check (state it in the report): editing 500,000 to 480,000 posts JE-WIP-EDIT-… with Dr 201000 20,000 / Cr category account 20,000.
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.

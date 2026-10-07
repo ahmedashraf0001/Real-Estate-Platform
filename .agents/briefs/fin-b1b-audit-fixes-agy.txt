@@ -1,0 +1,69 @@
+ROLE
+You are the implementer for task fin-b1b-audit-fixes in the repo at C:/Users/lyr1csan/workspace/Real-Estate-Platform (Windows, Git Bash; the Next.js app is in zakaria-farid/, run npm/npx from there).
+Another agent (Codex) reviews every line you write, and Claude commits. Do NOT run git commit/add/push.
+git in this checkout needs: git -c "safe.directory=C:/Users/lyr1csan/workspace/Real-Estate-Platform" <cmd>
+
+<execution_rules>
+- Implement in your current agent. Run every shell command in the FOREGROUND and wait for it. Never create background tasks, terminals or sub-agents, and never "wait for" a background job.
+- Write the TESTS first and capture RED once, then implement, then GREEN once.
+- While working run only the task's test files (cd zakaria-farid && npx tsx --test src/lib/erp/__tests__/<file>.test.ts) and cd zakaria-farid && npx tsc --noEmit at the end. The reviewer runs the full gates.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Edit in place with minimal hunks. Never regenerate a whole file. Never remove or rename existing exports.
+- Always finish with the REPORT below, even if incomplete. List concrete changed paths.
+- Use the `caveman` skill for all prose and the report: terse, no recap, payload (paths, lines, counts, errors) verbatim.
+</execution_rules>
+
+<quality_rules>
+The reviewer rejects work that breaks any of these:
+- No hardcoded or placeholder data: no invented names, counts, IDs, dates, prices or sample rows in production code. Data comes from the real state/API source named in the task.
+- No fake tests: every test imports production code or drives real handlers, asserts real outputs, and would fail if the feature were removed. No copied helpers, no assertion-free tests, no tests that only check a mock was called.
+- No dead code: no unused exports, files, props, branches, commented-out code or leftover fallbacks. Remove what you replace; grep for 0 references after removing a symbol.
+- No bloat: reuse existing components, helpers and tokens before adding new ones. No new abstraction for a single use. No speculative options.
+- No shortcuts: wire every new module into its real production caller; no TODO stubs, no no-op callbacks, no "handled elsewhere" without a path.
+- Do not invent fields: read the existing types first and use their exact names.
+</quality_rules>
+
+PROJECT RULES (read first)
+- AGENTS.md (repo root), zakaria-farid/AGENTS.md (this Next.js has breaking changes: read node_modules/next/dist/docs before Next-specific code), PROJECT_SPEC.md (rules tagged [user-confirmed] are binding), zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, zakaria-farid/.agents/audits/SIM-2026-10-07-admin-lifecycle.md.
+- Money math uses D() from zakaria-farid/src/lib/erp/math.ts (custom Decimal: plus, minus, timesRatio, dividedBy, gt, lt, isZero, toFixed; there is NO comparedTo). Never use JS float math on money. Every journal entry must balance (debit = credit). Posted journals are immutable: correct them with new entries, never by editing old lines.
+- Keep the existing FIN-OS UI layout and style. Change UI only where the task says. Never remove or merge a page, widget or button.
+- Never apply or re-apply Supabase migrations. Never touch .env files. No DB access.
+- Arabic strings: preserve UTF-8.
+- New dependencies: pin exact versions and list them in the report. No cloud accounts, real credentials, deployment or real data.
+- No business-rule or wording meaning changes unless the task says so.
+
+REPORT (final message)
+- Files changed and why; dependencies added.
+- Tests added (names); RED evidence (decisive failure line); GREEN counts; typecheck exit code.
+- Every requirement of the task: done / not done (and why).
+- Anything you skipped, guessed or left unfinished.
+
+TASK
+TASK fin-b1b-audit-fixes (FINANCIAL_CORE, money). Follow-up to fin-b1-cost-journals.
+
+The working tree already contains fin-b1-cost-journals (uncommitted):
+- zakaria-farid/src/components/admin/erp/context/ERPWorkstationContext.tsx
+- zakaria-farid/src/lib/erp/propertyCostEngine.ts (buildCostCorrectionJournalLines)
+- zakaria-farid/src/lib/erp/__tests__/costCorrectionJournals.test.ts
+
+Read the original task at C:/Users/lyr1csan/workspace/Real-Estate-Platform/.agents/briefs/fin-b1-cost-journals-body.txt first. All of its rules still apply. Do NOT revert or rewrite that work. Fix only the three audit issues below.
+
+A1. Refund larger than the net cost (ERPWorkstationContext.tsx ~4313, handleAddCostAdjustment).
+    - Example: a refund of 2,000 against a current net effective cost of 1,000 posts −2,000 to the ledger while the sub-ledger clamps to zero.
+    - Required: before any write, reject a refund whose amount is greater than the item's current net effective cost (calculateCostItemEffectiveTotals on the state item). Use a clear Arabic/English error.
+    - A refund equal to the net cost is allowed.
+    - Test: refund 2,000 on net 1,000 makes zero cost writes and zero journal writes, and rejects. Refund 1,000 on net 1,000 posts Dr 201000 1000.00 / Cr category 1000.00.
+A2. Stale modal data overwrites adjustment history (ERPWorkstationContext.tsx ~4245 edit and ~4351 adjustment).
+    - The audit showed a sub-ledger delta of −300 against a journal delta of +200 when the modal held an older copy of the item.
+    - Required, edit: the saved row must keep the CURRENT state item's adjustments, payable_installments and paid amounts. Take only the editable fields from the modal: amount, name, category, phase, supplier, invoice_ref, quantity, unit, unit_cost, notes and due_date. Read the exact field names in types.ts. Recompute net_effective_cost_egp and remaining_amount_egp from the merged item with calculateCostItemEffectiveTotals.
+    - Required, adjustment: the incoming adjustments must equal the state item's adjustments plus exactly one new one. If any existing adjustment is missing or changed, reject as stale with an error asking the user to refresh, and write nothing.
+    - Tests: (1) an edit submitted with a stale copy that lacks a later adjustment keeps that adjustment in the saved row, and the journal delta equals the base-amount change only; (2) an adjustment submitted from a stale copy is rejected with zero writes.
+A3. Missing R2 edit tests (costCorrectionJournals.test.ts ~153). The React-free harness already exists. Use it to drive the production edit handler:
+    - Order: update row, then persist the journal.
+    - Journal failure: the row is restored to the original and the error is rethrown. Local state is unchanged and there is no success toast.
+    - New total below paid_amount_egp: rejected, zero writes.
+    - Unchanged amount: no journal.
+
+OUT OF SCOPE: anything else. No UI changes. No DB, no migrations.
+
+ACCEPTANCE: the new tests are RED before the fix and GREEN after. tsc is clean. npm test shows only the 7 baseline failures (the count is now 778 + the new tests). Update the existing fin-b1 handoff line rather than adding a new one.

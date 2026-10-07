@@ -1,0 +1,67 @@
+TASK fin-b2-units-persist (FINANCIAL_CORE: units, contracts, double-sale risk)
+
+GOAL
+Building units must be real, saved data, and every contract wizard must see the same units and the same live contracts. The audit (zakaria-farid/.agents/audits/SIM-2026-10-07-admin-lifecycle.md, B2 and B3) found these problems:
+(a) The add-property form never saves units. Every building gets building_units = [] and total_units_count = 1, so the ERP invents 6 placeholder units.
+(b) The lead-drawer contract wizard gets raw properties and contracts={[]}. It shows a building as "0 شقة متاحة", and with contracts=[] a contracted unit could be sold again.
+(c) Unit labels read "شقة شقة 1A".
+
+READ FIRST
+- zakaria-farid/src/components/admin/AdminPropertyForm.tsx: zod schema total_floors / units_per_floor (~232), handleBuildingConfigChange (~573), payloadBase (~742), how an edited property hydrates its defaults (~470-500).
+- zakaria-farid/src/app/actions/properties.ts: saveProperty (~99).
+- zakaria-farid/src/lib/erp/supabaseService.ts ~110-135: the placeholder-unit fallback inside fetchLiveERPData (unit_id `${p.id}-apt-${i+1}`, label `شقة ${floor}${letter} - الدور ${floor}`).
+- zakaria-farid/src/lib/supabase/types.ts: BuildingUnitItem (~55).
+- zakaria-farid/src/components/admin/LeadPipeline.tsx ~2922: NewContractWizardModal props (properties={properties}, contracts={[]}).
+- zakaria-farid/src/components/admin/erp/v2/modals/NewContractWizardModal.tsx: getAvailableUnitsForProperty, isPropertyAvailableForContract, canSellWholeBuilding, unit option label (~691).
+- zakaria-farid/src/lib/erp/projectStatusHelper.ts ~50-80 (unit-contract matching by building_unit_id).
+
+REQUIRED
+R1. Add ONE exported pure function, in zakaria-farid/src/lib/erp/ (pick the existing module that best fits, e.g. projectStatusHelper.ts):
+    buildBuildingUnits(params: { propertyId: string; totalFloors: number; unitsPerFloor: number; areaSqm: number; priceEgp: number }): BuildingUnitItem[]
+    - count = totalFloors × unitsPerFloor. Order floor-major. Letters A, B, C, … within a floor.
+    - unit_id = `${propertyId}-apt-${n}` with n = 1..count, the same scheme as the existing fallback, so existing contracts still match.
+    - unit_number = `${floor}${letter}`, with no "شقة" prefix and no floor text, because the wizards already add "شقة" and the floor.
+    - area_sqm = round(area/count). bedrooms 3, bathrooms 2 (same as the fallback). status 'available'.
+    - price_egp: integer EGP, equal split, and the LAST unit absorbs the remainder so the sum equals priceEgp exactly. Use D() from zakaria-farid/src/lib/erp/math.ts, not float math.
+R2. The fallback in supabaseService.ts fetchLiveERPData (only for legacy rows with no stored units) must call buildBuildingUnits instead of its inline generator.
+    - Keep its existing ids for legacy rows: with the default 6 units, use totalFloors 3 × unitsPerFloor 2, so ids apt-1..apt-6 and floors 1-3 stay as today.
+    - Keep the existing `: 6` default and the total_units_count rule.
+    - Because unit_number no longer carries "شقة …", check every place that renders unit_number and make sure labels still read "شقة 1A - الدور 1" or the equivalent where they did before. List each place in the report.
+R3. Saving the property (AdminPropertyForm + saveProperty):
+    - For type 'building' with total_floors and units_per_floor both set, save building_units = buildBuildingUnits(...) and total_units_count = count.
+    - On CREATE the property id is not known before insert. Generate the units right after insert, using the returned id, and update the row in the same server action. If that update fails, return an error, with no silent success.
+    - On EDIT, keep the stored building_units unchanged unless total_floors × units_per_floor changed. If it changed:
+      - Query erp_contracts for this property_id with status <> 'Rescinded' and a non-null building_unit_id.
+      - If any exist, refuse the save with an Arabic/English error saying units cannot be rebuilt while units are under contract.
+      - Otherwise regenerate.
+    - On EDIT, hydrate total_floors and units_per_floor from the stored units: floors = max floor, units_per_floor = max count of units on one floor.
+    - Do not save floors or units_per_floor as new columns. There are no such columns and no migrations are allowed.
+R4. LeadPipeline contract wizard:
+    - Pass real live contracts, not [], loaded with the same Supabase query the ERP uses (supabaseService.ts ~279 erp_contracts select). Reuse an existing ERPSupabaseService method if there is one. Otherwise add one small static method and use it in both places.
+    - Pass properties normalized the same way as the ERP: extract the per-property normalization from fetchLiveERPData into an exported function and call it from both places, so the lead wizard and the /fin-os contracts wizard list the same units and the same availability.
+    - Load contracts when the wizard opens. While they load, the wizard must not allow picking a unit. Show the existing loading pattern, or disable it.
+R5. The unit option label in NewContractWizardModal (~691) must read "شقة 1A • الدور 1 • …", with no doubled "شقة", both for new units and for legacy fallback units.
+
+OUT OF SCOPE
+- Existing DB rows: no backfill and no DB writes outside the save flow.
+- No UI layout or styling changes beyond the label text and the loading/disabled state in R4.
+- Do not change contract creation, pricing, CAD rooms, or the bedrooms field.
+
+TESTS (RED first). New file zakaria-farid/src/lib/erp/__tests__/buildingUnits.test.ts, importing production code:
+T1. buildBuildingUnits({propertyId:'p1', totalFloors:2, unitsPerFloor:2, areaSqm:600, priceEgp:1000001})
+    - gives 4 units with ids p1-apt-1..p1-apt-4, unit_number ['1A','1B','2A','2B'] and floors [1,1,2,2];
+    - area 150 each;
+    - prices [250000,250000,250000,250001]; the sum is 1000001.
+T2. 3 floors × 2 per floor gives ids apt-1..apt-6 and floors [1,1,2,2,3,3], the legacy-compatible scheme.
+T3. units_per_floor 3 gives letters A, B, C on each floor.
+T4. The normalization function from R4 applied to {type:'building', building_units:[], total_units_count:1, price_egp:12500000, area_sqm:350, id:'x'} gives 6 units whose prices sum to 12500000 and whose ids include 'x-apt-2'.
+T5. Where the availability helpers can be imported: a building with units apt-1..apt-4 and one live contract on apt-1 has 3 available units, and a Rescinded contract on apt-2 does not reduce availability.
+
+ACCEPTANCE
+- grep -n "contracts={\[\]}" zakaria-farid/src/components/admin/LeadPipeline.tsx gives 0 hits.
+- grep -rn "buildBuildingUnits" zakaria-farid/src finds the definition, the tests, the supabaseService fallback and the save flow.
+- tsc clean. npm test: only the 7 baseline failures.
+- In the report, state the manual check: create a building with 2 floors × 2 units, price 1,000,001; the DB row has 4 building_units and total_units_count 4; both wizards show "4 شقة متاحة".
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.
