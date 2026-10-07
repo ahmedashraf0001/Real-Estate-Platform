@@ -4,4 +4,4 @@ fin-b2-units-persist done cc1edfc (incl. fin-b2b)
 fin-b4-price-basis done f889ee4
 ui-small-fixes done 7175234
 # B6 folded into ui-small-fixes R8; B7 dropped (user 2026-10-07)
-fin-b9-floors-include-ground done (sha below)
+fin-b9-floors-include-ground done ecf8675
