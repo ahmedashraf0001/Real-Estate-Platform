@@ -7,4 +7,5 @@ ui-small-fixes done 7175234
 fin-b9-floors-include-ground done ecf8675
 fin-c1-tranche-resplit done 8b1efae
 fin-c2-partner-id-lines done 4a021ff
-fin-c2b-partner-id-race running
+fin-c2b-partner-id-race done 1f02bd4
+ui-c3-real-display-values done 958bed3 (ZFKpiCard neutral rates)

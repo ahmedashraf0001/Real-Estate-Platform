@@ -49,13 +49,12 @@
 - PR base is `main`. Commit only verified work. Ask before any push or PR that is not already authorized.
 - Run `bash .agents/scripts/sync_graph.sh` from the repo root after each commit.
 
-## Resume point (2026-10-07 23:05)
-- Implementer is now Codex at medium effort (user choice): `bash .agents/codex-impl.sh <task-id>` from the repo root. agy is no longer used.
-- Done and pushed: fin-b9 `ecf8675` (floor count includes ground), fin-c1 `8b1efae` (tranche re-split), fin-c2 `4a021ff` (partner_id on equity lines). All are live-verified on the test DB.
-- Waiting on the Codex usage limit (it resets 2026-10-08 00:40):
-  1. `fin-c2b-partner-id-race`: the brief is in `.agents/briefs/`. The tree is clean, so re-run the script as is.
-  2. `ui-c3-real-display-values`: run with `UI=1 bash .agents/codex-impl.sh ui-c3-real-display-values`. Then check the vault and analysis views in the browser pane.
+## Resume point (2026-10-08 01:55)
+- Implementer: Codex medium via `bash .agents/codex-impl.sh <task-id>` (add `UI=1` for UI tasks). agy not used.
+- Done and pushed to PR #12: fin-c2b `1f02bd4` (profile partner_id immutable on save), ui-c3 `958bed3` (real sparklines/deltas in vault + analysis; rates neutral; fake tax-id row and fake +8.4% pill removed). Both live-checked in browser pane zakaria-dev (no console errors).
+- Queue is empty. Next work needs a decision from the user.
 - Still unexplained: on the edit form of SIM building `13c805ff-…`, the area field showed empty although 400 was entered.
+- Codex screenshot capture cannot reach the dev server (it tries port 3000; zakaria-dev is 51101). Claude does the visual check.
 
 ## Next (older)
 1. Watch CI on PR #12. Offer Auto-fix if it fails. Never enable auto-merge unless asked.
