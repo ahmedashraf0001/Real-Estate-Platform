@@ -23,6 +23,8 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 | `TBD` | fin-b2-units-persist: persist returned-id building units; retain same-count edits and reject contracted rebuilds; exact legacy odd counts; shared contracts query/normalization; block pending/failed lead wizard before first effect; localized unit labels; reviewer takeover after agy fix1, 22/22 task tests, tsc exit 0, npm test exit 1 (808 total / 801 pass / 7 baseline fail), 14 viewed fixture screenshots at 1280/390; no live DB mutation or commit |
 | `TBD` | fin-b2b-audit-fixes: stored-row edit guard and ignored client unit fields; reject contracted type changes; normalize legacy contract labels; retain last-unit piastres; agy fix1 restores listing-versus-contract metrics and removes duplicate availability exports; reviewer PASS, no takeover, 28/28 task tests, tsc exit 0, npm test exit 1 (814 total / 807 pass / 7 exact baseline fail); no UI changes, DB access or commit |
 
+| `TBD` | fin-b4-price-basis: full project sales value versus net adjusted cost; live contract-value portfolio sales; whole-building card price; reviewer takeover after stopped agy fix1, 5/5 task tests, build exit 0, tsc exit 0, npm test exit 1 (821 total / 814 pass / 7 exact baseline fail), 10 viewed fixture screenshots at 1280/390; no commit |
+
 ## Verified on the real DB (2026-10-07, real session)
 - Ready panel: both partners show 1,041,666.50 on the Gouna building.
 - Final price: building is now `ready` at 12,499,900. A `final` history row was written with cost 4,900,000. The contract is unchanged. `units_repriced` = 0 because building units are not stored (`building_units = []`); the app builds 6 placeholder units in `supabaseService.ts`.

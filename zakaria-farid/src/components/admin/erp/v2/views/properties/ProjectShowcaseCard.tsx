@@ -88,6 +88,7 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
   const metrics = calculateProjectCardMetrics(property, contracts);
   const imgUrl = getCuratedProjectImage(property, index);
   const isBuilding = property.type === 'building' || (property.title_ar || '').includes('عمارة') || (property.title_en || '').toLowerCase().includes('building') || (property.building_units && property.building_units.length > 0);
+  const displayedPrice = isBuilding ? (property.price_egp || 0) : metrics.minPrice;
 
   const formatEgp = (val: number): string => {
     return `${Math.round(val).toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
@@ -316,11 +317,9 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
             <span style={{ fontSize: '0.66rem', color: '#64748b' }}>{isAr ? 'السعر' : 'Price'}</span>
             <strong 
               style={{ fontSize: '0.76rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}
-              title={formatEgp(metrics.minPrice)}
+              title={formatEgp(displayedPrice)}
             >
-              {metrics.minPrice !== metrics.maxPrice
-                ? `${formatCompactEgp(metrics.minPrice)}`
-                : formatCompactEgp(metrics.minPrice)}
+              {formatCompactEgp(displayedPrice)}
             </strong>
           </div>
         </div>

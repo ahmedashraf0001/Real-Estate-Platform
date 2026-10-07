@@ -1,6 +1,123 @@
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
-import { D } from '@/lib/erp/math';
+import { D, Decimal } from '@/lib/erp/math';
+import { calculateCostItemEffectiveTotals } from './propertyCostEngine';
+
+export interface ProjectSalesValueMetrics {
+  salesValue: Decimal;
+  contractedSales: Decimal;
+  netCost: Decimal;
+}
+
+function isContractMatchingUnit(
+  c: ERPContract,
+  property: Property,
+  u: BuildingUnitItem
+): boolean {
+  if (c.building_unit_id && c.building_unit_id === u.unit_id) return true;
+  const isPropMatch = (c.property_id && c.property_id === property.id) ||
+    (c.unit_id && (c.unit_id === property.title_ar || c.unit_id === property.title_en || c.unit_id === property.id));
+  if (isPropMatch) {
+    const uNorm = normalizeUnitNumber(u.unit_number);
+    const cNumNorm = normalizeUnitNumber(c.building_unit_number);
+    if (cNumNorm && uNorm && cNumNorm.toLowerCase() === uNorm.toLowerCase()) return true;
+    if (c.building_unit_number && c.building_unit_number === u.unit_number) return true;
+    const cUnitIdNorm = normalizeUnitNumber(c.unit_id);
+    if (cUnitIdNorm && uNorm && cUnitIdNorm.toLowerCase() === uNorm.toLowerCase()) return true;
+    if (c.unit_id && (c.unit_id.trim() === u.unit_number.trim() || c.unit_id.trim() === u.unit_id.trim())) return true;
+  }
+  return false;
+}
+
+function isContractMatchingProject(
+  c: ERPContract,
+  property: Property
+): boolean {
+  // An explicit property_id decides; title/unit fallbacks are only for legacy rows without one.
+  if (c.property_id) return c.property_id === property.id;
+  if (c.unit_id && (c.unit_id === property.id || c.unit_id === property.title_ar || c.unit_id === property.title_en)) return true;
+  if (c.building_unit_id && (property.building_units || []).some(u => u.unit_id === c.building_unit_id)) return true;
+  if ((property.building_units || []).some(u => isContractMatchingUnit(c, property, u))) return true;
+  return false;
+}
+
+/**
+ * Pure helper for project price basis (user-confirmed 2026-10-07):
+ * - Project sales value = sum of gross_contract_value of live contracts (status <> 'Rescinded') on the project
+ *   + catalog price (price_egp + tax_amount_egp) of every unit with no live contract.
+ *   For a non-building or a building with no units: its contract value if contracted, else property price_egp.
+ * - Contracted sales = sum of gross_contract_value of live contracts. Never catalog prices.
+ * - Cost = net effective cost (calculateCostItemEffectiveTotals(item).netEffectiveCost), same basis as calculatePropertyAuditMetrics.
+ * - Margin = (sales value − cost) / sales value.
+ */
+export function calculateProjectSalesValue(
+  property: Property,
+  contracts: ERPContract[] = [],
+  propertyCosts: ERPPropertyCostItem[] = []
+): ProjectSalesValueMetrics {
+  if (!property) {
+    return {
+      salesValue: D(0),
+      contractedSales: D(0),
+      netCost: D(0)
+    };
+  }
+
+  const bUnits: BuildingUnitItem[] = property.building_units || [];
+  const hasBuildingUnits = bUnits.length > 0;
+
+  // Filter live contracts (status <> 'Rescinded')
+  const activeContracts = (contracts || []).filter(c => c && c.status !== 'Rescinded');
+  const projectContracts = activeContracts.filter(c => isContractMatchingProject(c, property));
+
+  let contractedSales = D(0);
+  for (const c of projectContracts) {
+    contractedSales = contractedSales.plus(D(c.gross_contract_value || 0));
+  }
+
+  let salesValue = D(0);
+
+  if (hasBuildingUnits) {
+    // Legacy master contracts carry no whole-building flag: a live contract that matches no unit covers the building.
+    const isWholeSold = projectContracts.some(c => Boolean(c.is_whole_building_sale) || !bUnits.some(u => isContractMatchingUnit(c, property, u)));
+
+    if (isWholeSold) {
+      salesValue = contractedSales;
+    } else {
+      let uncontractedUnitsCatalogVal = D(0);
+      for (const u of bUnits) {
+        const hasLiveContract = projectContracts.some(c => isContractMatchingUnit(c, property, u));
+        if (!hasLiveContract) {
+          const unitCatalogPrice = D(u.price_egp || 0).plus(D(u.tax_amount_egp || 0));
+          uncontractedUnitsCatalogVal = uncontractedUnitsCatalogVal.plus(unitCatalogPrice);
+        }
+      }
+      salesValue = contractedSales.plus(uncontractedUnitsCatalogVal);
+    }
+  } else {
+    // Non-building or a building with no units:
+    // Its contract value if contracted, else property price_egp
+    if (projectContracts.length > 0) {
+      salesValue = contractedSales;
+    } else {
+      salesValue = D(property.price_egp || 0);
+    }
+  }
+
+  // Cost basis: net effective cost of property cost items for this property
+  let netCost = D(0);
+  for (const costItem of propertyCosts || []) {
+    if (!costItem || costItem.property_id !== property.id) continue;
+    const totals = calculateCostItemEffectiveTotals(costItem);
+    netCost = netCost.plus(D(totals.netEffectiveCost));
+  }
+
+  return {
+    salesValue,
+    contractedSales,
+    netCost
+  };
+}
 
 export interface ProjectStatusMetrics {
   totalUnits: number;

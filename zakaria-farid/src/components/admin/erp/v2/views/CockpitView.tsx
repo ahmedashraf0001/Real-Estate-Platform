@@ -51,7 +51,7 @@ import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
 import { formatCompactEGP } from '@/lib/erp/propertyAnalysisEngine';
-import { computeProjectStatusMetrics } from '@/lib/erp/projectStatusHelper';
+import { computeProjectStatusMetrics, calculateProjectSalesValue } from '@/lib/erp/projectStatusHelper';
 import { ERPApexChart } from '../charts/ERPApexChart';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFSearchBar } from '../common/ZFSearchBar';
@@ -639,23 +639,31 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   // ─── Chart 2: Project Sales Value vs Capital Cost (Bar Chart) ───
   const comparisonChartData = useMemo(() => {
     const projects = properties.filter(p => isPropertyInProject(p.id));
-    const activeContracts = contracts.filter(c => c.status !== 'Rescinded' && isInCurrentPeriod(c.contract_date) && isPropertyInProject(c.property_id, c.unit_id));
-    const activeCosts = propertyCosts.filter(c => isInCurrentPeriod(c.logged_date) && isPropertyInProject(c.property_id));
+    // Decimal stores piastres; scale only on conversion to chart coordinates.
+    const toChartMillions = (value: Decimal) => Number(`${value.toFixed(2)}e-6`);
     const matchesProject = (contract: ERPContract, project: Property) =>
-      contract.property_id === project.id || Boolean(project.building_units?.some(unit => unit.unit_id === contract.unit_id || (unit as any).unit_number === contract.unit_id));
-    const rows = projects.map(project => ({
-      name: (isAr ? project.title_ar : project.title_en) || project.title_ar || project.title_en || project.id,
-      sales: activeContracts.filter(contract => matchesProject(contract, project)).reduce((total, contract) => total + Number(contract.gross_contract_value || 0), 0) / 1000000,
-      costs: getConstructionWIP(activeCosts.filter(cost => cost.property_id === project.id)).toNumber() / 1000000,
-    }));
+      !calculateProjectSalesValue(project, [contract]).contractedSales.isZero();
+    const rows = projects.map(project => {
+      const { salesValue, netCost } = calculateProjectSalesValue(project, contracts, propertyCosts);
+      return {
+        name: (isAr ? project.title_ar : project.title_en) || project.title_ar || project.title_en || project.id,
+        sales: toChartMillions(salesValue),
+        costs: toChartMillions(netCost),
+      };
+    });
     if (statProjectFilter === 'all') {
-      const unmatchedSales = activeContracts.filter(contract => !projects.some(project => matchesProject(contract, project)));
-      const unmatchedCosts = activeCosts.filter(cost => !projects.some(project => project.id === cost.property_id));
-      if (unmatchedSales.length || unmatchedCosts.length) {
+      const liveContracts = contracts.filter(c => c && c.status !== 'Rescinded');
+      const unmatchedContracts = liveContracts.filter(contract => !projects.some(project => matchesProject(contract, project)));
+      const unmatchedCosts = propertyCosts.filter(cost => !projects.some(project => project.id === cost.property_id));
+      const unmatchedSalesVal = unmatchedContracts.reduce((sum, c) => sum.plus(D(c.gross_contract_value || 0)), D(0));
+      const unmatchedCostsVal = getConstructionWIP(unmatchedCosts);
+      const unmatchedSales = toChartMillions(unmatchedSalesVal);
+      const unmatchedCostsNum = toChartMillions(unmatchedCostsVal);
+      if (unmatchedSales > 0 || unmatchedCostsNum > 0) {
         rows.push({
           name: isAr ? 'غير مرتبط بمشروع' : 'Unassigned project',
-          sales: unmatchedSales.reduce((total, contract) => total + Number(contract.gross_contract_value || 0), 0) / 1000000,
-          costs: getConstructionWIP(unmatchedCosts).toNumber() / 1000000,
+          sales: unmatchedSales,
+          costs: unmatchedCostsNum,
         });
       }
     }
@@ -666,7 +674,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       sales: plottedRows.map(row => row.sales),
       costs: plottedRows.map(row => row.costs),
     };
-  }, [properties, contracts, propertyCosts, isPropertyInProject, isInCurrentPeriod, statProjectFilter, isAr]);
+  }, [properties, contracts, propertyCosts, isPropertyInProject, statProjectFilter, isAr]);
 
   const comparisonChartSeries = useMemo(() => [
     {
