@@ -1,0 +1,26 @@
+TASK unit-area-split (FINANCIAL_CORE small + SURFACE_UI small)
+
+RULES (PROJECT_SPEC.md, [user-confirmed 2026-10-08], binding)
+A. When a building's area is split evenly over its generated units, unit areas use 2 decimals and the LAST unit absorbs the rounding remainder, so unit areas sum EXACTLY to the building area.
+B. The project card "المساحات" line shows the building total area plus the unit area (a range when units differ), e.g. "400 م² · الوحدات 66.67 م²".
+
+CURRENT
+zakaria-farid/src/lib/erp/projectStatusHelper.ts ~311: `const unitArea = count > 0 ? Math.round(areaSqm / count) : 0;` -> 400 m2 / 6 units = 67 each = 402. Unit price split right above already uses last-unit-absorbs; mirror that style (Decimal helper D, no float drift).
+zakaria-farid/src/components/admin/erp/v2/views/properties/ProjectShowcaseCard.tsx ~297-303 shows only metrics.minArea - metrics.maxArea.
+
+REQUIRED
+R1. Fix the split per rule A at the root. Find (graphify query first, rg second) EVERY other place that derives per-unit area from a building area by division (floor plan generator, wizards, contractsPipeline defaultArea, calculator, etc.) and route them through ONE helper; report each file:line.
+R2. Per-unit area feeds pricing (price per m2 x unit area). After the change, for a building priced by m2, the unit prices must still sum exactly to the building price (existing last-unit-absorbs on price). Do not change how prices are computed otherwise.
+R3. No backfill: existing building_units JSON in the DB, reserved/contracted units and signed contracts never change. New generation only. Report how many existing buildings would differ under the new rule (read-only count).
+R4. Card per rule B, using the property's stored area_sqm as total; unit part from its units (single value or min-max). Format with up to 2 decimals, drop trailing zeros. Keep FIN-OS layout, same component, same style tokens; no new widgets.
+R5. Smallest diff. No migration.
+
+TESTS (RED first)
+T1. 400 m2 / 6 units -> five units 66.67, last 66.65, sum exactly 400. Also 400/4 -> 100 each; 1 unit -> full area; 0 units -> [].
+T2. Priced building: unit price sum == building price after the change.
+T3. Card label: equal units -> "400 م² · الوحدات 66.67 م²" style; mixed units -> range.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+- final.md: every file:line changed, the R1 list, the R3 count.

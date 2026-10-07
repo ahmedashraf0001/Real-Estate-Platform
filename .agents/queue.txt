@@ -10,8 +10,7 @@ fin-c2-partner-id-lines done 4a021ff
 fin-c2b-partner-id-race done 1f02bd4
 ui-c3-real-display-values done 958bed3 (ZFKpiCard neutral rates)
 sim-area-field-bug closed not-reproduced (DB area 400; form renders 400; 390px fixed wizard footer covers field; regression test added)
-unit-area-rounding todo (building 400 m2 / 6 units stored as 67 each = 402; per-unit price uses it; money rule needs user)
-ui-project-card-area todo (project card "المساحات" shows one unit's area)
+unit-area-split running (codex high; incl. card area line)
 manual-checks todo (payout post, cost-edit JE, 2x2 building units; payout confirm needs user)
 pdf-reports todo (HTML-based PDF: property lifecycle money/paid/debt, client statement, partner statement; mockup first)
 ui-calculator-repricing todo (repricing UI weird/buggy; mockup first)
