@@ -12,6 +12,7 @@ import {
   ERPCostAllocation, 
   ERPInstallmentSchedule, 
   ERPJournalEntry, 
+  ERPJournalLine,
   ERPMakerCheckerRequest, 
   ERPPartnerCall, 
   ERPPartnerCommitment,
@@ -752,6 +753,31 @@ export class ERPSupabaseService {
   }
 
   /**
+   * Maps an in-memory journal line to its Supabase row representation (INV-4.1).
+   */
+  static mapJournalLineForPersistence(
+    l: ERPJournalLine,
+    entryId: string,
+    idx = 0
+  ) {
+    const lineId = ensureUUID(l.line_id);
+    l.line_id = lineId;
+    l.entry_id = entryId;
+    return {
+      line_id: lineId,
+      entry_id: entryId,
+      line_number: l.line_number || idx + 1,
+      account_code: l.account_code,
+      debit_amount: l.debit_amount,
+      credit_amount: l.credit_amount,
+      unit_id: l.unit_id ? l.unit_id.slice(0, 50) : null,
+      contract_id: l.contract_id && isUUID(l.contract_id) ? l.contract_id : null,
+      partner_id: l.partner_id && isUUID(l.partner_id) ? l.partner_id : null,
+      memo: l.memo || null
+    };
+  }
+
+  /**
    * Persist a Double-Entry Journal Entry and its Lines.
    */
   static async persistJournalEntry(
@@ -830,23 +856,7 @@ export class ERPSupabaseService {
         throw entryError;
       }
 
-      const lineRows = entry.lines.map((l, idx) => {
-        const lineId = ensureUUID(l.line_id);
-        l.line_id = lineId;
-        l.entry_id = entryId;
-        return {
-          line_id: lineId,
-          entry_id: entryId,
-          line_number: l.line_number || idx + 1,
-          account_code: l.account_code,
-          debit_amount: l.debit_amount,
-          credit_amount: l.credit_amount,
-          unit_id: l.unit_id ? l.unit_id.slice(0, 50) : null,
-          contract_id: l.contract_id && isUUID(l.contract_id) ? l.contract_id : null,
-          partner_id: l.partner_id && isUUID(l.partner_id) ? l.partner_id : null,
-          memo: l.memo || null
-        };
-      });
+      const lineRows = entry.lines.map((l, idx) => ERPSupabaseService.mapJournalLineForPersistence(l, entryId, idx));
 
       let { error: lineError } = await supabase.from('erp_journal_lines').insert(lineRows);
       if (lineError && (lineError.code === '23503' || lineError.message?.includes('foreign key') || lineError.message?.includes('erp_accounts') || lineError.message?.includes('account_code'))) {
@@ -2040,9 +2050,29 @@ export class ERPSupabaseService {
       notes?: string;
       joined_date?: string;
     }
-  ): Promise<void> {
-    const rawId = (profile as any).partner_id || profile.id || generateUUID();
-    const cleanId = ensureUUID(rawId);
+  ): Promise<string | undefined> {
+    const rawId = (profile as any).partner_id || profile.id;
+    let cleanId = rawId && isUUID(rawId) ? rawId.trim() : undefined;
+    if (!cleanId) {
+      try {
+        const { data: existingRows, error: lookupError } = await supabase
+          .from('erp_partner_profiles')
+          .select('partner_id')
+          .eq('name', profile.name)
+          .limit(1);
+        if (lookupError) throw lookupError;
+        if (existingRows && existingRows.length > 0 && existingRows[0]?.partner_id && isUUID(existingRows[0].partner_id)) {
+          cleanId = existingRows[0].partner_id;
+        }
+      } catch (lookupError) {
+        if (this.isSchemaCacheError(lookupError)) return undefined;
+        throw lookupError;
+      }
+    }
+    if (!cleanId) {
+      cleanId = generateUUID();
+    }
+
     const row = {
       partner_id: cleanId,
       name: profile.name,
@@ -2060,10 +2090,12 @@ export class ERPSupabaseService {
     if (error) {
       if (this.isSchemaCacheError(error)) {
         console.warn('erp_partner_profiles table not yet in schema cache. Kept in memory.');
-        return;
+        return undefined;
       }
       throw error;
     }
+
+    return cleanId;
   }
 
   /**
@@ -2214,5 +2246,3 @@ export class ERPSupabaseService {
     return taxRow;
   }
 }
-
-

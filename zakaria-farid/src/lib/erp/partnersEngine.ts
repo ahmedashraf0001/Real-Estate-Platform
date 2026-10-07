@@ -1004,6 +1004,7 @@ export class PartnersEngine {
    */
   static createPayoutJournalEntry(params: {
     partnerName: string;
+    partnerId?: string;
     /** Cash paid out. */
     amount: string | number;
     /** Unpaid capital settled from the partner's share (non-cash). */
@@ -1045,12 +1046,14 @@ export class PartnersEngine {
           account_code: '303000',
           debit_amount: D(amt).plus(offset).toFixed(2),
           credit_amount: '0.00',
+          partner_id: params.partnerId,
           memo: `توزيعات أرباح ومسحوبات الشريك: ${params.partnerName}`
         },
         ...(offset.gt(0) ? [{
           account_code: '301000',
           debit_amount: '0.00',
           credit_amount: offset.toFixed(2),
+          partner_id: params.partnerId,
           memo: `سداد مديونية ضخ رأس مال الشريك ${params.partnerName} خصماً من أرباحه`
         }] : []),
         ...(D(amt).gt(0) ? [{
@@ -1070,6 +1073,7 @@ export class PartnersEngine {
    */
   static createCapitalInjectionJournalEntry(params: {
     partnerName: string;
+    partnerId?: string;
     amount: string | number;
     paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000' | 'CASH' | 'INSTAPAY' | 'INSTAPAY_101000';
     propertyTitle?: string;
@@ -1113,6 +1117,7 @@ export class PartnersEngine {
           account_code: '301000',
           debit_amount: '0.00',
           credit_amount: amt,
+          partner_id: params.partnerId,
           memo: `إثبات زيادة رأس مال وحصة الشريك: ${params.partnerName}`
         }
       ]

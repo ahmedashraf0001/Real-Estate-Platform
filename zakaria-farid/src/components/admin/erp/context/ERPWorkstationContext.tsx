@@ -41,7 +41,8 @@ import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { 
   PartnersEngine, 
   PartnerFinancialSummary,
-  computeProjectPayoutPosition
+  computeProjectPayoutPosition,
+  isSamePartner
 } from '@/lib/erp/partnersEngine';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import {
@@ -399,8 +400,8 @@ export interface ERPWorkstationContextValue {
     date?: string;
     notes?: string;
   }) => Promise<ERPTaxRecord | null>;
-  handleConfirmPartnerPayout: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; payoutDate: string; receiptRef: string; memo: string }) => Promise<boolean>;
-  handleConfirmPartnerInjection: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; commitmentId?: string; injectionDate: string; receiptRef: string; memo: string; role?: 'equity_partner' | 'land_partner' | 'silent_financier'; phone?: string; nationalId?: string; projectSharePct?: number }) => Promise<void>;
+  handleConfirmPartnerPayout: (details: { partnerName: string; partnerId?: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; payoutDate: string; receiptRef: string; memo: string }) => Promise<boolean>;
+  handleConfirmPartnerInjection: (details: { partnerName: string; partnerId?: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; commitmentId?: string; injectionDate: string; receiptRef: string; memo: string; role?: 'equity_partner' | 'land_partner' | 'silent_financier'; phone?: string; nationalId?: string; projectSharePct?: number }) => Promise<void>;
   handleCreatePartnerCommitment: (payload: { propertyId: string; partnerName: string; milestoneName: string; milestonePhase?: string; committedAmount: string; dueDate: string; notes?: string }) => Promise<void>;
   handleRegisterNewPartner: (profileData: NewPartnerSubmitPayload) => Promise<void>;
   handleSaveProjectExpense: (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => Promise<void>;
@@ -3326,6 +3327,7 @@ export function ERPWorkstationProvider({
   // Handler: Confirm Partner Payout (user-confirmed 2026-10-06: per project, unpaid commitments are settled first from the share)
   const handleConfirmPartnerPayout = useCallback(async (details: {
     partnerName: string;
+    partnerId?: string;
     amount: string;
     paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
     propertyId?: string;
@@ -3385,8 +3387,14 @@ export function ERPWorkstationProvider({
       }
 
       const propertyTitle = details.propertyTitle || property.title_ar || property.title_en;
+      const matchedProfile = partnerProfiles.find(p => isSamePartner(p.name, details.partnerName));
+      const resolvedPartnerId = details.partnerId && isUUID(details.partnerId)
+        ? details.partnerId
+        : (matchedProfile?.id && isUUID(matchedProfile.id) ? matchedProfile.id : undefined);
+
       const entry = PartnersEngine.createPayoutJournalEntry({
         partnerName: details.partnerName,
+        partnerId: resolvedPartnerId,
         amount: cashAmt.toFixed(2),
         debtOffsetAmount: offsetAmt.toFixed(2),
         paymentMethod: details.paymentMethod,
@@ -3489,11 +3497,12 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.properties, data.contracts, data.partnerCommitments, data.journalEntries, data.periods, partnerTransactions, isAr, activePeriod, supabase, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, persistJournalEntryGuarded]);
+  }, [data.properties, data.contracts, data.partnerCommitments, data.journalEntries, data.periods, partnerProfiles, partnerTransactions, isAr, activePeriod, supabase, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, persistJournalEntryGuarded]);
 
   // Handler: Confirm Partner Capital Injection
   const handleConfirmPartnerInjection = useCallback(async (details: {
     partnerName: string;
+    partnerId?: string;
     amount: string;
     paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
     propertyId?: string;
@@ -3514,8 +3523,40 @@ export function ERPWorkstationProvider({
     setIsMutating(true);
     try {
       const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
+      const roleArMap: Record<string, string> = {
+        equity_partner: 'شريك ممول بالمشروع',
+        land_partner: 'شريك مساهم بالأرض',
+        silent_financier: 'ممول صامت'
+      };
+      const assignedRole = details.role || 'equity_partner';
+
+      const matchedProfile = partnerProfiles.find(p => isSamePartner(p.name, details.partnerName));
+      const existingId = details.partnerId && isUUID(details.partnerId)
+        ? details.partnerId
+        : (matchedProfile?.id && isUUID(matchedProfile.id) ? matchedProfile.id : undefined);
+
+      let savedProfileId: string | undefined;
+      try {
+        savedProfileId = await ERPSupabaseService.persistPartnerProfile(supabase, {
+          id: existingId,
+          name: details.partnerName,
+          role: assignedRole,
+          phone: details.phone,
+          national_id: details.nationalId,
+          joined_date: details.injectionDate
+        });
+      } catch (profErr) {
+        console.error('Secondary record failed to persist (partner profile):', profErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
+      }
+
+      const resolvedPartnerId = (savedProfileId && isUUID(savedProfileId))
+        ? savedProfileId
+        : (existingId || undefined);
+
       const entry = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: details.partnerName,
+        partnerId: resolvedPartnerId,
         amount: details.amount,
         paymentMethod: details.paymentMethod,
         propertyTitle: details.propertyTitle,
@@ -3568,39 +3609,30 @@ export function ERPWorkstationProvider({
         toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
-      const roleArMap: Record<string, string> = {
-        equity_partner: 'شريك ممول بالمشروع',
-        land_partner: 'شريك مساهم بالأرض',
-        silent_financier: 'ممول صامت'
-      };
-      const assignedRole = details.role || 'equity_partner';
-
-      try {
-        await ERPSupabaseService.persistPartnerProfile(supabase, {
-          id: `pt-${Date.now()}`,
-          name: details.partnerName,
-          role: assignedRole,
-          phone: details.phone,
-          national_id: details.nationalId,
-          joined_date: details.injectionDate
-        });
-      } catch (profErr) {
-        console.error('Secondary record failed to persist (partner profile):', profErr);
-        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
-      }
-
       saveRegisteredPartner({
         name: details.partnerName,
         role: roleArMap[assignedRole] || 'شريك استثماري',
         isPermanent: false
       });
 
+      const effectiveProfileId = (resolvedPartnerId && isUUID(resolvedPartnerId))
+        ? resolvedPartnerId
+        : `pt-${Date.now()}`;
+
       setPartnerProfiles(prev => {
-        if (prev.some(p => p.name === details.partnerName)) return prev;
+        if (prev.some(p => isSamePartner(p.name, details.partnerName))) {
+          return prev.map(p => isSamePartner(p.name, details.partnerName) ? {
+            ...p,
+            id: (resolvedPartnerId && isUUID(resolvedPartnerId)) ? resolvedPartnerId : p.id,
+            role: assignedRole || p.role,
+            phone: details.phone || p.phone,
+            national_id: details.nationalId || p.national_id
+          } : p);
+        }
         return [
           ...prev,
           {
-            id: `pt-${Date.now()}`,
+            id: effectiveProfileId,
             name: details.partnerName,
             role: assignedRole,
             phone: details.phone,
@@ -3685,7 +3717,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen]);
+  }, [data.periods, partnerProfiles, activePeriod, supabase, isAr, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, persistJournalEntryGuarded]);
 
   // Handler: Create Partner Milestone Commitment
   const handleCreatePartnerCommitment = useCallback(async (payload: {
@@ -3741,8 +3773,31 @@ export function ERPWorkstationProvider({
         instapayHandle: profileData.instapayHandle
       });
 
+      const existingProfile = partnerProfiles.find(p => isSamePartner(p.name, profileData.name));
+      const existingUUID = existingProfile?.id && isUUID(existingProfile.id) ? existingProfile.id : undefined;
+
+      let savedProfileId: string | undefined;
+      try {
+        savedProfileId = await ERPSupabaseService.persistPartnerProfile(supabase, {
+          id: existingUUID,
+          name: profileData.name,
+          role: profileData.role,
+          phone: profileData.phone,
+          email: profileData.email,
+          national_id: profileData.nationalId,
+          joined_date: existingProfile?.joined_date || new Date().toISOString().split('T')[0]
+        });
+      } catch (profileErr) {
+        console.error('Secondary record failed to persist (partner profile):', profileErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
+      }
+
+      const effectiveProfileId = (savedProfileId && isUUID(savedProfileId))
+        ? savedProfileId
+        : (existingUUID || `pt-${Date.now()}`);
+
       const newProfile: ERPPartnerProfile = {
-        id: `pt-${Date.now()}`,
+        id: effectiveProfileId,
         name: profileData.name,
         role: profileData.role,
         phone: profileData.phone,
@@ -3752,24 +3807,9 @@ export function ERPWorkstationProvider({
         instapay_handle: profileData.instapayHandle,
         preferred_payout_method: profileData.preferredPayoutMethod,
         notes: profileData.notes || `شريك وممول استثماري تم توثيقه بالنظام`,
-        joined_date: new Date().toISOString().split('T')[0]
+        joined_date: existingProfile?.joined_date || new Date().toISOString().split('T')[0]
       };
-      setPartnerProfiles(prev => [...prev.filter(p => p.name !== profileData.name), newProfile]);
-
-      try {
-        await ERPSupabaseService.persistPartnerProfile(supabase, {
-          id: newProfile.id,
-          name: newProfile.name,
-          role: newProfile.role,
-          phone: newProfile.phone,
-          email: profileData.email,
-          national_id: newProfile.national_id,
-          joined_date: newProfile.joined_date
-        });
-      } catch (profileErr) {
-        console.error('Secondary record failed to persist (partner profile):', profileErr);
-        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
-      }
+      setPartnerProfiles(prev => [...prev.filter(p => !isSamePartner(p.name, profileData.name)), newProfile]);
 
       if (profileData.propertyId && profileData.sharePercentage && profileData.sharePercentage > 0) {
         const partnerShare = profileData.sharePercentage;
@@ -3808,8 +3848,14 @@ export function ERPWorkstationProvider({
           return;
         }
 
+        const matchedProfile = partnerProfiles.find(p => isSamePartner(p.name, profileData.name));
+        const resolvedPartnerId = (savedProfileId && isUUID(savedProfileId))
+          ? savedProfileId
+          : (existingUUID || (matchedProfile?.id && isUUID(matchedProfile.id) ? matchedProfile.id : undefined));
+
         const entry = PartnersEngine.createCapitalInjectionJournalEntry({
           partnerName: profileData.name,
+          partnerId: resolvedPartnerId,
           amount: profileData.initialDeposit.amount,
           paymentMethod: profileData.initialDeposit.paymentMethod,
           receiptRef: profileData.initialDeposit.receiptRef,
@@ -3879,7 +3925,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, data.periods, activePeriod, isAr, ensureActivePeriodOpen]);
+  }, [supabase, data.periods, partnerProfiles, activePeriod, isAr, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, persistJournalEntryGuarded]);
 
   // Handler: Atomically save the project cost record and balanced journal entry.
   const handleSaveProjectExpense = useCallback(async (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => {
