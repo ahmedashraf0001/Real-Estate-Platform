@@ -1,0 +1,21 @@
+TASK fin-c2b-partner-id-race (FINANCIAL_CORE follow-up to fin-c2-partner-id-lines, commit 4a021ff)
+
+PROBLEM (from the independent audit of c2; the race predates c2)
+zakaria-farid/src/lib/erp/supabaseService.ts persistPartnerProfile (~2040-2099): when no UUID is known it looks the name up, else generates a UUID, then calls .upsert(row, { onConflict: 'name' }). Two concurrent first-time saves for the same name both generate UUIDs; the second upsert REPLACES partner_id on the existing row, so the first journal's partner_id points at a UUID that no longer exists. The same overwrite happens whenever a caller passes a stale UUID that differs from the stored row's partner_id.
+
+REQUIRED
+R1. A profile row's partner_id must never change once stored. Insert only when the name is new (insert with conflict-do-nothing, e.g. upsert(row, { onConflict: 'name', ignoreDuplicates: true })); update the other fields (phone, email, national_id, role, updated_at) by name WITHOUT partner_id; then read back partner_id by name and return the STORED UUID. Check that the ERPWorkstationContext callers (~3395, ~3540, ~3557, ~3781, ~3856) use the returned value, not the one they sent.
+R2. Keep current error behaviour: schema-cache errors return undefined; other errors throw; lookup errors still block writes.
+R3. Smallest diff. No migration. Verify in zakaria-farid/supabase/migrations that erp_partner_profiles.name has a unique constraint and report the file:line.
+
+TESTS (RED first) in zakaria-farid/src/lib/erp/__tests__/partnerIdLines.test.ts:
+T1. Concurrency: a mock table where the row for the name is created between the lookup and the insert (two saves via Promise.all). Both calls return the SAME stored UUID, and partner_id in the mock table never changes.
+T2. Stale UUID: stored row has UUID A; persistPartnerProfile called with UUID B for the same name returns A and the row keeps A.
+Existing tests must still pass; adjust their mocks only as needed for the new call sequence and report each change.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+
+DOCS
+Append " + c2b: profile partner_id immutable" to the existing fin-c2 row in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md; no new row.
