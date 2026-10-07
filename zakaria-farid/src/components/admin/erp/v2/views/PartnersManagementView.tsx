@@ -371,6 +371,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
         properties={properties}
         summaries={partnerSummaries}
         transactions={partnerTransactions}
+        commitments={partnerCommitments}
         isAr={isAr}
         onOpenNewPartner={onOpenNewPartnerModal}
         onOpenInjection={(pName, propId) => onOpenInjection?.(pName, propId || selectedBuildingId)}
