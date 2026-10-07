@@ -23,6 +23,7 @@ import {
 import { Property } from '@/lib/supabase/types';
 import { ERPPropertyCostItem, ERPPropertyPriceHistoryEntry, PropertyCostCategory } from '@/lib/erp/types';
 import { calculatePropertyAuditMetrics } from '@/lib/erp/propertyCostEngine';
+import { formatUnitDisplayName } from '@/lib/erp/projectStatusHelper';
 import {
   priceBuiltProperty,
   pricePerSqmForMarkup,
@@ -777,7 +778,7 @@ export function CostPricingCalculator({
 
                       return (
                         <tr key={u.unit_id || idx}>
-                          <td>{u.unit_number}</td>
+                          <td>{formatUnitDisplayName(u.unit_number, isAr)}</td>
                           <td>{u.floor}</td>
                           <td>{u.area_sqm} {isAr ? 'م²' : 'm²'}</td>
                           <td>

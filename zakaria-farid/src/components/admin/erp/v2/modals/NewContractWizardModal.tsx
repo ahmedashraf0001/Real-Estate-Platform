@@ -47,6 +47,7 @@ import {
   getAvailableUnitsForProperty,
   canSellWholeBuilding,
 } from '@/lib/erp/propertiesPortfolioCalculations';
+import { cleanUnitNumber } from '@/lib/erp/projectStatusHelper';
 import shellStyles from '../ZFWorkstationShell.module.css';
 import w from './NewContractWizardModal.module.css';
 
@@ -87,6 +88,8 @@ interface NewContractWizardModalProps {
   initialLeadId?: string;
   properties: Property[];
   contracts: ERPContract[];
+  isLoadingContracts?: boolean;
+  contractsError?: string | null;
   leads?: any[];
   activePeriod: ERPAccountingPeriod;
   unifiedPartners: Array<{ name: string; role: string }>;
@@ -106,6 +109,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   initialLeadId,
   properties,
   contracts,
+  isLoadingContracts = false,
+  contractsError,
   leads = [],
   unifiedPartners,
   isMutating = false,
@@ -114,6 +119,9 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [contractErrors, setContractErrors] = useState<Record<string, string>>({});
+  const isContractsPending = isLoadingContracts === true;
+  const hasContractsError = Boolean(contractsError);
+  const isContractsBlocked = isContractsPending || hasContractsError;
 
   // Step 1: Unit & Buyer
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
@@ -161,15 +169,19 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     const prop = properties.find(p => p.id === id);
     if (prop) {
       const canSellWhole = canSellWholeBuilding(prop, contracts);
-      const availableUnits = getAvailableUnitsForProperty(prop, contracts);
+      const availableUnits = isContractsBlocked ? [] : getAvailableUnitsForProperty(prop, contracts);
       let targetUnitId = unitId || '';
 
-      if (targetUnitId && !availableUnits.some(u => u.unit_id === targetUnitId)) {
+      if (isContractsBlocked) {
         targetUnitId = '';
-      }
+      } else {
+        if (targetUnitId && !availableUnits.some(u => u.unit_id === targetUnitId)) {
+          targetUnitId = '';
+        }
 
-      if (!targetUnitId && !canSellWhole && availableUnits.length > 0) {
-        targetUnitId = availableUnits[0].unit_id;
+        if (!targetUnitId && !canSellWhole && availableUnits.length > 0) {
+          targetUnitId = availableUnits[0].unit_id;
+        }
       }
 
       setSelectedBuildingUnitId(targetUnitId);
@@ -191,13 +203,15 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         setPartnerSplits(normalizePartnerSplits(null));
       }
     }
-  }, [properties, contracts]);
+  }, [properties, contracts, isContractsBlocked]);
 
   const handlePropertyChange = (id: string) => {
+    if (isContractsBlocked) return;
     applyPropertySelection(id, '');
   };
 
   const handleBuildingUnitChange = (unitId: string) => {
+    if (isContractsBlocked) return;
     setSelectedBuildingUnitId(unitId);
     const prop = properties.find(p => p.id === selectedPropertyId);
     if (!prop) return;
@@ -317,9 +331,33 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   }, [selectedProperty, selectedBuildingUnitId]);
 
   const availableBuildingUnits = useMemo(() => {
+    if (isContractsBlocked) return [];
     if (!selectedProperty || selectedProperty.type !== 'building' || !selectedProperty.building_units) return [];
     return getAvailableUnitsForProperty(selectedProperty, contracts);
-  }, [selectedProperty, contracts]);
+  }, [selectedProperty, contracts, isContractsBlocked]);
+
+  useEffect(() => {
+    if (isContractsBlocked) {
+      if (selectedBuildingUnitId) setSelectedBuildingUnitId('');
+      return;
+    }
+    if (!selectedProperty || selectedProperty.type !== 'building') return;
+    if (selectedBuildingUnitId && !availableBuildingUnits.some(u => u.unit_id === selectedBuildingUnitId)) {
+      const nextUnitId = availableBuildingUnits[0]?.unit_id || '';
+      setSelectedBuildingUnitId(nextUnitId);
+      if (nextUnitId) {
+        const u = selectedProperty.building_units?.find(unit => unit.unit_id === nextUnitId);
+        if (u) setBasePriceInput((u.price_egp || 0).toString());
+      }
+    } else if (!selectedBuildingUnitId && !canSellWhole && availableBuildingUnits.length > 0) {
+      const nextUnitId = availableBuildingUnits[0]?.unit_id || '';
+      setSelectedBuildingUnitId(nextUnitId);
+      if (nextUnitId) {
+        const u = selectedProperty.building_units?.find(unit => unit.unit_id === nextUnitId);
+        if (u) setBasePriceInput((u.price_egp || 0).toString());
+      }
+    }
+  }, [selectedProperty, availableBuildingUnits, selectedBuildingUnitId, canSellWhole, isContractsBlocked]);
 
   const handleLeadChange = (leadId: string) => {
     setSelectedLeadId(leadId);
@@ -360,6 +398,13 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   const validateStep1 = (): boolean => {
     const errs: Record<string, string> = {};
+    if (isContractsBlocked) {
+      errs.property = contractsError
+        ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+        : (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Loading contracts data, please wait...');
+      setContractErrors(errs);
+      return false;
+    }
     if (!selectedPropertyId) {
       errs.property = isAr ? 'يرجى اختيار الوحدة العقارية' : 'Please select a property unit';
     } else if (selectedPropertyId === 'custom_unit' && !customUnitName.trim()) {
@@ -398,6 +443,15 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isContractsBlocked) {
+      setContractErrors({
+        property: contractsError
+          ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+          : (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Loading contracts data, please wait...')
+      });
+      setStep(1);
+      return;
+    }
     if (Math.abs(totalSplitsPct - 100) > 0.01) {
       setContractErrors({ splits: isAr ? 'يجب أن يكون مجموع نسب الشركاء 100% بالضبط' : 'Partner shares must sum to exactly 100%' });
       return;
@@ -446,6 +500,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   };
 
   const propertySections: ZFCustomSelectSection[] = useMemo(() => {
+    if (isContractsBlocked) return [];
     const sectionsMap = new Map<string, ZFCustomSelectSection>();
 
     const getPropertySection = (p: Property): { id: string; titleAr: string; titleEn: string } => {
@@ -520,7 +575,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     });
 
     return Array.from(sectionsMap.values());
-  }, [properties, contracts, isAr]);
+  }, [properties, contracts, isAr, isContractsBlocked]);
 
   if (!isOpen) return null;
 
@@ -543,6 +598,14 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   };
 
   const goToStep = (s: 1 | 2 | 3) => {
+    if (isContractsBlocked) {
+      setContractErrors({
+        property: contractsError
+          ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+          : (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Loading contracts data, please wait...')
+      });
+      return;
+    }
     if (s > 1 && step === 1 && !validateStep1()) return;
     if (s === 3 && step <= 2) {
       if (!validateStep1()) { setStep(1); return; }
@@ -558,7 +621,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   ];
 
   // Errors already shown under their own field are not repeated in the banner.
-  const bannerErrors = [contractErrors.splits].filter(Boolean);
+  const bannerErrors = [
+    contractErrors.splits,
+    contractsError ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts data: ${contractsError}`) : null
+  ].filter(Boolean);
 
   const footer = (
     <ZFFormFooter aside={isAr ? `الخطوة ${step} من 3` : `Step ${step} of 3`}>
@@ -576,7 +642,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       )}
       {/* Distinct keys: React must not reuse the Next button as the submit button, or the same click submits. */}
       {step < 3 ? (
-        <button key="next" type="button" className={shellStyles.btnPrimary} onClick={() => goToStep((step + 1) as 2 | 3)}>
+        <button key="next" type="button" className={shellStyles.btnPrimary} disabled={isContractsBlocked} onClick={() => goToStep((step + 1) as 2 | 3)}>
           {isAr ? 'التالي' : 'Next'}
         </button>
       ) : (
@@ -585,7 +651,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
           type="submit"
           form="zf-new-contract-form"
           className={shellStyles.btnPrimary}
-          disabled={isMutating || !splitsBalanced}
+          disabled={isMutating || !splitsBalanced || isContractsBlocked}
         >
           {isMutating ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'اعتماد العقد' : 'Create contract')}
         </button>
@@ -647,6 +713,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   placeholderAr="اختر من العقارات المتاحة"
                   placeholderEn="Choose an available property"
                   isAr={isAr}
+                  disabled={isContractsBlocked}
                   hasError={!!contractErrors.property}
                   customAction={{
                     labelAr: '+ وحدة غير موجودة في الكتالوج',
@@ -673,25 +740,33 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                 <ZFField
                   label={isAr ? 'الشقة' : 'Apartment'}
                   required={!canSellWhole}
-                  hint={isAr
-                    ? `${availableBuildingUnits.length} شقة متاحة في هذه العمارة`
-                    : `${availableBuildingUnits.length} apartments available in this building`}
+                  hint={isContractsPending
+                    ? (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Checking contracts and available units...')
+                    : hasContractsError
+                    ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+                    : (isAr
+                      ? `${availableBuildingUnits.length} شقة متاحة في هذه العمارة`
+                      : `${availableBuildingUnits.length} apartments available in this building`)}
                 >
                   <select
                     className={zfForm.control}
                     value={selectedBuildingUnitId}
                     onChange={e => handleBuildingUnitChange(e.target.value)}
+                    disabled={isContractsBlocked}
                   >
                     {canSellWhole && (
                       <option value="">{isAr ? 'العمارة بالكامل' : 'Whole building'}</option>
                     )}
-                    {availableBuildingUnits.map(u => (
-                      <option key={u.unit_id} value={u.unit_id}>
-                        {isAr
-                          ? `شقة ${u.unit_number} • الدور ${u.floor} • ${fmt(u.price_egp || 0)} ج.م`
-                          : `Apt ${u.unit_number} • Floor ${u.floor} • ${fmt(u.price_egp || 0)} EGP`}
-                      </option>
-                    ))}
+                    {availableBuildingUnits.map(u => {
+                      const displayUnitNumber = cleanUnitNumber(u.unit_number) || u.unit_number;
+                      return (
+                        <option key={u.unit_id} value={u.unit_id}>
+                          {isAr
+                            ? `شقة ${displayUnitNumber} • الدور ${u.floor} • ${fmt(u.price_egp || 0)} ج.م`
+                            : `Apt ${displayUnitNumber} • Floor ${u.floor} • ${fmt(u.price_egp || 0)} EGP`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </ZFField>
               )}
@@ -1135,7 +1210,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   {
                     label: isAr ? 'الوحدة' : 'Unit',
                     value: selectedBuildingUnit
-                      ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${selectedBuildingUnit.unit_number}`
+                      ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${isAr ? 'شقة ' : 'Apt '}${cleanUnitNumber(selectedBuildingUnit.unit_number) || selectedBuildingUnit.unit_number}`
                       : selectedProperty
                         ? (selectedProperty.title_ar || selectedProperty.title_en)
                         : (customUnitName || '—')

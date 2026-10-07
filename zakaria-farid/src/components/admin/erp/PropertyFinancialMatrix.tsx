@@ -24,6 +24,7 @@ import {
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
+import { formatUnitDisplayName } from '@/lib/erp/projectStatusHelper';
 import { ZFPagination } from './v2/ZFPagination';
 import { ZFFilterToolbar } from './v2/ZFFilterToolbar';
 
@@ -949,7 +950,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
-                          {unit.unit_number}
+                          {formatUnitDisplayName(unit.unit_number, isAr)}
                         </h4>
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                           {isAr ? `الدور ${unit.floor} — ${unit.area_sqm} م²` : `Floor ${unit.floor} — ${unit.area_sqm} sqm`}

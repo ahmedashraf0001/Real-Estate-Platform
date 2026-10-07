@@ -20,6 +20,8 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 | `c494766` | Side rail alert = unpaid capital commitments only (user-confirmed) |
 | `999a962` | Calculator marks units with a live contract as contracted (placeholder units are all "available") |
 | `TBD` | fin-b1-cost-journals + fin-b1b-audit-fixes: balanced journals for cost edits/adjustments/deletes; reject refunds > net cost, retain current adjustments/installments/paid amounts, allow clearing editable optional fields, reject any changed adjustment history; R2 ordering/rollback/validation covered; reviewer: tsc 0, 20/20 targeted tests, npm test 785 total / 778 pass / 7 baseline fail (exit 1) |
+| `TBD` | fin-b2-units-persist: persist returned-id building units; retain same-count edits and reject contracted rebuilds; exact legacy odd counts; shared contracts query/normalization; block pending/failed lead wizard before first effect; localized unit labels; reviewer takeover after agy fix1, 22/22 task tests, tsc exit 0, npm test exit 1 (808 total / 801 pass / 7 baseline fail), 14 viewed fixture screenshots at 1280/390; no live DB mutation or commit |
+| `TBD` | fin-b2b-audit-fixes: stored-row edit guard and ignored client unit fields; reject contracted type changes; normalize legacy contract labels; retain last-unit piastres; agy fix1 restores listing-versus-contract metrics and removes duplicate availability exports; reviewer PASS, no takeover, 28/28 task tests, tsc exit 0, npm test exit 1 (814 total / 807 pass / 7 exact baseline fail); no UI changes, DB access or commit |
 
 ## Verified on the real DB (2026-10-07, real session)
 - Ready panel: both partners show 1,041,666.50 on the Gouna building.

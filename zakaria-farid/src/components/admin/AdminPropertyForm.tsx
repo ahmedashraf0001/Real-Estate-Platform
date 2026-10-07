@@ -22,7 +22,7 @@ import { saveProperty, uploadMediaFile } from '@/app/actions/properties';
 import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge, buildZoneInstances } from '@/lib/layering';
 import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 import type { ZoneInstance } from '@/lib/layering';
-import type { Property, PropertyVideo } from '@/lib/supabase/types';
+import type { Property, PropertyVideo, BuildingUnitItem } from '@/lib/supabase/types';
 import {
   PartnerShareItem,
   SystemPartner,
@@ -213,6 +213,24 @@ function inferSubtype(property: Property | undefined): FormValues['subtype'] {
   if (/السطح|Roof/.test(text) && zones.length > 0) return 'standard_roof';
   if (/Private Garden|الحديقة الخاصة/.test(text)) return 'ground';
   return 'standard';
+}
+
+function hydrateBuildingConfig(units?: BuildingUnitItem[] | null): { totalFloors: number | ''; unitsPerFloor: number | '' } {
+  if (!units || !Array.isArray(units) || units.length === 0) {
+    return { totalFloors: '', unitsPerFloor: '' };
+  }
+  let maxFloor = 0;
+  const floorCounts: Record<number, number> = {};
+  for (const u of units) {
+    const f = typeof u.floor === 'number' && !isNaN(u.floor) ? u.floor : 1;
+    if (f > maxFloor) maxFloor = f;
+    floorCounts[f] = (floorCounts[f] || 0) + 1;
+  }
+  const maxPerFloor = maxFloor > 0 ? Math.max(...Object.values(floorCounts), 0) : 0;
+  return {
+    totalFloors: maxFloor > 0 ? maxFloor : '',
+    unitsPerFloor: maxPerFloor > 0 ? maxPerFloor : ''
+  };
 }
 
 function generateSlug(text: string) {
@@ -459,6 +477,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     return [];
   });
 
+  const initialBuildingConfig = property ? hydrateBuildingConfig(property.building_units) : { totalFloors: '', unitsPerFloor: '' };
+
   const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: property ? {
@@ -470,8 +490,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       area_sqm: property.area_sqm,
       type: (['apartment', 'building', 'garage'].includes(property.type) ? property.type : 'apartment') as 'apartment' | 'building' | 'garage',
       subtype: inferSubtype(property),
-      total_floors: '',
-      units_per_floor: '',
+      total_floors: initialBuildingConfig.totalFloors as FormValues['total_floors'],
+      units_per_floor: initialBuildingConfig.unitsPerFloor as FormValues['units_per_floor'],
       location: property.location,
       latitude: property.latitude ?? undefined,
       longitude: property.longitude ?? undefined,
@@ -760,6 +780,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         spec_layers: zoneInstances,
         videos: videos,
         video_url: videos[0]?.url || null,
+        total_floors: data.type === 'building' && data.total_floors !== '' && data.total_floors !== undefined ? Number(data.total_floors) : undefined,
+        units_per_floor: data.type === 'building' && data.units_per_floor !== '' && data.units_per_floor !== undefined ? Number(data.units_per_floor) : undefined,
         partner_splits: data.type === 'building' 
           ? partnerSplits.map(p => ({
               partner_name: p.partnerName,
@@ -791,7 +813,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Please try again.';
       console.error('Save error:', err);
-      toast.error(isAr ? 'فشل الحفظ. يرجى المحاولة مرة أخرى.' : 'Save failed: ' + errMsg);
+      toast.error(isAr ? (errMsg || 'فشل الحفظ. يرجى المحاولة مرة أخرى.') : 'Save failed: ' + errMsg);
     } finally {
       setSaving(false);
     }

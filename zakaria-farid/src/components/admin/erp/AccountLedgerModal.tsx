@@ -18,6 +18,7 @@ import {
 import { ERPAccount, ERPJournalEntry, ERPContract } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
+import { formatUnitWithFloor } from '@/lib/erp/projectStatusHelper';
 import { toast } from 'sonner';
 import { localizeJournalDescription, localizeJournalMemo, localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { exportAccountLedgerExcel } from '@/lib/erp/excelExporter';
@@ -332,12 +333,16 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       unitInfo = ct.unit_id;
     }
 
-    if (unitInfo && isAr) {
-      unitInfo = unitInfo
-        .replace(/^.*?apt-(\d+)/i, 'شقة $1')
-        .replace(/^.*?unit-(\d+)/i, 'وحدة $1');
-      if (/^\d+$/.test(unitInfo.trim())) {
-        unitInfo = `شقة ${unitInfo.trim()}`;
+    if (unitInfo) {
+      const matchedUnit = prop?.building_units?.find(u => u.unit_id === ct.building_unit_id || u.unit_id === ct.unit_id || u.unit_number === unitInfo);
+      if (matchedUnit) {
+        unitInfo = formatUnitWithFloor(matchedUnit.unit_number, matchedUnit.floor, isAr);
+      } else if (ct.building_unit_number && prop?.type === 'building') {
+        unitInfo = formatUnitWithFloor(unitInfo, undefined, isAr);
+      } else if (isAr) {
+        // Retain existing standalone/generic-unit wording.
+        unitInfo = unitInfo.replace(/^.*?apt-(\d+)/i, 'شقة $1').replace(/^.*?unit-(\d+)/i, 'وحدة $1');
+        if (/^\d+$/.test(unitInfo.trim())) unitInfo = `شقة ${unitInfo.trim()}`;
       }
     }
 
