@@ -108,6 +108,57 @@ export function getPropertyCostAccountCode(category: PropertyCostCategory): stri
 }
 
 /**
+ * Builds balanced double-entry correction lines for cost-item edits, adjustments, and deletions.
+ * Keeping the general ledger in exact alignment with the cost sub-ledger.
+ */
+export function buildCostCorrectionJournalLines(params: {
+  category: PropertyCostCategory;
+  delta: string | number;
+  memo: string;
+}): ConstructionExpenseJournalLine[] {
+  const d = D(params.delta);
+  if (d.isZero()) {
+    return [];
+  }
+
+  const categoryAccount = getPropertyCostAccountCode(params.category);
+
+  if (d.gt(0)) {
+    const amt = d.toFixed(2);
+    return [
+      {
+        account_code: categoryAccount,
+        debit_amount: amt,
+        credit_amount: '0.00',
+        memo: params.memo
+      },
+      {
+        account_code: '201000',
+        debit_amount: '0.00',
+        credit_amount: amt,
+        memo: params.memo
+      }
+    ];
+  }
+
+  const absAmt = d.abs().toFixed(2);
+  return [
+    {
+      account_code: '201000',
+      debit_amount: absAmt,
+      credit_amount: '0.00',
+      memo: params.memo
+    },
+    {
+      account_code: categoryAccount,
+      debit_amount: '0.00',
+      credit_amount: absAmt,
+      memo: params.memo
+    }
+  ];
+}
+
+/**
  * Builds the balanced posting for a construction cost.
  *
  * Immediate cash/bank purchases credit the selected treasury account. Supplier

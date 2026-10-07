@@ -44,6 +44,10 @@ import {
   computeProjectPayoutPosition
 } from '@/lib/erp/partnersEngine';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
+import {
+  buildCostCorrectionJournalLines,
+  calculateCostItemEffectiveTotals
+} from '@/lib/erp/propertyCostEngine';
 import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
 import { InspectorPayload } from '../ZFInspectorDrawer';
 import { NewContractWizardPayload } from '../v2/modals/NewContractWizardModal';
@@ -4052,52 +4056,404 @@ export function ERPWorkstationProvider({
   const handleDeletePropertyCostItem = useCallback(async (itemId: string) => {
     setIsMutating(true);
     try {
-      await ERPSupabaseService.deletePropertyCostItem(supabase, itemId);
+      const item = data.propertyCosts.find(c => c.item_id === itemId || c.id === itemId);
+      if (!item) {
+        throw new Error(isAr ? 'بند التكلفة غير موجود' : 'Cost item not found');
+      }
+
+      const paid = D(item.paid_amount_egp || 0);
+      if (paid.gt(0)) {
+        throw new Error(
+          isAr
+            ? `لا يمكن حذف بند تكلفة تم سداد مبالغ منه بالفعل (${paid.toFixed(2)} ج.م).`
+            : `Cannot delete cost item with recorded payments (${paid.toFixed(2)} EGP).`
+        );
+      }
+
+      const totals = calculateCostItemEffectiveTotals(item);
+      const netEffectiveCost = D(totals.netEffectiveCost);
+
+      if (!netEffectiveCost.isZero()) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
+        if (!ensureActivePeriodOpen(isAr ? 'حذف بند تكلفة' : 'Delete Cost Item', targetPeriod)) {
+          throw new Error(
+            isAr
+              ? `الفترة المحاسبية (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) مغلقة أو مقفلة. يُحظر حذف البند.`
+              : `Fiscal period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) is closed or locked.`
+          );
+        }
+
+        const cleanItemId = item.item_id || item.id || itemId;
+        const entryNumber = `JE-WIP-DEL-${cleanItemId.slice(0, 8).toUpperCase()}`;
+        const memo = isAr
+          ? `إلغاء وعكس بند تكلفة: ${item.item_name_ar || ''} (مبلغ: ${netEffectiveCost.toFixed(2)})`
+          : `Reversal of cost item: ${item.item_name_en || item.item_name_ar || ''} (amount: ${netEffectiveCost.toFixed(2)})`;
+
+        const lines = buildCostCorrectionJournalLines({
+          category: item.category,
+          delta: netEffectiveCost.times(-1).toFixed(2),
+          memo
+        });
+
+        const reversalEntry = GeneralLedgerEngine.validateAndCreateEntry({
+          entry_number: entryNumber,
+          entry_date: todayStr,
+          period: targetPeriod,
+          description: memo,
+          source_module: 'WIP_ALLOCATION',
+          source_entity_id: item.property_id,
+          created_by: currentUser?.email || currentUser?.id || 'CFO_FARID',
+          lines
+        });
+
+        await persistJournalEntryGuarded(reversalEntry);
+
+        setData(prev => ({
+          ...prev,
+          journalEntries: prev.journalEntries.some(e => e.entry_id === reversalEntry.entry_id || e.entry_number === reversalEntry.entry_number)
+            ? prev.journalEntries
+            : [reversalEntry, ...prev.journalEntries]
+        }));
+
+        try {
+          await ERPSupabaseService.deletePropertyCostItem(supabase, cleanItemId);
+        } catch (deleteErr) {
+          try {
+            const compMemo = isAr
+              ? `تراجع عن إلغاء بند تكلفة: ${item.item_name_ar || ''} (إعادة إثبات)`
+              : `Compensating entry for failed deletion of cost item: ${item.item_name_en || item.item_name_ar || ''}`;
+            const compLines = buildCostCorrectionJournalLines({
+              category: item.category,
+              delta: netEffectiveCost.toFixed(2),
+              memo: compMemo
+            });
+            const compEntry = GeneralLedgerEngine.validateAndCreateEntry({
+              entry_number: `JE-WIP-DEL-ROLLBACK-${cleanItemId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+              entry_date: todayStr,
+              period: targetPeriod,
+              description: compMemo,
+              source_module: 'WIP_ALLOCATION',
+              source_entity_id: item.property_id,
+              created_by: currentUser?.email || currentUser?.id || 'CFO_FARID',
+              lines: compLines
+            });
+            await persistJournalEntryGuarded(compEntry);
+
+            setData(prev => ({
+              ...prev,
+              journalEntries: prev.journalEntries.some(e => e.entry_id === compEntry.entry_id || e.entry_number === compEntry.entry_number)
+                ? prev.journalEntries
+                : [compEntry, ...prev.journalEntries]
+            }));
+          } catch (compErr) {
+            console.error('CRITICAL: Financial reversal recovery failed:', compErr);
+            const errorMessage = (error: unknown): string =>
+              typeof error === 'object' && error !== null && 'message' in error
+                ? String(error.message)
+                : String(error);
+            const delMsg = errorMessage(deleteErr);
+            const cmpMsg = errorMessage(compErr);
+            const failureMsg = isAr
+              ? `فشل حذف بند التكلفة (${delMsg}) وفشل تدارك القيد العكسي (${cmpMsg}). يرجى المراجعة المالية الفورية.`
+              : `Deletion failed (${delMsg}) and financial reversal recovery failed (${cmpMsg}). Immediate ledger review required.`;
+
+            const combinedError = typeof AggregateError === 'function'
+              ? new AggregateError([deleteErr, compErr], failureMsg)
+              : Object.assign(new Error(failureMsg), { causes: [deleteErr, compErr] });
+
+            throw combinedError;
+          }
+          throw deleteErr;
+        }
+      } else {
+        await ERPSupabaseService.deletePropertyCostItem(supabase, item.item_id || item.id || itemId);
+      }
+
       setData(prev => ({
         ...prev,
         propertyCosts: prev.propertyCosts.filter(c => c.item_id !== itemId && c.id !== itemId)
       }));
       toast.info(isAr ? 'تم حذف بند التكلفة' : 'Cost item deleted', { duration: 3000 });
     } catch (err) {
-      console.warn('Fallback deleting property cost item:', err);
-      setData(prev => ({
-        ...prev,
-        propertyCosts: prev.propertyCosts.filter(c => c.item_id !== itemId && c.id !== itemId)
-      }));
-      toast.info(isAr ? 'تم حذف بند التكلفة' : 'Cost item deleted', { duration: 3000 });
+      console.error('CRITICAL: Failed to delete property cost item:', err);
+      toast.error(
+        isAr ? 'فشل حذف بند التكلفة' : 'Failed to delete cost item',
+        { description: err instanceof Error ? err.message : String(err) }
+      );
+      throw err;
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, isAr]);
+  }, [supabase, isAr, data.propertyCosts, resolveAndEnsurePeriodForDate, ensureActivePeriodOpen, currentUser, persistJournalEntryGuarded]);
 
   const handleUpdatePropertyCostItem = useCallback(async (item: ERPPropertyCostItem) => {
     setIsMutating(true);
     try {
-      await ERPSupabaseService.updatePropertyCostItem(supabase, item);
+      const original = data.propertyCosts.find(c => c.item_id === item.item_id || c.id === item.item_id);
+      if (!original) {
+        throw new Error(isAr ? 'بند التكلفة غير موجود' : 'Cost item not found');
+      }
+
+      // Merge only editable fields from modal; retain current state adjustments, installments, and paid amount
+      const mergedItem: ERPPropertyCostItem = {
+        ...original,
+        total_cost_egp: item.total_cost_egp !== undefined ? item.total_cost_egp : original.total_cost_egp,
+        ...(item.total_amount !== undefined ? { total_amount: item.total_amount } : (original.total_amount !== undefined ? { total_amount: original.total_amount } : {})),
+        item_name_ar: item.item_name_ar !== undefined ? item.item_name_ar : original.item_name_ar,
+        item_name_en: item.item_name_en !== undefined ? item.item_name_en : original.item_name_en,
+        category: item.category !== undefined ? item.category : original.category,
+        phase: item.phase !== undefined ? item.phase : original.phase,
+        supplier_contractor: item.supplier_contractor,
+        invoice_ref: item.invoice_ref,
+        quantity: item.quantity !== undefined ? item.quantity : original.quantity,
+        unit: item.unit !== undefined ? item.unit : original.unit,
+        unit_cost_egp: item.unit_cost_egp !== undefined ? item.unit_cost_egp : original.unit_cost_egp,
+        notes: item.notes,
+        due_date: item.due_date,
+        adjustments: original.adjustments,
+        payable_installments: original.payable_installments,
+        paid_amount_egp: original.paid_amount_egp,
+        updated_at: new Date().toISOString()
+      };
+
+      const effectiveTotals = calculateCostItemEffectiveTotals(mergedItem);
+      // Recorded payments are kept as stored; they can include payments outside the installment schedule.
+      const recordedPaid = D(original.paid_amount_egp ?? effectiveTotals.paidAmount ?? 0);
+      mergedItem.net_effective_cost_egp = effectiveTotals.netEffectiveCost;
+      mergedItem.paid_amount_egp = recordedPaid.toFixed(2);
+      mergedItem.remaining_amount_egp = D(effectiveTotals.netEffectiveCost).minus(recordedPaid).toFixed(2);
+
+      const paidAmount = D(original.paid_amount_egp || effectiveTotals.paidAmount || 0);
+      const newTotal = D(mergedItem.total_cost_egp || 0);
+      if (newTotal.lt(paidAmount)) {
+        throw new Error(
+          isAr
+            ? `لا يمكن تقليل إجمالي التكلفة (${newTotal.toFixed(2)} ج.م) عن المبلغ المسدد (${paidAmount.toFixed(2)} ج.م).`
+            : `New total cost (${newTotal.toFixed(2)}) cannot be less than paid amount (${paidAmount.toFixed(2)}).`
+        );
+      }
+
+      const delta = newTotal.minus(original.total_cost_egp || original.total_amount || 0);
+      let journalEntry: ERPJournalEntry | undefined;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
+      if (!ensureActivePeriodOpen(isAr ? 'تعديل تكلفة بند' : 'Cost Item Edit', targetPeriod)) {
+        throw new Error(
+          isAr
+            ? `الفترة المحاسبية (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) مغلقة أو مقفلة. يُحظر تعديل البند.`
+            : `Fiscal period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) is closed or locked.`
+        );
+      }
+
+      if (!delta.isZero()) {
+        const itemId = mergedItem.item_id || mergedItem.id || '';
+        const entryNumber = `JE-WIP-EDIT-${itemId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+        const memo = isAr
+          ? `تعديل تكلفة بند: ${mergedItem.item_name_ar || ''} (فرق: ${delta.toFixed(2)})`
+          : `Cost adjustment for item: ${mergedItem.item_name_en || mergedItem.item_name_ar || ''} (delta: ${delta.toFixed(2)})`;
+
+        const lines = buildCostCorrectionJournalLines({
+          category: mergedItem.category,
+          delta: delta.toFixed(2),
+          memo
+        });
+
+        journalEntry = GeneralLedgerEngine.validateAndCreateEntry({
+          entry_number: entryNumber,
+          entry_date: todayStr,
+          period: targetPeriod,
+          description: memo,
+          source_module: 'WIP_ALLOCATION',
+          source_entity_id: mergedItem.property_id,
+          created_by: currentUser?.email || currentUser?.id || 'CFO_FARID',
+          lines
+        });
+
+        await ERPSupabaseService.updatePropertyCostItem(supabase, mergedItem);
+        try {
+          await persistJournalEntryGuarded(journalEntry);
+        } catch (journalErr) {
+          await ERPSupabaseService.updatePropertyCostItem(supabase, original);
+          throw journalErr;
+        }
+      } else {
+        await ERPSupabaseService.updatePropertyCostItem(supabase, mergedItem);
+      }
+
       setData(prev => ({
         ...prev,
-        propertyCosts: prev.propertyCosts.map(c => (c.item_id === item.item_id || c.id === item.item_id) ? item : c)
+        propertyCosts: prev.propertyCosts.map(c => (c.item_id === mergedItem.item_id || c.id === mergedItem.item_id) ? mergedItem : c),
+        journalEntries: journalEntry ? [journalEntry, ...prev.journalEntries] : prev.journalEntries
       }));
       toast.success(isAr ? 'تم تحديث بيانات البند بنجاح' : 'Cost item updated');
     } catch (err) {
-      console.warn('Fallback updating property cost item:', err);
-      setData(prev => ({
-        ...prev,
-        propertyCosts: prev.propertyCosts.map(c => (c.item_id === item.item_id || c.id === item.item_id) ? item : c)
-      }));
+      console.error('CRITICAL: Failed to update property cost item:', err);
+      toast.error(
+        isAr ? 'فشل تحديث بيانات بند التكلفة' : 'Failed to update cost item',
+        { description: err instanceof Error ? err.message : String(err) }
+      );
+      throw err;
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, isAr]);
+  }, [supabase, isAr, data.propertyCosts, resolveAndEnsurePeriodForDate, ensureActivePeriodOpen, currentUser, persistJournalEntryGuarded]);
 
   const handleAddCostAdjustment = useCallback(async (updatedItem: ERPPropertyCostItem) => {
     setIsMutating(true);
     try {
-      await ERPSupabaseService.addPropertyCostAdjustment(supabase, updatedItem);
+      const original = data.propertyCosts.find(c => c.item_id === updatedItem.item_id || c.id === updatedItem.item_id);
+      if (!original) {
+        throw new Error(isAr ? 'بند التكلفة الأصلي غير موجود' : 'Original cost item not found');
+      }
+
+      const incomingAdjustments = updatedItem.adjustments || [];
+      if (incomingAdjustments.some(
+        a => typeof a.adjustment_id !== 'string' || a.adjustment_id.trim().length === 0
+      )) {
+        throw new Error(isAr
+          ? 'يجب أن تحتوي كل تسوية على معرف صالح'
+          : 'Every adjustment must have a valid adjustment_id');
+      }
+
+      const originalAdjustments = original.adjustments || [];
+
+      // Check for stale adjustments: every existing adjustment must be present and unchanged
+      for (const origAdj of originalAdjustments) {
+        const matching = incomingAdjustments.find(a => a.adjustment_id === origAdj.adjustment_id);
+        if (!matching) {
+          throw new Error(
+            isAr
+              ? 'بيانات التسويات غير محدثة (بيانات قديمة). يُرجى تحديث الصفحة وإعادة المحاولة.'
+              : 'Adjustment data is stale. Please refresh the page and try again.'
+          );
+        }
+        if (
+          matching.adjustment_type !== origAdj.adjustment_type ||
+          matching.amount_egp !== origAdj.amount_egp ||
+          matching.parent_item_id !== origAdj.parent_item_id ||
+          matching.created_at !== origAdj.created_at ||
+          matching.journal_entry_id !== origAdj.journal_entry_id ||
+          matching.reason !== origAdj.reason ||
+          matching.reference_invoice !== origAdj.reference_invoice ||
+          matching.payment_method !== origAdj.payment_method ||
+          matching.logged_by !== origAdj.logged_by
+        ) {
+          throw new Error(
+            isAr
+              ? 'بيانات التسويات غير محدثة (بيانات قديمة). يُرجى تحديث الصفحة وإعادة المحاولة.'
+              : 'Adjustment data is stale. Please refresh the page and try again.'
+          );
+        }
+      }
+
+      const existingAdjustmentIds = new Set(
+        originalAdjustments
+          .map(a => a.adjustment_id)
+          .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      );
+      const newAdjustments = incomingAdjustments.filter(
+        a => typeof a.adjustment_id === 'string' && a.adjustment_id.trim().length > 0 && !existingAdjustmentIds.has(a.adjustment_id)
+      );
+
+      if (newAdjustments.length !== 1) {
+        throw new Error(
+          newAdjustments.length === 0
+            ? (isAr ? 'لم يتم العثور على أي تسوية جديدة ذات معرف صالح' : 'No new adjustment with valid adjustment_id found')
+            : (isAr ? 'تم العثور على أكثر من تسوية جديدة، يلزم تسوية واحدة فقط' : 'Multiple new adjustments found; exactly one required')
+        );
+      }
+
+      if (incomingAdjustments.length !== originalAdjustments.length + 1) {
+        throw new Error(
+          isAr
+            ? 'بيانات التسويات غير محدثة (بيانات قديمة). يُرجى تحديث الصفحة وإعادة المحاولة.'
+            : 'Adjustment data is stale. Please refresh the page and try again.'
+        );
+      }
+
+      const newAdjustment = newAdjustments[0];
+
+      let delta = D(0);
+      if (newAdjustment.adjustment_type === 'SUPPLEMENT_UNDERPAYMENT') {
+        delta = D(newAdjustment.amount_egp || 0).abs();
+      } else if (newAdjustment.adjustment_type === 'REFUND_OVERPAYMENT') {
+        const refundAmt = D(newAdjustment.amount_egp || 0).abs();
+        const currentTotals = calculateCostItemEffectiveTotals(original);
+        const currentNetCost = D(currentTotals.netEffectiveCost);
+        if (refundAmt.gt(currentNetCost)) {
+          throw new Error(
+            isAr
+              ? `لا يمكن أن يتجاوز مبلغ الاسترداد (${refundAmt.toFixed(2)} ج.م) صافي التكلفة الفعلي الحالي للبند (${currentNetCost.toFixed(2)} ج.م).`
+              : `Refund amount (${refundAmt.toFixed(2)}) cannot exceed current net effective cost (${currentNetCost.toFixed(2)}).`
+          );
+        }
+        delta = D(0).minus(refundAmt);
+      }
+
+      const itemToSave: ERPPropertyCostItem = {
+        ...original,
+        adjustments: [...originalAdjustments, newAdjustment]
+      };
+      const effectiveTotals = calculateCostItemEffectiveTotals(itemToSave);
+      const recordedPaid = D(original.paid_amount_egp ?? effectiveTotals.paidAmount ?? 0);
+      itemToSave.net_effective_cost_egp = effectiveTotals.netEffectiveCost;
+      itemToSave.paid_amount_egp = recordedPaid.toFixed(2);
+      itemToSave.remaining_amount_egp = D(effectiveTotals.netEffectiveCost).minus(recordedPaid).toFixed(2);
+
+      let journalEntry: ERPJournalEntry | undefined;
+
+      if (!delta.isZero()) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
+        if (!ensureActivePeriodOpen(isAr ? 'تسوية تكلفة بند' : 'Cost Adjustment', targetPeriod)) {
+          throw new Error(
+            isAr
+              ? `الفترة المحاسبية (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) مغلقة أو مقفلة. يُحظر تسجيل التسوية.`
+              : `Fiscal period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) is closed or locked.`
+          );
+        }
+
+        const entryNumber = `JE-WIP-ADJ-${newAdjustment.adjustment_id.slice(0, 8).toUpperCase()}`;
+        const memo = isAr
+          ? `تسوية بند تكلفة (${newAdjustment.adjustment_type === 'SUPPLEMENT_UNDERPAYMENT' ? 'سداد مكمل' : 'استرداد زيادة'}): ${newAdjustment.reason || itemToSave.item_name_ar || ''}`
+          : `Cost adjustment (${newAdjustment.adjustment_type}): ${newAdjustment.reason || itemToSave.item_name_en || itemToSave.item_name_ar || ''}`;
+
+        const lines = buildCostCorrectionJournalLines({
+          category: itemToSave.category,
+          delta: delta.toFixed(2),
+          memo
+        });
+
+        journalEntry = GeneralLedgerEngine.validateAndCreateEntry({
+          entry_number: entryNumber,
+          entry_date: todayStr,
+          period: targetPeriod,
+          description: memo,
+          source_module: 'WIP_ALLOCATION',
+          source_entity_id: itemToSave.property_id,
+          created_by: currentUser?.email || currentUser?.id || 'CFO_FARID',
+          lines
+        });
+
+        await ERPSupabaseService.addPropertyCostAdjustment(supabase, itemToSave);
+        try {
+          await persistJournalEntryGuarded(journalEntry);
+        } catch (journalErr) {
+          await ERPSupabaseService.updatePropertyCostItem(supabase, original);
+          throw journalErr;
+        }
+      } else {
+        await ERPSupabaseService.addPropertyCostAdjustment(supabase, itemToSave);
+      }
+
       setData(prev => ({
         ...prev,
-        propertyCosts: prev.propertyCosts.map(c => (c.item_id === updatedItem.item_id || c.id === updatedItem.item_id) ? updatedItem : c)
+        propertyCosts: prev.propertyCosts.map(c => (c.item_id === itemToSave.item_id || c.id === itemToSave.item_id) ? itemToSave : c),
+        journalEntries: journalEntry ? [journalEntry, ...prev.journalEntries] : prev.journalEntries
       }));
+      toast.success(isAr ? 'تم حفظ تسوية بند التكلفة بنجاح' : 'Cost adjustment recorded successfully');
     } catch (err) {
       console.error('CRITICAL: Failed to persist cost adjustment to database:', err);
       toast.error(
@@ -4108,7 +4464,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, isAr]);
+  }, [supabase, isAr, data.propertyCosts, resolveAndEnsurePeriodForDate, ensureActivePeriodOpen, currentUser, persistJournalEntryGuarded]);
 
   const handleRecordCostPayablePayment = useCallback(async (updatedItem: ERPPropertyCostItem) => {
     setIsMutating(true);

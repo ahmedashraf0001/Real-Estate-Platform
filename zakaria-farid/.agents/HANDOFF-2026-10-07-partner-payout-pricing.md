@@ -19,6 +19,7 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 | `c1eb234` | Collections share = collected cash × split % (contracts store `cash_share` 0.00, so it was always 0) |
 | `c494766` | Side rail alert = unpaid capital commitments only (user-confirmed) |
 | `999a962` | Calculator marks units with a live contract as contracted (placeholder units are all "available") |
+| `TBD` | fin-b1-cost-journals + fin-b1b-audit-fixes: balanced journals for cost edits/adjustments/deletes; reject refunds > net cost, retain current adjustments/installments/paid amounts, allow clearing editable optional fields, reject any changed adjustment history; R2 ordering/rollback/validation covered; reviewer: tsc 0, 20/20 targeted tests, npm test 785 total / 778 pass / 7 baseline fail (exit 1) |
 
 ## Verified on the real DB (2026-10-07, real session)
 - Ready panel: both partners show 1,041,666.50 on the Gouna building.
