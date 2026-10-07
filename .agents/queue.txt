@@ -6,4 +6,5 @@ ui-small-fixes done 7175234
 # B6 folded into ui-small-fixes R8; B7 dropped (user 2026-10-07)
 fin-b9-floors-include-ground done ecf8675
 fin-c1-tranche-resplit done 8b1efae
-fin-c2-partner-id-lines running
+fin-c2-partner-id-lines done 4a021ff
+fin-c2b-partner-id-race running
