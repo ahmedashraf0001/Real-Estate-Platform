@@ -46,7 +46,8 @@ import {
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import {
   buildCostCorrectionJournalLines,
-  calculateCostItemEffectiveTotals
+  calculateCostItemEffectiveTotals,
+  resplitUnpaidInstallments
 } from '@/lib/erp/propertyCostEngine';
 import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
 import { InspectorPayload } from '../ZFInspectorDrawer';
@@ -4235,6 +4236,12 @@ export function ERPWorkstationProvider({
       }
 
       const delta = newTotal.minus(original.total_cost_egp || original.total_amount || 0);
+      if (!delta.isZero() && mergedItem.payable_installments && mergedItem.payable_installments.length > 0) {
+        mergedItem.payable_installments = resplitUnpaidInstallments(
+          mergedItem.payable_installments,
+          effectiveTotals.netEffectiveCost
+        );
+      }
       let journalEntry: ERPJournalEntry | undefined;
 
       const todayStr = new Date().toISOString().split('T')[0];

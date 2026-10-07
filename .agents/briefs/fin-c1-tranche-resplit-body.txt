@@ -1,0 +1,38 @@
+TASK fin-c1-tranche-resplit (FINANCIAL_CORE: payable schedule, no new postings)
+
+GOAL
+Editing a cost item's total in its 24-hour window keeps the old payable tranches. Live repro: item c1729fd2 edited 1,000,001 -> 1,000,000; total_cost_egp and remaining_amount_egp are 1,000,000, but its 7 payable_installments still sum to 1,000,001.
+
+RULE ([user-confirmed 2026-10-07], PROJECT_SPEC.md "Partner payouts and final pricing")
+When a cost item's total is edited, its new remaining amount is re-split evenly over its unpaid tranches; the last unpaid tranche absorbs rounding. Paid and partly paid amounts never change.
+
+READ FIRST
+- zakaria-farid/src/components/admin/erp/context/ERPWorkstationContext.tsx ~4185-4300: the edit handler. mergedItem copies original.payable_installments unchanged (~4215). The journal for the difference is already correct; do not touch it.
+- How tranches are first built on create (grep "Construction Tranche" / title_ar "القسط الإنشائي") and the ERPPropertyCostItem / installment types in zakaria-farid/src/lib/erp/types.ts.
+- zakaria-farid/src/lib/erp/propertyCostEngine.ts (calculateCostItemEffectiveTotals) for the net/paid basis.
+
+REQUIRED
+R1. Add ONE exported pure helper in zakaria-farid/src/lib/erp/propertyCostEngine.ts, e.g. resplitUnpaidInstallments(installments, newNetTotal): returns new installments.
+    - Fully paid tranches: unchanged.
+    - A partly paid tranche keeps its paid_amount_egp; treat its amount_egp floor as its paid amount. Simplest correct rule: each partly paid tranche keeps amount_egp = paid_amount_egp + its share; document the rule you chose in a one-line comment.
+    - Remaining to split = newNetTotal − sum(paid_amount_egp of all tranches). Split evenly in piastres over tranches that are not fully paid; last such tranche absorbs rounding. Sum of amount_egp must equal newNetTotal exactly.
+    - If there are no installments, return them unchanged. If remaining < 0, throw (the handler already blocks total < paid, keep that).
+    - Use D() (Decimal), never float math.
+R2. In the edit handler, when the total changes and the item has payable_installments, set mergedItem.payable_installments from R1 using the net effective total (net of adjustments, same basis as remaining_amount_egp). Status fields: keep each tranche's status consistent (fully paid stays PAID; others keep PENDING/PARTIALLY_PAID per their paid amount).
+R3. Persist through the existing save path (no new DB columns, no migration).
+
+OUT OF SCOPE
+No journal changes, no UI/layout changes, no backfill of existing items.
+
+TESTS (RED first), new file zakaria-farid/src/lib/erp/__tests__/trancheResplit.test.ts importing production code:
+T1. 7 unpaid tranches summing 1,000,001, new total 1,000,000: 7 tranches, sum exactly 1,000,000, first six equal, last absorbs rounding.
+T2. 3 tranches of 100,000; first fully paid, second paid 40,000; new total 360,000: tranche 1 unchanged (100,000 paid), tranche 2 paid 40,000 stays, sum = 360,000, unpaid remainder 220,000 split evenly over tranches 2 and 3.
+T3. new total below total paid throws.
+T4. Handler-level (smallest existing seam): editing an item's total rewrites its installments so they sum to the new net total. If no seam exists without big mocking, test R1 + one assertion that the handler calls it (grep-level is NOT acceptable; use the real code path or skip T4 and say why).
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.

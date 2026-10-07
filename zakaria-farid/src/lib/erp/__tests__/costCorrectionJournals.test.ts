@@ -6,7 +6,8 @@ import ts from 'typescript';
 import { 
   buildCostCorrectionJournalLines, 
   calculateCostItemEffectiveTotals,
-  PROPERTY_COST_CATEGORIES 
+  PROPERTY_COST_CATEGORIES,
+  resplitUnpaidInstallments
 } from '../propertyCostEngine';
 import { GeneralLedgerEngine } from '../ledger';
 import { ERPAccountingPeriod, ERPJournalEntry, ERPPropertyCostItem, ERPPayableInstallment } from '../types';
@@ -141,13 +142,14 @@ function getContextHandlerFactory(handlerName: string) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText;
 
-  return new Function(
+  const fn = new Function(
     'data', 'setData', 'isAr', 'setIsMutating', 'supabase', 'currentUser',
     'resolveAndEnsurePeriodForDate', 'ensureActivePeriodOpen', 'persistJournalEntryGuarded',
     'ERPSupabaseService', 'D', 'buildCostCorrectionJournalLines', 'calculateCostItemEffectiveTotals',
-    'GeneralLedgerEngine', 'toast',
+    'GeneralLedgerEngine', 'toast', 'resplitUnpaidInstallments',
     transpiled
   );
+  return (...args: any[]) => fn(...args, resplitUnpaidInstallments);
 }
 
 describe('F1, F2, F3: Actual Context Handlers Execution & Proof', () => {
@@ -1022,6 +1024,17 @@ describe('F1, F2, F3: Actual Context Handlers Execution & Proof', () => {
         status: 'PAID'
       };
 
+      const instPending: ERPPayableInstallment = {
+        installment_id: 'inst-2',
+        cost_item_id: 'item-edit-1',
+        installment_number: 2,
+        title_ar: 'قسط 2',
+        due_date: '2026-12-01',
+        amount_egp: '470000.00',
+        paid_amount_egp: '0.00',
+        status: 'PENDING'
+      };
+
       const originalItem: ERPPropertyCostItem = {
         item_id: 'item-edit-1',
         property_id: 'prop-1',
@@ -1042,7 +1055,7 @@ describe('F1, F2, F3: Actual Context Handlers Execution & Proof', () => {
         logged_by: 'usr',
         status: 'verified',
         adjustments: [adjInState],
-        payable_installments: [instInState],
+        payable_installments: [instInState, instPending],
         supplier_contractor: 'Old supplier',
         invoice_ref: 'Old invoice',
         due_date: '2026-11-01'
@@ -1093,7 +1106,13 @@ describe('F1, F2, F3: Actual Context Handlers Execution & Proof', () => {
       const savedRow = dbCalls[0][1];
       // Saved row must keep CURRENT state adjustments, payable_installments and paid amounts
       assert.deepEqual(savedRow.adjustments, [adjInState], 'Saved row must retain state adjustments');
-      assert.deepEqual(savedRow.payable_installments, [instInState], 'Saved row must retain state payable_installments');
+      assert.equal(savedRow.payable_installments?.length, 2, 'Saved row has 2 installments');
+      assert.deepEqual(savedRow.payable_installments[0], instInState, 'Saved row must retain paid tranche unchanged');
+      assert.equal(savedRow.payable_installments[1].amount_egp, '490000.00', 'Pending tranche updated to 490,000.00');
+      assert.equal(savedRow.payable_installments[1].paid_amount_egp, '0.00', 'Pending tranche paid is 0.00');
+      assert.equal(savedRow.payable_installments[1].status, 'PENDING', 'Pending tranche status is PENDING');
+      const savedInstSum = savedRow.payable_installments.reduce((acc: any, i: any) => acc.plus(i.amount_egp), D(0));
+      assert.equal(savedInstSum.toFixed(2), '540000.00', 'Schedule sum equals net effective cost 540,000.00');
       assert.equal(savedRow.paid_amount_egp, '50000.00', 'Saved row must retain paid amount');
       assert.equal(savedRow.item_name_ar, 'خرسانة مسلحة معدلة', 'Saved row took edited name');
       assert.equal(savedRow.notes, 'ملاحظة جديدة', 'Saved row took edited notes');
@@ -1115,6 +1134,15 @@ describe('F1, F2, F3: Actual Context Handlers Execution & Proof', () => {
       // Local state updated with merged item
       assert.equal(state.propertyCosts[0].total_cost_egp, '520000.00');
       assert.deepEqual(state.propertyCosts[0].adjustments, [adjInState]);
+      assert.equal(state.propertyCosts[0].payable_installments?.length, 2);
+      assert.deepEqual(state.propertyCosts[0].payable_installments[0], instInState);
+      assert.equal(state.propertyCosts[0].payable_installments[1].amount_egp, '490000.00');
+      const stateInstSum = state.propertyCosts[0].payable_installments.reduce((acc: any, i: any) => acc.plus(i.amount_egp), D(0));
+      assert.equal(stateInstSum.toFixed(2), '540000.00');
+    });
+
+    it('F2: module import does not create globalThis.resplitUnpaidInstallments', () => {
+      assert.equal((globalThis as any).resplitUnpaidInstallments, undefined);
     });
 
     it('A3.1: Order: update row in DB, then persist the journal', async () => {
