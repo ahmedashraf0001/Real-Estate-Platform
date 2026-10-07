@@ -59,14 +59,25 @@ function mockSupabaseClient(tableStore: Map<string, Record<string, unknown>[]>):
           tableStore.set(table, [...(tableStore.get(table) ?? []), ...list]);
           return { error: null };
         },
-        async upsert(rowOrRows: Record<string, unknown> | Record<string, unknown>[], opt?: { onConflict?: string }) {
+        update(fields: Record<string, unknown>) {
+          return {
+            async eq(field: string, value: unknown) {
+              const rows = tableStore.get(table) ?? [];
+              for (const row of rows) {
+                if (row[field] === value) Object.assign(row, fields);
+              }
+              return { error: null };
+            }
+          };
+        },
+        async upsert(rowOrRows: Record<string, unknown> | Record<string, unknown>[], opt?: { onConflict?: string; ignoreDuplicates?: boolean }) {
           const list = Array.isArray(rowOrRows) ? rowOrRows : [rowOrRows];
           const conflictCol = opt?.onConflict || 'id';
           const existing = tableStore.get(table) ?? [];
           for (const item of list) {
             const idx = existing.findIndex(e => e[conflictCol] === item[conflictCol]);
             if (idx >= 0) {
-              existing[idx] = { ...existing[idx], ...item };
+              if (!opt?.ignoreDuplicates) existing[idx] = { ...existing[idx], ...item };
             } else {
               existing.push({ ...item });
             }
@@ -78,6 +89,59 @@ function mockSupabaseClient(tableStore: Map<string, Record<string, unknown>[]>):
     }
   } as unknown as SupabaseClient;
 }
+
+describe('fin-c2b-partner-id-race: immutable stored profile identity', () => {
+  it('T1: concurrent first saves return the same stored UUID without replacing partner_id', async () => {
+    const store = new Map<string, Record<string, unknown>[]>();
+    const client = mockSupabaseClient(store);
+    const originalFrom = client.from.bind(client);
+    const proposedIds: unknown[] = [];
+    const storedIds: unknown[] = [];
+    // Both lookups snapshot the empty table before either awaited insert runs.
+    client.from = ((table: string) => {
+      const query = originalFrom(table);
+      const originalUpsert = query.upsert.bind(query);
+      query.upsert = ((row: Record<string, unknown>, options: any) => {
+        proposedIds.push(row.partner_id);
+        const result = originalUpsert(row, options);
+        storedIds.push(store.get(table)?.[0]?.partner_id);
+        return result;
+      }) as typeof query.upsert;
+      return query;
+    }) as typeof client.from;
+
+    const ids = await Promise.all([
+      ERPSupabaseService.persistPartnerProfile(client, { name: 'Concurrent partner' }),
+      ERPSupabaseService.persistPartnerProfile(client, { name: 'Concurrent partner' })
+    ]);
+    assert.strictEqual(proposedIds.length, 2);
+    assert.notStrictEqual(proposedIds[0], proposedIds[1], 'Both initial lookups missed the row');
+    assert.ok(isUUID(ids[0]!));
+    assert.deepStrictEqual(ids, [storedIds[0], storedIds[0]]);
+    assert.deepStrictEqual(storedIds, [ids[0], ids[0]], 'Insert conflict never changes identity');
+    assert.strictEqual(store.get('erp_partner_profiles')?.length, 1);
+    assert.strictEqual(store.get('erp_partner_profiles')?.[0].partner_id, ids[0]);
+  });
+
+  it('T2: stale supplied UUID returns stored UUID and updates only profile fields', async () => {
+    const store = new Map<string, Record<string, unknown>[]>([
+      ['erp_partner_profiles', [{ name: 'Existing partner', partner_id: PARTNER_UUID, phone: 'old' }]]
+    ]);
+    const id = await ERPSupabaseService.persistPartnerProfile(mockSupabaseClient(store), {
+      name: 'Existing partner', partner_id: '11111111-2222-4333-8444-555555555555',
+      phone: 'new', email: 'partner@example.com', national_id: 'test-national-id', role: 'land_partner'
+    });
+    assert.strictEqual(id, PARTNER_UUID);
+    const rows = store.get('erp_partner_profiles')!;
+    assert.strictEqual(rows.length, 1);
+    assert.strictEqual(rows[0].partner_id, PARTNER_UUID);
+    assert.strictEqual(rows[0].phone, 'new');
+    assert.strictEqual(rows[0].email, 'partner@example.com');
+    assert.strictEqual(rows[0].national_id, 'test-national-id');
+    assert.strictEqual(rows[0].role, 'land_partner');
+    assert.ok(!Number.isNaN(Date.parse(rows[0].updated_at as string)));
+  });
+});
 
 /**
  * Extracts and compiles a production callback from ERPWorkstationContext.tsx

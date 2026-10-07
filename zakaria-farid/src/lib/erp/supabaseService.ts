@@ -2073,9 +2073,7 @@ export class ERPSupabaseService {
       cleanId = generateUUID();
     }
 
-    const row = {
-      partner_id: cleanId,
-      name: profile.name,
+    const fields = {
       phone: profile.phone || null,
       email: (profile as any).email || null,
       national_id: profile.national_id || null,
@@ -2083,11 +2081,28 @@ export class ERPSupabaseService {
       updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase
-      .from('erp_partner_profiles')
-      .upsert(row, { onConflict: 'name' });
+    try {
+      const { error: insertError } = await supabase
+        .from('erp_partner_profiles')
+        .upsert({ partner_id: cleanId, name: profile.name, ...fields }, { onConflict: 'name', ignoreDuplicates: true });
+      if (insertError) throw insertError;
 
-    if (error) {
+      const { error: updateError } = await supabase
+        .from('erp_partner_profiles')
+        .update(fields)
+        .eq('name', profile.name);
+      if (updateError) throw updateError;
+
+      const { data: storedRows, error: readError } = await supabase
+        .from('erp_partner_profiles')
+        .select('partner_id')
+        .eq('name', profile.name)
+        .limit(1);
+      if (readError) throw readError;
+      const storedId = storedRows?.[0]?.partner_id;
+      if (!storedId || !isUUID(storedId)) throw new Error('Stored partner profile UUID is missing or invalid.');
+      return storedId;
+    } catch (error) {
       if (this.isSchemaCacheError(error)) {
         console.warn('erp_partner_profiles table not yet in schema cache. Kept in memory.');
         return undefined;
@@ -2095,7 +2110,6 @@ export class ERPSupabaseService {
       throw error;
     }
 
-    return cleanId;
   }
 
   /**
