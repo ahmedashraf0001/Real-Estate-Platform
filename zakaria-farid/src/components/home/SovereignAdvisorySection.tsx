@@ -438,26 +438,18 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="dark"] .pillar-glass-plate {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.10) 0%,
-            rgba(18, 24, 38, 0.45) 50%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.20);
-          box-shadow: 
-            0 16px 36px rgba(0, 0, 0, 0.35),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.5);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .pillar-glass-plate {
-          background: #FFFFFF;
-          border: 1px solid rgba(184, 147, 74, 0.22);
-          box-shadow: 
-            0 4px 18px rgba(30, 24, 16, 0.04),
-            0 1px 3px rgba(0, 0, 0, 0.02);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .pillar-glass-plate:hover,
@@ -466,7 +458,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="dark"] .pillar-glass-plate.active {
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45), 0 0 20px rgba(184, 147, 74, 0.2);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .pillar-glass-plate.active,
@@ -564,26 +556,18 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="dark"] .patron-monograph-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.12) 0%,
-            rgba(18, 24, 38, 0.55) 50%,
-            rgba(10, 14, 24, 0.75) 100%
-          );
-          backdrop-filter: blur(32px) saturate(210%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 
-            0 24px 56px rgba(0, 0, 0, 0.45),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.6);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .patron-monograph-card {
-          background: #FFFFFF;
-          border: 1px solid rgba(184, 147, 74, 0.25);
-          box-shadow: 
-            0 12px 36px rgba(30, 24, 16, 0.05),
-            0 2px 6px rgba(0, 0, 0, 0.02);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .monograph-top-bar {

@@ -184,3 +184,7 @@ Implementation guide: `zakaria-farid/.claude/skills/erp-partner-payout-pricing/S
 - [user-confirmed 2026-10-08] Repricing a building in the calculator: available units get the new price per m² × their area; reserved/contracted units keep their price. The building's saved price = sum of all unit prices (locked + repriced), so it always equals the units' total. Profit and margin use that sum.
 - [user-confirmed 2026-10-08] UI removals approved for the calculator, PDC page and ledger page exactly as listed in .agents/mockups/ui-calc-pdc-ledger.html (slider, scenarios table, top 4 summary cards, side cost/history panels; PDC two tables merged, 4 view buttons, red alert banner, week calendar replaced; ledger type donut, selected-account card, period+balance cards merged, new account popup).
 - [user-confirmed 2026-10-06] The ERP's current page layout and visual design stay as they are. A page-merge and de-bloat pass was tried and rejected; change UI only where a feature needs it, inside the existing components and style.
+
+## Public property travel times (2026-10-08) [user-confirmed]
+
+- [user-confirmed 2026-10-08] Use FOSSGIS OSRM car/foot routing without an API key. Default origin is explicitly labelled Tahrir Square, Cairo (30.0444, 31.2357); geolocation is opt-in. Always show walking; cap its duration label above 3 hours. Transit/cab is estimated from car duration x 1.35 + 10 minutes. Routing failures use haversine x 1.3, car 50 km/h, walking 4.8 km/h, with every fallback row labelled estimated.

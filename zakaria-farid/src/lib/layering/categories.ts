@@ -92,7 +92,7 @@ export const ZONE_CATEGORY_BUCKETS: Record<PropertyTypeId, ZoneCategoryBucket[]>
       en: 'Utilities & Parking',
       ar: 'الخدمات والمرافق والجراج',
       emoji: '⚡',
-      addTemplates: ['bld.electric_box', 'bld.water_motors', 'bld.garage_bays'],
+      addTemplates: ['bld.building', 'bld.electric_box', 'bld.water_motors', 'bld.garage_bays'],
       match: (id, label) =>
         /electric|meter|motor|pump|water|garage|bay|parking|كهرباء|عداد|موتور|طلمبة|مضخة|جراج|باكية/.test(text(id, label)) ||
         id === 'bld.electric_box' || id === 'bld.water_motors' || id === 'bld.garage_bays' || id === 'bld.basement',
@@ -102,7 +102,7 @@ export const ZONE_CATEGORY_BUCKETS: Record<PropertyTypeId, ZoneCategoryBucket[]>
       en: 'Floor Core & Transit',
       ar: 'الممرات والمناور والسلم',
       emoji: '🏢',
-      addTemplates: ['bld.central_corridor', 'bld.staircase', 'bld.elevator', 'bld.lightwell', 'bld.balcony'],
+      addTemplates: ['bld.central_corridor', 'bld.staircase', 'bld.elevator', 'bld.lightwell', 'bld.service', 'bld.balcony'],
       match: (id, label) =>
         id !== 'bld.unit' &&
         (/corridor|stair|elevator|lightwell|duct|balcony|terrace|طرقة|ممر|سلم|مصعد|أسانسير|منور|بلكونة|تراس/.test(text(id, label)) ||

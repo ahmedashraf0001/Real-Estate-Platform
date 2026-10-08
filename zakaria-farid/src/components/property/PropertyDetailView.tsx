@@ -6,10 +6,14 @@ if (typeof window !== 'undefined') {
   L = require('leaflet');
 }
 import { Property } from '@/types';
+import { fetchRoute, estimateRoute, formatDuration } from '@/lib/geo/routing';
+import { buildPropertySpecs, getSpecGridColumns } from '@/lib/utils/propertySpecs';
+import { createFrameScheduler } from '@/lib/utils/frameScheduler';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import { cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
+import { unitCode } from '@/lib/layering/labels';
 import ArchitecturalBlueprintInspector from './ArchitecturalBlueprintInspector';
 import ViewingScheduler from './ViewingScheduler';
 import { InquiryModal } from '@/components/InquiryModal';
@@ -18,7 +22,9 @@ import { toast } from 'sonner';
 import { createCachedTileLayer } from '@/lib/mapCache';
 import { getStoredPlatformSettings } from '@/lib/services/marketIntelligence';
 import { 
-  Bed, 
+  Bed,
+  Phone,
+  MessageCircle,
   Bath, 
   Maximize2, 
   Calendar, 
@@ -183,6 +189,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     router.push('/' + locale + '/properties/' + id);
   });
   const onOpenInquiry = propOnOpenInquiry || ((type: string, propertyName?: string) => {
+    setInquiryUnitCode(undefined);
     setIsInquiryModalOpen(true);
   });
 
@@ -222,7 +229,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     broker: rawProperty.broker || {
       name: isAr ? 'زكريا فريد' : 'Zakaria Farid',
       role: isAr ? 'المالك المباشر والمستشار الأول' : 'Senior Acquisition Lead',
-      phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}` : '+201009970776',
+      phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER.replace(/\D/g, '')}` : '',
       email: '',
       avatar: ''
     },
@@ -256,6 +263,24 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       (window as any).__masrLenis.scrollTo(0, { immediate: true });
     }
   }, [propertyId]);
+
+  const specCards = buildPropertySpecs({
+    ...rawProperty,
+    beds: property.beds,
+    baths: property.baths,
+    sqm: property.sqm,
+    builtYear: property.builtYear,
+  }, locale);
+  const specIcons = { floors: Building2, units: Building2, bedrooms: Bed, bathrooms: Bath, area: Maximize2, year: Calendar, finishing: CheckCircle, type: Building2 };
+  const [pageUrl, setPageUrl] = useState('');
+  useEffect(() => { setPageUrl(window.location.href); }, [locale, property.slug]);
+  const contactPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+    ? property.broker.phone.replace(/[^0-9+]/g, '')
+    : '';
+  const contactMessage = isAr
+    ? `أرغب في الاستفسار عن العقار: ${property.title}\n${pageUrl}`
+    : `I would like to inquire about: ${property.title}\n${pageUrl}`;
+  const whatsappHref = contactPhone ? `https://wa.me/${contactPhone.replace(/\D/g, '')}?text=${encodeURIComponent(contactMessage)}` : '';
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -357,29 +382,42 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   };
 
   // Mobile sticky lead bar: hide on scroll down, show on scroll up or when scrolling stops
-  const [isLeadBarHidden, setIsLeadBarHidden] = useState(false);
+  const leadBarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 768px)');
     let lastY = window.scrollY;
-    let ticking = false;
     let idleTimer: ReturnType<typeof setTimeout>;
-    const onScroll = () => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => setIsLeadBarHidden(false), 400);
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const delta = y - lastY;
-        if (Math.abs(delta) > 8) {
-          setIsLeadBarHidden(delta > 0 && y > 120);
-          lastY = y;
-        }
-        ticking = false;
-      });
+    const setHidden = (hidden: boolean) => {
+      leadBarRef.current?.classList.toggle('lead-bar-hidden', hidden);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const scrollFrame = createFrameScheduler(() => {
+      if (!mobile.matches) return;
+      const y = window.scrollY;
+      const delta = y - lastY;
+      if (Math.abs(delta) > 8) {
+        setHidden(delta > 0 && y > 120);
+        lastY = y;
+      }
+    });
+    const onScroll = () => {
+      if (!mobile.matches) return;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => setHidden(false), 400);
+      scrollFrame.schedule();
+    };
+    const syncViewport = () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(idleTimer);
+      lastY = window.scrollY;
+      setHidden(false);
+      if (mobile.matches) window.addEventListener('scroll', onScroll, { passive: true });
+    };
+    syncViewport();
+    mobile.addEventListener('change', syncViewport);
     return () => {
       clearTimeout(idleTimer);
+      scrollFrame.dispose();
+      mobile.removeEventListener('change', syncViewport);
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
@@ -419,6 +457,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     }
   };
   const [isAmbientGlow, setIsAmbientGlow] = useState(true);
+  const [inquiryUnitCode, setInquiryUnitCode] = useState<string | undefined>();
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [mediaMode, setMediaMode] = useState<'photos' | 'videos'>('photos');
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
@@ -440,7 +479,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   
   // Live User Geolocation & Distance State
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'fallback'>('idle');
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'denied' | 'unavailable'>('idle');
 
   const [isHidePrices, setIsHidePrices] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -466,95 +505,77 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
   const similarProperties = propSimilar || [];
 
-  // Geolocation Detection
+  const locationAttempt = useRef(0);
+  useEffect(() => () => { locationAttempt.current++; }, []);
+
+  // Geolocation is opt-in; stale callbacks cannot update an unmounted view.
   const requestLocation = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      setGeoStatus('fallback');
+    const attempt = ++locationAttempt.current;
+    if (!navigator.geolocation) {
+      setUserCoords(null);
+      setGeoStatus('unavailable');
       return;
     }
     setGeoStatus('locating');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserCoords({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        });
+        if (attempt !== locationAttempt.current) return;
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setGeoStatus('located');
       },
-      () => {
-        // Fallback default: Downtown Cairo (30.0444, 31.2357)
-        setUserCoords({ lat: 30.0444, lng: 31.2357 });
-        setGeoStatus('fallback');
+      (error) => {
+        if (attempt !== locationAttempt.current) return;
+        setUserCoords(null);
+        setGeoStatus(error.code === 1 ? 'denied' : 'unavailable');
       },
       { timeout: 8000, enableHighAccuracy: true }
     );
   };
 
-  useEffect(() => {
-    requestLocation();
-  }, []);
-
-  // Only used when hasCoordinates; the location section is hidden otherwise.
   const mapCoords = property.mapCoordinates ?? { x: 0, y: 0, lat: 0, lng: 0 };
-
-  // Haversine Distance Calculation
-  const activeOrigin = userCoords || { lat: 30.0444, lng: 31.2357 };
-  const directDistanceKm = useMemo(() => {
-    const R = 6371; // Earth radius in km
-    const dLat = ((mapCoords.lat - activeOrigin.lat) * Math.PI) / 180;
-    const dLon = ((mapCoords.lng - activeOrigin.lng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((activeOrigin.lat * Math.PI) / 180) *
-      Math.cos((mapCoords.lat * Math.PI) / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }, [mapCoords, activeOrigin]);
-
-  const roadDistanceKm = directDistanceKm * 1.28;
-
-  const formatDuration = (mins: number) => {
-    if (mins < 1) return isAr ? 'أقل من دقيقة' : '< 1 min';
-    if (mins < 60) return isAr ? `${Math.round(mins)} دقيقة` : `${Math.round(mins)} mins`;
-    const hrs = Math.floor(mins / 60);
-    const remainingMins = Math.round(mins % 60);
-    if (isAr) {
-      return remainingMins > 0 ? `${hrs} ساعة و ${remainingMins} دقيقة` : `${hrs} ساعات`;
-    }
-    return remainingMins > 0 ? `${hrs} hr ${remainingMins} mins` : `${hrs} hrs`;
-  };
+  const originLat = userCoords?.lat ?? 30.0444;
+  const originLng = userCoords?.lng ?? 31.2357;
+  const [routes, setRoutes] = useState<{
+    car: Awaited<ReturnType<typeof fetchRoute>>;
+    foot: Awaited<ReturnType<typeof fetchRoute>>;
+  } | null>(null);
+  useEffect(() => {
+    setRoutes(null);
+    if (!hasCoordinates || geoStatus === 'locating') return;
+    const controller = new AbortController();
+    const from = { lat: originLat, lng: originLng };
+    const to = { lat: mapCoords.lat, lng: mapCoords.lng };
+    // Skip requests from a discarded effect, including Strict Mode's mount probe.
+    Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      const [car, foot] = await Promise.all([
+        fetchRoute('car', from, to, controller.signal), fetchRoute('foot', from, to, controller.signal)
+      ]);
+      if (!controller.signal.aborted) setRoutes({ car, foot });
+    });
+    return () => controller.abort();
+  }, [originLat, originLng, mapCoords.lat, mapCoords.lng, hasCoordinates, geoStatus === 'locating']);
 
   const travelEstimates = useMemo(() => {
-    const isNearby = roadDistanceKm <= 3.5;
+    const dLat = (mapCoords.lat - originLat) * Math.PI / 180;
+    const dLng = (mapCoords.lng - originLng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(originLat * Math.PI / 180) *
+      Math.cos(mapCoords.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    const directKm = 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
+    const car = routes?.car ?? estimateRoute('car', directKm);
+    const foot = routes?.foot ?? estimateRoute('foot', directKm);
+    const label = (routed: boolean) => routed ? (isAr ? 'عبر الطرق' : 'Routed') : (isAr ? 'تقديري' : 'Estimated');
+    const distance = (km: number) => `${km.toFixed(1)} ${isAr ? 'كم' : 'km'}`;
     return [
-      {
-        mode: isAr ? 'بالسيارة' : 'Driving',
-        sub: isAr 
-          ? `${roadDistanceKm.toFixed(1)} كم عبر الطرق السريعة` 
-          : `${roadDistanceKm.toFixed(1)} km via main highway`,
-        time: formatDuration((roadDistanceKm / 65) * 60),
-        icon: Car
-      },
-      {
-        mode: isAr ? 'مواصلات / تاكسي' : 'Transit & Cab',
-        sub: isAr 
-          ? 'عبر المحاور الرئيسية والطريق الدائري' 
-          : 'Via ring road & main arterials',
-        time: formatDuration((roadDistanceKm / 45) * 60 + 8),
-        icon: Train
-      },
-      // Walking only when it is actually close; no invented "nearby services" times.
-      ...(isNearby ? [{
-        mode: isAr ? 'سيراً على الأقدام' : 'Walking',
-        sub: isAr 
-          ? `${roadDistanceKm.toFixed(1)} كم مسار مشي مباشر` 
-          : `${roadDistanceKm.toFixed(1)} km direct walking route`,
-        time: formatDuration((roadDistanceKm / 4.8) * 60),
-        icon: Footprints
-      }] : [])
+      { mode: isAr ? 'بالسيارة' : 'Driving', sub: `${distance(car.distanceKm)} · ${label(!!routes?.car)}`,
+        time: formatDuration(car.durationMin, isAr ? 'ar' : 'en'), icon: Car },
+      { mode: isAr ? 'سيراً على الأقدام' : 'Walking', sub: `${distance(foot.distanceKm)} · ${label(!!routes?.foot)}`,
+        time: foot.durationMin > 180 ? (isAr ? 'أكثر من 3 ساعات سيراً' : 'Over 3 hours walking') : formatDuration(foot.durationMin, isAr ? 'ar' : 'en'), icon: Footprints },
+      { mode: isAr ? 'مواصلات / تاكسي' : 'Transit & Cab', sub: `${distance(car.distanceKm)} · ${label(false)}`,
+        time: formatDuration(car.durationMin * 1.35 + 10, isAr ? 'ar' : 'en'), icon: Train }
     ];
-  }, [roadDistanceKm, isAr]);
+  }, [routes, originLat, originLng, mapCoords.lat, mapCoords.lng, isAr]);
+  const travelLoading = !routes || geoStatus === 'locating';
 
   // Real Estate JSON-LD Schema
   useEffect(() => {
@@ -692,7 +713,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
                 {isHidePrices ? (
                   <>
-                    <div className="price-value" style={{ fontSize: '1.25rem', color: '#946F23', fontWeight: 800 }}>
+                    <div className="price-value" style={{ fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 800 }}>
                       {isAr ? 'السعر عند الطلب' : 'Price on Application'}
                     </div>
                     <span className="price-tax-note">
@@ -704,7 +725,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 ) : (
                   <>
                     <div className="price-value tabular-nums">
-                      {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                      {formattedPrice} <span className="price-currency" style={{ color: 'var(--text-primary)' }}>{isAr ? 'ج.م' : property.currency}</span>
                     </div>
                     <span className="price-tax-note">
                       {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m²` : ''}
@@ -1243,63 +1264,20 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <h3 className="section-subtitle">{isAr ? 'مواصفات وتفاصيل الصرح' : 'Property Specifications'}</h3>
               </div>
 
-              {/* Luxury Key Specification Cards Matrix */}
-              <div className="property-spec-matrix-grid">
-                {property.beds > 0 && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Bed size={18} className="spec-stat-icon" />
+              {/* Data-backed, type-aware specifications */}
+              <div className={`property-spec-matrix-grid spec-columns-${getSpecGridColumns(specCards.length)} spec-count-${specCards.length}`}>
+                {specCards.map(card => {
+                  const Icon = specIcons[card.id];
+                  return (
+                    <div className="spec-stat-card" key={card.id}>
+                      <div className="spec-stat-icon-wrap"><Icon size={18} className="spec-stat-icon" aria-hidden="true" /></div>
+                      <div className="spec-stat-info">
+                        <span className="spec-stat-label">{card.label}</span>
+                        <span className="spec-stat-value">{card.value}</span>
+                      </div>
                     </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'غرف النوم' : 'BEDROOMS'}</span>
-                      <span className="spec-stat-value">{property.beds} {isAr ? 'أجنحة خاصة' : 'Suites'}</span>
-                    </div>
-                  </div>
-                )}
-                {property.baths > 0 && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Bath size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'الحمامات' : 'BATHROOMS'}</span>
-                      <span className="spec-stat-value">{property.baths} {isAr ? 'حمامات فاخرة' : 'Bathrooms'}</span>
-                    </div>
-                  </div>
-                )}
-                {property.sqm > 0 && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Maximize2 size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'مساحة المباني' : 'BUILT-UP AREA'}</span>
-                      <span className="spec-stat-value">{property.sqm} {isAr ? 'م²' : 'SQM'}</span>
-                    </div>
-                  </div>
-                )}
-                {property.builtYear && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Calendar size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'سنة الإنجاز' : 'COMPLETION'}</span>
-                      <span className="spec-stat-value">{isAr ? `تسليم ${property.builtYear}` : `Built in ${property.builtYear}`}</span>
-                    </div>
-                  </div>
-                )}
-                {property.propertyType && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Building2 size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'نوع العقار' : 'TYPOLOGY'}</span>
-                      <span className="spec-stat-value">{isAr ? (rawProperty.type === 'villa' ? 'فيلا مستقلة' : rawProperty.type === 'apartment' ? 'شقة سكنية' : rawProperty.type === 'duplex' ? 'دوبلكس' : rawProperty.type === 'townhouse' ? 'تاون هاوس' : rawProperty.type === 'chalet' ? 'شاليه' : property.propertyType) : property.propertyType}</span>
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
 
               {property.narrative && (
@@ -1341,7 +1319,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               </div>
 
-              {/* All communication funnels through the Private Acquisition lead form */}
+              {contactPhone && (
+                <div className="broker-contact-row">
+                  <a className="broker-contact-btn" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={isAr ? 'التواصل عبر واتساب' : 'Contact on WhatsApp'}>
+                    <MessageCircle size={16} aria-hidden="true" /><span>{isAr ? 'واتساب' : 'WhatsApp'}</span>
+                  </a>
+                  <a className="broker-contact-btn" href={`tel:${contactPhone}`} aria-label={isAr ? 'الاتصال بالمستشار' : 'Call advisor'}>
+                    <Phone size={16} aria-hidden="true" /><span>{isAr ? 'اتصال' : 'Call'}</span>
+                  </a>
+                </div>
+              )}
               <div className="broker-action-stack">
                 {isSold ? (
                   <div style={{
@@ -1374,7 +1361,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     )}
                     <button
                       type="button"
-                      onClick={() => setIsInquiryModalOpen(true)}
+                      onClick={() => { setInquiryUnitCode(undefined); setIsInquiryModalOpen(true); }}
                       className="btn-gold broker-primary-btn"
                       title={isAr ? 'تقديم طلب شراء رسمي وسري' : 'Submit Private Acquisition Inquiry'}
                     >
@@ -1390,27 +1377,27 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 )}
               </div>
 
-              {/* Optional Cal.com VIP Viewing Scheduler (Only shown if calendar is active) */}
-              {rawProperty.calcom_event_link && (
+              {/* Viewing scheduler remains mounted even without a calendar link. */}
                 <div className="broker-calendar-section">
                   <div className="calendar-section-header">
                     <span className="calendar-eyebrow">
                       {isAr ? 'معاينة ميدانية خاصة' : 'VIP PRIVATE VIEWING'}
                     </span>
                     <p className="calendar-subtext">
-                      {isAr ? 'اختر موعد الجولة التفقدية مباشرة من التقويم.' : 'Schedule an on-site walkthrough directly.'}
+                      {rawProperty.calcom_event_link
+                        ? (isAr ? 'اختر موعد الجولة التفقدية مباشرة من التقويم.' : 'Schedule an on-site walkthrough directly.')
+                        : (isAr ? 'اطلب معاينة عبر زر الاستشارة لتنسيق موعد الزيارة.' : 'Request a viewing using the inquiry button to arrange your visit.')}
                     </p>
                   </div>
                   <ViewingScheduler
-                    calLink={rawProperty.calcom_event_link}
+                    calLink={rawProperty.calcom_event_link ?? null}
                     propertyId={rawProperty.id}
                     propertySlug={rawProperty.slug}
                     propertyTitle={property.title}
                     isAr={isAr}
-                    whatsappHref={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}`}
+                    whatsappHref={whatsappHref}
                   />
                 </div>
-              )}
             </div>
 
           </aside>
@@ -1429,6 +1416,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             <button 
               className={`gps-locate-btn ${geoStatus === 'locating' ? 'locating' : ''}`}
               onClick={requestLocation}
+              disabled={geoStatus === 'locating'}
               type="button"
               title={isAr ? 'حساب المسافة الدقيقة من موقعك الحالي' : 'Calculate travel distance from your current coordinates'}
             >
@@ -1436,9 +1424,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               <span>
                 {geoStatus === 'locating' 
                   ? (isAr ? 'جاري تحديد موقعك...' : 'Detecting Location...') 
-                  : geoStatus === 'located' 
-                    ? (isAr ? 'تم تحديد موقعك' : 'Live Location Set') 
-                    : (isAr ? 'احسب المسافة من موقعك' : 'Calculate Distance')}
+                  : (isAr ? 'استخدم موقعي' : 'Use my location')}
               </span>
             </button>
           </div>
@@ -1466,19 +1452,25 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <div className="radar-stack-header">
                   <div className="radar-stack-header-text">
                     <span className="radar-stack-eyebrow">{isAr ? 'المسافات وسهولة الوصول' : 'PROXIMITY & CONNECTIVITY'}</span>
-                    <h4 className="radar-stack-title">{isAr ? 'أوقات الوصول والتنقل' : 'Estimated Travel Times'}</h4>
+                    <h4 className="radar-stack-title">{isAr ? 'أوقات الوصول والتنقل' : 'Travel Times'}</h4>
                   </div>
                   <span className="radar-stack-status">
                     <span className="live-radar-dot" />
                     <span>
                       {geoStatus === 'located' 
-                        ? (isAr ? 'موقعك المباشر' : 'Live GPS') 
-                        : (isAr ? 'من وسط القاهرة' : 'From Downtown Cairo')}
+                        ? (isAr ? 'من موقعك الحالي' : 'From your current location')
+                        : (isAr ? 'مرجع: وسط القاهرة (ميدان التحرير)' : 'Reference: Downtown Cairo (Tahrir Square)')}
                     </span>
                   </span>
                 </div>
 
-                <div className="radar-cards-list">
+                {(geoStatus === 'denied' || geoStatus === 'unavailable') && (
+                  <p role="status" className="poi-sub-detail">{geoStatus === 'denied'
+                    ? (isAr ? 'لم تسمح بالوصول إلى موقعك. نستخدم الموقع المرجعي.' : 'Location permission denied. Using the reference origin.')
+                    : (isAr ? 'تعذر تحديد موقعك. نستخدم الموقع المرجعي.' : 'Location unavailable. Using the reference origin.')}</p>
+                )}
+                <div className="radar-cards-list" aria-busy={travelLoading} aria-live="polite">
+                  {travelLoading && <span className="travel-loading-label">{isAr ? 'جاري حساب المسارات...' : 'Calculating routes...'}</span>}
                   {travelEstimates.map((item, i) => {
                     const Icon = item.icon;
                     return (
@@ -1489,9 +1481,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                         <div className="poi-info">
                           <div className="poi-mode-row">
                             <span className="poi-mode-title">{item.mode}</span>
-                            <span className="poi-time-val">{item.time}</span>
+                            <span className="poi-time-val">{travelLoading ? <span className="travel-skeleton" aria-hidden="true" /> : item.time}</span>
                           </div>
-                          <span className="poi-sub-detail">{item.sub}</span>
+                          <span className="poi-sub-detail">{travelLoading ? <span className="travel-skeleton" aria-hidden="true" /> : item.sub}</span>
                         </div>
                       </div>
                     );
@@ -1500,7 +1492,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
                 <div className="radar-stack-footer">
                   <Compass size={13} className="compass-icon" />
-                  <span>{isAr ? `وصول مباشر وسريع عبر المحاور الرئيسية في ${property.district}` : `Direct access via ${property.district} main arterials`}</span>
+                  <span>{isAr ? 'المسارات عبر OpenStreetMap؛ المواصلات تقديرية.' : 'Routes via OpenStreetMap; transit times are estimated.'}</span>
                 </div>
               </div>
 
@@ -1519,6 +1511,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             propertyTitle={property.title} 
             locale={locale} 
             propertyType={rawProperty.type} 
+            inventory={rawProperty.building_units || []}
+            onRequestUnit={unit => {
+              setInquiryUnitCode(unitCode(unit.unit?.unit_code ?? unit.instance_label ?? ''));
+              setIsInquiryModalOpen(true);
+            }}
             propertyImages={property.images} 
           />
         </div>
@@ -1548,12 +1545,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
       {/* Mobile Sticky Bottom Lead Bar (portaled: the page-transition wrapper's filter breaks position:fixed) */}
       {mounted && typeof document !== 'undefined' && createPortal(
-      <div className={`mobile-bottom-lead-bar ${isLeadBarHidden ? 'lead-bar-hidden' : ''}`}>
+      <div ref={leadBarRef} className="mobile-bottom-lead-bar">
         <div className="property-price-card">
           <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
           {isHidePrices ? (
             <>
-              <div className="price-value" style={{ fontSize: '1.1rem', color: '#946F23', fontWeight: 800 }}>
+              <div className="price-value" style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 800 }}>
                 {isAr ? 'السعر عند الطلب' : 'Price on Application'}
               </div>
               <span className="price-tax-note">
@@ -1563,7 +1560,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           ) : (
             <>
               <div className="price-value tabular-nums">
-                {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                {formattedPrice} <span className="price-currency" style={{ color: 'var(--text-primary)' }}>{isAr ? 'ج.م' : property.currency}</span>
               </div>
               <span className="price-tax-note">
                 {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m²` : ''}
@@ -1644,6 +1641,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         onClose={() => setIsInquiryModalOpen(false)}
         title={isAr ? `طلب استحواذ — ${property.title}` : `Private Acquisition — ${property.title}`}
         propertyName={property.title}
+        unitCode={inquiryUnitCode}
         propertyId={rawProperty.id || property.id}
         locale={locale}
       />
@@ -1813,7 +1811,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 1.15rem;
           font-weight: 700;
           color: var(--gold-primary);
-          opacity: 0.9;
+          opacity: 1;
           margin-left: 4px;
         }
 
@@ -1847,24 +1845,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 42px;
           height: 42px;
           border-radius: 50%;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all var(--transition-fast);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .header-icon-btn {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: #C7D2DF;
         }
 
         [data-theme="light"] .header-icon-btn {
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: var(--text-secondary);
         }
 
@@ -1875,7 +1877,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .header-icon-btn.active {
           color: #0A0C10;
-          background: linear-gradient(135deg, #FFF4D4 0%, var(--gold-primary) 50%, var(--gold-dark) 100%);
+          background: var(--bg-glass-card);
           border-color: transparent;
         }
 
@@ -1903,10 +1905,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-          border: 1px solid rgba(221, 167, 82, 0.22);
-          background: rgba(13, 18, 30, 0.65);
+          border: var(--glass-border);
+          background: var(--glass-strong);
           color: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(12px);
+          backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-mode-tab:hover {
@@ -1917,19 +1921,19 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .gallery-mode-tab.active {
           color: #FFFDF5;
-          background: rgba(221, 167, 82, 0.2);
+          background: var(--glass-strong);
           border-color: #DDA752;
-          box-shadow: 0 0 16px rgba(221, 167, 82, 0.28);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .gallery-mode-tab {
-          background: #FFFFFF;
+          background: var(--glass-strong);
           border-color: rgba(0, 0, 0, 0.1);
           color: #475569;
         }
 
         [data-theme="light"] .gallery-mode-tab.active {
-          background: #FFFDF7;
+          background: var(--glass-strong);
           border-color: #A87A28;
           color: #8C6826;
         }
@@ -2048,19 +2052,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         @keyframes auroraDriftAlpha {
           0% {
             transform: scale(1.02) translate(0px, 0px) rotate(0deg);
-            filter: blur(56px) saturate(165%) brightness(0.96);
           }
           33% {
             transform: scale(1.06) translate(18px, -10px) rotate(0.8deg);
-            filter: blur(66px) saturate(185%) brightness(1.02);
           }
           66% {
             transform: scale(1.03) translate(-16px, 10px) rotate(-0.6deg);
-            filter: blur(58px) saturate(165%) brightness(0.95);
           }
           100% {
             transform: scale(1.02) translate(0px, 0px) rotate(0deg);
-            filter: blur(56px) saturate(165%) brightness(0.96);
           }
         }
 
@@ -2085,11 +2085,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           background-size: cover;
           background-position: center;
           border-radius: 36px;
-          will-change: transform, filter, opacity;
+          will-change: transform, opacity;
           pointer-events: none;
         }
 
         .ambient-aurora-mesh.mesh-alpha {
+          filter: blur(56px) saturate(165%) brightness(0.96);
           opacity: 0.45;
           animation: auroraDriftAlpha 7.5s infinite ease-in-out;
         }
@@ -2153,10 +2154,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .gallery-counter-pill {
-          background: rgba(10, 14, 22, 0.8);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.45rem 1.15rem;
           font-family: var(--font-heading);
@@ -2164,6 +2165,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-weight: 700;
           letter-spacing: 0.1em;
           color: #DDA752;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-actions-right {
@@ -2177,8 +2180,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          backdrop-filter: blur(24px) saturate(210%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           border-radius: 9999px;
           padding: 0.55rem 1.25rem;
           font-family: var(--font-heading);
@@ -2187,20 +2190,23 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           letter-spacing: 0.04em;
           cursor: pointer;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 14px rgba(221, 167, 82, 0.2), inset 0 1px 1.5px rgba(255, 255, 255, 0.3);
+          box-shadow: var(--shadow-glass);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .gallery-ambient-btn {
-          background: rgba(8, 12, 20, 0.92);
-          border: 1.5px solid rgba(221, 167, 82, 0.55);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #FFFFFF;
         }
 
         [data-theme="light"] .gallery-ambient-btn {
-          background: rgba(255, 255, 255, 0.96);
-          border: 1.5px solid rgba(184, 134, 11, 0.55);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #0D1117;
-          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14), inset 0 1.5px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .gallery-ambient-btn:hover {
@@ -2211,16 +2217,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .gallery-ambient-btn.active {
           border-color: var(--gold-primary, #DDA752);
-          background: linear-gradient(135deg, rgba(221, 167, 82, 0.32) 0%, rgba(10, 14, 24, 0.96) 100%);
+          background: var(--glass-strong);
           color: #FFF0C2;
-          box-shadow: 0 0 22px rgba(221, 167, 82, 0.45), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .gallery-ambient-btn.active {
-          background: linear-gradient(135deg, #FFF5DB 0%, #FFFFFF 100%);
+          background: var(--glass-strong);
           border-color: #B8860B;
           color: #7A5200;
-          box-shadow: 0 4px 20px rgba(184, 134, 11, 0.28), inset 0 1.5px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .ambient-sparkle-icon {
@@ -2256,10 +2262,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: rgba(10, 14, 22, 0.8);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.45rem 1.15rem;
           font-family: var(--font-heading);
@@ -2268,6 +2274,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: #ffffff;
           cursor: pointer;
           transition: all var(--transition-fast);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-fullscreen-btn:hover {
@@ -2299,9 +2307,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         [data-theme="light"] .gallery-ambient-btn,
         [data-theme="dark"] .gallery-ambient-btn.active,
         [data-theme="light"] .gallery-ambient-btn.active {
-          background: rgba(10, 14, 22, 0.8);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: none;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
           color: #ffffff;
         }
 
@@ -2332,10 +2340,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          background: rgba(10, 14, 22, 0.75);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           color: #ffffff;
           display: flex;
           align-items: center;
@@ -2343,6 +2351,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           cursor: pointer;
           transition: all var(--transition-fast);
           z-index: 3;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-nav-arrow:hover {
@@ -2432,7 +2442,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.7rem;
           font-weight: 700;
           color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-video-play-btn {
@@ -2479,22 +2489,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           position: fixed;
           inset: 0;
           z-index: 9999;
-          backdrop-filter: blur(28px);
-          -webkit-backdrop-filter: blur(28px);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 1.5rem;
           overflow: hidden;
           transition: background var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-overlay {
-          background: rgba(5, 7, 12, 0.94);
+          background: var(--glass-strong);
         }
 
         [data-theme="light"] .lightbox-overlay {
-          background: rgba(245, 247, 250, 0.94);
+          background: var(--glass-strong);
         }
 
         .lightbox-ambient-fade-slot {
@@ -2567,7 +2581,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         @media (prefers-reduced-motion: reduce) {
           .ambient-glow-layer,
-          .lightbox-ambient-glow {
+          .lightbox-ambient-glow,
+          .ambient-aurora-mesh,
+          .lightbox-aurora-mesh {
             animation: none !important;
           }
         }
@@ -2593,22 +2609,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           justify-content: space-between;
           padding: 0.75rem 1.25rem;
           border-radius: 9999px;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           z-index: 20;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-top-bar {
-          background: rgba(18, 24, 38, 0.45);
-          border: 1px solid rgba(255, 255, 255, 0.20);
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .lightbox-top-bar {
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .lightbox-top-left {
@@ -2758,28 +2778,32 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 52px;
           height: 52px;
           border-radius: 50%;
-          backdrop-filter: blur(24px) saturate(200%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all var(--transition-fast);
           z-index: 30;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-nav-arrow {
-          background: rgba(18, 24, 38, 0.48);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #FFFFFF;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .lightbox-nav-arrow {
-          background: rgba(255, 255, 255, 0.85);
-          border: 1px solid rgba(0, 0, 0, 0.10);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #0F172A;
-          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+          box-shadow: var(--shadow-glass);
         }
 
         .lightbox-nav-arrow:hover {
@@ -2807,22 +2831,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 100%;
           border-radius: 24px;
           padding: 0.9rem 1.5rem;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           z-index: 20;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-bottom-dock {
-          background: rgba(18, 24, 38, 0.45);
-          border: 1px solid rgba(255, 255, 255, 0.20);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .lightbox-bottom-dock {
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.07), inset 0 1.5px 2px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .dock-meta-row {
@@ -3052,12 +3080,17 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         /* Key Specification Cards Matrix (Reference Layout) */
         .property-spec-matrix-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 0.85rem;
           margin-bottom: 2rem;
           padding-bottom: 1.75rem;
           border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
         }
+
+        .spec-columns-1 .spec-stat-card { grid-column: span 6; }
+        .spec-columns-2 .spec-stat-card { grid-column: span 3; }
+        .spec-columns-3 .spec-stat-card { grid-column: span 2; }
+        .spec-count-5 .spec-stat-card:nth-child(4) { grid-column: 2 / span 2; }
 
         .spec-stat-card {
           display: flex;
@@ -3068,9 +3101,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           border-radius: 18px;
           min-height: 110px;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          backdrop-filter: blur(24px) saturate(200%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(108%) brightness(108%);
           position: relative;
+          contain: paint;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [dir="rtl"] .spec-stat-card {
@@ -3079,28 +3115,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .spec-stat-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.16) 0%,
-            rgba(255, 255, 255, 0.04) 25%,
-            rgba(18, 24, 38, 0.42) 60%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 16px 40px rgba(0, 0, 0, 0.35),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="dark"] .spec-stat-card:hover {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.07) 25%,
-            rgba(18, 24, 38, 0.5) 60%,
-            rgba(10, 14, 24, 0.75) 100%
-          );
+          background: var(--bg-glass-hover);
           border-color: rgba(221, 167, 82, 0.6);
           transform: translateY(-3px);
           box-shadow: 
@@ -3110,19 +3131,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-stat-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.4) 35%,
-            rgba(255, 255, 255, 0.6) 100%
-          );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1.5px solid rgba(255, 255, 255, 0.9);
-          box-shadow: 
-            0 14px 36px rgba(15, 23, 42, 0.07),
-            0 0 20px rgba(184, 134, 11, 0.06),
-            inset 0 1.5px 2px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .spec-stat-card:hover {
@@ -3183,11 +3195,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           letter-spacing: 0.06em;
           text-transform: uppercase;
           color: var(--gold-primary, #DDA752);
-          opacity: 0.9;
+          opacity: 1;
         }
 
         [data-theme="light"] .spec-stat-label {
-          color: #8C6826;
+          color: var(--gold-dark);
         }
 
         .spec-stat-value {
@@ -3204,37 +3216,20 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         /* Gold highlighted card (e.g. Freehold Title Verification) */
         [data-theme="dark"] .spec-stat-card.card-highlight-gold {
-          background: linear-gradient(
-            135deg,
-            rgba(229, 184, 105, 0.18) 0%,
-            rgba(255, 255, 255, 0.08) 25%,
-            rgba(18, 24, 38, 0.45) 60%,
-            rgba(10, 14, 24, 0.7) 100%
-          );
-          border: 1.5px solid rgba(229, 184, 105, 0.65);
-          box-shadow: 
-            0 16px 40px rgba(0, 0, 0, 0.35),
-            0 0 25px rgba(229, 184, 105, 0.22),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.7);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="dark"] .spec-stat-card.card-highlight-gold .gold-val {
           color: #FCD34D;
-          text-shadow: 0 0 10px rgba(252, 211, 77, 0.4);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold {
-          background: linear-gradient(
-            135deg,
-            rgba(254, 243, 199, 0.8) 0%,
-            rgba(255, 255, 255, 0.5) 40%,
-            rgba(254, 243, 199, 0.7) 100%
-          );
-          border: 1.5px solid rgba(184, 134, 11, 0.55);
-          box-shadow: 
-            0 14px 36px rgba(184, 134, 11, 0.12),
-            0 0 20px rgba(184, 134, 11, 0.1),
-            inset 0 2px 2px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold .gold-val {
@@ -3244,11 +3239,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         @media (max-width: 768px) {
           .property-spec-matrix-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.65rem;
             margin-bottom: 1.5rem;
             padding-bottom: 1.25rem;
           }
+          .property-spec-matrix-grid .spec-stat-card:nth-child(n) { grid-column: auto; }
+          .property-spec-matrix-grid .spec-stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
           .spec-stat-card {
             padding: 0.95rem 0.85rem 0.85rem;
             min-height: 96px;
@@ -3746,24 +3743,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: flex;
           flex-direction: column;
           gap: 3px;
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 12px;
           padding: 0.55rem 0.95rem;
           pointer-events: none;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .sanctum-overlay-badge {
-          background: rgba(10, 14, 22, 0.85);
-          border: 1px solid rgba(221, 167, 82, 0.4);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .sanctum-overlay-badge {
-          background: rgba(255, 255, 255, 0.94);
-          border: 1px solid rgba(184, 133, 48, 0.25);
-          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.08), inset 0 1px 1px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .sanctum-badge-mode {
@@ -3824,8 +3825,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .sanctum-pin-tag {
-          background: rgba(10, 14, 22, 0.92);
-          border: 1px solid var(--gold-primary, #DDA752);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           border-radius: 8px;
           padding: 4px 10px;
           font-size: 0.72rem;
@@ -3835,9 +3836,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           max-width: 260px;
           overflow: hidden;
           text-overflow: ellipsis;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          box-shadow: var(--shadow-glass);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .sanctum-map-frame .leaflet-control-zoom {
@@ -3850,11 +3852,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .sanctum-map-frame .leaflet-control-zoom a {
-          background: rgba(10, 14, 22, 0.85) !important;
+          background: var(--glass-strong) !important;
           color: var(--gold-primary, #DDA752) !important;
-          border: 1px solid rgba(221, 167, 82, 0.3) !important;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          border: var(--glass-border) !important;
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           transition: all 0.2s ease;
         }
 
@@ -3864,9 +3866,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a {
-          background: rgba(255, 255, 255, 0.92) !important;
-          color: #B8860B !important;
-          border: 1px solid rgba(184, 133, 48, 0.3) !important;
+          background: var(--glass-strong) !important;
+          color: var(--gold-primary) !important;
+          border: var(--glass-border) !important;
         }
 
         [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a:hover {
@@ -4010,8 +4012,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         /* Sidebar Radar Card */
         .sidebar-radar-card {
-          backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 22px;
           padding: 1.75rem 1.85rem 1.65rem;
           display: flex;
@@ -4021,38 +4023,36 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           box-sizing: border-box;
           justify-content: space-between;
           transition: all var(--transition-smooth);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
+          contain: paint;
         }
 
         [data-theme="dark"] .sidebar-radar-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(255, 255, 255, 0.05) 25%,
-            rgba(18, 24, 38, 0.45) 60%,
-            rgba(10, 14, 24, 0.7) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.32);
-          box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.45),
-            0 0 25px rgba(221, 167, 82, 0.12),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .sidebar-radar-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.4) 35%,
-            rgba(255, 255, 255, 0.6) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 20px 50px rgba(15, 23, 42, 0.08),
-            0 0 25px rgba(184, 134, 11, 0.08),
-            inset 0 2px 2.5px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
+        .travel-skeleton {
+          display: inline-block;
+          width: 6rem;
+          height: 0.8rem;
+          border-radius: 4px;
+          background: var(--border-medium);
+        }
+        .travel-loading-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+        .gps-locate-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+        .location-suite-side .radar-stack-header { flex-wrap: wrap; }
+        .location-suite-side .radar-stack-status { white-space: normal; max-width: 100%; }
         .radar-stack-header {
           display: flex;
           align-items: center;
@@ -4246,8 +4246,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .broker-card {
-          backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 22px;
           padding: 1.75rem 1.85rem 1.65rem;
           transition: all var(--transition-smooth);
@@ -4257,6 +4257,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           margin-top: 78px;
           min-height: 278px;
           box-sizing: border-box;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
+          contain: paint;
         }
 
         @media (max-width: 1024px) {
@@ -4269,33 +4274,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .broker-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(255, 255, 255, 0.05) 25%,
-            rgba(18, 24, 38, 0.45) 60%,
-            rgba(10, 14, 24, 0.7) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.32);
-          box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.45),
-            0 0 25px rgba(221, 167, 82, 0.12),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .broker-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.4) 35%,
-            rgba(255, 255, 255, 0.6) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 20px 50px rgba(15, 23, 42, 0.08),
-            0 0 25px rgba(184, 134, 11, 0.08),
-            inset 0 2px 2.5px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .broker-profile {
@@ -4345,6 +4332,32 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: var(--text-secondary);
           display: block;
           margin-top: 2px;
+        }
+
+        .broker-contact-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.75rem;
+          margin-bottom: 0.75rem;
+        }
+        .broker-contact-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 44px;
+          padding: 0.65rem;
+          border: 1px solid var(--border-subtle);
+          border-radius: 12px;
+          color: var(--text-primary);
+          background: transparent;
+          text-decoration: none;
+          font-weight: 700;
+        }
+        .broker-contact-btn:hover { border-color: var(--gold-primary); }
+        .broker-contact-btn:focus-visible {
+          outline: 2px solid var(--gold-primary);
+          outline-offset: 3px;
         }
 
         .broker-action-stack {
@@ -4741,13 +4754,17 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           right: 0.75rem;
           z-index: 99;
           border-radius: 18px;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           padding: 0.875rem 1.15rem 1rem;
           flex-direction: column;
           align-items: stretch;
           gap: 0.65rem;
           transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .mobile-bottom-lead-bar.lead-bar-hidden {
@@ -4768,36 +4785,18 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .mobile-bottom-lead-bar {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.25) 0%,
-            rgba(255, 255, 255, 0.08) 30%,
-            rgba(18, 24, 38, 0.42) 65%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow:
-            0 20px 48px rgba(0, 0, 0, 0.38),
-            0 4px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .mobile-bottom-lead-bar {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.32) 40%,
-            rgba(255, 255, 255, 0.52) 100%
-          );
-          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          border: 1.5px solid rgba(255, 255, 255, 0.75);
-          box-shadow:
-            0 24px 56px rgba(15, 23, 42, 0.14),
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
-            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
 
@@ -4994,6 +4993,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             margin-bottom: 1.1rem;
             padding-bottom: 1.1rem;
           }
+        }
+        .lightbox-overlay > *, .mobile-bottom-lead-bar > * {
+          --glass-blur: none;
+          --glass-blur-nav: none;
+        }
+        [data-theme="light"] .mobile-bottom-lead-bar .price-value {
+          color: var(--gold-dark);
         }
       `}</style>
     </div>

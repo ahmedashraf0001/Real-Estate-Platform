@@ -204,13 +204,16 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               position: fixed;
               inset: 0;
               z-index: 99999;
-              background: rgba(8, 11, 19, 0.55);
-              backdrop-filter: blur(12px);
-              -webkit-backdrop-filter: blur(12px);
+              background: var(--glass-strong);
+              backdrop-filter: var(--glass-blur);
+              -webkit-backdrop-filter: var(--glass-blur);
               display: flex;
               align-items: center;
               justify-content: flex-end;
               padding: 1.5rem;
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
+              text-shadow: var(--glass-text-shadow);
             }
 
             /* Drawer is anchored to the right edge in both languages
@@ -223,41 +226,34 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
 
             /* Floating Glass Island Drawer */
             .saved-portfolio-drawer {
+          --glass-blur: none;
+          --glass-blur-nav: none;
               width: min(430px, calc(100vw - 3rem));
               height: calc(100vh - 3rem);
               max-height: 940px;
               border-radius: 28px;
-              backdrop-filter: blur(36px) saturate(220%) contrast(108%);
-              -webkit-backdrop-filter: blur(36px) saturate(220%) contrast(108%);
+              backdrop-filter: var(--glass-blur);
+              -webkit-backdrop-filter: var(--glass-blur);
               display: flex;
               flex-direction: column;
               overflow: hidden;
               transition: all var(--transition-smooth);
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
+              text-shadow: var(--glass-text-shadow);
             }
 
             [data-theme="dark"] .saved-portfolio-drawer {
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.18) 0%,
-                rgba(255, 255, 255, 0.04) 20%,
-                rgba(18, 24, 38, 0.60) 50%,
-                rgba(10, 14, 24, 0.88) 100%
-              );
-              border: 1px solid rgba(229, 184, 105, 0.28);
-              box-shadow: 
-                0 24px 64px rgba(0, 0, 0, 0.65),
-                inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-                inset 0 -1px 1px rgba(255, 255, 255, 0.10);
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
             }
 
             [data-theme="light"] .saved-portfolio-drawer {
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.94) 0%,
-                rgba(250, 248, 243, 0.85) 100%
-              );
-              border: 1px solid rgba(184, 147, 74, 0.32);
-              box-shadow: 0 20px 50px rgba(30, 24, 16, 0.12), inset 0 1.5px 2px #FFFFFF;
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
             }
 
             @media (max-width: 640px) {
@@ -364,8 +360,8 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               display: inline-flex;
               align-items: center;
               gap: 5px;
-              background: rgba(255, 255, 255, 0.05);
-              border: 1px solid rgba(255, 255, 255, 0.12);
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
               border-radius: 9999px;
               padding: 0.4rem 0.75rem;
               font-size: 0.75rem;
@@ -373,11 +369,13 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               color: rgba(255, 255, 255, 0.7);
               cursor: pointer;
               transition: all var(--transition-fast);
-              backdrop-filter: blur(10px);
+              backdrop-filter: var(--glass-blur-nav);
+              box-shadow: var(--shadow-glass);
+              text-shadow: var(--glass-text-shadow);
             }
 
             [data-theme="light"] .drawer-clear-btn {
-              background: rgba(0, 0, 0, 0.04);
+              background: var(--bg-glass-card);
               border-color: rgba(0, 0, 0, 0.08);
               color: #475569;
             }
@@ -392,19 +390,21 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               width: 36px;
               height: 36px;
               border-radius: 9999px;
-              background: rgba(255, 255, 255, 0.05);
-              border: 1px solid rgba(255, 255, 255, 0.12);
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
               color: rgba(255, 255, 255, 0.75);
               display: flex;
               align-items: center;
               justify-content: center;
               cursor: pointer;
               transition: all var(--transition-fast);
-              backdrop-filter: blur(10px);
+              backdrop-filter: var(--glass-blur-nav);
+              box-shadow: var(--shadow-glass);
+              text-shadow: var(--glass-text-shadow);
             }
 
             [data-theme="light"] .drawer-close-btn {
-              background: rgba(0, 0, 0, 0.04);
+              background: var(--bg-glass-card);
               border-color: rgba(0, 0, 0, 0.08);
               color: #475569;
             }
@@ -520,29 +520,26 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               gap: 12px;
               padding: 0.95rem;
               border-radius: 16px;
-              backdrop-filter: blur(16px);
-              -webkit-backdrop-filter: blur(16px);
+              backdrop-filter: var(--glass-blur);
+              -webkit-backdrop-filter: var(--glass-blur);
               cursor: pointer;
               transition: all var(--transition-fast);
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
+              text-shadow: var(--glass-text-shadow);
             }
 
             [data-theme="dark"] .drawer-prop-card {
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.08) 0%,
-                rgba(255, 255, 255, 0.02) 40%,
-                rgba(18, 24, 38, 0.55) 100%
-              );
-              border: 1px solid rgba(255, 255, 255, 0.12);
-              box-shadow: 
-                0 6px 20px rgba(0, 0, 0, 0.3),
-                inset 0 1.5px 2px rgba(255, 255, 255, 0.25);
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
             }
 
             [data-theme="light"] .drawer-prop-card {
-              background: rgba(255, 255, 255, 0.8);
-              border: 1px solid rgba(184, 147, 74, 0.2);
-              box-shadow: 0 4px 16px rgba(30, 24, 16, 0.04), inset 0 1px 1px #FFFFFF;
+              background: var(--bg-glass-card);
+              border: var(--glass-border);
+              box-shadow: var(--shadow-glass);
             }
 
             [data-theme="dark"] .drawer-prop-card:hover {
@@ -667,12 +664,12 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               font-weight: 800;
               color: #E5B869;
               margin-top: 4px;
-              text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+              text-shadow: var(--glass-text-shadow);
             }
 
             [data-theme="light"] .drawer-prop-price {
               color: #8C6826;
-              text-shadow: none;
+              text-shadow: var(--glass-text-shadow);
             }
 
             .drawer-footer {

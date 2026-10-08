@@ -48,7 +48,7 @@ export interface AttributeTemplate {
 // ─────────────────────────────────────────────────────────────────────────────
 export const PROPERTY_TYPE_LABELS: Record<PropertyTypeId, { en: string; ar: string }> = {
   apartment: { en: 'Apartment', ar: 'شقة' },
-  building:  { en: 'Building (عمارة)', ar: 'عمارة' },
+  building:  { en: 'Building', ar: 'عمارة' },
   garage:    { en: 'Garage', ar: 'جراج' },
 };
 
@@ -75,6 +75,8 @@ export const ZONE_TEMPLATES: ZoneTemplate[] = [
 
   // ── BUILDING (عمارة) ────────────────────────────────────────────────────────
   // Floor-level groups (containers)
+  { id: 'bld.building', property_type_id: 'building', label_en: 'Building / Shared Facilities', label_ar: 'المبنى / المرافق العامة', category: 'infrastructure', is_optional: true, sort_order: 0 },
+  { id: 'bld.service', property_type_id: 'building', label_en: 'Service Room', label_ar: 'غرفة الخدمات', category: 'infrastructure', is_optional: true, sort_order: 23 },
   { id: 'bld.basement',        property_type_id: 'building', label_en: 'Basement / Parking',         label_ar: 'البدروم / الجراج',           category: 'infrastructure', is_optional: true, sort_order: 1 },
   { id: 'bld.ground_lobby',    property_type_id: 'building', label_en: 'Ground Floor & Entrance',    label_ar: 'الدور الأرضي والمدخل',       category: 'infrastructure', sort_order: 2 },
   { id: 'bld.typical_floors',  property_type_id: 'building', label_en: 'Typical Floors & Stairwell', label_ar: 'الأدوار المتكررة والسلم',    category: 'infrastructure', sort_order: 3 },
@@ -359,6 +361,10 @@ export const ATTRIBUTE_TEMPLATES: AttributeTemplate[] = [
   { id: 'inf.elev.brand',               trade_id: 'inf.elevator',   label_en: 'Elevator Brand',       label_ar: 'ماركة الأسانسير',     data_type: 'enum',
     enum_values: ['Sigma', 'Otis', 'Schindler', 'Local (محلي)'] },
   { id: 'inf.elev.capacity',            trade_id: 'inf.elevator',   label_en: 'Capacity (kg)',        label_ar: 'الحمولة (كجم)',       data_type: 'integer' },
+  { id: 'inf.elev.persons', trade_id: 'inf.elevator', label_en: 'Persons', label_ar: 'عدد الأشخاص', data_type: 'integer' },
+  { id: 'inf.elev.stops', trade_id: 'inf.elevator', label_en: 'Stops', label_ar: 'عدد الوقفات', data_type: 'integer' },
+  { id: 'inf.stair.width', trade_id: 'inf.common_finish', label_en: 'Stair width (m)', label_ar: 'عرض السلم (م)', data_type: 'numeric', applies_to_zone_ids: ['bld.staircase'] },
+  { id: 'inf.stair.material', trade_id: 'inf.common_finish', label_en: 'Finish material', label_ar: 'خامة التشطيب', data_type: 'text', applies_to_zone_ids: ['bld.staircase'] },
   { id: 'inf.sec.intercom',             trade_id: 'inf.security',   label_en: 'Intercom Type',        label_ar: 'نوع الإنتركم',        data_type: 'enum',
     enum_values: ['Audio (صوت)', 'Video (صورة وصوت)', 'None'] },
   { id: 'inf.sec.guard_room',           trade_id: 'inf.security',   label_en: 'Security Guard Room',  label_ar: 'حجرة الأمن',          data_type: 'boolean' },
@@ -381,6 +387,23 @@ export const ATTRIBUTE_TEMPLATES: AttributeTemplate[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const ZONE_TRADE_OVERRIDES: Record<string, string[]> = {
+  'bld.building': ['inf.ramp_access', 'inf.parking', 'inf.drainage', 'inf.lobby', 'inf.security', 'inf.elevator', 'inf.common_finish', 'inf.insulation', 'inf.water_systems'],
+  'bld.entrance_gate': ['inf.security'],
+  'bld.entrance_lobby': ['inf.lobby', 'inf.security'],
+  'bld.staircase': ['inf.common_finish'],
+  'bld.elevator': ['inf.elevator'],
+  'bld.electric_box': [],
+  'bld.water_motors': ['inf.water_systems'],
+  'bld.garage_bays': ['inf.parking'],
+  'bld.guard_room': ['inf.security'],
+  'bld.commercial_shop': [],
+  'bld.central_corridor': ['inf.common_finish'],
+  'bld.lightwell': [],
+  'bld.service': [],
+  'bld.balcony': ['inf.common_finish'],
+  'bld.roof_terrace': ['inf.insulation'],
+  'bld.roof_service': ['inf.water_systems'],
+  'bld.unit': [],
   // Building zones — specific trade subsets
   'bld.basement':        ['inf.ramp_access', 'inf.parking', 'inf.drainage'],
   'bld.ground_lobby':    ['inf.lobby', 'inf.security', 'inf.elevator'],

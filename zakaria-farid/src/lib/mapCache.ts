@@ -3,6 +3,24 @@ import type { Property } from '@/lib/supabase/types';
 
 const MAP_CACHE_NAME = 'zf-sovereign-map-cache-v1';
 
+/** Provider templates shared by the visible basemap and property-site prefetch. */
+export function getBaseLayerSpecs(mode: 'satellite' | 'neon'): { url: string; options: L.TileLayerOptions }[] {
+  const service = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const attribution = 'Tiles &copy; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, and the GIS user community';
+  if (mode === 'neon') {
+    return ['World_Dark_Gray_Base', 'World_Dark_Gray_Reference'].map(name => ({
+      url: `${service}Canvas/${name}/MapServer/tile/{z}/{y}/{x}`,
+      options: { maxZoom: 19, maxNativeZoom: 16, pane: 'neon-basemap', attribution },
+    }));
+  }
+  return ['World_Imagery', 'Reference/World_Transportation', 'Reference/World_Boundaries_and_Places'].map((name, index) => ({
+    url: `${service}${name}/MapServer/tile/{z}/{y}/{x}`,
+    options: { maxZoom: 19, opacity: index === 0 ? 1 : 0.95, attribution: index === 0
+      ? 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS user community'
+      : attribution },
+  }));
+}
+
 /**
  * Converts standard Latitude/Longitude to Tile XYZ coordinates at a specific zoom level
  */
@@ -75,15 +93,10 @@ export async function preloadPropertyMapSites(properties?: Property[]): Promise<
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
       );
 
-      // Carto vector tiles
-      const vectorTiles = getTileUrlsForLocation(
-        lat,
-        lng,
-        [11, 14],
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'
+      const neonTiles = getBaseLayerSpecs('neon').flatMap(spec =>
+        getTileUrlsForLocation(lat, lng, [11, 14], spec.url)
       );
-
-      tileUrls.push(...satTiles, ...vectorTiles);
+      tileUrls.push(...satTiles, ...neonTiles);
     });
 
     // Also cache Cairo headquarters
@@ -107,7 +120,7 @@ export async function preloadPropertyMapSites(properties?: Property[]): Promise<
             const cachedResponse = await cache.match(url);
             if (!cachedResponse) {
               const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
-              if (res.ok) {
+              if (res.ok && res.headers.get('content-type')?.startsWith('image/')) {
                 await cache.put(url, res);
               }
             }
@@ -148,43 +161,62 @@ export function createCachedTileLayer(
 
       const url = (this as any).getTileUrl(coords);
 
-      // Check Cache Storage API first
-      if (typeof window !== 'undefined' && 'caches' in window) {
-        caches.open(MAP_CACHE_NAME).then((cache) => {
-          cache.match(url).then((response) => {
-            if (response && response.ok) {
-              response.blob().then((blob) => {
-                const objectUrl = URL.createObjectURL(blob);
-                tile.src = objectUrl;
-              }).catch(() => {
-                tile.src = url;
-              });
-            } else {
-              tile.src = url;
-              fetch(url, { mode: 'cors', cache: 'force-cache' })
-                .then((res) => {
-                  if (res.ok) cache.put(url, res.clone());
-                })
-                .catch(() => {});
-            }
-          }).catch(() => {
-            tile.src = url;
-          });
-        }).catch(() => {
+      let objectUrl: string | undefined;
+      let tileCache: Cache | undefined;
+      const revoke = () => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = undefined;
+      };
+      tile.addEventListener('load', revoke);
+      tile.addEventListener('error', () => {
+        if (objectUrl) {
+          revoke();
+          void tileCache?.delete(url).catch(() => {});
           tile.src = url;
-        });
-      } else {
-        tile.src = url;
-      }
+        }
+      });
+
+      // Ignore opaque, empty and non-image cache entries; never strand a tile
+      // on a failed Cache Storage/blob operation.
+      const load = async () => {
+        if (!('caches' in window)) { tile.src = url; return; }
+        try {
+          const cache = await caches.open(MAP_CACHE_NAME);
+          tileCache = cache;
+          const response = await cache.match(url);
+          if (response?.ok && response.headers.get('content-type')?.startsWith('image/')) {
+            const blob = await response.blob();
+            if (blob.size > 0) {
+              objectUrl = URL.createObjectURL(blob);
+              tile.src = objectUrl;
+              return;
+            }
+          }
+          if (response) await cache.delete(url);
+          tile.src = url;
+          const fresh = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+          if (fresh.ok && fresh.headers.get('content-type')?.startsWith('image/')) {
+            await cache.put(url, fresh);
+          }
+        } catch {
+          tile.src = url;
+        }
+      };
+      void load();
 
       return tile;
     }
   });
 
-  return new (CachedTileLayerClass as any)(urlTemplate, {
+  const layer: L.TileLayer = new (CachedTileLayerClass as any)(urlTemplate, {
     maxZoom: 19,
     crossOrigin: true,
     ...options
   });
+  layer.on('tileunload', (event: L.TileEvent) => {
+    const src = (event.tile as HTMLImageElement).src;
+    if (src.startsWith('blob:')) URL.revokeObjectURL(src);
+  });
+  return layer;
 }
 

@@ -367,11 +367,12 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
 
         [data-theme="dark"] .map-fly-pill {
           color: rgba(255, 255, 255, 0.9);
-          background: rgba(10, 14, 22, 0.75);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .map-fly-pill:hover {
@@ -383,11 +384,12 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
 
         [data-theme="light"] .map-fly-pill {
           color: #12151B;
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 4px 12px rgba(30, 24, 16, 0.06), inset 0 1px 1px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .map-fly-pill:hover {
@@ -399,10 +401,10 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
 
         .map-fly-pill.active {
           color: #0A0C10 !important;
-          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 50%, #C59A45 100%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.6) !important;
+          background: var(--bg-glass-card) !important;
+          border: var(--glass-border) !important;
           font-weight: 700;
-          box-shadow: 0 4px 16px rgba(197, 154, 69, 0.28), inset 0 1px 1px #FFFFFF !important;
+          box-shadow: var(--shadow-glass) !important;
         }
 
         .fly-pin-icon {
@@ -427,26 +429,31 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
           bottom: 2rem;
           left: 2rem;
           z-index: 500;
-          backdrop-filter: blur(24px) saturate(190%);
-          -webkit-backdrop-filter: blur(24px) saturate(190%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 18px;
           padding: 1.5rem 1.75rem;
           max-width: 380px;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .map-glass-badge {
-          background: rgba(17, 20, 27, 0.82);
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .map-glass-badge {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(20px) saturate(190%);
-          -webkit-backdrop-filter: blur(20px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 16px 36px rgba(30, 24, 16, 0.08), inset 0 1.5px 2px #FFFFFF;
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .glass-badge-header {

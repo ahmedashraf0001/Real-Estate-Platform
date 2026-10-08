@@ -1,0 +1,56 @@
+.root { --bp-gold: var(--gold-primary, #E5B869); --bp-line: var(--border-subtle, rgba(255,255,255,.08)); background: var(--bg-surface, #11141B); color: var(--text-primary, #F0F1F4); padding: 24px; width: 100%; min-width: 0; font-size: 14px; }
+.root * { box-sizing: border-box; }
+.root button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--bp-line); cursor: pointer; min-height: 44px; padding: 10px 14px; border-radius: 6px; }
+.root button:focus-visible { outline: 2px solid var(--bp-gold); outline-offset: 3px; }
+.root button:hover { border-color: var(--bp-gold); }
+.root button { min-width: 44px; }
+.root button:disabled { opacity: .4; cursor: default; }
+.path { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 22px; border-bottom: 1px solid var(--bp-line); }
+.path button, .legend span { display: inline-flex; align-items: center; gap: 8px; }
+.root [aria-current="page"], .activeChip { color: var(--bp-gold); border-color: var(--bp-gold); background: color-mix(in srgb, var(--bp-gold) 9%, transparent); }
+.activeChip { padding: 12px 14px; border-radius: 6px; }
+.path .back { margin-inline-start: auto; }
+.workspace { display: grid; grid-template-columns: 150px minmax(0,1fr) 255px; gap: 24px; margin-top: 24px; align-items: start; }
+.floors { display: flex; flex-direction: column; gap: 8px; }
+.floors button { display: flex; flex-direction: column; align-items: start; gap: 7px; text-align: start; }
+.floors small, .detail p, .room span, .unit>span:not(.pill), .note { color: var(--text-secondary, #B0B4BE); line-height: 1.7; }
+.planColumn { min-width: 0; }
+.floorPlan { display: grid; grid-template-columns: minmax(0,1fr) minmax(90px,.65fr) minmax(0,1fr); border: 3px solid var(--bp-gold); gap: 5px; padding: 9px; min-height: 410px; }
+.unitStack, .core { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.root .unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; flex: 1; padding: 24px 8px; position: relative; background: var(--bg-primary, #0E1117); }
+.unit strong { font-size: 20px; font-weight: 600; }
+.unit>span:not(.door) { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+.unit svg, .element svg, .room svg, .iconTile { color: var(--bp-gold); }
+.root .link { color: var(--bp-gold); font-size: 12px; }
+.door { position: absolute; inset-inline-end: -7px; top: 50%; background: var(--bg-surface, #11141B); padding: 4px 0; color: var(--bp-gold); }
+.unitStack:last-of-type .door { inset-inline-start: -7px; inset-inline-end: auto; }
+.root .element { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; padding: 20px 7px; text-align: center; flex: 1; }
+.root .lightwell { border-style: dashed; }
+.root [aria-pressed="true"] { border-color: var(--bp-gold); background: color-mix(in srgb, var(--bp-gold) 8%, transparent); }
+.legend { display: flex; flex-wrap: wrap; gap: 18px; padding: 18px 0; font-size: 12px; color: var(--text-secondary, #B0B4BE); }
+.pill { display: inline-block; font-size: 12px; line-height: 1.5; white-space: nowrap; padding: 4px 9px; border-radius: 20px; background: color-mix(in srgb, currentColor 7%, transparent); border: 1px solid var(--bp-line); }
+.root .available { color: #65B98E; }
+.detail { border-inline-start: 1px solid var(--bp-line); padding-inline-start: 22px; min-width: 0; }
+.detail h3 { margin: 16px 0 8px; font-size: 21px; }
+.detail h4 { font-size: 14px; font-weight: 500; padding-top: 14px; border-top: 1px solid var(--bp-line); }
+.iconTile { display: inline-flex; padding: 15px; border: 1px solid var(--bp-line); border-radius: 8px; }
+.facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.facts div { padding-block: 8px; border-bottom: 1px solid var(--bp-line); }
+.facts dt { color: var(--text-secondary, #B0B4BE); font-size: 12px; }
+.facts dd { margin: 8px 0 0; overflow-wrap: anywhere; }
+.trades { list-style: none; margin: 0; padding: 0; }
+.trades li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0; }
+.note { font-size: 12px; border-top: 1px solid var(--bp-line); padding-top: 16px; }
+.summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-top: 20px; }
+.root .request { background: var(--bp-gold); color: var(--bg-primary, #0E1117); }
+.roomPlan { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border: 3px solid var(--bp-gold); gap: 6px; padding: 10px; }
+.root .room { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; min-height: 150px; text-align: center; }
+.building { border: 3px solid var(--bp-gold); padding: 16px; }
+.building h3 { text-align: center; margin: 6px 0 20px; font-size: 22px; font-weight: 500; }
+.building>button { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 7px; min-height: 52px; border-radius: 0; }
+.empty { grid-column: 1/-1; text-align: center; }
+.photos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.photos img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; }
+.photoSlot { border: 1px dashed var(--bp-line); padding: 25px 10px; text-align: center; }
+@media(max-width:1100px) { .workspace { grid-template-columns: 125px minmax(0,1fr); gap: 16px; } .detail { grid-column: 2; border-inline-start: 0; border-top: 1px solid var(--bp-line); padding: 20px 0 0; } }
+@media(max-width:600px) { .root { padding: 14px; } .workspace { display: flex; flex-direction: column; gap: 18px; } .floors { flex-direction: row; overflow-x: auto; width: 100%; padding: 4px 0 8px; } .floors button { flex: 0 0 125px; } .planColumn, .detail { width: 100%; } .floorPlan { grid-template-columns: minmax(0,1fr) 82px minmax(0,1fr); gap: 4px; padding: 5px; min-height: 390px; } .root .unit { padding: 15px 4px; gap: 13px; } .unit strong { font-size: 16px; } .unit>span { font-size: 12px; } .root .element { padding: 15px 4px; font-size: 12px; } .path .back { margin-inline-start: 0; } .facts { gap: 18px; } .summary { gap: 10px; } .roomPlan { gap: 4px; padding: 5px; } .root .room { padding: 10px 4px; } }

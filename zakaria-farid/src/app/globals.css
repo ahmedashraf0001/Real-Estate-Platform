@@ -6,7 +6,7 @@
 
 /* ─── Google Fonts & External Styles ──────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@300;400;500;600;700;800;900&family=Cinzel:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Reem+Kufi:wght@400;500;600;700&display=swap');
-@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+@import 'leaflet/dist/leaflet.css';
 
 /* ─── Thmanyah Sans — UI / body text ─────────── */
 @font-face {
@@ -130,12 +130,19 @@
   --bg-card-hover: #1E2028;
 
   /* Radiant Liquid Crystal Glass System */
-  --bg-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 25%, rgba(18, 24, 38, 0.38) 60%, rgba(10, 14, 24, 0.62) 100%);
-  --bg-glass-card: rgba(22, 28, 42, 0.52);
-  --bg-glass-hover: rgba(30, 38, 54, 0.68);
-  --border-glass: rgba(255, 255, 255, 0.32);
-  --border-glass-subtle: rgba(255, 255, 255, 0.18);
-  --glass-blur: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+  --bg-glass: rgba(12, 15, 22, 0.36);
+  --bg-glass-card: linear-gradient(180deg, rgba(12, 15, 22, 0.30), rgba(12, 15, 22, 0.42));
+  --bg-glass-hover: var(--bg-glass-card);
+  --glass-strong: linear-gradient(180deg, rgba(12, 15, 22, 0.58), rgba(12, 15, 22, 0.70));
+  --glass-border: 1px solid rgba(255, 255, 255, 0.16);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  --glass-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --glass-fallback: rgba(12, 15, 22, 0.86);
+  --border-glass: rgba(255, 255, 255, 0.16);
+  --border-glass-subtle: var(--border-glass);
+  --glass-blur: blur(16px) saturate(140%);
+  --glass-blur-nav: blur(14px) saturate(140%);
 
   /* Unified Egyptian Champagne Gold System */
   --gold-primary: #E5B869;
@@ -166,11 +173,7 @@
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
   --shadow-gold: 0 8px 30px rgba(229, 184, 105, 0.22);
-  --shadow-glass:
-    0 20px 48px rgba(0, 0, 0, 0.38),
-    0 4px 14px rgba(0, 0, 0, 0.18),
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+  --shadow-glass: var(--glass-shadow), var(--glass-highlight);
 
   /* Typography */
   --font-heading: 'IBM Plex Sans Arabic', 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -223,11 +226,16 @@
   --bg-card: #FFFFFF;
   --bg-card-hover: #F8F5EE;
 
-  --bg-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.22) 35%, rgba(255, 255, 255, 0.40) 100%);
-  --bg-glass-card: rgba(255, 255, 255, 0.45);
-  --bg-glass-hover: rgba(255, 255, 255, 0.60);
-  --border-glass: rgba(255, 255, 255, 0.65);
-  --border-glass-subtle: rgba(255, 255, 255, 0.35);
+  --bg-glass: rgba(255, 255, 255, 0.36);
+  --bg-glass-card: linear-gradient(180deg, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0.42));
+  --bg-glass-hover: var(--bg-glass-card);
+  --glass-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.70));
+  --glass-border: 1px solid rgba(255, 255, 255, 0.60);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.80);
+  --glass-shadow: 0 20px 50px rgba(30, 24, 16, 0.10);
+  --glass-fallback: rgba(255, 255, 255, 0.86);
+  --border-glass: rgba(255, 255, 255, 0.60);
+  --border-glass-subtle: var(--border-glass);
 
   --gold-primary: #8C6826;
   --gold-light: #B8934A;
@@ -248,11 +256,7 @@
   --shadow-md: 0 10px 28px rgba(30, 24, 16, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 24px 52px rgba(30, 24, 16, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04);
   --shadow-gold: 0 10px 30px rgba(184, 133, 48, 0.20);
-  --shadow-glass:
-    0 18px 44px rgba(15, 23, 42, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.02),
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+  --shadow-glass: var(--glass-shadow), var(--glass-highlight);
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -545,20 +549,23 @@ img {
    GLASS COMPONENTS
 ───────────────────────────────────────────────────────────────── */
 .glass-panel {
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-  -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-  border: 1px solid var(--border-glass);
+  background: var(--bg-glass-card);
+  text-shadow: var(--glass-text-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass);
   transition: background var(--transition-smooth), border-color var(--transition-smooth);
 }
 
 .glass-pill {
-  background: var(--bg-glass-card);
-  backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-  -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-  border: 1px solid var(--border-glass);
+  --glass-blur: var(--glass-blur-nav);
+  background: var(--bg-glass);
+  text-shadow: var(--glass-text-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
   border-radius: var(--radius-full);
   padding: 0.45rem 1rem;
   box-shadow: var(--shadow-glass);
@@ -1169,3 +1176,39 @@ div[style*="background:#ffffff"] select {
   }
 }
 
+
+@supports not (backdrop-filter: blur(1px)) {
+  :root, [data-theme="light"] {
+    --bg-glass: var(--glass-fallback);
+    --bg-glass-card: var(--glass-fallback);
+    --glass-strong: var(--glass-fallback);
+  }
+}
+
+/* Descendants share the outer glass's already filtered backdrop. */
+.app-root :is(.glass-panel, .glass-pill, .quick-search-bar,
+  .catalog-master-omnibar, .sidebar-widget, .catalog-pagination,
+  .market-chart-widget, .seller-consignment-banner, .floating-glass-directory,
+  .floating-estate-card, .map-selected-preview-card,
+  .sidebar-radar-card, .broker-card,
+  .modal-backdrop, .lightbox-overlay, .saved-portfolio-backdrop,
+  .compare-modal-backdrop, .mobile-drawer-glass, .card-content-overlay, .hero-title-glass-card) > * {
+  --glass-blur: none;
+  --glass-blur-nav: none;
+}
+
+/* One text edge throughout public glass, including child typography overrides. */
+.app-root :is(.nav-glass-capsule, .mobile-drawer-glass, .quick-search-bar,
+  .card-content-overlay, .hero-title-glass-card, .floating-glass-directory,
+  .floating-estate-card, .broker-card, .sidebar-radar-card, .spec-stat-card,
+  .modal-backdrop, .lightbox-overlay, .saved-portfolio-backdrop,
+  .compare-modal-backdrop) * {
+  text-shadow: var(--glass-text-shadow) !important;
+}
+
+.app-root :is(.floating-glass-directory, .broker-card, .modal-backdrop,
+  .quick-search-bar, .catalog-master-omnibar) input::placeholder,
+.app-root .modal-backdrop textarea::placeholder {
+  color: var(--text-secondary) !important;
+  opacity: 1;
+}

@@ -733,7 +733,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           .hero-pill-line-gold {
             color: #FFFFFF;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            text-shadow: var(--glass-text-shadow);
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
@@ -752,14 +752,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
             -webkit-background-clip: unset !important;
             background-clip: unset !important;
             -webkit-text-fill-color: #FFFFFF !important;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+            text-shadow: var(--glass-text-shadow) !important;
             font-weight: 800 !important;
           }
 
           [data-theme="light"] .hero-pill-line-gold .gold-text-span {
             color: #FFFFFF !important;
             -webkit-text-fill-color: #FFFFFF !important;
-            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+            text-shadow: var(--glass-text-shadow) !important;
             font-weight: 800 !important;
           }
 
@@ -863,9 +863,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           .hero-title-glass-card {
-            background: transparent !important;
+            background: var(--glass-strong) !important;
+            border-radius: var(--radius-lg);
             border: none !important;
-            box-shadow: none !important;
+            box-shadow: var(--shadow-glass) !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
             padding: 0 !important;
@@ -885,7 +886,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           animation: blinkCursor 0.75s infinite ease-in-out;
           vertical-align: 0.05em;
           -webkit-text-fill-color: var(--gold-primary, #DDA752);
-          text-shadow: 0 0 10px rgba(221, 167, 82, 0.85);
+          text-shadow: var(--glass-text-shadow);
         }
 
         @keyframes blinkCursor {
@@ -990,30 +991,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: calc(1.22em * 2 + 4px + 1.85rem) !important;
             margin: 0 auto 0.2rem auto !important;
             padding: 0.95rem 0.8rem 0.85rem !important;
-            background: 
-              radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.4) 0%, rgba(229, 184, 105, 0.12) 28%, transparent 55%),
-              linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.24) 0%,
-                rgba(255, 255, 255, 0.08) 32%,
-                rgba(16, 22, 34, 0.45) 75%,
-                rgba(10, 14, 24, 0.62) 100%
-              ) !important;
-            backdrop-filter: blur(28px) saturate(210%) brightness(108%) contrast(106%) !important;
-            -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(108%) contrast(106%) !important;
-            border: 1.1px solid rgba(255, 255, 255, 0.32) !important;
+            background: var(--glass-strong) !important;
+            backdrop-filter: var(--glass-blur) !important;
+            -webkit-backdrop-filter: var(--glass-blur) !important;
+            border: var(--glass-border) !important;
             border-radius: 20px !important;
-            box-shadow: 
-              0 18px 44px rgba(0, 0, 0, 0.4),
-              0 4px 14px rgba(0, 0, 0, 0.16),
-              inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-              inset 0 -1px 1px rgba(255, 255, 255, 0.15) !important;
+            box-shadow: var(--shadow-glass) !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
             box-sizing: border-box !important;
             overflow: visible !important;
+            text-shadow: var(--glass-text-shadow);
           }
 
           /* Highlight glow perfectly centered behind text */
@@ -1094,7 +1084,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             -webkit-text-fill-color: transparent !important;
             color: transparent !important;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
-            text-shadow: none !important;
+            text-shadow: var(--glass-text-shadow) !important;
             white-space: nowrap !important;
           }
 
@@ -1132,7 +1122,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-family: inherit !important;
             font-style: normal !important;
             font-weight: 800 !important;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+            text-shadow: var(--glass-text-shadow) !important;
             white-space: nowrap !important;
           }
 
@@ -1155,7 +1145,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           [data-theme="light"] .hero-pill-line-white .white-text-span {
             color: #FFFFFF !important;
             -webkit-text-fill-color: #FFFFFF !important;
-            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8) !important;
+            text-shadow: var(--glass-text-shadow) !important;
           }
 
           /* Mobile Sparkling Star Divider with Symmetrical Glowing Lines */
@@ -1202,14 +1192,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
             margin: 0 auto !important;
             text-align: center !important;
             max-width: 44ch !important;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9) !important;
+            text-shadow: var(--glass-text-shadow) !important;
             display: block !important;
             width: 100% !important;
           }
 
           [data-theme="light"] .hero-subtitle {
             color: rgba(255, 255, 255, 0.94) !important;
-            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85) !important;
+            text-shadow: var(--glass-text-shadow) !important;
             font-weight: 500 !important;
           }
 
@@ -1269,26 +1259,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 0.75rem;
             font-weight: 600;
             color: #FFFFFF;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            background: var(--glass-strong);
+            border: var(--glass-border);
+            backdrop-filter: var(--glass-blur-nav);
+            -webkit-backdrop-filter: var(--glass-blur-nav);
+            box-shadow: var(--shadow-glass);
             transition: all 0.2s ease;
+            text-shadow: var(--glass-text-shadow);
           }
 
           .hero-dest-chip:active {
             transform: scale(0.96);
-            background: rgba(229, 184, 105, 0.2);
+            background: var(--glass-strong);
             border-color: rgba(229, 184, 105, 0.5);
             color: #E5B869;
           }
 
           [data-theme="light"] .hero-dest-chip {
             color: #1E293B;
-            background: rgba(255, 255, 255, 0.8);
+            background: var(--glass-strong);
             border-color: rgba(0, 0, 0, 0.1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            box-shadow: var(--shadow-glass);
           }
 
           .dest-chip-arrow {
@@ -1308,17 +1299,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             width: 100%;
             padding: 0.65rem 0.85rem;
             border-radius: 14px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background: var(--glass-strong);
+            border: var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="light"] .hero-mobile-trust-bar {
-            background: rgba(255, 255, 255, 0.7);
+            background: var(--glass-strong);
             border-color: rgba(0, 0, 0, 0.08);
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+            box-shadow: var(--shadow-glass);
           }
 
           .hero-trust-item {
@@ -1400,12 +1392,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
           max-width: 680px;
           margin: 0;
           font-weight: 400;
-          text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .hero-subtitle {
           color: rgba(255, 255, 255, 0.94) !important;
-          text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85) !important;
+          text-shadow: var(--glass-text-shadow) !important;
           font-weight: 500 !important;
         }
 
@@ -1558,26 +1550,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
           font-weight: 600;
           color: var(--text-secondary, #94A3B8);
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          backdrop-filter: blur(24px) saturate(200%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           transition: all var(--transition-fast);
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .destination-pill {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.78) 0%,
-            rgba(255, 255, 255, 0.45) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.88);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: #475569;
-          box-shadow: 0 4px 14px rgba(30, 24, 16, 0.05), inset 0 1px 1px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .destination-pill:hover {
@@ -1589,7 +1579,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           color: #0A0C10;
           font-weight: 700;
           border-color: transparent;
-          background: transparent;
+          background: var(--bg-glass-card);
         }
 
         .destination-pill-indicator {
@@ -1697,26 +1687,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="dark"] .seller-consignment-banner {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.12) 0%,
-            rgba(18, 24, 38, 0.55) 50%,
-            rgba(10, 14, 24, 0.80) 100%
-          );
-          backdrop-filter: blur(32px) saturate(210%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 
-            0 28px 64px rgba(0, 0, 0, 0.5),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.6);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .seller-consignment-banner {
-          background: linear-gradient(135deg, #FFFFFF 0%, #FAF7F2 100%);
-          border: 1.5px solid rgba(184, 147, 74, 0.35);
-          box-shadow: 
-            0 16px 48px rgba(30, 24, 16, 0.06),
-            0 2px 8px rgba(0, 0, 0, 0.02);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .banner-watermark-scale {
@@ -1891,20 +1873,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
           align-items: center;
           gap: 8px;
           border-radius: 10px;
-          background: rgba(255, 255, 255, 0.06);
+          background: var(--bg-glass-card);
           color: #FFFFFF;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: var(--glass-border);
           cursor: pointer;
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           transition: all var(--transition-fast);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .seller-outline-btn {
-          background: rgba(255, 255, 255, 0.65);
+          background: var(--bg-glass-card);
           border-color: rgba(30, 24, 16, 0.15);
           color: #141210;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+          box-shadow: var(--shadow-glass);
         }
 
         .seller-outline-btn:hover {
@@ -1977,6 +1961,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .stat-lbl {
             font-size: 0.65rem;
           }
+        }
+        [data-theme="light"] .hero-title-glass-card .gold-text-span,
+        [data-theme="light"] .hero-title-glass-card .white-text-span {
+          color: var(--text-primary) !important;
+          -webkit-text-fill-color: var(--text-primary) !important;
+          background: none !important;
+          text-shadow: var(--glass-text-shadow) !important;
         }
       `}</style>
     </div>

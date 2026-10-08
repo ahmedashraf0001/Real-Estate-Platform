@@ -21,6 +21,8 @@ export interface Property {
   sqm: number;
   propertyType: 'Apartment' | 'Building (عمارة)' | 'Garage' | string;
   builtYear?: number;
+  floors?: number;
+  calcom_event_link?: string | null;
   featured?: boolean;
   images: string[];
   videos?: PropertyVideo[];
