@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIN-OS — نماذج التعديل</title>
+<style>
+@font-face{font-family:'ThmanyahSans';src:url('../../zakaria-farid/public/fonts/thmanyahsans-Regular.woff2') format('woff2');font-weight:400}
+@font-face{font-family:'ThmanyahSans';src:url('../../zakaria-farid/public/fonts/thmanyahsans-Medium.woff2') format('woff2');font-weight:500}
+@font-face{font-family:'ThmanyahSans';src:url('../../zakaria-farid/public/fonts/thmanyahsans-Bold.woff2') format('woff2');font-weight:700}
+:root{--canvas:#f1f5f9;--panel:#fff;--accent:#2563eb;--accent-subtle:#eff6ff;--accent-tint:rgba(37,99,235,.08);--border:#cbd5e1;--hair:#e2e8f0;--div:#f1f5f9;--title:#0f172a;--body:#334155;--muted:#64748b;--subtle:#94a3b8;--ok:#16a34a;--bad:#dc2626;--warn:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--body);font-family:'ThmanyahSans','Cairo','Segoe UI',Tahoma,sans-serif;font-size:13px;line-height:1.5}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+.mock-title{font-size:20px;font-weight:700;color:var(--title);margin:28px 0 4px}
+.mock-sub{color:var(--muted);margin:0 0 12px}
+.approve{border:1px dashed #94a3b8;background:#fff;border-radius:10px;padding:10px 14px;margin:10px 0 0;font-size:12.5px}
+.approve b{color:var(--title)}
+.approve ol{margin:4px 0 0;padding-inline-start:18px}
+.stage{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.grid{display:grid;gap:12px}
+.card{background:#fff;border:1px solid var(--hair);border-radius:12px;padding:14px}
+.card h3{margin:0 0 10px;font-size:13.5px;color:var(--title);display:flex;align-items:center;gap:8px}
+.sq{width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);color:var(--accent);border:1px solid var(--accent-tint);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.lbl{font-size:11.5px;color:var(--muted)}
+.big{font-size:22px;font-weight:700;color:var(--title)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:9999px;padding:1px 9px;font-size:11px;font-weight:500;border:1px solid}
+.p-ok{color:#15803d;background:#f0fdf4;border-color:rgba(22,163,74,.2)}
+.p-bad{color:#b91c1c;background:#fef2f2;border-color:rgba(220,38,38,.2)}
+.p-warn{color:#b45309;background:#fffbeb;border-color:rgba(217,119,6,.2)}
+.p-acc{color:var(--accent);background:var(--accent-subtle);border-color:rgba(37,99,235,.2)}
+.p-mut{color:var(--muted);background:#f8fafc;border-color:var(--hair)}
+.btn{border-radius:8px;padding:8px 14px;font:inherit;font-weight:500;border:1px solid var(--border);background:#fff;color:var(--title);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg span{padding:6px 12px;font-size:12px;border-inline-start:1px solid var(--hair)}
+.seg span:first-child{border:0}
+.seg span.on{background:var(--accent-subtle);color:var(--accent);font-weight:500}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:9999px;padding:4px 10px;font-size:12px;background:#fff}
+.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-subtle)}
+.chip i{font-style:normal;background:var(--div);border-radius:9999px;padding:0 6px;font-size:11px;color:var(--title)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:right;font-weight:500;color:var(--muted);font-size:11.5px;padding:8px;background:var(--accent-tint);border-bottom:1px solid var(--border)}
+td{padding:8px;border-bottom:1px solid var(--div);color:var(--body)}
+td.n,th.n{text-align:left;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+tfoot td{font-weight:700;color:var(--title);border-top:1px solid var(--border);border-bottom:0}
+tr.locked td{color:var(--subtle)}
+.ref{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--muted);direction:ltr;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.input{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;display:flex;align-items:center;gap:8px}
+.input .num{font-size:20px;font-weight:700;color:var(--title)}
+.bar{position:sticky;bottom:0;background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;margin-top:12px}
+.steps{display:flex;gap:0;align-items:center;font-size:12px}
+.steps span{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.steps span b{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.steps span.done b{background:var(--accent);border-color:var(--accent);color:#fff}
+.steps span.cur{color:var(--title);font-weight:500}
+.steps span.cur b{border-color:var(--accent);color:var(--accent)}
+.steps i{width:36px;height:1px;background:var(--border);margin:0 8px}
+.rail{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11.5px}
+.cal .h{color:var(--subtle);font-size:10.5px;padding:4px 0}
+.cal .d{padding:5px 0 7px;border-radius:7px;position:relative;color:var(--body)}
+.cal .d.o{color:#cbd5e1}
+.cal .d.t{border:1px solid var(--accent);color:var(--accent);font-weight:700}
+.cal .d.s{background:var(--accent-subtle)}
+.dots{position:absolute;bottom:2px;left:0;right:0;display:flex;justify-content:center;gap:2px}
+.dots u{width:4px;height:4px;border-radius:50%;display:block;text-decoration:none}
+.in{background:var(--ok)} .out{background:var(--bad)} .late{background:#b45309}
+.daylist div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--div);font-size:12px}
+.modal{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,.12)}
+.mh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--hair)}
+.mfig{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--hair)}
+.mfig div{padding:10px 16px;border-inline-start:1px solid var(--hair)}
+.mfig div:first-child{border:0}
+.x{text-decoration:line-through;color:var(--subtle)}
+.cut{outline:2px dashed #dc2626;outline-offset:2px;opacity:.55;position:relative}
+.cut:after{content:attr(data-cut);position:absolute;top:6px;left:6px;background:#dc2626;color:#fff;font-size:10.5px;padding:1px 6px;border-radius:4px}
+@media (max-width:820px){.kpis{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr!important}.mfig{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ================= 1. CALCULATOR ================= -->
+<div class="mock-title">1. حاسبة التسعير — إعادة التسعير</div>
+<p class="mock-sub">خطوات واضحة: التكلفة ← سعر المتر ← أثره على الوحدات ← زر حفظ واحد يتغير حسب مرحلة العقار. نفس صفحة FIN-OS بعرض كامل.</p>
+
+<div class="stage">
+  <div class="row" style="margin-bottom:12px">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:var(--title)">حاسبة التكاليف والتسعير</div>
+      <div class="lbl">اختر العقار، حدد سعر المتر، وراجع أثره على الوحدات المتاحة قبل الاعتماد.</div>
+    </div>
+    <div class="sp"></div>
+    <div class="seg"><span class="on">تسعير عقار مبني</span><span>دراسة جدوى</span></div>
+  </div>
+
+  <div class="card row" style="margin-bottom:12px">
+    <div class="input" style="min-width:300px"><span class="lbl">العقار</span><b style="color:var(--title)">SIM عمارة اختبار دورة الحياة</b><span class="sp"></span>▾</div>
+    <span class="pill p-warn">تحت الإنشاء</span>
+    <div class="sp"></div>
+    <div class="steps">
+      <span class="done"><b>✓</b>السعر المبدئي <span class="num lbl">6,000,000</span></span><i></i>
+      <span class="cur"><b>2</b>إنهاء الإنشاء</span><i></i>
+      <span><b>3</b>السعر النهائي</span>
+    </div>
+  </div>
+
+  <div class="grid two" style="grid-template-columns:1fr 1.4fr">
+    <div class="card">
+      <h3><span class="sq">①</span>أساس التكلفة</h3>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
+        <div><div class="lbl">صافي التكلفة المسجلة</div><div class="big num">1,780,000</div></div>
+        <div><div class="lbl">المساحة</div><div class="big num">600 م²</div></div>
+        <div><div class="lbl">تكلفة المتر</div><div class="big num">2,967</div></div>
+        <div><div class="lbl">بنود التكلفة</div><div style="padding-top:6px"><a href="#" style="color:var(--accent)">3 بنود — عرض</a></div></div>
+      </div>
+      <div class="lbl" style="margin-top:10px">الصافي = الأصل + الإضافات − المرتجعات (لكل بند).</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="sq">②</span>سعر المتر</h3>
+      <div class="row">
+        <div class="input" style="width:220px"><span class="num">9,000</span><span class="lbl">ج.م/م²</span></div>
+        <div class="row" style="gap:6px">
+          <span class="chip">التعادل <i class="num">2,967</i></span>
+          <span class="chip">التكلفة +15% <i class="num">3,412</i></span>
+          <span class="chip">التكلفة +30% <i class="num">3,857</i></span>
+          <span class="chip on">سعر السوق <i class="num">9,000</i> ✎</span>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;border-top:1px solid var(--div);padding-top:12px">
+        <div><div class="lbl">سعر العقار</div><div class="big num" style="font-size:18px">5,500,000</div><div class="lbl">متاح 4,500,000 + مباع 1,000,000</div></div>
+        <div><div class="lbl">الربح المتوقع</div><div class="big num" style="font-size:18px;color:var(--ok)">+3,720,000</div></div>
+        <div><div class="lbl">هامش الربح</div><div class="big num" style="font-size:18px">67.6%</div></div>
+        <div><div class="lbl">عن السعر الحالي</div><div class="big num" style="font-size:18px;color:var(--bad)">−500,000</div></div>
+      </div>
+      <div class="lbl" style="margin-top:8px">سعر السوق يُكتب مرة لكل عقار ويُحفظ معه. الأزرار تملأ الخانة فقط؛ لا شيء يُحفظ قبل الضغط على زر الاعتماد.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3><span class="sq">③</span>أثر السعر على الوحدات <span class="pill p-mut">5 متاحة · 1 مباعة لا تتغير</span></h3>
+    <table>
+      <thead><tr><th>الوحدة</th><th>الدور</th><th class="n">المساحة</th><th>الحالة</th><th class="n">السعر الحالي</th><th class="n">السعر الجديد</th><th class="n">الفرق</th></tr></thead>
+      <tbody>
+        <tr class="locked"><td>شقة 1A</td><td>1</td><td class="n">100 م²</td><td><span class="pill p-mut">🔒 مباعة — لا تتغير</span></td><td class="n">1,000,000</td><td class="n">1,000,000</td><td class="n">—</td></tr>
+        <tr><td>شقة 1B</td><td>1</td><td class="n">100 م²</td><td><span class="pill p-ok">متاحة</span></td><td class="n">1,000,000</td><td class="n">900,000</td><td class="n" style="color:var(--bad)">−100,000</td></tr>
+        <tr><td>شقة 2A</td><td>2</td><td class="n">100 م²</td><td><span class="pill p-ok">متاحة</span></td><td class="n">1,000,000</td><td class="n">900,000</td><td class="n" style="color:var(--bad)">−100,000</td></tr>
+        <tr><td>شقة 2B</td><td>2</td><td class="n">100 م²</td><td><span class="pill p-ok">متاحة</span></td><td class="n">1,000,000</td><td class="n">900,000</td><td class="n" style="color:var(--bad)">−100,000</td></tr>
+        <tr><td>شقة 3A</td><td>3</td><td class="n">100 م²</td><td><span class="pill p-ok">متاحة</span></td><td class="n">1,000,000</td><td class="n">900,000</td><td class="n" style="color:var(--bad)">−100,000</td></tr>
+        <tr><td>شقة 3B</td><td>3</td><td class="n">100 م²</td><td><span class="pill p-ok">متاحة</span></td><td class="n">1,000,000</td><td class="n">900,000</td><td class="n" style="color:var(--bad)">−100,000</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">الإجمالي = سعر العقار <span class="pill p-ok">مطابق</span></td><td class="n">6,000,000</td><td class="n">5,500,000</td><td class="n">−500,000</td></tr></tfoot>
+    </table>
+    <div class="lbl" style="margin-top:6px">الوحدات المتاحة = سعر المتر × مساحتها. المباعة والمحجوزة ثابتة على سعر عقدها. سعر العقار = مجموع الوحدات، فيتطابق دائماً.</div>
+  </div>
+
+  <div class="bar">
+    <div><div class="lbl">السعر الحالي ← الجديد</div><b class="num" style="color:var(--title)">6,000,000 ← 5,500,000</b></div>
+    <div class="sp"></div>
+    <button class="btn">سجل الأسعار (2)</button>
+    <button class="btn">إنهاء الإنشاء</button>
+    <button class="btn pri">حفظ السعر المبدئي</button>
+  </div>
+  <div class="lbl" style="margin-top:6px">زر الاعتماد الرئيسي واحد: «حفظ السعر المبدئي» قبل إنهاء الإنشاء، «اعتماد السعر النهائي» بعده، «حفظ السعر» للعقار الجاهز. كل حفظ يطلب تأكيداً بملخص التغيير ويُسجَّل في سجل الأسعار.</div>
+</div>
+
+<div class="approve"><b>يحتاج موافقتك (حذف):</b>
+<ol>
+<li>حذف شريط المؤشر (slider) — تحل محله خانة الرقم + أزرار التعادل/‎+15%/‎+30%/السوق.</li>
+<li>حذف جدول «مقارنة الأسعار» المنفصل — نفس الأرقام صارت أزرار.</li>
+<li>حذف بطاقات الملخص الأربع العلوية (سعر البيع/الربح/التكلفة/الفرق) — صارت داخل بطاقة «سعر المتر».</li>
+<li>حذف لوحة «توزيع التكاليف» و«سجل الأسعار» الجانبية — سجل الأسعار يفتح من زر في الشريط السفلي.</li>
+</ol>
+<b>أخطاء تُصلح ضمن المهمة:</b> الوحدة المباعة تظهر بسعر جديد؛ ملاحظة «للعرض فقط… أسعار الوحدات من صفحة العقارات» تناقض التسعير النهائي؛ مجموع أسعار الوحدات الجديد لا يساوي سعر العقار (6 × 670,000 = 4,020,000 بدل 4,000,000)؛ الزرّان «حفظ السعر المبدئي» و«إنهاء الإنشاء واعتماد السعر النهائي» بجانب بعض بلا ترتيب.
+</div>
+
+<!-- ================= 2. PDC ================= -->
+<div class="mock-title">2. أجندة المستحقات — جدول واحد + تقويم جديد</div>
+<p class="mock-sub">الوارد (أقساط العملاء) والصادر (المقاولون) في جدول واحد بعمود «الاتجاه». أعداد الفلاتر تُحسب من نفس الصفوف المعروضة، فلا يظهر «2» مع جدول فارغ.</p>
+
+<div class="grid two" style="grid-template-columns:1fr 300px;align-items:start">
+<div class="stage">
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="card"><div class="row"><span class="lbl">تحصيلات مجدولة</span><span class="sp"></span><span class="sq">↓</span></div><div class="big num">728,572</div></div>
+    <div class="card"><div class="row"><span class="lbl">التزامات المقاولين</span><span class="sp"></span><span class="sq">↑</span></div><div class="big num">1,576,542</div></div>
+    <div class="card"><div class="row"><span class="lbl">السيولة المتوقعة</span><span class="sp"></span><span class="sq">≈</span></div><div class="big num">3,881,836</div></div>
+    <div class="card"><div class="row"><span class="lbl">العاجل (متأخر + اليوم)</span><span class="sp"></span><span class="sq">!</span></div><div class="big num">576,543</div></div>
+  </div>
+
+  <div class="row" style="margin-bottom:8px">
+    <div class="seg"><span class="on">الكل <span class="num">23</span></span><span>وارد من العملاء <span class="num">9</span></span><span>صادر للمقاولين <span class="num">14</span></span></div>
+    <div class="sp"></div>
+    <div class="input" style="width:240px;padding:5px 10px"><span class="lbl">بحث بالعميل أو المقاول أو الوحدة…</span></div>
+    <span class="chip">الترتيب: الأقرب استحقاقاً ▾</span>
+  </div>
+  <div class="row" style="margin-bottom:10px;gap:6px">
+    <span class="chip on">الكل <i>23</i></span>
+    <span class="chip">متأخر <i>2</i></span>
+    <span class="chip">مستحق اليوم <i>0</i></span>
+    <span class="chip">خلال 7 أيام <i>0</i></span>
+    <span class="chip">قادم <i>13</i></span>
+    <span class="chip">مسدد بالكامل <i>8</i></span>
+  </div>
+
+  <table>
+    <thead><tr><th>الاتجاه</th><th class="n">الاستحقاق</th><th>الطرف</th><th>المشروع / الوحدة</th><th>البيان</th><th class="n">القيمة</th><th class="n">المتبقي</th><th>الحالة</th><th></th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill p-bad">↑ صادر</span></td><td class="n">2026-10-07</td><td>SIM مقاول مباني</td><td>SIM عمارة دورة الحياة</td><td>إنشاءات وهيكل</td><td class="n">500,000</td><td class="n">376,543</td><td><span class="pill p-bad">متأخر يوم</span></td><td><button class="btn" style="padding:3px 10px">سداد</button></td></tr>
+      <tr><td><span class="pill p-bad">↑ صادر</span></td><td class="n">2026-10-07</td><td>SIM مقاول تشطيبات</td><td>SIM عمارة دورة الحياة</td><td>تشطيبات داخلية</td><td class="n">300,000</td><td class="n">200,000</td><td><span class="pill p-bad">متأخر يوم</span></td><td><button class="btn" style="padding:3px 10px">سداد</button></td></tr>
+      <tr><td><span class="pill p-bad">↑ صادر</span></td><td class="n">2026-11-05</td><td>SIM مقاول حفر وخرسانة</td><td>SIM عمارة دورة الحياة</td><td>القسط الإنشائي 1</td><td class="n">142,857</td><td class="n">142,857</td><td><span class="pill p-mut">قادم</span></td><td><button class="btn" style="padding:3px 10px">سداد</button></td></tr>
+      <tr><td><span class="pill p-ok">↓ وارد</span></td><td class="n">2027-02-07</td><td>SIM عميل تجريبي</td><td>دورة الحياة · شقة 1A</td><td>قسط 2</td><td class="n">121,429</td><td class="n">121,429</td><td><span class="pill p-mut">قادم</span></td><td><button class="btn" style="padding:3px 10px">تحصيل</button></td></tr>
+      <tr><td><span class="pill p-ok">↓ وارد</span></td><td class="n">2026-10-07</td><td>SIM عميل تجريبي</td><td>دورة الحياة · شقة 1A</td><td>الدفعة المقدمة</td><td class="n">150,000</td><td class="n">0</td><td><span class="pill p-ok">محصل</span></td><td><a href="#" style="color:var(--accent);font-size:12px">سند القبض</a></td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="5">المعروض: 23 · متبقٍ وارد <span class="num">728,572</span> · متبقٍ صادر <span class="num">1,576,542</span></td><td></td><td class="n" style="color:var(--bad)">−847,970</td><td colspan="2" class="lbl">صافي</td></tr></tfoot>
+  </table>
+  <div class="lbl" style="margin-top:6px">التصنيف يظهر بالعربي (إنشاءات وهيكل) لا بالكود (civil_structure). المبالغ بدون كسور في الجدول؛ الكسور في التفاصيل فقط.</div>
+</div>
+
+<div class="rail">
+  <div class="row" style="margin-bottom:8px"><span class="sq">▦</span><b style="color:var(--title)">تقويم المستحقات</b><span class="sp"></span><div class="seg"><span>أسبوع</span><span class="on">شهر</span></div></div>
+  <div class="row" style="margin-bottom:6px"><span>‹</span><span class="sp"></span><b style="color:var(--title)">أكتوبر 2026</b><span class="sp"></span><span>›</span></div>
+  <div class="cal">
+    <div class="h">سبت</div><div class="h">أحد</div><div class="h">اثنين</div><div class="h">ثلاثاء</div><div class="h">أربعاء</div><div class="h">خميس</div><div class="h">جمعة</div>
+    <div class="d o">26</div><div class="d o">27</div><div class="d o">28</div><div class="d o">29</div><div class="d o">30</div><div class="d">1</div><div class="d">2</div>
+    <div class="d">3</div><div class="d">4</div><div class="d">5</div><div class="d s">6<span class="dots"><u class="in"></u><u class="out"></u></span></div><div class="d">7<span class="dots"><u class="late"></u><u class="late"></u><u class="in"></u></span></div><div class="d t">8</div><div class="d">9</div>
+    <div class="d">10</div><div class="d">11</div><div class="d">12</div><div class="d">13</div><div class="d">14</div><div class="d">15</div><div class="d">16</div>
+    <div class="d">17</div><div class="d">18</div><div class="d">19</div><div class="d">20</div><div class="d">21</div><div class="d">22</div><div class="d">23</div>
+    <div class="d">24</div><div class="d">25</div><div class="d">26</div><div class="d">27</div><div class="d">28</div><div class="d">29</div><div class="d">30</div>
+  </div>
+  <div class="row lbl" style="gap:10px;margin:8px 0;font-size:11px"><span><u class="in" style="display:inline-block;width:7px;height:7px;border-radius:50%"></u> وارد</span><span><u class="out" style="display:inline-block;width:7px;height:7px;border-radius:50%"></u> صادر</span><span><u class="late" style="display:inline-block;width:7px;height:7px;border-radius:50%"></u> متأخر</span></div>
+  <div style="border-top:1px solid var(--hair);padding-top:8px">
+    <div class="lbl" style="margin-bottom:4px">الثلاثاء 6 أكتوبر</div>
+    <div class="daylist">
+      <div><span>↓ Test Buyer · مقدم</span><b class="num" style="color:var(--ok)">+2,083,333</b></div>
+      <div><span>↑ rhrt · إنشاءات</span><b class="num" style="color:var(--bad)">−3,000,000</b></div>
+      <div><span class="lbl">صافي اليوم</span><b class="num">−916,667</b></div>
+    </div>
+  </div>
+  <div class="lbl" style="margin-top:8px">الضغط على يوم يفلتر الجدول على ذلك اليوم.</div>
+</div>
+</div>
+
+<div class="approve"><b>يحتاج موافقتك (حذف/دمج):</b>
+<ol>
+<li>دمج الجدولين («1. المقبوضات» و«2. المدفوعات») في جدول واحد مع عمود «الاتجاه».</li>
+<li>حذف أزرار العرض الأربعة («عرض الجدولين معاً»، «المقبوضات فقط»، «المدفوعات فقط»، «عرض المتأخرات فقط») — يحل محلها شريط الاتجاه + شريحة «متأخر».</li>
+<li>حذف شريط التنبيه الأحمر «تنبيه تدفقات الخزينة…» — نفس الرقم في بطاقة «العاجل» وشريحة «متأخر».</li>
+<li>استبدال ويدجت «أجندة المستحقات والتقويم» (شريط أسبوع بأرقام مقطوعة «…3k») بالتقويم الشهري أعلاه.</li>
+</ol>
+<b>أخطاء تُصلح:</b> عدد «متأخرات 2» يُحسب من الجدولين بينما الجدول المعروض وارد فقط فيظهر فارغاً (تم إعادة إنتاجه)؛ ترتيب «الأولوية» يضع قسط 2027-07 قبل 2027-02؛ كود التصنيف الإنجليزي ظاهر.
+</div>
+
+<!-- ================= 3. LEDGER ================= -->
+<div class="mock-title">3. دفتر الأستاذ — تقليل الويدجتس + نافذة كشف الحساب</div>
+<p class="mock-sub">الصفحة الآن: 4 بطاقات + رسمان بيانيان + جدول، والجانب: شجرة الحسابات + بطاقة الحساب المحدد + الإجراءات + الفترة + التوازن (5 ويدجتس).</p>
+
+<div class="grid two" style="grid-template-columns:1fr 300px;align-items:start">
+<div class="stage">
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="card"><span class="lbl">إجمالي الأصول</span><div class="big num">11,429,804</div></div>
+    <div class="card"><span class="lbl">إجمالي الخصوم</span><div class="big num">3,931,304</div></div>
+    <div class="card"><span class="lbl">حقوق الملكية</span><div class="big num">7,501,501</div></div>
+    <div class="card"><span class="lbl">صافي نتيجة النشاط</span><div class="big num">0</div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1.6fr 1fr;margin-bottom:12px">
+    <div class="card"><h3><span class="sq">▥</span>حركة القيود المحاسبية</h3><div style="height:90px;border:1px dashed var(--hair);border-radius:8px" class="lbl"> (يبقى كما هو)</div></div>
+    <div class="card cut" data-cut="يُحذف"><h3><span class="sq">◔</span>توزيع القيود حسب النوع</h3><div style="height:90px" class="lbl">مشتريات 58% · مبيعات 42% · 0% · 0% · 0%</div></div>
+  </div>
+  <div class="card"><h3>دليل الحسابات · سجل القيود · ميزان المراجعة · المركز المالي · الأرباح والخسائر</h3><div class="lbl">الجدول كما هو.</div></div>
+</div>
+<div class="grid">
+  <div class="rail"><b style="color:var(--title)">هيكل الحسابات</b><div class="lbl">الشجرة كما هي. الضغط على حساب يفتح نافذة كشف الحساب مباشرة.</div></div>
+  <div class="rail cut" data-cut="يُحذف"><b>خزينة النقدية الرئيسية (بطاقة الحساب المحدد)</b><div class="lbl">نفس أرقام نافذة كشف الحساب.</div></div>
+  <div class="rail"><b style="color:var(--title)">الإجراءات والتصدير</b><div class="lbl">قيد جديد · حساب فرعي · Excel · طباعة الميزان · القوائم.</div></div>
+  <div class="rail"><b style="color:var(--title)">الفترة والتوازن</b>
+    <div class="row" style="margin-top:6px"><span class="chip">2026 / 10 ▾</span><span class="pill p-acc">مفتوحة</span><span class="sp"></span><span class="pill p-ok">متوازن 0.00</span></div>
+    <div class="row lbl" style="margin-top:6px"><span>مدين <span class="num">17,779,722</span></span><span class="sp"></span><span>دائن <span class="num">17,779,722</span></span></div>
+    <div class="lbl" style="margin-top:4px">بطاقتا «الفترة المحاسبية» و«التدقيق والتوازن» في بطاقة واحدة. أزرار الإقفال داخل قائمة ▾.</div>
+  </div>
+</div>
+</div>
+
+<div class="modal" style="margin-top:16px">
+  <div class="mh">
+    <span class="sq">▤</span>
+    <div><b style="color:var(--title);font-size:15px">خزينة النقدية الرئيسية (كاش باليد)</b><div class="lbl"><span class="num">101000</span> · أصول متداولة · طبيعة مدينة</div></div>
+    <div class="sp"></div>
+    <span class="chip">الفترة: 2026 / 10 ▾</span>
+    <div class="input" style="padding:5px 10px;width:200px"><span class="lbl">بحث في البيان أو المرجع…</span></div>
+    <span style="font-size:18px;color:var(--muted)">✕</span>
+  </div>
+  <div class="mfig">
+    <div><div class="lbl">رصيد أول المدة</div><div class="big num" style="font-size:17px">0</div></div>
+    <div><div class="lbl">إجمالي المدين</div><div class="big num" style="font-size:17px">9,733,334</div></div>
+    <div><div class="lbl">إجمالي الدائن</div><div class="big num" style="font-size:17px">5,124,957</div></div>
+    <div><div class="lbl">رصيد آخر المدة</div><div class="big num" style="font-size:17px;color:var(--accent)">4,608,377 <span style="font-size:12px">مدين</span></div></div>
+  </div>
+  <div style="padding:0 16px 8px">
+    <table>
+      <thead><tr><th class="n">التاريخ</th><th>المرجع</th><th>البيان</th><th>النوع</th><th class="n">مدين</th><th class="n">دائن</th><th class="n">الرصيد</th></tr></thead>
+      <tbody>
+        <tr><td class="n lbl">2026-10-01</td><td></td><td class="lbl">رصيد أول المدة</td><td></td><td class="n"></td><td class="n"></td><td class="n">0</td></tr>
+        <tr><td class="n">2026-10-06</td><td><span class="ref">JE-RCP-RC-20261006-0001</span></td><td>تحصيل مقدم — Test Buyer</td><td><span class="pill p-ok">تحصيل عميل</span></td><td class="n">2,083,333</td><td class="n">—</td><td class="n">2,083,333</td></tr>
+        <tr><td class="n">2026-10-06</td><td><span class="ref">JE-2026-CAP-7500</span></td><td>تمويل من شريك — محمود رشاد</td><td><span class="pill p-acc">تمويل شريك</span></td><td class="n">7,500,000</td><td class="n">—</td><td class="n">9,583,333</td></tr>
+        <tr><td class="n">2026-10-06</td><td><span class="ref">AP-7ee7d6b9-145e…</span></td><td>سداد مقاول — rhrt</td><td><span class="pill p-warn">سداد مقاول</span></td><td class="n">—</td><td class="n">3,000,000</td><td class="n">6,583,333</td></tr>
+        <tr><td class="n">2026-10-07</td><td><span class="ref">JE-RCP-RC-20261007-CR02</span></td><td>تحصيل مقدم — SIM عميل تجريبي · شقة 1A</td><td><span class="pill p-ok">تحصيل عميل</span></td><td class="n">150,000</td><td class="n">—</td><td class="n">6,733,333</td></tr>
+        <tr><td class="n">2026-10-07</td><td><span class="ref">JE-2026-DIST-5707</span></td><td>صرف أرباح لشريك</td><td><span class="pill p-mut">صرف لشريك</span></td><td class="n">—</td><td class="n">500</td><td class="n">6,732,833</td></tr>
+        <tr><td colspan="7" class="lbl" style="text-align:center">… 11 حركة أخرى …</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">الإجمالي · 16 حركة</td><td class="n">9,733,334</td><td class="n">5,124,957</td><td class="n">4,608,377 م</td></tr></tfoot>
+    </table>
+  </div>
+  <div class="row" style="padding:10px 16px;border-top:1px solid var(--hair)"><span class="lbl">ترتيب زمني تصاعدي حتى يُقرأ الرصيد الجاري من أعلى لأسفل. الضغط على صف يفتح القيد كاملاً.</span><span class="sp"></span><button class="btn">Excel</button><button class="btn">PDF</button><button class="btn pri">إغلاق</button></div>
+</div>
+
+<div class="approve"><b>يحتاج موافقتك (حذف/دمج):</b>
+<ol>
+<li>حذف «توزيع القيود حسب النوع» (دائرة بنسب أغلبها 0%).</li>
+<li>حذف بطاقة «الحساب المحدد» من الجانب — نفس الأرقام في النافذة، والضغط على الحساب في الشجرة يفتح النافذة.</li>
+<li>دمج «الفترة المحاسبية والرقابة» و«التدقيق والتوازن المالي» في بطاقة واحدة «الفترة والتوازن».</li>
+</ol>
+<b>نافذة كشف الحساب:</b> عمود رصيد جارٍ، رصيد أول وآخر المدة، ترتيب تصاعدي، مرجع في سطر واحد (يُقطع بـ … ويظهر كاملاً عند المرور)، البيان سطر واحد، نوع الحركة شريحة صغيرة، فلتر بالفترة. حالياً: المرجع ينكسر على 3–4 أسطر، لا يوجد رصيد جارٍ، والترتيب تنازلي.
+</div>
+
+</div>
+</body>
+</html>

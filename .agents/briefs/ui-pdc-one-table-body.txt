@@ -1,0 +1,38 @@
+TASK ui-pdc-one-table (SURFACE_UI). Page: /fin-os/ar/pdc ("أجندة المستحقات").
+
+USER APPROVAL OVERRIDES THE HEADER RULE "never remove or merge a widget/button" FOR EXACTLY THESE ITEMS (user-approved 2026-10-08, PROJECT_SPEC.md):
+1. Merge the two tables ("1. المقبوضات والتحصيلات الواردة" and "2. المدفوعات والالتزامات الصادرة") into ONE table with a direction column.
+2. Remove the 4 view buttons: "عرض الجدولين معاً (المقبوضات + المدفوعات)", "المقبوضات والتحصيلات فقط", "المدفوعات والالتزامات فقط", "عرض المتأخرات فقط".
+3. Remove the red banner "تنبيه تدفقات الخزينة: توجد (N) معاملات..." (line ~1014).
+4. Replace the side widget "أجندة الاستحقاقات والتقويم" (week strip, ~line 2129) with a month calendar.
+Nothing else is removed. KPI cards, the cards/table toggle, the other side widgets, row actions (تحصيل / سداد modals, سند القبض, إشعار استحقاق, inspect, print) stay and keep working.
+
+APPROVED MOCKUP (binding for layout/wording): .agents/mockups/ui-calc-pdc-ledger.html section "2. أجندة المستحقات". Its numbers are fake; all data comes from the existing memos.
+
+FILE: zakaria-farid/src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx (+ its CSS module if needed). Existing state (lines ~116-126): tableSelection, maturityTab, statusFilter, inflowSortBy/outflowSortBy, searchQuery, viewMode, per-table pagination. Existing memos: projectedItems (~136, inflows), projectedOutflows (~144), filteredInflowItems (~211), filteredOutflowItems (~263), sorted*/paginated*.
+
+REQUIRED
+R1. Direction switch (segmented, same style as existing segmented controls): "الكل N" | "وارد من العملاء N" | "صادر للمقاولين N". Replace tableSelection 'both'|'inflows'|'outflows' semantics with this switch (rename allowed; no dead state left).
+R2. Maturity chips (existing maturityTab values all/due_today/overdue/due_week/cleared + add "قادم" only if an existing status maps to it cleanly; otherwise keep the existing 5). BUG FIX: every chip count must be computed from the SAME rows the table would show for the current direction + search + status filter (only the chip's own maturity criterion varies). Today chips count both directions while the table shows one, so "متأخرات 2" shows an empty table. After the fix: chip count N > 0 always yields N rows.
+R3. One unified row model: map inflow and outflow items into one typed union { direction: 'in' | 'out', dueDate, party, projectLabel, unitLabel?, description, total, paid, remaining, status, source item } — no invented fields; read the ProjectedOutflowItem and inflow item types first. One sort select (reuse existing sort options; "priority" must order overdue first, then today, then ascending due date — today "priority" puts 2027-07-07 before 2027-02-07, fix it). One pagination.
+R4. Columns: الاتجاه (pill: "↓ وارد" success tone / "↑ صادر" danger tone, existing statusPill classes) | تاريخ الاستحقاق | الطرف | المشروع / الوحدة | البيان | القيمة | المتبقي | الحالة (existing pills) | الإجراء (existing per-direction action buttons/links unchanged). Cost category shows the Arabic label, never the raw code (civil_structure). Find the existing category label map (rg "civil_structure" src/lib src/components) and reuse it.
+R5. Footer row: count shown, remaining inflows, remaining outflows, net (inflows − outflows) using D() from src/lib/erp/math.ts. Table amounts show no decimals (formatting only).
+R6. Cards view (viewMode 'cards') uses the same unified filtered list.
+R7. Calendar widget: month grid (Sat..Fri, RTL), month nav ‹ ›, week/month toggle (week = current single row). Each day shows up to 3 dots: incoming (success), outgoing (danger), overdue (amber) derived from the unified rows by due date. Today outlined in accent. Clicking a day sets selectedCalendarDate (existing state) AND filters the main table to that date (show a removable chip "يوم 2026-10-06 ✕" next to the maturity chips). Below the grid: list of that day's items (direction arrow, party, short description, signed amount) and "صافي اليوم". Empty day: one muted line "لا توجد مستحقات في هذا اليوم". No truncated "…3k" amounts.
+R8. FIN-OS rules (~/.claude/skills/fin-os-erp-design/SKILL.md — read sections 1-3): white panels, 1px hairlines, soft pastel micro-pills, no tinted row/card backgrounds, no new color literals outside existing tokens/CSS variables, tabular numbers.
+R9. Remove all code that only served the removed items (banner, 4 buttons, second table block, second pagination state, week strip). Done-grep in zakaria-farid/src must return 0 hits: rg -n "عرض الجدولين معاً|تنبيه تدفقات الخزينة|المقبوضات والتحصيلات فقط|المدفوعات والالتزامات فقط|currentPageOutflows|outflowSortBy" src
+
+TESTS (RED first)
+- Update zakaria-farid/src/lib/erp/__tests__/financialAgendaDualTables.test.ts (it pins the old two-table design) to the approved one-table design; report each changed assertion.
+- New tests importing production code (export the pure row-mapping/filter/count function from a small module next to the view, e.g. src/lib/erp/agendaRows.ts, and use it in the view):
+  T1. direction 'in' + overdue: when only outflows are overdue, overdue chip count is 0 (old bug: 2).
+  T2. count for each chip == length of rows returned for that chip, for every direction (table-driven).
+  T3. priority sort: overdue, then today, then ascending date (2027-02-07 before 2027-07-07).
+  T4. footer net = inflow remaining − outflow remaining, exact decimals.
+  T5. calendar day buckets: a date with one inflow and two overdue outflows yields dots [in, late] and day net correct.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit exit 0.
+- npx tsx --test on the touched test files: all pass.
+- Done-grep above: 0 hits.
+- No screenshots required; Claude checks the page visually.
