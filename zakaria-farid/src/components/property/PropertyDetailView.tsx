@@ -8,6 +8,7 @@ if (typeof window !== 'undefined') {
 import { Property } from '@/types';
 import { fetchRoute, estimateRoute, formatDuration } from '@/lib/geo/routing';
 import { buildPropertySpecs, getSpecGridColumns } from '@/lib/utils/propertySpecs';
+import { createFrameScheduler } from '@/lib/utils/frameScheduler';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import { cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
@@ -379,29 +380,42 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   };
 
   // Mobile sticky lead bar: hide on scroll down, show on scroll up or when scrolling stops
-  const [isLeadBarHidden, setIsLeadBarHidden] = useState(false);
+  const leadBarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 768px)');
     let lastY = window.scrollY;
-    let ticking = false;
     let idleTimer: ReturnType<typeof setTimeout>;
-    const onScroll = () => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => setIsLeadBarHidden(false), 400);
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const delta = y - lastY;
-        if (Math.abs(delta) > 8) {
-          setIsLeadBarHidden(delta > 0 && y > 120);
-          lastY = y;
-        }
-        ticking = false;
-      });
+    const setHidden = (hidden: boolean) => {
+      leadBarRef.current?.classList.toggle('lead-bar-hidden', hidden);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const scrollFrame = createFrameScheduler(() => {
+      if (!mobile.matches) return;
+      const y = window.scrollY;
+      const delta = y - lastY;
+      if (Math.abs(delta) > 8) {
+        setHidden(delta > 0 && y > 120);
+        lastY = y;
+      }
+    });
+    const onScroll = () => {
+      if (!mobile.matches) return;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => setHidden(false), 400);
+      scrollFrame.schedule();
+    };
+    const syncViewport = () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(idleTimer);
+      lastY = window.scrollY;
+      setHidden(false);
+      if (mobile.matches) window.addEventListener('scroll', onScroll, { passive: true });
+    };
+    syncViewport();
+    mobile.addEventListener('change', syncViewport);
     return () => {
       clearTimeout(idleTimer);
+      scrollFrame.dispose();
+      mobile.removeEventListener('change', syncViewport);
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
@@ -1523,7 +1537,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
       {/* Mobile Sticky Bottom Lead Bar (portaled: the page-transition wrapper's filter breaks position:fixed) */}
       {mounted && typeof document !== 'undefined' && createPortal(
-      <div className={`mobile-bottom-lead-bar ${isLeadBarHidden ? 'lead-bar-hidden' : ''}`}>
+      <div ref={leadBarRef} className="mobile-bottom-lead-bar">
         <div className="property-price-card">
           <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
           {isHidePrices ? (
@@ -2023,19 +2037,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         @keyframes auroraDriftAlpha {
           0% {
             transform: scale(1.02) translate(0px, 0px) rotate(0deg);
-            filter: blur(56px) saturate(165%) brightness(0.96);
           }
           33% {
             transform: scale(1.06) translate(18px, -10px) rotate(0.8deg);
-            filter: blur(66px) saturate(185%) brightness(1.02);
           }
           66% {
             transform: scale(1.03) translate(-16px, 10px) rotate(-0.6deg);
-            filter: blur(58px) saturate(165%) brightness(0.95);
           }
           100% {
             transform: scale(1.02) translate(0px, 0px) rotate(0deg);
-            filter: blur(56px) saturate(165%) brightness(0.96);
           }
         }
 
@@ -2060,11 +2070,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           background-size: cover;
           background-position: center;
           border-radius: 36px;
-          will-change: transform, filter, opacity;
+          will-change: transform, opacity;
           pointer-events: none;
         }
 
         .ambient-aurora-mesh.mesh-alpha {
+          filter: blur(56px) saturate(165%) brightness(0.96);
           opacity: 0.45;
           animation: auroraDriftAlpha 7.5s infinite ease-in-out;
         }
@@ -2542,7 +2553,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         @media (prefers-reduced-motion: reduce) {
           .ambient-glow-layer,
-          .lightbox-ambient-glow {
+          .lightbox-ambient-glow,
+          .ambient-aurora-mesh,
+          .lightbox-aurora-mesh {
             animation: none !important;
           }
         }

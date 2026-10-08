@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useFavorites } from '@/lib/context/FavoritesContext';
+import { createFrameScheduler } from '@/lib/utils/frameScheduler';
 
 interface NavbarProps {
   currentView?: 'home' | 'properties' | 'detail' | 'about' | 'contact' | 'map' | 'admin' | 'maintenance' | 'not-found';
@@ -85,18 +86,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 30);
-    };
+    let scrolled = false;
+    const scrollFrame = createFrameScheduler(() => {
+      const next = window.scrollY > 30;
+      if (next !== scrolled) {
+        scrolled = next;
+        setIsScrolled(next);
+      }
+    });
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 992);
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', scrollFrame.schedule, { passive: true });
     window.addEventListener('resize', handleResize);
-    handleScroll();
+    scrollFrame.schedule();
     handleResize();
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', scrollFrame.schedule);
+      scrollFrame.dispose();
       window.removeEventListener('resize', handleResize);
     };
   }, []);
