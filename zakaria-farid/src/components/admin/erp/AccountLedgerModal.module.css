@@ -187,7 +187,7 @@
 .tdDesc {
   padding: 0.75rem 0.85rem;
   vertical-align: top;
-  min-width: 320px;
+  min-width: 200px;
 }
 
 .descStack {
@@ -424,4 +424,254 @@
   background: #ffffff;
   border-top: 1px solid #cbd5e1;
   font-weight: 800;
+}
+
+/* ─── FIN-OS REDESIGN STYLES (R4 & R5) ─── */
+.headerExtraWrap {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.headerPeriodSelect {
+  padding: 3px 9px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-title, #0f172a);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.headerSearchWrap {
+  position: relative;
+  width: 190px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.headerSearchIcon {
+  position: absolute;
+  inset-inline-start: 0.5rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.headerSearchInput {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding-inline-start: 1.65rem;
+  padding-inline-end: 1.4rem;
+  font-size: 0.72rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-title, #0f172a);
+  font-family: inherit;
+  outline: none;
+}
+
+.headerSearchInput:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.headerClearSearchBtn {
+  position: absolute;
+  inset-inline-end: 0.35rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.figuresRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--erp-hairline, #e2e8f0);
+  background: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+.figureCell {
+  padding: 10px 16px;
+  border-inline-start: 1px solid var(--erp-hairline, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.figureCell:first-child {
+  border-inline-start: 0;
+}
+
+.figureLabel {
+  font-size: 0.72rem;
+  color: var(--erp-text-muted, #64748b);
+  font-weight: 500;
+}
+
+.figureValue {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.figureNature {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--erp-accent, #2563eb);
+}
+
+.refCode {
+  font-family: ui-monospace, Consolas, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  color: var(--erp-text-muted, #64748b);
+  direction: ltr;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.descText {
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+  color: var(--erp-text-body, #334155);
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.statusPillGreen {
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
+.statusPillAmber {
+  color: #b45309;
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+.statusPillRed {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.statusPillBlue {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.statusPillNeutral {
+  color: #64748b;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.trMuted td {
+  color: var(--erp-text-muted, #94a3b8) !important;
+  font-size: 0.74rem;
+  background: #fafbfc;
+}
+
+.tdMuted {
+  color: var(--erp-text-muted, #94a3b8) !important;
+}
+
+.tdRef {
+  padding: 0.65rem 0.85rem;
+  vertical-align: middle;
+  width: 150px;
+}
+
+.tdType {
+  padding: 0.65rem 0.85rem;
+  vertical-align: middle;
+  width: 100px;
+}
+
+.tdBalance {
+  padding: 0.65rem 0.85rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  vertical-align: middle;
+  color: var(--erp-text-title, #0f172a);
+  width: 120px;
+}
+
+.tfootRow td {
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  border-top: 1px solid var(--erp-border, #cbd5e1);
+  padding: 0.65rem 0.85rem;
+  background: #ffffff;
+}
+
+.tfootLabel {
+  text-align: start;
+}
+
+.tfootDebit,
+.tfootCredit,
+.tfootBalance {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tableControlsBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+
+.tdNum {
+  padding: 0.65rem 0.85rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tdDate,
+.tdBalance {
+  white-space: nowrap;
 }
