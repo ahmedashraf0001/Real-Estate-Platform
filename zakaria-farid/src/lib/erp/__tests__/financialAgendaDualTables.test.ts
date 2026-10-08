@@ -302,19 +302,22 @@ describe('Financial Agenda Dual Tables & Zero-Cheque Architecture', () => {
       'Module title must reflect Financial Transactions & Dues Agenda'
     );
 
-    assert.ok(
-      html.includes('1. المقبوضات والتحصيلات الواردة (أقساط العملاء)'),
-      'Table 1 (Inflows) header must be rendered'
-    );
+    // Unified One-Table Architecture & Direction Column
+    assert.ok(html.includes('الاتجاه'), 'Table must render unified direction column');
+    assert.ok(html.includes('وارد من العملاء'), 'Direction switch must render Client Inflows segment');
+    assert.ok(html.includes('صادر للمقاولين'), 'Direction switch must render Payables Outflows segment');
+    assert.ok(html.includes('المشروع / الوحدة'), 'Unified table must render Project / Unit column');
 
-    assert.ok(
-      html.includes('2. المدفوعات والالتزامات الصادرة (مستحقات المقاولين والموردين والمصروفات)'),
-      'Table 2 (Outflows) header must be rendered'
-    );
-
-    assert.ok(html.includes('عرض الجدولين معاً'), 'Both tables pill must exist');
-    assert.ok(html.includes('المقبوضات والتحصيلات فقط'), 'Inflows only pill must exist');
-    assert.ok(html.includes('المدفوعات والالتزامات فقط'), 'Outflows only pill must exist');
+    // Banned removed widgets & buttons (User Approval 2026-10-08)
+    const removedTerms = [
+      ['عرض', 'الجدولين', 'معاً'].join(' '),
+      ['المقبوضات', 'والتحصيلات', 'فقط'].join(' '),
+      ['المدفوعات', 'والالتزامات', 'فقط'].join(' '),
+      ['تنبيه', 'تدفقات', 'الخزينة'].join(' ')
+    ];
+    for (const term of removedTerms) {
+      assert.ok(!html.includes(term), `Removed term ${term} must NOT exist`);
+    }
 
     const bannedTerms = [
       'شيك بنكي',

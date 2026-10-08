@@ -46,13 +46,22 @@ import {
   ProjectedOutflowItem,
   buildProjectedOutflowItems,
   calculateFinancialAgendaKPIs,
-  sortInflowItems,
-  sortOutflowItems,
   FinancialAgendaKPIs,
   AgendaOutflowStatus
 } from '@/lib/erp/financialAgendaProjection';
+import {
+  UnifiedAgendaRow,
+  AgendaDirectionFilter,
+  AgendaMaturityTab,
+  AgendaStatusFilter,
+  buildUnifiedAgendaRows,
+  filterAgendaRows,
+  calculateAgendaChipCounts,
+  sortAgendaRows,
+  calculateAgendaFooter
+} from '@/lib/erp/agendaRows';
 import { InstallmentDetailDrawer } from './installments/InstallmentDetailDrawer';
-import { InstallmentsCalendarStrip } from './installments/InstallmentsCalendarStrip';
+import { InstallmentsMonthCalendar } from './installments/InstallmentsMonthCalendar';
 import { InstallmentsAnalyticsCharts } from './installments/InstallmentsAnalyticsCharts';
 import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
 import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
@@ -65,6 +74,13 @@ function formatNumberWithCommas(val: Decimal | string | number | bigint | undefi
   const parts = d.abs().toFixed(2).split('.');
   const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return `${integerPart}.${parts[1]}`;
+}
+
+function formatNoDecimals(val: Decimal | string | number | bigint | undefined | null): string {
+  if (val === undefined || val === null) return '0';
+  const d = val instanceof Decimal ? val : D(val);
+  const rounded = Math.round(d.toNumber());
+  return rounded.toLocaleString('en-US');
 }
 
 export interface HandInstallmentsVaultViewProps {
@@ -112,18 +128,15 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   const [printingItemId, setPrintingItemId] = useState<string | null>(null);
   const [printingDocType, setPrintingDocType] = useState<'receipt' | 'due_notice'>('receipt');
 
-  // View mode & selection state (Dual Stacked vs Individual)
-  const [tableSelection, setTableSelection] = useState<'both' | 'inflows' | 'outflows'>('both');
-  const [maturityTab, setMaturityTab] = useState<'all' | 'due_today' | 'overdue' | 'due_week' | 'cleared'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'cleared' | 'overdue'>('all');
-  const [inflowSortBy, setInflowSortBy] = useState<string>('priority');
-  const [outflowSortBy, setOutflowSortBy] = useState<string>('priority');
+  // View mode & selection state (Unified One-Table Architecture)
+  const [directionFilter, setDirectionFilter] = useState<AgendaDirectionFilter>('all');
+  const [maturityTab, setMaturityTab] = useState<AgendaMaturityTab>('all');
+  const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>('all');
+  const [sortBy, setSortBy] = useState<string>('priority');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
-  const [currentPageInflows, setCurrentPageInflows] = useState<number>(1);
-  const [pageSizeInflows, setPageSizeInflows] = useState<number>(10);
-  const [currentPageOutflows, setCurrentPageOutflows] = useState<number>(1);
-  const [pageSizeOutflows, setPageSizeOutflows] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Outflow settlement modal state (Strictly Cash or InstaPay)
   const [settlingOutflowItem, setSettlingOutflowItem] = useState<ProjectedOutflowItem | null>(null);
@@ -207,124 +220,85 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
       .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
   }, [projectedItems]);
 
-  // 7. FILTERING & SORTING FOR INFLOWS (Table 1)
-  const filteredInflowItems = useMemo(() => {
-    return projectedItems.filter(item => {
-      if (selectedCalendarDate && item.dueDate !== selectedCalendarDate) {
-        return false;
-      }
+  // 7. UNIFIED ROWS & DUES FILTERING ENGINE
+  const allUnifiedRows = useMemo(() => {
+    return buildUnifiedAgendaRows(projectedItems, projectedOutflows, isAr);
+  }, [projectedItems, projectedOutflows, isAr]);
 
-      if (maturityTab === 'due_today') {
-        if (item.status !== 'due_today') return false;
-      } else if (maturityTab === 'overdue') {
-        if (item.status !== 'overdue') return false;
-      } else if (maturityTab === 'due_week') {
-        const nextWeek = new Date(todayStr);
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        const nextWeekStr = nextWeek.toISOString().split('T')[0];
-        if (item.dueDate < todayStr || item.dueDate > nextWeekStr || item.status === 'cleared') {
-          return false;
-        }
-      } else if (maturityTab === 'cleared') {
-        if (item.status !== 'cleared') return false;
-      }
-
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'cleared' && item.status !== 'cleared') return false;
-        if (statusFilter === 'overdue' && item.status !== 'overdue') return false;
-        if (statusFilter === 'pending' && item.status === 'cleared') return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const code = (item.instrumentNumber || '').toLowerCase();
-        const client = (item.buyerName || '').toLowerCase();
-        const contractNum = (item.contractNumber || '').toLowerCase();
-        const unit = (item.unitId || '').toLowerCase();
-        const project = (item.projectTitle || '').toLowerCase();
-        return code.includes(q) || client.includes(q) || contractNum.includes(q) || unit.includes(q) || project.includes(q);
-      }
-
-      return true;
+  // Direction switch counts (evaluated before direction filter is applied)
+  const directionCounts = useMemo(() => {
+    const base = filterAgendaRows(allUnifiedRows, {
+      direction: 'all',
+      maturityTab: 'all',
+      statusFilter,
+      searchQuery,
+      calendarDate: selectedCalendarDate,
+      todayStr
     });
-  }, [projectedItems, selectedCalendarDate, maturityTab, statusFilter, searchQuery, todayStr]);
+    const inflows = base.filter(r => r.direction === 'in').length;
+    const outflows = base.filter(r => r.direction === 'out').length;
+    return {
+      all: base.length,
+      inflows,
+      outflows
+    };
+  }, [allUnifiedRows, statusFilter, searchQuery, selectedCalendarDate, todayStr]);
 
-  const sortedInflowItems = useMemo(() => {
-    return sortInflowItems(filteredInflowItems, inflowSortBy, isAr);
-  }, [filteredInflowItems, inflowSortBy, isAr]);
-
-  const totalInflowPages = Math.ceil(sortedInflowItems.length / pageSizeInflows) || 1;
-  const paginatedInflowItems = useMemo(() => {
-    const start = (currentPageInflows - 1) * pageSizeInflows;
-    return sortedInflowItems.slice(start, start + pageSizeInflows);
-  }, [sortedInflowItems, currentPageInflows, pageSizeInflows]);
-
-  // 8. FILTERING & SORTING FOR OUTFLOWS (Table 2)
-  const filteredOutflowItems = useMemo(() => {
-    return projectedOutflows.filter(item => {
-      if (selectedCalendarDate && item.dueDate !== selectedCalendarDate) {
-        return false;
-      }
-
-      if (maturityTab === 'due_today') {
-        if (item.status !== 'due_today') return false;
-      } else if (maturityTab === 'overdue') {
-        if (item.status !== 'overdue') return false;
-      } else if (maturityTab === 'due_week') {
-        const nextWeek = new Date(todayStr);
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        const nextWeekStr = nextWeek.toISOString().split('T')[0];
-        if (item.dueDate < todayStr || item.dueDate > nextWeekStr || item.status === 'paid') {
-          return false;
-        }
-      } else if (maturityTab === 'cleared') {
-        if (item.status !== 'paid') return false;
-      }
-
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'cleared' && item.status !== 'paid') return false;
-        if (statusFilter === 'overdue' && item.status !== 'overdue') return false;
-        if (statusFilter === 'pending' && item.status === 'paid') return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const ben = (item.beneficiary || '').toLowerCase();
-        const proj = (item.projectTitle || '').toLowerCase();
-        const desc = (item.description || '').toLowerCase();
-        const inv = (item.invoiceRef || '').toLowerCase();
-        return ben.includes(q) || proj.includes(q) || desc.includes(q) || inv.includes(q);
-      }
-
-      return true;
+  // Chip counts: computed strictly from the SAME rows matching current direction + search + status + calendar date
+  const chipCounts = useMemo(() => {
+    return calculateAgendaChipCounts(allUnifiedRows, {
+      direction: directionFilter,
+      statusFilter,
+      searchQuery,
+      calendarDate: selectedCalendarDate,
+      todayStr
     });
-  }, [projectedOutflows, selectedCalendarDate, maturityTab, statusFilter, searchQuery, todayStr]);
+  }, [allUnifiedRows, directionFilter, statusFilter, searchQuery, selectedCalendarDate, todayStr]);
 
-  const sortedOutflowItems = useMemo(() => {
-    return sortOutflowItems(filteredOutflowItems, outflowSortBy, isAr);
-  }, [filteredOutflowItems, outflowSortBy, isAr]);
+  // Filtered unified rows for display
+  const filteredUnifiedRows = useMemo(() => {
+    return filterAgendaRows(allUnifiedRows, {
+      direction: directionFilter,
+      maturityTab,
+      statusFilter,
+      searchQuery,
+      calendarDate: selectedCalendarDate,
+      todayStr
+    });
+  }, [allUnifiedRows, directionFilter, maturityTab, statusFilter, searchQuery, selectedCalendarDate, todayStr]);
 
-  const totalOutflowPages = Math.ceil(sortedOutflowItems.length / pageSizeOutflows) || 1;
-  const paginatedOutflowItems = useMemo(() => {
-    const start = (currentPageOutflows - 1) * pageSizeOutflows;
-    return sortedOutflowItems.slice(start, start + pageSizeOutflows);
-  }, [sortedOutflowItems, currentPageOutflows, pageSizeOutflows]);
+  // Sorted unified rows
+  const sortedUnifiedRows = useMemo(() => {
+    return sortAgendaRows(filteredUnifiedRows, sortBy, isAr);
+  }, [filteredUnifiedRows, sortBy, isAr]);
 
-  const activeFiltersCount = (maturityTab !== 'all' ? 1 : 0) +
+  // Pagination for unified table & cards
+  const totalPages = Math.ceil(sortedUnifiedRows.length / pageSize) || 1;
+  const paginatedUnifiedRows = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedUnifiedRows.slice(start, start + pageSize);
+  }, [sortedUnifiedRows, currentPage, pageSize]);
+
+  // Footer exact decimal summary
+  const footerSummary = useMemo(() => {
+    return calculateAgendaFooter(filteredUnifiedRows);
+  }, [filteredUnifiedRows]);
+
+  const activeFiltersCount = (directionFilter !== 'all' ? 1 : 0) +
+    (maturityTab !== 'all' ? 1 : 0) +
     (statusFilter !== 'all' ? 1 : 0) +
     (searchQuery.trim() ? 1 : 0) +
     (selectedCalendarDate ? 1 : 0) +
-    (inflowSortBy !== 'priority' ? 1 : 0);
+    (sortBy !== 'priority' ? 1 : 0);
 
   const handleResetFilters = () => {
+    setDirectionFilter('all');
     setMaturityTab('all');
     setStatusFilter('all');
-    setInflowSortBy('priority');
-    setOutflowSortBy('priority');
+    setSortBy('priority');
     setSearchQuery('');
     setSelectedCalendarDate(null);
-    setCurrentPageInflows(1);
-    setCurrentPageOutflows(1);
+    setCurrentPage(1);
   };
 
   // Convert projected item to ERPPDCRecord equivalent for collection modal
@@ -906,10 +880,10 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           subtitleLabel={isAr ? 'المحصل' : 'Collected'}
           subtitleValue={`${agendaKPIs.inflowsClearedCount} / ${agendaKPIs.inflowsCount} ${isAr ? 'دفعة' : 'records'}`}
           onClick={() => {
-            setTableSelection('inflows');
+            setDirectionFilter('inflows');
             setMaturityTab('all');
           }}
-          style={tableSelection === 'inflows' ? { borderColor: '#10b981', boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)' } : undefined}
+          style={directionFilter === 'inflows' ? { borderColor: '#10b981', boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)' } : undefined}
           tooltip={isAr ? 'انقر لتصفية العرض على المقبوضات الواردة فقط' : 'Click to filter on Inflows only'}
         />
 
@@ -929,10 +903,10 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           subtitleLabel={isAr ? 'المسدد' : 'Settled'}
           subtitleValue={`${agendaKPIs.outflowsPaidCount} / ${agendaKPIs.outflowsCount} ${isAr ? 'مستحق' : 'payables'}`}
           onClick={() => {
-            setTableSelection('outflows');
+            setDirectionFilter('outflows');
             setMaturityTab('all');
           }}
-          style={tableSelection === 'outflows' ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.2)' } : undefined}
+          style={directionFilter === 'outflows' ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.2)' } : undefined}
           tooltip={isAr ? 'انقر لتصفية العرض على المدفوعات الصادرة فقط' : 'Click to filter on Outflows only'}
         />
 
@@ -952,11 +926,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           subtitleLabel={isAr ? 'صافي المجدول' : 'Net scheduled'}
           subtitleValue={agendaKPIs.netScheduledFlow.formatEGP(isAr)}
           onClick={() => {
-            setTableSelection('both');
+            setDirectionFilter('all');
             setMaturityTab('all');
           }}
-          style={tableSelection === 'both' ? { borderColor: 'var(--erp-accent)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--erp-accent) 20%, transparent)' } : undefined}
-          tooltip={isAr ? 'انقر لعرض الجدولين معاً (المقبوضات + المدفوعات)' : 'Click to view dual stacked tables'}
+          style={directionFilter === 'all' ? { borderColor: 'var(--erp-accent)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--erp-accent) 20%, transparent)' } : undefined}
+          tooltip={isAr ? 'انقر لعرض الكل (المقبوضات + المدفوعات)' : 'Click to view all'}
         />
 
         {/* Card 4: Urgent Dues (Overdue + Due Today) */}
@@ -976,120 +950,14 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           subtitleValue={`${agendaKPIs.urgentCount} ${isAr ? 'استحقاق مطلوب' : 'urgent items'}`}
           onClick={() => {
             setMaturityTab('overdue');
+            setSelectedCalendarDate(null);
           }}
           style={maturityTab === 'overdue' ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.2)' } : undefined}
           tooltip={isAr ? 'انقر لتصفية كافة المتأخرات العاجلة' : 'Click to filter on urgent overdue dues'}
         />
       </ZFKpiGrid>
 
-      {/* 2.5 OVERDUE URGENT SECTION */}
-      {agendaKPIs.urgentCount > 0 && (
-        <div style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '12px',
-          padding: '0.85rem 1.15rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '7px',
-              background: 'rgba(220, 38, 38, 0.08)',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <AlertCircle size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? `تنبيه تدفقات الخزينة: توجد (${agendaKPIs.urgentCount}) معاملات واستحقاقات عاجلة تتطلب المتابعة الفورية` : `Cash Flow Alert: ${agendaKPIs.urgentCount} urgent transactions require follow-up`}
-              </div>
-              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                {isAr 
-                  ? `إجمالي المبالغ العاجلة: ${agendaKPIs.urgentSum.formatEGP(isAr)} (متأخرات ومستحقات اليوم)` 
-                  : `Total urgent balance: ${agendaKPIs.urgentSum.formatEGP(isAr)}`}
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMaturityTab('overdue');
-              setSelectedCalendarDate(null);
-            }}
-            style={{
-              padding: '0.35rem 0.85rem',
-              borderRadius: '6px',
-              border: '1px solid rgba(220, 38, 38, 0.25)',
-              background: 'rgba(220, 38, 38, 0.06)',
-              color: '#dc2626',
-              fontSize: '0.76rem',
-              fontWeight: 800,
-              cursor: 'pointer'
-            }}
-          >
-            {isAr ? 'عرض المتأخرات فقط' : 'View Overdue Only'}
-          </button>
-        </div>
-      )}
-
-      {/* Active Calendar Date Filter Banner */}
-      {selectedCalendarDate && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'var(--erp-accent-subtle)',
-          border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
-          borderRadius: '8px',
-          padding: '0.45rem 0.85rem',
-          marginBottom: '1rem',
-          fontSize: '0.78rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
-            <Calendar size={14} />
-            <span>
-              {isAr 
-                ? `عرض مواعيد واستحقاقات تاريخ: ${selectedCalendarDate}` 
-                : `Showing transactions for date: ${selectedCalendarDate}`}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCalendarDate(null);
-              setCurrentPageInflows(1);
-              setCurrentPageOutflows(1);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--erp-accent)',
-              fontWeight: 700,
-              fontSize: '0.74rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem'
-            }}
-          >
-            <X size={12} />
-            <span>{isAr ? 'عرض الكل' : 'Clear filter'}</span>
-          </button>
-        </div>
-      )}
-
-      {/* 3. DUAL TABLE MODE SELECTOR PILLS */}
+      {/* 3. DIRECTION SWITCH (Segmented Control) */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -1106,86 +974,94 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         }}>
           <button
             type="button"
-            onClick={() => setTableSelection('both')}
+            onClick={() => {
+              setDirectionFilter('all');
+              setCurrentPage(1);
+            }}
             style={{
               padding: '0.35rem 0.85rem',
               borderRadius: '6px',
               border: 'none',
-              background: tableSelection === 'both' ? '#ffffff' : 'transparent',
-              color: tableSelection === 'both' ? 'var(--erp-accent)' : '#64748b',
-              fontWeight: tableSelection === 'both' ? 800 : 600,
+              background: directionFilter === 'all' ? '#ffffff' : 'transparent',
+              color: directionFilter === 'all' ? 'var(--erp-accent, #2563eb)' : '#64748b',
+              fontWeight: directionFilter === 'all' ? 800 : 600,
               fontSize: '0.74rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
           >
-            {isAr ? 'عرض الجدولين معاً (المقبوضات + المدفوعات)' : 'Dual Tables Stacked'}
+            {isAr ? `الكل ${directionCounts.all}` : `All ${directionCounts.all}`}
           </button>
 
           <button
             type="button"
-            onClick={() => setTableSelection('inflows')}
+            onClick={() => {
+              setDirectionFilter('inflows');
+              setCurrentPage(1);
+            }}
             style={{
               padding: '0.35rem 0.85rem',
               borderRadius: '6px',
               border: 'none',
-              background: tableSelection === 'inflows' ? '#ffffff' : 'transparent',
-              color: tableSelection === 'inflows' ? '#10b981' : '#64748b',
-              fontWeight: tableSelection === 'inflows' ? 800 : 600,
+              background: directionFilter === 'inflows' ? '#ffffff' : 'transparent',
+              color: directionFilter === 'inflows' ? '#10b981' : '#64748b',
+              fontWeight: directionFilter === 'inflows' ? 800 : 600,
               fontSize: '0.74rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
           >
-            {isAr ? 'المقبوضات والتحصيلات فقط' : 'Inflows Only'}
+            {isAr ? `وارد من العملاء ${directionCounts.inflows}` : `Client Inflows ${directionCounts.inflows}`}
           </button>
 
           <button
             type="button"
-            onClick={() => setTableSelection('outflows')}
+            onClick={() => {
+              setDirectionFilter('outflows');
+              setCurrentPage(1);
+            }}
             style={{
               padding: '0.35rem 0.85rem',
               borderRadius: '6px',
               border: 'none',
-              background: tableSelection === 'outflows' ? '#ffffff' : 'transparent',
-              color: tableSelection === 'outflows' ? '#f59e0b' : '#64748b',
-              fontWeight: tableSelection === 'outflows' ? 800 : 600,
+              background: directionFilter === 'outflows' ? '#ffffff' : 'transparent',
+              color: directionFilter === 'outflows' ? '#dc2626' : '#64748b',
+              fontWeight: directionFilter === 'outflows' ? 800 : 600,
               fontSize: '0.74rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
           >
-            {isAr ? 'المدفوعات والالتزامات فقط' : 'Outflows Only'}
+            {isAr ? `صادر للمقاولين ${directionCounts.outflows}` : `Payables Outflows ${directionCounts.outflows}`}
           </button>
         </div>
 
         <div style={{ fontSize: '0.74rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
           {isAr 
-            ? `المعاملات المعروضة: ${sortedInflowItems.length} مقبوضات • ${sortedOutflowItems.length} مدفوعات` 
-            : `Showing: ${sortedInflowItems.length} Inflows • ${sortedOutflowItems.length} Outflows`}
+            ? `المعاملات المعروضة: ${sortedUnifiedRows.length} معاملة` 
+            : `Showing: ${sortedUnifiedRows.length} records`}
         </div>
       </div>
 
       {/* 4. UNIFIED FILTER TOOLBAR */}
       <ZFFilterToolbar
         tabs={[
-          { id: 'all', label: isAr ? 'كل المواعيد' : 'All Dues' },
-          { id: 'due_today', label: isAr ? 'مستحق اليوم' : 'Due Today', count: agendaKPIs.inflowsDueTodayCount + agendaKPIs.outflowsDueTodayCount },
-          { id: 'overdue', label: isAr ? 'متأخرات' : 'Overdue', count: agendaKPIs.inflowsOverdueCount + agendaKPIs.outflowsOverdueCount },
-          { id: 'due_week', label: isAr ? 'خلال 7 أيام' : 'Next 7 Days', count: agendaKPIs.inflowsDueWeekCount + agendaKPIs.outflowsDueWeekCount },
-          { id: 'cleared', label: isAr ? 'محصل ومسدد بالكامل' : 'Cleared / Paid', count: agendaKPIs.inflowsClearedCount + agendaKPIs.outflowsPaidCount }
+          { id: 'all', label: isAr ? 'الكل' : 'All', count: chipCounts.all },
+          { id: 'overdue', label: isAr ? 'متأخر' : 'Overdue', count: chipCounts.overdue },
+          { id: 'due_today', label: isAr ? 'مستحق اليوم' : 'Due Today', count: chipCounts.due_today },
+          { id: 'due_week', label: isAr ? 'خلال 7 أيام' : 'Next 7 Days', count: chipCounts.due_week },
+          { id: 'upcoming', label: isAr ? 'قادم' : 'Upcoming', count: chipCounts.upcoming },
+          { id: 'cleared', label: isAr ? 'مسدد بالكامل' : 'Cleared / Paid', count: chipCounts.cleared }
         ]}
         activeTab={maturityTab}
         onTabChange={(tabId) => {
           setMaturityTab(tabId as any);
-          setCurrentPageInflows(1);
-          setCurrentPageOutflows(1);
+          setCurrentPage(1);
         }}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);
-          setCurrentPageInflows(1);
-          setCurrentPageOutflows(1);
+          setCurrentPage(1);
         }}
         searchPlaceholder={isAr ? 'بحث بالعميل، المستفيد، المشروع، رقم العقد أو الفاتورة...' : 'Search counterparty, project, contract or invoice...'}
         filters={[
@@ -1194,8 +1070,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             value: statusFilter,
             onChange: (val) => {
               setStatusFilter(val as any);
-              setCurrentPageInflows(1);
-              setCurrentPageOutflows(1);
+              setCurrentPage(1);
             },
             ariaLabel: isAr ? 'تصفية حسب الحالة' : 'Filter by status',
             options: [
@@ -1206,13 +1081,12 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             ]
           }
         ]}
-        sortBy={inflowSortBy}
+        sortBy={sortBy}
         onSortChange={(val) => {
-          setInflowSortBy(val);
-          setOutflowSortBy(val);
+          setSortBy(val);
         }}
         sortOptions={[
-          { value: 'priority', label: isAr ? 'الأولوية: المتأخر ثم اليوم' : 'Priority: Overdue First' },
+          { value: 'priority', label: isAr ? 'الأولوية: المتأخر ثم اليوم ثم الأقرب' : 'Priority: Overdue First' },
           { value: 'due_date_asc', label: isAr ? 'التاريخ: الأقرب الأول' : 'Date: Soonest First' },
           { value: 'due_date_desc', label: isAr ? 'التاريخ: الأبعد الأول' : 'Date: Latest First' },
           { value: 'nominal_desc', label: isAr ? 'المبلغ: الأكبر الأول' : 'Amount: High to Low' },
@@ -1224,11 +1098,35 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         onResetFilters={handleResetFilters}
         viewMode={viewMode}
         onViewModeChange={(m) => setViewMode(m)}
+        customActions={selectedCalendarDate ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCalendarDate(null);
+              setCurrentPage(1);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.25rem 0.65rem',
+              borderRadius: '9999px',
+              background: 'var(--erp-accent-subtle, #eff6ff)',
+              color: 'var(--erp-accent, #2563eb)',
+              border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            <span>{isAr ? `يوم ${selectedCalendarDate} ✕` : `Date ${selectedCalendarDate} ✕`}</span>
+          </button>
+        ) : undefined}
         isAr={isAr}
       />
 
       {/* 5. EMPTY STATE */}
-      {sortedInflowItems.length === 0 && sortedOutflowItems.length === 0 && (
+      {sortedUnifiedRows.length === 0 && (
         <div style={{
           padding: '3.5rem 2rem',
           textAlign: 'center',
@@ -1259,420 +1157,250 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         </div>
       )}
 
-      {/* 6. REGISTER VIEW 1: DUAL STACKED CANONICAL TABLES */}
+      {/* 6. REGISTER VIEW 1: UNIFIED SINGLE CANONICAL TABLE */}
       {viewMode === 'table' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%' }}>
-          {/* ========================================================================= */}
-          {/* TABLE 1: INFLOWS & CLIENT DUES (المقبوضات والتحصيلات الواردة) */}
-          {/* ========================================================================= */}
-          {(tableSelection === 'both' || tableSelection === 'inflows') && (
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            width: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box'
+          }}>
+            {/* Section Header Bar */}
             <div style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              width: '100%',
-              minWidth: 0,
-              boxSizing: 'border-box'
+              padding: '0.85rem 1.15rem',
+              borderBottom: '1px solid #e2e8f0',
+              background: '#fafbfc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.65rem'
             }}>
-              {/* Section Header Bar */}
-              <div style={{
-                padding: '0.85rem 1.15rem',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#fafbfc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.65rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{
-                    width: '26px',
-                    height: '26px',
-                    borderRadius: '6px',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    color: '#10b981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <Wallet size={14} />
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                      {isAr ? '1. المقبوضات والتحصيلات الواردة (أقساط العملاء)' : '1. Inflows & Collections (Client Receivables)'}
-                    </h2>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                      {isAr ? 'مستحقات عقود البيع وأقساط الوحدات المحصلة وقيد السداد' : 'Sales contracts receivables and unit installments'}
-                    </span>
-                  </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '6px',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  color: 'var(--erp-accent, #2563eb)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Wallet size={14} />
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
-                    {isAr ? 'إجمالي المحصل: ' : 'Cleared: '}
-                    <strong style={{ fontVariantNumeric: 'tabular-nums', marginInlineStart: '0.25rem' }}>
-                      {agendaKPIs.inflowsCleared.formatEGP(isAr)}
-                    </strong>
-                  </span>
-                  <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
-                    {sortedInflowItems.length} {isAr ? 'معاملة' : 'records'}
+                <div>
+                  <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                    {isAr ? 'أجندة المستحقات والمعاملات المالية' : 'Transactions & Financial Dues Agenda'}
+                  </h2>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                    {isAr ? 'جدول موحد للمقبوضات والتحصيلات الواردة والمدفوعات والالتزامات الصادرة' : 'Unified ledger for scheduled incoming collections and outgoing contractor dues'}
                   </span>
                 </div>
               </div>
 
-              {/* Table Data */}
-              {sortedInflowItems.length > 0 ? (
-                <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-                  <table style={{ width: '100%', minWidth: '940px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                    <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569' }}>
-                        {renderSortHeader('due_date', isAr ? 'تاريخ الاستحقاق' : 'Due Date', inflowSortBy, setInflowSortBy)}
-                        {renderSortHeader('counterparty', isAr ? 'العميل' : 'Client / Buyer', inflowSortBy, setInflowSortBy)}
-                        {renderSortHeader('project', isAr ? 'المشروع والوحدة' : 'Project & Unit', inflowSortBy, setInflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'البيان والنوع' : 'Description'}</th>
-                        {renderSortHeader('nominal', isAr ? 'القيمة الإجمالية' : 'Nominal Value', inflowSortBy, setInflowSortBy)}
-                        {renderSortHeader('remaining', isAr ? 'المتبقي' : 'Remaining', inflowSortBy, setInflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'طريقة التحصيل' : 'Channel'}</th>
-                        {renderSortHeader('status', isAr ? 'الحالة' : 'Status', inflowSortBy, setInflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'سند القبض / الإشعار' : 'Receipt / Notice'}</th>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'الإجراء' : 'Action'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedInflowItems.map((item) => {
-                        const isCleared = item.status === 'cleared';
-                        const distinctiveUnit = getDistinctiveUnit(item.projectTitle, item.unitId);
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
+                  {sortedUnifiedRows.length} {isAr ? 'معاملة' : 'records'}
+                </span>
+              </div>
+            </div>
 
-                        return (
-                          <tr
-                            key={item.id}
-                            onClick={() => setInspectingItemId(item.id)}
-                            style={{
-                              borderBottom: '1px solid #cbd5e1',
-                              cursor: 'pointer',
-                              transition: 'background 0.15s ease'
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                            onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
-                          >
-                            {/* Date */}
-                            <td style={{ padding: '0.75rem 1rem', color: item.status === 'overdue' ? '#dc2626' : '#0f172a', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <Clock size={12} color={item.status === 'overdue' ? '#dc2626' : '#64748b'} />
-                                <span>{item.dueDate}</span>
+            {/* Table Data */}
+            {sortedUnifiedRows.length > 0 ? (
+              <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+                <table style={{ width: '100%', minWidth: '940px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569' }}>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'الاتجاه' : 'Direction'}</th>
+                      {renderSortHeader('due_date', isAr ? 'تاريخ الاستحقاق' : 'Due Date', sortBy, setSortBy)}
+                      {renderSortHeader('counterparty', isAr ? 'الطرف' : 'Party', sortBy, setSortBy)}
+                      <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'المشروع / الوحدة' : 'Project / Unit'}</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'البيان' : 'Description'}</th>
+                      {renderSortHeader('nominal', isAr ? 'القيمة' : 'Amount', sortBy, setSortBy)}
+                      {renderSortHeader('remaining', isAr ? 'المتبقي' : 'Remaining', sortBy, setSortBy)}
+                      <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'الحالة' : 'Status'}</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'الإجراء' : 'Action'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedUnifiedRows.map((row) => {
+                      const isInflow = row.direction === 'in';
+                      const isCleared = isInflow ? row.status === 'cleared' : row.status === 'paid';
+
+                      return (
+                        <tr
+                          key={row.id}
+                          onClick={() => {
+                            if (isInflow) {
+                              setInspectingItemId(row.sourceItem.id);
+                            }
+                          }}
+                          style={{
+                            borderBottom: '1px solid #cbd5e1',
+                            cursor: isInflow ? 'pointer' : 'default',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
+                        >
+                          {/* 1. Direction Pill */}
+                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                            {isInflow ? (
+                              <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
+                                {isAr ? '↓ وارد' : '↓ In'}
+                              </span>
+                            ) : (
+                              <span className={`${styles.statusPill} ${styles.statusPillRed}`}>
+                                {isAr ? '↑ صادر' : '↑ Out'}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 2. Due Date */}
+                          <td style={{ padding: '0.75rem 1rem', color: row.status === 'overdue' ? '#dc2626' : '#0f172a', fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Clock size={12} color={row.status === 'overdue' ? '#dc2626' : '#64748b'} />
+                              <span>{row.dueDate}</span>
+                            </div>
+                          </td>
+
+                          {/* 3. Counterparty */}
+                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 800, color: '#0f172a' }}>
+                              {row.party}
+                            </div>
+                          </td>
+
+                          {/* 4. Project / Unit */}
+                          <td style={{ padding: '0.75rem 1rem', minWidth: '180px', maxWidth: '260px' }}>
+                            <div title={row.projectLabel} style={{ fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {row.projectLabel}
+                            </div>
+                            {row.unitLabel && (
+                              <div style={{ fontSize: '0.7rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 600 }}>
+                                {row.unitLabel}
                               </div>
-                            </td>
+                            )}
+                          </td>
 
-                            {/* Buyer */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <div style={{ fontWeight: 800, color: '#0f172a' }}>
-                                {item.buyerName}
-                              </div>
-                            </td>
-
-                            {/* Project & Unit */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <div style={{ fontWeight: 700, color: '#334155' }}>
-                                {item.projectTitle}
-                              </div>
-                              {distinctiveUnit && (
-                                <div style={{ fontSize: '0.7rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 600 }}>
-                                  {distinctiveUnit}
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Description / Tranche */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
+                          {/* 5. Description (Cost category Arabic label for outflow) */}
+                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                            {isInflow ? (
                               <span style={{
                                 fontSize: '0.68rem',
                                 fontWeight: 700,
                                 padding: '0.12rem 0.5rem',
                                 borderRadius: '5px',
-                                background: item.isDownPayment ? 'rgba(56, 189, 248, 0.08)' : 'var(--erp-accent-subtle, #eff6ff)',
-                                color: item.isDownPayment ? '#0284c7' : 'var(--erp-accent, #2563eb)',
-                                border: item.isDownPayment ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)'
+                                background: row.isDownPayment ? 'rgba(56, 189, 248, 0.08)' : 'var(--erp-accent-subtle, #eff6ff)',
+                                color: row.isDownPayment ? '#0284c7' : 'var(--erp-accent, #2563eb)',
+                                border: row.isDownPayment ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)'
                               }}>
-                                {item.description}
+                                {row.description}
                               </span>
-                            </td>
-
-                            {/* Nominal Value */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <MoneyCell amount={item.nominalValue} isAr={isAr} highlight />
-                            </td>
-
-                            {/* Remaining Amount */}
-                            <td style={{ padding: '0.75rem 1rem', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: isCleared ? '#16a34a' : '#0f172a' }}>
-                              {D(item.remainingAmount).formatEGP(isAr)}
-                            </td>
-
-                            {/* Payment Channel (Strictly Cash / InstaPay) */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              {renderPaymentChannelPill(item.paymentMethod || 'CASH')}
-                            </td>
-
-                            {/* Status */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              {renderStatusPill(item.status)}
-                            </td>
-
-                            {/* Print Document Action */}
-                            <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              {isCleared ? (
-                                <button
-                                  type="button"
-                                  className={styles.btnSecondary}
-                                  onClick={() => {
-                                    setPrintingItemId(item.id);
-                                    setPrintingDocType('receipt');
-                                  }}
-                                  title={isAr ? 'طباعة سند القبض الرسمي المعتمد' : 'Print Official Receipt Voucher'}
-                                >
-                                  <Printer size={12} />
-                                  <span>{isAr ? 'سند القبض' : 'Receipt'}</span>
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={styles.btnPrimary}
-                                  onClick={() => {
-                                    setPrintingItemId(item.id);
-                                    setPrintingDocType('due_notice');
-                                  }}
-                                  title={isAr ? 'طباعة إشعار استحقاق ومطالبة سداد' : 'Print Installment Due Notice'}
-                                >
-                                  <FileCheck size={12} />
-                                  <span>{isAr ? 'إشعار استحقاق' : 'Due Notice'}</span>
-                                </button>
-                              )}
-                            </td>
-
-                            {/* Action: Collect */}
-                            <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
-                                {isCleared ? (
-                                  <span style={{
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    color: '#16a34a',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem'
-                                  }}>
-                                    <CheckCircle2 size={13} />
-                                    <span>{isAr ? 'محصل بالكامل' : 'Cleared'}</span>
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className={styles.btnPrimary}
-                                    onClick={() => handleTriggerCollect(item)}
-                                    disabled={isMutating}
-                                  >
-                                    <Wallet size={12} />
-                                    <span>{isAr ? 'تحصيل (كاش / إنستاباي)' : 'Collect'}</span>
-                                  </button>
+                            ) : (
+                              <div>
+                                <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                                  {row.costCategoryLabel}
+                                </div>
+                                {row.description && row.description !== row.costCategory && row.description !== row.costCategoryLabel && (
+                                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '1px' }}>
+                                    {row.description}
+                                  </div>
                                 )}
                               </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-                  {isAr ? 'لا توجد مقبوضات واردة مطابقة لشروط التصفية الحالية' : 'No matching inflows found'}
-                </div>
-              )}
+                            )}
+                          </td>
 
-              {/* Table 1 Footer Pagination */}
-              {sortedInflowItems.length > 0 && (
-                <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #cbd5e1', background: '#fafbfc' }}>
-                  <ZFPagination
-                    currentPage={currentPageInflows}
-                    totalPages={totalInflowPages}
-                    totalItems={sortedInflowItems.length}
-                    pageSize={pageSizeInflows}
-                    onPageChange={setCurrentPageInflows}
-                    onPageSizeChange={(sz) => {
-                      setPageSizeInflows(sz);
-                      setCurrentPageInflows(1);
-                    }}
-                    isAr={isAr}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+                          {/* 6. Total Nominal Amount (No Decimals) */}
+                          <td style={{ padding: '0.75rem 1rem', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                            {formatNoDecimals(row.total)}
+                          </td>
 
-          {/* ========================================================================= */}
-          {/* TABLE 2: OUTFLOWS & PAYABLES (المدفوعات والالتزامات الصادرة) */}
-          {/* ========================================================================= */}
-          {(tableSelection === 'both' || tableSelection === 'outflows') && (
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              width: '100%',
-              minWidth: 0,
-              boxSizing: 'border-box'
-            }}>
-              {/* Section Header Bar */}
-              <div style={{
-                padding: '0.85rem 1.15rem',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#fafbfc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.65rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{
-                    width: '26px',
-                    height: '26px',
-                    borderRadius: '6px',
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    color: '#d97706',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <Coins size={14} />
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                      {isAr ? '2. المدفوعات والالتزامات الصادرة (مستحقات المقاولين والموردين والمصروفات)' : '2. Outflows & Payables (Contractors, Vendors & Expenses)'}
-                    </h2>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                      {isAr ? 'التزامات التنفيذ والمقاولات ومستخلصات المشاريع واجبة السداد' : 'Construction milestones, contractor dues, and site expenses'}
-                    </span>
-                  </div>
-                </div>
+                          {/* 7. Remaining Amount (No Decimals) */}
+                          <td style={{
+                            padding: '0.75rem 1rem',
+                            fontVariantNumeric: 'tabular-nums',
+                            fontWeight: 800,
+                            color: isCleared ? '#16a34a' : (row.status === 'overdue' ? '#dc2626' : '#0f172a'),
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {formatNoDecimals(row.remaining)}
+                          </td>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
-                    {isAr ? 'إجمالي المسدد: ' : 'Paid: '}
-                    <strong style={{ fontVariantNumeric: 'tabular-nums', marginInlineStart: '0.25rem' }}>
-                      {agendaKPIs.outflowsPaid.formatEGP(isAr)}
-                    </strong>
-                  </span>
-                  <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
-                    {sortedOutflowItems.length} {isAr ? 'مستحق' : 'payables'}
-                  </span>
-                </div>
-              </div>
+                          {/* 8. Status Pill */}
+                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                            {isInflow 
+                              ? renderStatusPill(row.status)
+                              : renderOutflowStatusPill(row.status)}
+                          </td>
 
-              {/* Table Data */}
-              {sortedOutflowItems.length > 0 ? (
-                <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-                  <table style={{ width: '100%', minWidth: '940px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                    <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569' }}>
-                        {renderSortHeader('due_date', isAr ? 'تاريخ الاستحقاق' : 'Due Date', outflowSortBy, setOutflowSortBy)}
-                        {renderSortHeader('counterparty', isAr ? 'المستفيد / المقاول' : 'Payee / Contractor', outflowSortBy, setOutflowSortBy)}
-                        {renderSortHeader('project', isAr ? 'المشروع والبيان' : 'Project & Item', outflowSortBy, setOutflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'تصنيف التكلفة' : 'Cost Category'}</th>
-                        {renderSortHeader('total', isAr ? 'القيمة الإجمالية' : 'Total Amount', outflowSortBy, setOutflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'المسدد' : 'Paid'}</th>
-                        {renderSortHeader('remaining', isAr ? 'المتبقي للسداد' : 'Remaining', outflowSortBy, setOutflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'طريقة السداد' : 'Channel'}</th>
-                        {renderSortHeader('status', isAr ? 'الحالة' : 'Status', outflowSortBy, setOutflowSortBy)}
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'الإجراء' : 'Action'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedOutflowItems.map((outflow) => {
-                        const isPaid = outflow.status === 'paid';
-
-                        return (
-                          <tr
-                            key={outflow.id}
-                            style={{
-                              borderBottom: '1px solid #cbd5e1',
-                              transition: 'background 0.15s ease'
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                            onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
-                          >
-                            {/* Date */}
-                            <td style={{ padding: '0.75rem 1rem', color: outflow.status === 'overdue' ? '#dc2626' : '#0f172a', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <Clock size={12} color={outflow.status === 'overdue' ? '#dc2626' : '#64748b'} />
-                                <span>{outflow.dueDate}</span>
-                              </div>
-                            </td>
-
-                            {/* Beneficiary */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <div style={{ fontWeight: 800, color: '#0f172a' }}>
-                                {outflow.beneficiary}
-                              </div>
-                            </td>
-
-                            {/* Project & Description */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <div style={{ fontWeight: 700, color: '#334155' }}>
-                                {outflow.projectTitle}
-                              </div>
-                              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '1px' }}>
-                                {outflow.description}
-                              </div>
-                            </td>
-
-                            {/* Cost Category */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <span style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                padding: '0.12rem 0.5rem',
-                                borderRadius: '5px',
-                                background: '#f1f5f9',
-                                color: '#475569',
-                                border: '1px solid #cbd5e1'
-                              }}>
-                                {outflow.costCategory}
-                              </span>
-                            </td>
-
-                            {/* Total Amount */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <MoneyCell amount={outflow.totalAmount} isAr={isAr} highlight />
-                            </td>
-
-                            {/* Paid Amount */}
-                            <td style={{ padding: '0.75rem 1rem', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#16a34a' }}>
-                              {D(outflow.paidAmount).formatEGP(isAr)}
-                            </td>
-
-                            {/* Remaining Amount */}
-                            <td style={{ padding: '0.75rem 1rem', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: isPaid ? '#16a34a' : '#d97706' }}>
-                              {D(outflow.remainingAmount).formatEGP(isAr)}
-                            </td>
-
-                            {/* Channel (Strictly Cash / InstaPay) */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              {renderPaymentChannelPill(outflow.paymentMethod)}
-                            </td>
-
-                            {/* Status */}
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              {renderOutflowStatusPill(outflow.status)}
-                            </td>
-
-                            {/* Action: Settle */}
-                            <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                          {/* 9. Actions */}
+                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                            {isInflow ? (
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
-                                {isPaid ? (
+                                {isCleared ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className={styles.btnSecondary}
+                                      onClick={() => {
+                                        setPrintingItemId(row.sourceItem.id);
+                                        setPrintingDocType('receipt');
+                                      }}
+                                      title={isAr ? 'طباعة سند القبض الرسمي المعتمد' : 'Print Official Receipt Voucher'}
+                                      style={{ padding: '0.32rem 0.55rem' }}
+                                    >
+                                      <Printer size={12} />
+                                      <span>{isAr ? 'سند القبض' : 'Receipt'}</span>
+                                    </button>
+                                    <span style={{
+                                      fontSize: '0.74rem',
+                                      fontWeight: 700,
+                                      color: '#16a34a',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem'
+                                    }}>
+                                      <CheckCircle2 size={13} />
+                                      <span>{isAr ? 'محصل بالكامل' : 'Cleared'}</span>
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className={styles.btnPrimary}
+                                      onClick={() => handleTriggerCollect(row.sourceItem)}
+                                      disabled={isMutating}
+                                    >
+                                      <Wallet size={12} />
+                                      <span>{isAr ? 'تحصيل (كاش / إنستاباي)' : 'Collect'}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.btnSecondary}
+                                      onClick={() => {
+                                        setPrintingItemId(row.sourceItem.id);
+                                        setPrintingDocType('due_notice');
+                                      }}
+                                      title={isAr ? 'طباعة إشعار استحقاق ومطالبة سداد' : 'Print Installment Due Notice'}
+                                      style={{ padding: '0.32rem 0.55rem' }}
+                                    >
+                                      <FileCheck size={12} />
+                                      <span>{isAr ? 'إشعار استحقاق' : 'Notice'}</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+                                {isCleared ? (
                                   <span style={{
                                     fontSize: '0.74rem',
                                     fontWeight: 700,
@@ -1688,9 +1416,9 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setSettlingOutflowItem(outflow);
-                                      setSettleAmount(outflow.remainingAmount);
-                                      setSettleMethod(outflow.paymentMethod || 'CASH');
+                                      setSettlingOutflowItem(row.sourceItem);
+                                      setSettleAmount(row.sourceItem.remainingAmount);
+                                      setSettleMethod(row.sourceItem.paymentMethod || 'CASH');
                                     }}
                                     disabled={isMutating}
                                     style={{
@@ -1713,38 +1441,70 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                                   </button>
                                 )}
                               </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-                  {isAr ? 'لا توجد التزامات أو مدفوعات صادرة مطابقة لشروط التصفية الحالية' : 'No matching outflows found'}
-                </div>
-              )}
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '1.5px solid #cbd5e1', background: '#f8fafc', fontWeight: 700 }}>
+                      <td colSpan={5} style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+                        <span>{isAr ? `المعروض: ${footerSummary.count}` : `Showing: ${footerSummary.count}`}</span>
+                        <span style={{ margin: '0 0.5rem', color: '#cbd5e1' }}>•</span>
+                        <span>{isAr ? 'متبقٍ وارد ' : 'Remaining Inflows '}</span>
+                        <span className="num" style={{ fontVariantNumeric: 'tabular-nums', color: '#16a34a' }}>
+                          {formatNoDecimals(footerSummary.inflowsRemaining)}
+                        </span>
+                        <span style={{ margin: '0 0.5rem', color: '#cbd5e1' }}>•</span>
+                        <span>{isAr ? 'متبقٍ صادر ' : 'Remaining Outflows '}</span>
+                        <span className="num" style={{ fontVariantNumeric: 'tabular-nums', color: '#dc2626' }}>
+                          {formatNoDecimals(footerSummary.outflowsRemaining)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}></td>
+                      <td style={{
+                        padding: '0.75rem 1rem',
+                        fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 800,
+                        color: footerSummary.net.gte(0) ? '#16a34a' : '#dc2626',
+                        direction: 'ltr',
+                        textAlign: isAr ? 'left' : 'right',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {footerSummary.net.gte(0) ? '+' : '−'}{formatNoDecimals(footerSummary.net.abs())}
+                      </td>
+                      <td colSpan={2} style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.74rem' }}>
+                        {isAr ? 'صافي المتبقي' : 'Net Remaining'}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
+                {isAr ? 'لا توجد معاملات مطابقة لشروط التصفية الحالية' : 'No matching transactions found'}
+              </div>
+            )}
 
-              {/* Table 2 Footer Pagination */}
-              {sortedOutflowItems.length > 0 && (
-                <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #cbd5e1', background: '#fafbfc' }}>
-                  <ZFPagination
-                    currentPage={currentPageOutflows}
-                    totalPages={totalOutflowPages}
-                    totalItems={sortedOutflowItems.length}
-                    pageSize={pageSizeOutflows}
-                    onPageChange={setCurrentPageOutflows}
-                    onPageSizeChange={(sz) => {
-                      setPageSizeOutflows(sz);
-                      setCurrentPageOutflows(1);
-                    }}
-                    isAr={isAr}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+            {/* Table Footer Pagination */}
+            {sortedUnifiedRows.length > 0 && (
+              <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #cbd5e1', background: '#fafbfc' }}>
+                <ZFPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={sortedUnifiedRows.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setCurrentPage(1);
+                  }}
+                  isAr={isAr}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1752,45 +1512,58 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
       {viewMode === 'cards' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className={styles.cardsGrid}>
-            {paginatedInflowItems.map((item) => {
-              const isCleared = item.status === 'cleared';
+            {paginatedUnifiedRows.map((row) => {
+              const isInflow = row.direction === 'in';
+              const isCleared = isInflow ? row.status === 'cleared' : row.status === 'paid';
 
               return (
                 <div
-                  key={item.id}
-                  onClick={() => setInspectingItemId(item.id)}
+                  key={row.id}
+                  onClick={() => {
+                    if (isInflow) {
+                      setInspectingItemId(row.sourceItem.id);
+                    }
+                  }}
                   style={{
                     background: '#ffffff',
-                    border: item.status === 'overdue' ? '1.5px solid rgba(220, 38, 38, 0.4)' : '1px solid #cbd5e1',
+                    border: row.status === 'overdue' ? '1.5px solid rgba(220, 38, 38, 0.4)' : '1px solid #cbd5e1',
                     borderRadius: '12px',
                     padding: '1.15rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.85rem',
-                    cursor: 'pointer',
+                    cursor: isInflow ? 'pointer' : 'default',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--erp-accent)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = item.status === 'overdue' ? 'rgba(220, 38, 38, 0.4)' : '#cbd5e1')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = row.status === 'overdue' ? 'rgba(220, 38, 38, 0.4)' : '#cbd5e1')}
                 >
                   {/* Card Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                        #{item.instrumentNumber}
-                      </span>
-                      <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
-                        {item.buyerName}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                        {isInflow ? (
+                          <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
+                            {isAr ? '↓ وارد' : '↓ In'}
+                          </span>
+                        ) : (
+                          <span className={`${styles.statusPill} ${styles.statusPillRed}`}>
+                            {isAr ? '↑ صادر' : '↑ Out'}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+                          {row.dueDate}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
+                        {row.party}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>
-                        {(() => {
-                          const dUnit = getDistinctiveUnit(item.projectTitle, item.unitId);
-                          return dUnit ? `${item.projectTitle} • ${dUnit}` : item.projectTitle;
-                        })()}
+                        {row.projectLabel}{row.unitLabel ? ` • ${row.unitLabel}` : (row.direction === 'out' ? ` • ${row.costCategoryLabel}` : '')}
                       </div>
                     </div>
 
-                    {renderStatusPill(item.status)}
+                    {isInflow ? renderStatusPill(row.status) : renderOutflowStatusPill(row.status)}
                   </div>
 
                   {/* Amount Box */}
@@ -1805,80 +1578,138 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                   }}>
                     <div>
                       <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                        {isAr ? 'القيمة الإجمالية:' : 'Amount:'}
+                        {isAr ? 'القيمة:' : 'Amount:'}
                       </span>
                       <strong style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                        {D(item.nominalValue).formatEGP(isAr)}
+                        {formatNoDecimals(row.total)}
                       </strong>
                     </div>
 
                     <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                       <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                        {isAr ? 'الاستحقاق:' : 'Due:'}
+                        {isAr ? 'المتبقي:' : 'Remaining:'}
                       </span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: item.status === 'overdue' ? '#dc2626' : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                        {item.dueDate}
+                      <span style={{
+                        fontSize: '0.9rem',
+                        fontWeight: 800,
+                        color: isCleared ? '#16a34a' : (row.status === 'overdue' ? '#dc2626' : '#0f172a'),
+                        fontVariantNumeric: 'tabular-nums'
+                      }}>
+                        {formatNoDecimals(row.remaining)}
                       </span>
                     </div>
                   </div>
 
                   {/* Actions Row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.25rem' }} onClick={e => e.stopPropagation()}>
-                    {!isCleared ? (
-                      <button
-                        type="button"
-                        className={styles.btnPrimary}
-                        onClick={() => handleTriggerCollect(item)}
-                        disabled={isMutating}
-                        style={{ flex: 1 }}
-                      >
-                        <Wallet size={13} />
-                        <span>{isAr ? 'تحصيل (كاش / إنستاباي)' : 'Collect'}</span>
-                      </button>
-                    ) : (
-                      <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.35rem',
-                        padding: '0.45rem',
-                        borderRadius: '8px',
-                        background: '#ecfdf5',
-                        color: '#16a34a',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        border: '1px solid rgba(220, 38, 38, 0.25)'
-                      }}>
-                        <CheckCircle2 size={13} />
-                        <span>{isAr ? 'تم التحصيل' : 'Cleared'}</span>
-                      </div>
-                    )}
+                    {isInflow ? (
+                      <>
+                        {!isCleared ? (
+                          <button
+                            type="button"
+                            className={styles.btnPrimary}
+                            onClick={() => handleTriggerCollect(row.sourceItem)}
+                            disabled={isMutating}
+                            style={{ flex: 1 }}
+                          >
+                            <Wallet size={13} />
+                            <span>{isAr ? 'تحصيل (كاش / إنستاباي)' : 'Collect'}</span>
+                          </button>
+                        ) : (
+                          <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem',
+                            padding: '0.45rem',
+                            borderRadius: '8px',
+                            background: '#ecfdf5',
+                            color: '#16a34a',
+                            fontSize: '0.74rem',
+                            fontWeight: 800
+                          }}>
+                            <CheckCircle2 size={13} />
+                            <span>{isAr ? 'محصل بالكامل' : 'Cleared'}</span>
+                          </div>
+                        )}
 
-                    {isCleared ? (
-                      <button
-                        type="button"
-                        className={styles.btnSecondary}
-                        onClick={() => {
-                          setPrintingItemId(item.id);
-                          setPrintingDocType('receipt');
-                        }}
-                      >
-                        <Printer size={13} />
-                        <span>{isAr ? 'سند القبض' : 'Receipt'}</span>
-                      </button>
+                        {isCleared ? (
+                          <button
+                            type="button"
+                            className={styles.btnSecondary}
+                            onClick={() => {
+                              setPrintingItemId(row.sourceItem.id);
+                              setPrintingDocType('receipt');
+                            }}
+                          >
+                            <Printer size={13} />
+                            <span>{isAr ? 'سند القبض' : 'Receipt'}</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.btnSecondary}
+                            onClick={() => {
+                              setPrintingItemId(row.sourceItem.id);
+                              setPrintingDocType('due_notice');
+                            }}
+                          >
+                            <FileCheck size={13} />
+                            <span>{isAr ? 'إشعار' : 'Notice'}</span>
+                          </button>
+                        )}
+                      </>
                     ) : (
-                      <button
-                        type="button"
-                        className={styles.btnPrimary}
-                        onClick={() => {
-                          setPrintingItemId(item.id);
-                          setPrintingDocType('due_notice');
-                        }}
-                      >
-                        <FileCheck size={13} />
-                        <span>{isAr ? 'إشعار' : 'Notice'}</span>
-                      </button>
+                      <>
+                        {!isCleared ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSettlingOutflowItem(row.sourceItem);
+                              setSettleAmount(row.sourceItem.remainingAmount);
+                              setSettleMethod(row.sourceItem.paymentMethod || 'CASH');
+                            }}
+                            disabled={isMutating}
+                            style={{
+                              flex: 1,
+                              background: '#d97706',
+                              border: 'none',
+                              color: '#ffffff',
+                              padding: '0.42rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.3rem',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <Coins size={13} />
+                            <span>{isAr ? 'سداد (كاش / إنستاباي)' : 'Settle'}</span>
+                          </button>
+                        ) : (
+                          <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem',
+                            padding: '0.45rem',
+                            borderRadius: '8px',
+                            background: '#ecfdf5',
+                            color: '#16a34a',
+                            fontSize: '0.74rem',
+                            fontWeight: 800
+                          }}>
+                            <CheckCircle2 size={13} />
+                            <span>{isAr ? 'مسدد بالكامل' : 'Paid'}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1888,14 +1719,14 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
           <div style={{ padding: '0.75rem 0' }}>
             <ZFPagination
-              currentPage={currentPageInflows}
-              totalPages={totalInflowPages}
-              totalItems={sortedInflowItems.length}
-              pageSize={pageSizeInflows}
-              onPageChange={setCurrentPageInflows}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sortedUnifiedRows.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
               onPageSizeChange={(sz) => {
-                setPageSizeInflows(sz);
-                setCurrentPageInflows(1);
+                setPageSize(sz);
+                setCurrentPage(1);
               }}
               isAr={isAr}
             />
@@ -2136,98 +1967,18 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             defaultExpanded={true}
             isAr={isAr}
           >
-            <InstallmentsCalendarStrip
-              items={projectedItems}
+            <InstallmentsMonthCalendar
+              rows={allUnifiedRows}
               selectedDate={selectedCalendarDate}
               onSelectDate={(date) => {
                 setSelectedCalendarDate(date);
-                setCurrentPageInflows(1);
-                setCurrentPageOutflows(1);
+                setCurrentPage(1);
               }}
               isAr={isAr}
-              borderless
+              onInspectItem={(id) => {
+                setInspectingItemId(id);
+              }}
             />
-
-            {todayAgendaItems.length > 0 ? (
-              <div style={{
-                marginTop: '0.75rem',
-                paddingTop: '0.75rem',
-                borderTop: '1px solid #f1f5f9',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', fontWeight: 800, color: '#0f172a' }}>
-                    <Clock size={13} color="var(--erp-accent)" />
-                    <span>{isAr ? 'مواعيد اليوم' : "Today's Agenda"}</span>
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>{todayStr}</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
-                  {todayAgendaItems.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setInspectingItemId(item.id)}
-                      role="button"
-                      tabIndex={0}
-                      style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        padding: '0.5rem 0.65rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--erp-accent, #2563eb)')}
-                      onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                    >
-                      <div style={{ minWidth: 0, flex: 1, marginInlineEnd: '0.5rem' }}>
-                        <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.buyerName}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '1px' }}>
-                          {(() => {
-                            const dUnit = getDistinctiveUnit(item.projectTitle, item.unitId);
-                            return dUnit ? `${item.projectTitle} • ${dUnit}` : item.projectTitle;
-                          })()}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: isAr ? 'left' : 'right', flexShrink: 0 }}>
-                        <strong style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                          {D(item.nominalValue).formatEGP(isAr)}
-                        </strong>
-                        <div style={{ marginTop: '2px' }}>
-                          {renderStatusPill(item.status, true)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{
-                marginTop: '0.65rem',
-                padding: '0.45rem 0.65rem',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '0.72rem',
-                color: '#64748b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem'
-              }}>
-                <Clock size={12} style={{ color: 'var(--erp-accent, #2563eb)' }} />
-                <span>{isAr ? 'لا توجد استحقاقات مجدولة لليوم' : 'No dues scheduled for today'}</span>
-              </div>
-            )}
           </ZFWidgetCard>
 
           {/* Cards 2, 3, 4: Analytics Charts (Trend, Status Donut, Project Breakdown) */}
