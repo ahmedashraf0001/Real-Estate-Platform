@@ -4,6 +4,8 @@ import { adaptProperty, adaptProperties } from '@/lib/utils/propertyAdapter';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };

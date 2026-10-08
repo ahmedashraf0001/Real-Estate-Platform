@@ -3,6 +3,7 @@ import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
 import { updateSession } from './lib/supabase/middleware';
+import { getPublicSupabase } from './lib/supabase/public';
 
 // ─── next-intl locale middleware (used for all normal traffic) ────────────────
 const intlMiddleware = createMiddleware(routing);
@@ -91,6 +92,22 @@ export default async function middleware(req: NextRequest) {
   }
 
   // ── Normal traffic: delegate to next-intl locale middleware ───────────────
+  // Check existence before loading.tsx streams a 200 response for an unknown slug.
+  const propertyRoute = pathname.match(/^\/(ar|en)\/properties\/([^/]+)\/?$/);
+  if (propertyRoute && propertyRoute[2] !== 'compare') {
+    let slug: string;
+    try {
+      slug = decodeURIComponent(propertyRoute[2]);
+    } catch {
+      return NextResponse.rewrite(new URL('/_not-found', req.url), { status: 404 });
+    }
+    const { data, error } = await getPublicSupabase()
+      .from('properties').select('slug').eq('slug', slug).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      return NextResponse.rewrite(new URL('/_not-found', req.url), { status: 404 });
+    }
+  }
   return intlMiddleware(req);
 }
 

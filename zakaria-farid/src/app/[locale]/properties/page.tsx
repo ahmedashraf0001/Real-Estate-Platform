@@ -4,6 +4,8 @@ import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { CatalogView } from '@/components/catalog/CatalogView';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{

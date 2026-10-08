@@ -42,6 +42,18 @@ Skipping this causes real runtime failures on edge, not a cosmetic issue.
 
 ## Section 2 — Environment Variables
 
+### Runtime caching on Cloudflare
+
+Public property listing, detail, and map routes explicitly use `dynamic = 'force-dynamic'`:
+each request reads the current catalog without an OpenNext incremental cache or new paid
+bindings. Missing property slugs are checked in middleware before streaming, preserving
+the Next not-found page with HTTP 404. Keep the Arabic slug decoding from `4080fb7`.
+No dashboard change is required for this policy. If custom Cache Rules override the
+response's `private, no-cache, no-store` header, the operator must bypass HTML caching for
+these routes and purge the affected cached responses. Local preview does not prove the
+deployed Worker uses the same build or runtime settings; obtain its exception log when
+production returns 500 and preview does not.
+
 Set these in Pages project → **Settings** → **Environment Variables** → **Production** tab.
 
 > ⚠️ These must be set in the Cloudflare dashboard. Cloudflare does **not** read your local `.env.local` file at deploy time.
