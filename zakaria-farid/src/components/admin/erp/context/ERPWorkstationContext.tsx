@@ -4578,18 +4578,27 @@ export function ERPWorkstationProvider({
         ...prev,
         properties: prev.properties.map(p => {
           if (p.id !== propertyId) return p;
-          if (!options?.finalize) return { ...p, price_egp: newPriceEgp };
+          const updatedUnits = options?.unitPrices
+            ? p.building_units?.map(u =>
+                u.status === 'available' && options.unitPrices?.[u.unit_id] != null
+                  ? { ...u, price_egp: options.unitPrices[u.unit_id] }
+                  : u
+              )
+            : p.building_units;
+          if (!options?.finalize) {
+            return {
+              ...p,
+              price_egp: newPriceEgp,
+              building_units: updatedUnits,
+            };
+          }
           return {
             ...p,
             price_egp: newPriceEgp,
             completion_status: 'ready',
             construction_completed_at: finalizedAt,
             price_finalized_at: finalizedAt,
-            building_units: p.building_units?.map(u =>
-              u.status === 'available' && options.unitPrices?.[u.unit_id] != null
-                ? { ...u, price_egp: options.unitPrices[u.unit_id] }
-                : u
-            )
+            building_units: updatedUnits,
           };
         })
       }));
@@ -4601,7 +4610,9 @@ export function ERPWorkstationProvider({
         {
           description: options?.finalize
             ? (isAr ? `السعر النهائي: ${priceText} • ${result.units_repriced} وحدة متاحة اتسعّرت` : `Final price: ${priceText} • ${result.units_repriced} available units repriced`)
-            : (isAr ? `السعر الجديد: ${priceText}` : `New price: ${priceText}`),
+            : (result.units_repriced > 0
+                ? (isAr ? `السعر الجديد: ${priceText} • ${result.units_repriced} وحدة متاحة اتسعّرت` : `New price: ${priceText} • ${result.units_repriced} available units repriced`)
+                : (isAr ? `السعر الجديد: ${priceText}` : `New price: ${priceText}`)),
           duration: 5000
         }
       );

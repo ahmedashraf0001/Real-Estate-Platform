@@ -6,7 +6,10 @@ import {
   priceUnitsAtRate,
   priceSliderBounds,
   estimateFeasibility,
+  repriceBuilding,
 } from '../pricingCalculator';
+import { ERPSupabaseService } from '../supabaseService';
+import { D } from '../math';
 
 describe('pricingCalculator — built property (cost floor vs market)', () => {
   it('prices at the chosen rate and reports profit against recorded cost', () => {
@@ -80,5 +83,166 @@ describe('pricingCalculator — feasibility', () => {
     const r = estimateFeasibility({ landCost: 0, builtAreaSqm: 0, constructionCostPerSqm: 0, extraCostsPct: 0, salePricePerSqm: 0 });
     assert.equal(r.totalCost, '0.00');
     assert.equal(r.marginPct, null);
+  });
+});
+
+describe('repriceBuilding & save handler (T1-T4)', () => {
+  // T1: 6 units × 100 m², unit 1 contracted at 1,000,000, rate 9,000 -> five units 900,000, locked 1,000,000, total 5,500,000, Σunits == total
+  it('T1 repriceBuilding: 6 units × 100 m², unit 1 contracted at 1,000,000, rate 9,000 -> five units 900,000, locked 1,000,000, total 5,500,000, Σunits == total', () => {
+    const units = [
+      { unit_id: 'u1', area_sqm: 100, price_egp: 1000000, status: 'contracted' },
+      { unit_id: 'u2', area_sqm: 100, price_egp: 1000000, status: 'available' },
+      { unit_id: 'u3', area_sqm: 100, price_egp: 1000000, status: 'available' },
+      { unit_id: 'u4', area_sqm: 100, price_egp: 1000000, status: 'available' },
+      { unit_id: 'u5', area_sqm: 100, price_egp: 1000000, status: 'available' },
+      { unit_id: 'u6', area_sqm: 100, price_egp: 1000000, status: 'available' },
+    ];
+
+    const res = repriceBuilding(units, 9000);
+
+    assert.equal(res.units.length, 6);
+    assert.equal(res.units[0].locked, true);
+    assert.equal(res.units[0].newPrice, '1000000.00');
+    assert.equal(res.units[0].change, '0.00');
+
+    for (let i = 1; i < 6; i++) {
+      assert.equal(res.units[i].locked, false);
+      assert.equal(res.units[i].newPrice, '900000.00');
+      assert.equal(res.units[i].change, '-100000.00');
+    }
+
+    assert.equal(res.lockedTotal, '1000000.00');
+    assert.equal(res.repricedTotal, '4500000.00');
+    assert.equal(res.totalPrice, '5500000.00');
+
+    // Σunits == total
+    const sumUnits = res.units.reduce((acc, u) => acc.plus(u.newPrice), D(0));
+    assert.equal(sumUnits.toFixed(2), res.totalPrice);
+  });
+
+  // T2: all available: 6 × 66.67/66.65 m² (from buildBuildingUnits 400 m²) at 10,000/m² -> total == Σ rounded unit prices, every unit whole EGP
+  it('T2 all available: 6 × 66.67/66.65 m² (from buildBuildingUnits 400 m²) at 10,000/m² -> total == Σ rounded unit prices, every unit whole EGP', () => {
+    const units = [
+      { unit_id: 'u1', area_sqm: 66.67, price_egp: 666700, status: 'available' },
+      { unit_id: 'u2', area_sqm: 66.67, price_egp: 666700, status: 'available' },
+      { unit_id: 'u3', area_sqm: 66.67, price_egp: 666700, status: 'available' },
+      { unit_id: 'u4', area_sqm: 66.67, price_egp: 666700, status: 'available' },
+      { unit_id: 'u5', area_sqm: 66.67, price_egp: 666700, status: 'available' },
+      { unit_id: 'u6', area_sqm: 66.65, price_egp: 666500, status: 'available' },
+    ];
+
+    const res = repriceBuilding(units, 10000);
+
+    assert.equal(res.units.length, 6);
+    // Every unit whole EGP
+    for (const u of res.units) {
+      const num = Number(u.newPrice);
+      assert.equal(Number.isInteger(num), true, `Unit ${u.unit_id} newPrice ${u.newPrice} must be whole EGP`);
+    }
+
+    assert.equal(res.units[0].newPrice, '666700.00');
+    assert.equal(res.units[5].newPrice, '666500.00');
+    assert.equal(res.totalPrice, '4000000.00');
+
+    // Total == Σ rounded unit prices
+    const sumUnits = res.units.reduce((acc, u) => acc.plus(u.newPrice), D(0));
+    assert.equal(sumUnits.toFixed(2), res.totalPrice);
+  });
+
+  // T3: reserved unit stays at its price; status 'available' but contracted (contract with building_unit_id) also stays locked
+  it('T3 reserved unit stays at its price; status "available" but contracted (contract with building_unit_id) also stays locked', () => {
+    const units = [
+      { unit_id: 'u1', area_sqm: 100, price_egp: 800000, status: 'reserved' },
+      { unit_id: 'u2', area_sqm: 100, price_egp: 850000, status: 'available' }, // has contract
+      { unit_id: 'u3', area_sqm: 100, price_egp: 850000, status: 'available' }, // no contract
+    ];
+
+    const contracts = [
+      { building_unit_id: 'u2', status: 'Active' },
+    ];
+
+    const res = repriceBuilding(units, 10000, contracts);
+
+    // Reserved unit stays locked
+    assert.equal(res.units[0].locked, true);
+    assert.equal(res.units[0].newPrice, '800000.00');
+    assert.equal(res.units[0].change, '0.00');
+
+    // Available unit with contract stays locked
+    assert.equal(res.units[1].locked, true);
+    assert.equal(res.units[1].newPrice, '850000.00');
+    assert.equal(res.units[1].change, '0.00');
+
+    // Available unit without contract gets repriced
+    assert.equal(res.units[2].locked, false);
+    assert.equal(res.units[2].newPrice, '1000000.00');
+    assert.equal(res.units[2].change, '150000.00');
+
+    assert.equal(res.lockedTotal, '1650000.00');
+    assert.equal(res.repricedTotal, '1000000.00');
+    assert.equal(res.totalPrice, '2650000.00');
+  });
+
+  // T4: save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged
+  it('T4 save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged', async () => {
+    const updatePayloads: any[] = [];
+    const rpcCalls: any[] = [];
+
+    const mockSupabase: any = {
+      rpc: async (fn: string, args: any) => {
+        rpcCalls.push({ fn, args });
+        return { data: { stage: 'revised', units_repriced: 0 }, error: null };
+      },
+      from: (table: string) => ({
+        select: (_cols: string) => ({
+          eq: (_col: string, _val: any) => ({
+            single: async () => ({
+              data: {
+                building_units: [
+                  { unit_id: 'u1', area_sqm: 100, price_egp: 800000, status: 'available' },
+                  { unit_id: 'u2', area_sqm: 100, price_egp: 950000, status: 'reserved' },
+                  { unit_id: 'u3', area_sqm: 100, price_egp: 1000000, status: 'contracted', contract_id: 'c1' },
+                ],
+              },
+              error: null,
+            }),
+          }),
+        }),
+        update: (payload: any) => ({
+          eq: async (_col: string, _val: any) => {
+            updatePayloads.push(payload);
+            return { error: null };
+          },
+        }),
+      }),
+    };
+
+    const res = await ERPSupabaseService.recordPropertyPrice(mockSupabase, {
+      propertyId: 'p-1',
+      priceEgp: 2750000,
+      finalize: false,
+      unitPrices: {
+        u1: 900000, // available unit repriced
+        u2: 900000, // reserved unit MUST NOT be updated
+        u3: 900000, // contracted unit MUST NOT be updated
+      },
+      costBasisEgp: '1500000',
+    });
+
+    // Assert RPC called to log price history with total
+    assert.equal(rpcCalls.length, 1);
+    assert.equal(rpcCalls[0].fn, 'record_property_price');
+    assert.equal(rpcCalls[0].args.p_price_egp, 2750000);
+    assert.equal(rpcCalls[0].args.p_finalize, false);
+
+    // Assert exact update payload: property price and updated available units only
+    assert.equal(updatePayloads.length, 1);
+    const payload = updatePayloads[0];
+    assert.equal(payload.price_egp, 2750000);
+    assert.equal(payload.building_units.length, 3);
+    assert.equal(payload.building_units[0].price_egp, 900000); // available: updated
+    assert.equal(payload.building_units[1].price_egp, 950000); // reserved: unchanged
+    assert.equal(payload.building_units[2].price_egp, 1000000); // contracted: unchanged
+    assert.equal(res.units_repriced, 1);
   });
 });
