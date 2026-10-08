@@ -183,66 +183,40 @@ describe('repriceBuilding & save handler (T1-T4)', () => {
     assert.equal(res.totalPrice, '2650000.00');
   });
 
-  // T4: save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged
-  it('T4 save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged', async () => {
-    const updatePayloads: any[] = [];
+  // T4: non-finalize save is one atomic RPC call: unit prices go to record_property_price,
+  // which reprices available units and saves price = sum of units (migration 20261008120000).
+  it('T4 save handler: non-finalize save sends unitPrices in the single RPC call and makes no client-side update', async () => {
     const rpcCalls: any[] = [];
+    let tableCalls = 0;
 
     const mockSupabase: any = {
       rpc: async (fn: string, args: any) => {
         rpcCalls.push({ fn, args });
-        return { data: { stage: 'revised', units_repriced: 0 }, error: null };
+        return { data: { stage: 'revised', units_repriced: 1, price_egp: 2850000 }, error: null };
       },
-      from: (table: string) => ({
-        select: (_cols: string) => ({
-          eq: (_col: string, _val: any) => ({
-            single: async () => ({
-              data: {
-                building_units: [
-                  { unit_id: 'u1', area_sqm: 100, price_egp: 800000, status: 'available' },
-                  { unit_id: 'u2', area_sqm: 100, price_egp: 950000, status: 'reserved' },
-                  { unit_id: 'u3', area_sqm: 100, price_egp: 1000000, status: 'contracted', contract_id: 'c1' },
-                ],
-              },
-              error: null,
-            }),
-          }),
-        }),
-        update: (payload: any) => ({
-          eq: async (_col: string, _val: any) => {
-            updatePayloads.push(payload);
-            return { error: null };
-          },
-        }),
-      }),
+      from: () => {
+        tableCalls++;
+        throw new Error('no client-side table access expected');
+      },
     };
 
+    const unitPrices = { u1: 900000, u2: 900000 };
     const res = await ERPSupabaseService.recordPropertyPrice(mockSupabase, {
       propertyId: 'p-1',
       priceEgp: 2750000,
       finalize: false,
-      unitPrices: {
-        u1: 900000, // available unit repriced
-        u2: 900000, // reserved unit MUST NOT be updated
-        u3: 900000, // contracted unit MUST NOT be updated
-      },
+      unitPrices,
       costBasisEgp: '1500000',
     });
 
-    // Assert RPC called to log price history with total
     assert.equal(rpcCalls.length, 1);
     assert.equal(rpcCalls[0].fn, 'record_property_price');
     assert.equal(rpcCalls[0].args.p_price_egp, 2750000);
     assert.equal(rpcCalls[0].args.p_finalize, false);
-
-    // Assert exact update payload: property price and updated available units only
-    assert.equal(updatePayloads.length, 1);
-    const payload = updatePayloads[0];
-    assert.equal(payload.price_egp, 2750000);
-    assert.equal(payload.building_units.length, 3);
-    assert.equal(payload.building_units[0].price_egp, 900000); // available: updated
-    assert.equal(payload.building_units[1].price_egp, 950000); // reserved: unchanged
-    assert.equal(payload.building_units[2].price_egp, 1000000); // contracted: unchanged
+    assert.deepEqual(rpcCalls[0].args.p_unit_prices, unitPrices);
+    assert.equal(rpcCalls[0].args.p_cost_basis_egp, 1500000);
+    assert.equal(tableCalls, 0);
     assert.equal(res.units_repriced, 1);
+    assert.equal(res.price_egp, 2850000);
   });
 });

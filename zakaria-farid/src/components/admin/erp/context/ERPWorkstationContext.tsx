@@ -4573,6 +4573,8 @@ export function ERPWorkstationProvider({
         unitPrices: options?.unitPrices,
         costBasisEgp: options?.costBasisEgp
       });
+      // The RPC saves price = sum of unit prices when units are repriced; mirror what it saved.
+      const savedPriceEgp = result.price_egp ?? newPriceEgp;
       const finalizedAt = new Date().toISOString();
       setData(prev => ({
         ...prev,
@@ -4588,13 +4590,13 @@ export function ERPWorkstationProvider({
           if (!options?.finalize) {
             return {
               ...p,
-              price_egp: newPriceEgp,
+              price_egp: savedPriceEgp,
               building_units: updatedUnits,
             };
           }
           return {
             ...p,
-            price_egp: newPriceEgp,
+            price_egp: savedPriceEgp,
             completion_status: 'ready',
             construction_completed_at: finalizedAt,
             price_finalized_at: finalizedAt,
@@ -4602,7 +4604,7 @@ export function ERPWorkstationProvider({
           };
         })
       }));
-      const priceText = isAr ? `${newPriceEgp.toLocaleString('en-US')} ج.م` : `${newPriceEgp.toLocaleString('en-US')} EGP`;
+      const priceText = isAr ? `${savedPriceEgp.toLocaleString('en-US')} ج.م` : `${savedPriceEgp.toLocaleString('en-US')} EGP`;
       toast.success(
         options?.finalize
           ? (isAr ? 'تم اعتماد السعر النهائي وإنهاء الإنشاء' : 'Final price approved, construction complete')
