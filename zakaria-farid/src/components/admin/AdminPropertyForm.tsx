@@ -13,6 +13,7 @@ import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, Film, Play, Plus, Users, AlertCircle, AlertTriangle } from 'lucide-react';
+import { repairBuildingTradeScopes } from '@/lib/layering/buildingBlueprint';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -466,11 +467,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   const [inspectorZoneId, setInspectorZoneId] = useState<string | null>(null);
   const [roomsRailEl, setRoomsRailEl] = useState<HTMLDivElement | null>(null);
-  const [railOpen, setRailOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(property?.type !== 'building');
   const [zoneInstances, setZoneInstances] = useState<ZoneInstance[]>(() => {
     if (property?.spec_layers && Array.isArray(property.spec_layers) && property.spec_layers.length > 0) {
       if ('zone_template_id' in property.spec_layers[0]) {
-        return property.spec_layers as ZoneInstance[];
+        return property.type === 'building' ? repairBuildingTradeScopes(property.spec_layers as ZoneInstance[]).zones : property.spec_layers as ZoneInstance[];
       }
     }
     // For new properties, start with empty array so Step 3 prompts the user with the Wizard vs Ground Zero choice
@@ -1949,17 +1950,19 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       {currentStep === 3 && (
         <div className={styles.section} style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, backdropFilter: 'none' }}>
           <CADBlueprintBuilder
+            buildingUnits={property?.building_units}
             zoneInstances={zoneInstances}
             onZoneInstancesChange={setZoneInstances}
             propertyType={selectedType}
             subtype={selectedSubtype}
             bedrooms={bedroomsCount}
-            declaredArea={Number(watch('area_sqm')) || undefined}
+            declaredArea={selectedType === 'building' ? undefined : Number(watch('area_sqm')) || undefined}
             selectedZoneId={inspectorZoneId}
             onSelectedZoneIdChange={(id) => {
               setInspectorZoneId(id);
-              if (id) setRailOpen(true);
+              if (id && selectedType !== 'building') setRailOpen(true);
             }}
+            onInspectZone={(id) => { setInspectorZoneId(id); setRailOpen(true); }}
             listPortalTarget={roomsRailEl}
             onPresetMeta={({ bedrooms, bathrooms, floorNumber }) => {
               setValue('bedrooms', bedrooms);
@@ -2000,10 +2003,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             {inspectorZoneId && (
               <div className="rooms-rail-inspector-scroll">
                 <ZoneInspector
+                  buildingUnits={property?.building_units}
                   zoneInstances={zoneInstances}
                   onZoneInstancesChange={setZoneInstances}
                   selectedZoneId={inspectorZoneId}
-                  declaredArea={Number(watch('area_sqm')) || undefined}
+                  declaredArea={selectedType === 'building' ? undefined : Number(watch('area_sqm')) || undefined}
                   nested={false}
                   onClose={() => setInspectorZoneId(null)}
                   isAr={isAr}
@@ -2636,7 +2640,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       )}
 
       {/* ─── Stepper Bottom Navigation Bar ─── */}
-      <div className={styles.saveBar}>
+      <div className={styles.saveBar} style={currentStep === 3 && selectedType === 'building' ? { position: 'relative', inset: 'auto', width: '100%', flexWrap: 'wrap' } : undefined}>
         <div className={styles.saveBarStepper}>
           {steps.map((st, idx) => {
             const isActive = currentStep === st.num;

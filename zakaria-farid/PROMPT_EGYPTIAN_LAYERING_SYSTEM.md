@@ -2,6 +2,14 @@
 
 ## 1. Overview & Objective
 
+### Building blueprint data model
+
+- `properties.spec_layers` stores `ZoneInstance[]`; no new database columns. `bld.building` holds shared building work. Floor core kinds: `bld.elevator`, `bld.staircase`, `bld.lightwell`, `bld.service`, `bld.central_corridor`; entrance, garage and roof kinds retain their own template ids.
+- Trades belong only to their element, through `ZONE_TRADE_OVERRIDES`. Elevator gets `inf.elevator`; staircase gets `inf.common_finish`. No inherited or copied building-wide trade list. `repairBuildingTradeScopes` moves unrelated infrastructure trades to `bld.building`, collapses exact status/attribute copies and preserves distinct values; second run changes nothing. `scripts/repair-building-blueprint.ts` defaults to dry-run, restricts writes to the Gouna building on test project `lybkeycbiposjkjkyjlh`, and requires `--apply` plus an RLS-authorized session.
+- Optional `ZoneInstance.floor_number` is canonical; legacy `level_label` remains readable. Unit children remain under their owning `bld.unit`. Optional `unit` facts: `area_sqm`, `bedrooms`, `bathrooms`, `finishing_state`, `orientation`, `view`. Inventory supplies missing facts; recorded rooms supply bedroom/bathroom counts. Sale status comes from `properties.building_units.status` (maintained by ERP contract writes); `contracted` displays as sold. Missing inventory status stays unspecified; no manual CAD sale status.
+- Elevator attributes: existing `inf.elev.capacity` (kg) and `inf.elev.brand`; new optional `inf.elev.persons`, `inf.elev.stops` (default from served floor count). Stair attributes: optional `inf.stair.width` (m), `inf.stair.material`. Lightwell dimensions use existing `spatial.length_m` / `width_m`. Service rooms use optional `service_purpose`.
+- Admin edits fields in `ZoneInspector`; `BuildingBlueprintPreview` is the shared, responsive floor/unit presentation for subsequent public integration. Labels resolve through `blueprintLabel` / `zoneLabel`; icons through `BLUEPRINT_ICONS`. Preview facts use saved values, with no sample dimensions. Metre edits, drag, resize and arrow/Shift nudges retain CAD history.
+
 Implement a property construction layering and finishing specification system tailored for the Egyptian real estate market. The system manages 3 property types (**Apartments**, **Buildings**, and **Garages**) across 3 standard Egyptian finishing levels (**Red Brick**, **Semi-Finished**, and **Fully Finished**), covering the underlying data model, administrative builder tools, and customer-facing interactive components.
 
 ---

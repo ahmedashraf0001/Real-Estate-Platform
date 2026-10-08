@@ -78,6 +78,9 @@ export interface ZoneInstance {
   zone_template_id: string;
   instance_label?: string;   // "Bedroom 2" for repeatable zones
   level_label?: string;      // "Upper Level" for duplex/triplex
+  floor_number?: number;     // Canonical building floor; legacy level_label is still supported
+  unit?: Partial<Pick<BuildingUnitInstance, 'unit_code' | 'area_sqm' | 'bedrooms' | 'bathrooms' | 'finishing_state' | 'orientation' | 'view'>>;
+  service_purpose?: string;
   sort_order: number;
   trades: TradeInstance[];
   children?: ZoneInstance[]; // for container zones (Villa floors)
@@ -90,11 +93,13 @@ export interface BuildingUnitInstance {
   id: string;
   unit_code: string;         // e.g. "Flat 2A"
   unit_type: 'apartment' | 'duplex' | 'commercial';
-  floor_number: number;
-  bedrooms: number;
-  bathrooms: number;
-  area_sqm: number;
-  finishing_state: GlobalFinishingState;
+  floor_number?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area_sqm?: number;
+  finishing_state?: GlobalFinishingState;
+  orientation?: string;
+  view?: string;
   zones: ZoneInstance[];
 }
 
@@ -372,6 +377,7 @@ function buildBuildingStructureAndUnits(
       result.push({
         id: uid(),
         zone_template_id: 'bld.unit',
+        floor_number: f,
         instance_label: `Flat ${code}`,
         level_label: levelLabel,
         sort_order: sortIdx++,
@@ -391,6 +397,12 @@ function buildBuildingStructureAndUnits(
   for (const item of roofComponents) {
     const inst = fromTemplateId(item.tid, globalState, item.label, 'bld_roof', sortIdx++);
     if (inst) result.push(inst);
+  }
+
+  const stops = new Set(result.map(z => z.level_label)).size;
+  for (const zone of result) {
+    if (zone.zone_template_id !== 'bld.elevator') continue;
+    zone.trades.find(t => t.trade_template_id === 'inf.elevator')?.attributes.push({ attribute_template_id: 'inf.elev.stops', value: stops });
   }
 
   return result;

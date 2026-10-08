@@ -22,7 +22,8 @@ import {
 import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
 import { computeMetricLayout, metricInputFromSpatial, MetricRoomRect } from '@/lib/layering/floorplanLayout';
 import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
-import { ATTRIBUTE_TEMPLATES, getTradeTemplateLabels } from '@/lib/layering';
+import { ATTRIBUTE_TEMPLATES } from '@/lib/layering';
+import { blueprintLabel } from '@/lib/layering/labels';
 import type { TradeInstance } from '@/lib/layering';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
@@ -53,25 +54,6 @@ interface TradeSpecItem {
   badgeAr: string;
 }
 
-const TRADE_STATUS_LABELS: Record<string, { en: string; ar: string }> = {
-  NotStarted:   { en: 'Not started',   ar: 'لم يبدأ' },
-  RoughIn:      { en: 'Rough-in',      ar: 'تمديدات خام' },
-  Finished:     { en: 'Finished',      ar: 'مكتمل' },
-  ConduitsOnly: { en: 'Conduits only', ar: 'مواسير فقط' },
-  Wired:        { en: 'Wired',         ar: 'أسلاك' },
-  RedBrick:     { en: 'Red brick',     ar: 'طوب أحمر' },
-  Plastered:    { en: 'Plastered',     ar: 'محارة' },
-  Tiled:        { en: 'Tiled',         ar: 'سيراميك' },
-  FinalPaint:   { en: 'Final paint',   ar: 'دهان نهائي' },
-  Putty:        { en: 'Putty',         ar: 'معجون' },
-  SandBed:      { en: 'Sand bed',      ar: 'رملة' },
-  None:         { en: 'None',          ar: 'لا يوجد' },
-  Installed:    { en: 'Installed',     ar: 'مركب' },
-};
-
-const prettifyId = (id: string) =>
-  (id.split('.').pop() || id).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^\w/, c => c.toUpperCase());
-
 /** "Ceramic (سيراميك)" -> the part for the requested language. */
 function pickLang(value: string, isAr: boolean): string {
   const m = value.match(/^(.*?)\s*\((.*?)\)\s*$/);
@@ -82,12 +64,11 @@ function pickLang(value: string, isAr: boolean): string {
 /** Specs shown for a space come only from the trades the admin recorded on that zone. */
 function buildTradeSpecs(trades: TradeInstance[] = []): TradeSpecItem[] {
   return trades.map(t => {
-    const labels = getTradeTemplateLabels(t.trade_template_id);
-    const status = TRADE_STATUS_LABELS[t.status] || { en: t.status, ar: t.status };
+    const status = { en: blueprintLabel('status', t.status, false), ar: blueprintLabel('status', t.status, true) };
     const attrs = (t.attributes || []).filter(a => a.value !== null && a.value !== '' && a.value !== false);
     const attrText = (isAr: boolean) => attrs.map(a => {
       const tpl = ATTRIBUTE_TEMPLATES.find(x => x.id === a.attribute_template_id);
-      const label = a.custom_label || (tpl ? (isAr ? tpl.label_ar : tpl.label_en) : prettifyId(a.attribute_template_id));
+      const label = tpl ? blueprintLabel('attribute', tpl.id, isAr) : a.custom_label || blueprintLabel('attribute', a.attribute_template_id, isAr);
       const value = a.value === true ? (isAr ? 'نعم' : 'Yes') : pickLang(String(a.value), isAr);
       return `${label}: ${value}`;
     }).join(' · ');
@@ -95,8 +76,8 @@ function buildTradeSpecs(trades: TradeInstance[] = []): TradeSpecItem[] {
     const icon: TradeSpecItem['icon'] = id.includes('elec') ? 'zap' : id.includes('hvac') ? 'wind' : id.includes('plumb') ? 'droplet' : 'layers';
     return {
       id: t.id || id,
-      name: labels ? pickLang(labels.en, false) : prettifyId(id),
-      nameAr: labels ? labels.ar : prettifyId(id),
+      name: blueprintLabel('trade', id, false),
+      nameAr: blueprintLabel('trade', id, true),
       spec: attrText(false),
       specAr: attrText(true),
       icon,

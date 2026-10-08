@@ -26,9 +26,15 @@ import {
   removeTradeFromZone,
   removeZone,
 } from '@/lib/layering';
-import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
+import { fallbackMetricFor } from '@/lib/layering/zoneMetrics';
+
+import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
+import { buildingFloorKey, floorLabel, patchBlueprintZone, resolveBlueprintUnit } from '@/lib/layering/buildingBlueprint';
+import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
+import type { BuildingUnitItem } from '@/lib/supabase/types';
 
 interface ZoneInspectorProps {
+  buildingUnits?: BuildingUnitItem[];
   zoneInstances: ZoneInstance[];
   onZoneInstancesChange: (updated: ZoneInstance[]) => void;
   selectedZoneId: string | null;
@@ -38,37 +44,6 @@ interface ZoneInspectorProps {
   nested?: boolean;
   onClose?: () => void;
   isAr?: boolean;
-}
-
-const STATUS_LABELS: Record<string, { en: string; ar: string }> = {
-  NotStarted: { en: 'Not Started', ar: 'لم يبدأ' },
-  RoughIn: { en: 'Rough-In', ar: 'تمديدات خام' },
-  Finished: { en: 'Finished', ar: 'تم' },
-  ConduitsOnly: { en: 'Conduits Only', ar: 'مواسير فقط' },
-  Wired: { en: 'Wired', ar: 'أسلاك' },
-  RedBrick: { en: 'Red Brick', ar: 'طوب أحمر' },
-  Plastered: { en: 'Plastered', ar: 'مبياض' },
-  Tiled: { en: 'Tiled', ar: 'سيراميك' },
-  FinalPaint: { en: 'Final Paint', ar: 'دهان نهائي' },
-  Putty: { en: 'Putty', ar: 'معجون' },
-  SandBed: { en: 'Sand Bed', ar: 'رملة' },
-  None: { en: 'None', ar: 'لا يوجد' },
-  SubFrames: { en: 'Sub-Frames', ar: 'حلوق' },
-  Installed: { en: 'Installed', ar: 'مركّب' },
-  CopperPrep: { en: 'Copper Prep', ar: 'تمديد نحاس' },
-  InProgress: { en: 'In Progress', ar: 'جاري' },
-  Shaft: { en: 'Shaft Ready', ar: 'بئر المصعد' },
-  Applied: { en: 'Applied', ar: 'تم التطبيق' },
-};
-
-function statusLabel(status: string, isAr: boolean): string {
-  const s = STATUS_LABELS[status];
-  return s ? (isAr ? s.ar : s.en) : status;
-}
-
-function prettify(id: string): string {
-  const last = id.split('.').pop() ?? id;
-  return last.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function findZone(zones: ZoneInstance[], id: string): ZoneInstance | null {
@@ -82,15 +57,6 @@ function findZone(zones: ZoneInstance[], id: string): ZoneInstance | null {
   return null;
 }
 
-function zoneName(zone: ZoneInstance, isAr: boolean): string {
-  if (zone.instance_label?.trim()) return zone.instance_label;
-  const tpl = ZONE_TEMPLATES.find(t => t.id === zone.zone_template_id);
-  if (tpl) return isAr ? tpl.label_ar : tpl.label_en;
-  const shared = FALLBACK_ZONE_TITLES[zone.zone_template_id];
-  if (shared) return isAr ? shared.ar : shared.en;
-  return prettify(zone.zone_template_id);
-}
-
 function tradeTemplateFor(trade: { trade_template_id: string; status: string }): TradeTemplate {
   const found = TRADE_TEMPLATES.find(t => t.id === trade.trade_template_id);
   if (found) return found;
@@ -98,8 +64,8 @@ function tradeTemplateFor(trade: { trade_template_id: string; status: string }):
   return {
     id: trade.trade_template_id,
     categories: [],
-    label_en: prettify(trade.trade_template_id),
-    label_ar: prettify(trade.trade_template_id),
+    label_en: blueprintLabel('trade', trade.trade_template_id, false),
+    label_ar: blueprintLabel('trade', trade.trade_template_id, true),
     status_values: generic.includes(trade.status) || !trade.status ? generic : [...generic, trade.status],
   };
 }
@@ -111,7 +77,7 @@ const TIER_STYLES: Record<string, { en: string; ar: string; color: string }> = {
   mixed: { en: 'Mixed', ar: 'مختلط', color: '#9FB3D9' },
 };
 
-export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, declaredArea, nested = false, onClose, isAr = false }: ZoneInspectorProps) {
+export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, declaredArea, nested = false, onClose, isAr = false, buildingUnits = [] }: ZoneInspectorProps) {
   const [uploading, setUploading] = useState(false);
   const [addTradeOpen, setAddTradeOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -144,6 +110,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
       <ZoneInspectorBody
         key={zone.id}
         zone={zone}
+        buildingUnits={buildingUnits}
         zoneInstances={zoneInstances}
         onZoneInstancesChange={onZoneInstancesChange}
         declaredArea={declaredArea}
@@ -161,6 +128,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
 }
 
 interface BodyProps {
+  buildingUnits: BuildingUnitItem[];
   zone: ZoneInstance;
   zoneInstances: ZoneInstance[];
   onZoneInstancesChange: (updated: ZoneInstance[]) => void;
@@ -175,9 +143,13 @@ interface BodyProps {
 }
 
 function ZoneInspectorBody({
-  zone, zoneInstances, onZoneInstancesChange, declaredArea, isAr,
+  zone, zoneInstances, onZoneInstancesChange, declaredArea, isAr, buildingUnits,
   uploading, setUploading, addTradeOpen, setAddTradeOpen, fileRef, onClose,
 }: BodyProps) {
+  const ElementIcon = BLUEPRINT_ICONS[zone.zone_template_id] ?? Building;
+  const unitFacts = resolveBlueprintUnit(zone, buildingUnits);
+  const patchZone = (patch: Partial<ZoneInstance>) => onZoneInstancesChange(patchBlueprintZone(zoneInstances, zone.id, patch));
+  const floorCount = new Set(zoneInstances.filter(z => z.zone_template_id !== 'bld.building').map(buildingFloorKey)).size;
   const shared = fallbackMetricFor(zone.zone_template_id);
   const widthM = zone.spatial?.width_m ?? shared?.width_m ?? 3;
   const lengthM = zone.spatial?.length_m ?? shared?.length_m ?? 4;
@@ -247,6 +219,10 @@ function ZoneInspectorBody({
   };
 
   const zoneTpl = ZONE_TEMPLATES.find(t => t.id === zone.zone_template_id);
+  const elementAttributeIds = new Set(zone.trades.flatMap(t => getAttributesForTrade(t.trade_template_id, zone.zone_template_id)).filter(a =>
+    (zone.zone_template_id === 'bld.elevator' && a.id.startsWith('inf.elev.')) ||
+    (zone.zone_template_id === 'bld.staircase' && a.id.startsWith('inf.stair.')),
+  ).map(a => a.id));
   const existingTradeIds = new Set(zone.trades.map(t => t.trade_template_id));
   const addableTrades = (zoneTpl ? getTradesForZone(zoneTpl) : TRADE_TEMPLATES).filter(t => !existingTradeIds.has(t.id));
 
@@ -288,8 +264,8 @@ function ZoneInspectorBody({
     const newVid: ZoneVideo = {
       id: `zvid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       url: videoUrlInput.trim(),
-      title_en: videoTitleInput.trim() || `${zoneName(zone, false)} Walkthrough`,
-      title_ar: videoTitleInput.trim() || `معاينة ${zoneName(zone, true)}`,
+      title_en: videoTitleInput.trim() || `${zoneLabel(zone, false)} Walkthrough`,
+      title_ar: videoTitleInput.trim() || `معاينة ${zoneLabel(zone, true)}`,
       category: 'spec',
     };
     onZoneInstancesChange(addZoneVideo(zoneInstances, zone.id, newVid));
@@ -301,12 +277,12 @@ function ZoneInspectorBody({
   return (
     <>
       <header className="zi-header">
-        <span className="zi-header-icon"><Building size={15} /></span>
+        <span className="zi-header-icon"><ElementIcon size={15} /></span>
         <div className="zi-header-text">
-          <h4 className="zi-title" dir="auto">{zoneName(zone, isAr)}</h4>
+          <h4 className="zi-title">{zoneLabel(zone, isAr)}</h4>
           <div className="zi-meta">
             <span dir="ltr">{sqm} m²</span>
-            {zone.level_label && <span className="zi-level">{zone.level_label}</span>}
+            {zone.level_label && <span className="zi-level">{floorLabel(buildingFloorKey(zone), isAr)}</span>}
           </div>
         </div>
         {tier && (
@@ -332,8 +308,8 @@ function ZoneInspectorBody({
           className="zi-delete-zone"
           onClick={() => {
             const ok = window.confirm(isAr
-              ? `حذف "${zoneName(zone, isAr)}" نهائياً من المخطط؟`
-              : `Delete "${zoneName(zone, isAr)}" from the floor plan?`);
+              ? `حذف "${zoneLabel(zone, isAr)}" نهائياً من المخطط؟`
+              : `Delete "${zoneLabel(zone, isAr)}" from the floor plan?`);
             if (!ok) return;
             onZoneInstancesChange(removeZone(zoneInstances, zone.id));
             onClose();
@@ -344,6 +320,38 @@ function ZoneInspectorBody({
         </button>
       )}
 
+      {zone.zone_template_id === 'bld.unit' && <section className="zi-section">
+        <span className="zi-section-label">{isAr ? 'بيانات الشقة' : 'Unit facts'}</span>
+        {(['area_sqm', 'bedrooms', 'bathrooms'] as const).map((field, i) => <label className="zi-ceiling" key={field}>
+          <span>{(isAr ? ['المساحة (م²)', 'غرف النوم', 'الحمامات'] : ['Area (m²)', 'Bedrooms', 'Bathrooms'])[i]}</span>
+          <input type="number" min="0" step={field === 'area_sqm' ? '0.1' : '1'} value={zone.unit?.[field] ?? unitFacts[field] ?? ''} onChange={e => { const n = e.target.valueAsNumber; if (e.target.value === '' || (Number.isFinite(n) && n >= 0 && (field === 'area_sqm' || Number.isInteger(n)))) patchZone({ unit: { ...zone.unit, [field]: e.target.value === '' ? undefined : n } }); }} />
+        </label>)}
+        <label className="zi-ceiling"><span>{isAr ? 'الدور' : 'Floor'}</span><input type="number" min="-1" step="1" value={zone.floor_number ?? unitFacts.floor_number ?? ''} onChange={e => {
+          const n = e.target.valueAsNumber; if (!Number.isInteger(n) || n < -1) return;
+          const level_label = n === 0 ? 'bld_ground' : n === -1 ? 'bld_basement' : `Floor ${n}`;
+          const move = (list: ZoneInstance[]): ZoneInstance[] => list.map(z => ({ ...z, floor_number: n, level_label, ...(z.children ? { children: move(z.children) } : {}) }));
+          patchZone({ floor_number: n, level_label, children: zone.children ? move(zone.children) : undefined });
+        }} /></label>
+        <label className="zi-ceiling"><span>{isAr ? 'التشطيب' : 'Finishing'}</span><select value={zone.unit?.finishing_state ?? unitFacts.finishing_state ?? ''} onChange={e => patchZone({ unit: { ...zone.unit, finishing_state: (e.target.value || undefined) as 'red_brick' | 'semi_finished' | 'fully_finished' | undefined } })}>
+          <option value="">{isAr ? 'غير محدد' : 'Unspecified'}</option>{(['red_brick', 'semi_finished', 'fully_finished'] as const).map(value => <option key={value} value={value}>{blueprintLabel('status', value, isAr)}</option>)}
+        </select></label>
+        {(['orientation', 'view'] as const).map((field, i) => <label className="zi-ceiling" key={field}><span>{(isAr ? ['الاتجاه', 'الإطلالة'] : ['Orientation', 'View'])[i]}</span><input type="text" value={zone.unit?.[field] ?? ''} onChange={e => patchZone({ unit: { ...zone.unit, [field]: e.target.value || undefined } })} /></label>)}
+        <p>{isAr ? 'حالة البيع من سجل وحدات المبنى' : 'Sale status from building inventory'}: {blueprintLabel('status', unitFacts.status ?? '', isAr)}</p>
+      </section>}
+      {['bld.service', 'bld.guard_room', 'bld.electric_box', 'bld.water_motors', 'bld.roof_service'].includes(zone.zone_template_id) && <section className="zi-section"><label className="zi-ceiling"><span>{isAr ? 'الغرض من الغرفة' : 'Room purpose'}</span><input type="text" value={zone.service_purpose ?? ''} onChange={e => patchZone({ service_purpose: e.target.value || undefined })} /></label></section>}
+      {zone.trades.filter(t => getAttributesForTrade(t.trade_template_id, zone.zone_template_id).some(a => elementAttributeIds.has(a.id))).map(trade => <section className="zi-section" key={`facts-${trade.id}`}>
+        <span className="zi-section-label">{blueprintLabel('trade', trade.trade_template_id, isAr)}</span>
+        {getAttributesForTrade(trade.trade_template_id, zone.zone_template_id).filter(a => elementAttributeIds.has(a.id)).map(attr => {
+          const value = trade.attributes.find(a => a.attribute_template_id === attr.id)?.value;
+          const defaultStops = attr.id === 'inf.elev.stops' ? floorCount : undefined;
+          return <label className="zi-ceiling" key={attr.id}><span>{blueprintLabel('attribute', attr.id, isAr)}</span><input type={attr.data_type === 'integer' || attr.data_type === 'numeric' ? 'number' : 'text'} min="0" step={attr.data_type === 'integer' ? '1' : '0.1'} value={value === null || value === undefined ? '' : String(value)} placeholder={defaultStops === undefined ? undefined : String(defaultStops)} onChange={e => {
+            const numeric = attr.data_type === 'integer' || attr.data_type === 'numeric';
+            const next = e.target.value === '' ? null : numeric ? e.target.valueAsNumber : e.target.value;
+            if (typeof next === 'number' && (!Number.isFinite(next) || next < 0 || (attr.data_type === 'integer' && !Number.isInteger(next)))) return;
+            onZoneInstancesChange(updateAttributeValue(zoneInstances, zone.id, trade.id, attr.id, next));
+          }} />{defaultStops !== undefined && value == null && <small>{isAr ? `الافتراضي حسب الأدوار: ${defaultStops}` : `Default from floors: ${defaultStops}`}</small>}</label>;
+        })}
+      </section>)}
       <section className="zi-section">
         <span className="zi-section-label">{isAr ? 'الأبعاد' : 'DIMENSIONS'}</span>
         <div className="zi-dims">
@@ -426,7 +434,7 @@ function ZoneInspectorBody({
                     {isFlooring && <Hammer size={13} />}
                     {!isElectrical && !isPlumbing && !isHVAC && !isCarpentry && !isPainting && !isFlooring && <Wrench size={13} />}
                   </span>
-                  <span className="zi-trade-name" dir="auto">{isAr ? tpl.label_ar : tpl.label_en}</span>
+                  <span className="zi-trade-name">{blueprintLabel('trade', tpl.id, isAr)}</span>
                 </div>
                 <button
                   type="button"
@@ -450,7 +458,7 @@ function ZoneInspectorBody({
                       className={`zi-status-seg-btn ${isActive ? 'active' : ''}`}
                       onClick={() => onZoneInstancesChange(updateTradeStatus(zoneInstances, zone.id, trade.id, sv))}
                     >
-                      {statusLabel(sv, isAr)}
+                      {blueprintLabel('status', sv, isAr)}
                     </button>
                   );
                 })}
@@ -458,14 +466,14 @@ function ZoneInspectorBody({
 
               {/* Dynamic & Custom Trade Specifications */}
               <div className="zi-attrs">
-                {trade.attributes.map(attr => {
+                {trade.attributes.filter(attr => !elementAttributeIds.has(attr.attribute_template_id)).map(attr => {
                   const tplAttr = attrs.find(a => a.id === attr.attribute_template_id);
-                  const label = attr.custom_label || (tplAttr ? (isAr ? tplAttr.label_ar : tplAttr.label_en) : attr.attribute_template_id);
+                  const label = tplAttr ? blueprintLabel('attribute', tplAttr.id, isAr) : attr.custom_label || blueprintLabel('attribute', attr.attribute_template_id, isAr);
                   const val = attr.value === null ? '' : String(attr.value);
 
                   return (
                     <div key={attr.attribute_template_id} className="zi-attr-row">
-                      <span className="zi-attr-label" dir="auto" title={label}>{label}</span>
+                      <span className="zi-attr-label" title={label}>{label}</span>
                       <div className="zi-attr-input-group">
                         <input
                           type="text"
@@ -522,10 +530,10 @@ function ZoneInspectorBody({
                 </div>
 
                 {/* Quick Add Suggestions Chips */}
-                {attrs.filter(tplAttr => !trade.attributes.some(a => a.attribute_template_id === tplAttr.id)).length > 0 && (
+                {attrs.filter(tplAttr => !elementAttributeIds.has(tplAttr.id) && !trade.attributes.some(a => a.attribute_template_id === tplAttr.id)).length > 0 && (
                   <div className="zi-attr-chips">
                     <span className="zi-attr-chips-label">{isAr ? 'اقتراحات:' : 'Suggestions:'}</span>
-                    {attrs
+                    {attrs.filter(a => !elementAttributeIds.has(a.id))
                       .filter(tplAttr => !trade.attributes.some(a => a.attribute_template_id === tplAttr.id))
                       .map(tplAttr => (
                         <button
@@ -533,12 +541,12 @@ function ZoneInspectorBody({
                           type="button"
                           className="zi-attr-chip"
                           onClick={() => {
-                            const label = isAr ? tplAttr.label_ar : tplAttr.label_en;
+                            const label = blueprintLabel('attribute', tplAttr.id, isAr);
                             onZoneInstancesChange(updateAttributeValue(zoneInstances, zone.id, trade.id, tplAttr.id, '', label));
                           }}
                         >
                           <span>+</span>
-                          <span>{isAr ? tplAttr.label_ar : tplAttr.label_en}</span>
+                          <span>{blueprintLabel('attribute', tplAttr.id, isAr)}</span>
                         </button>
                       ))}
                   </div>
@@ -564,7 +572,7 @@ function ZoneInspectorBody({
               >
                 <option value="" disabled>{isAr ? 'اختر نظاماً...' : 'Pick a system...'}</option>
                 {addableTrades.map(t => (
-                  <option key={t.id} value={t.id}>{isAr ? t.label_ar : t.label_en}</option>
+                  <option key={t.id} value={t.id}>{blueprintLabel('trade', t.id, isAr)}</option>
                 ))}
               </select>
             ) : (
@@ -921,6 +929,7 @@ function InspectorStyles() {
 
       .zi-ceiling { display: flex; flex-direction: column; gap: 3px; }
       .zi-ceiling select, .zi-ceiling input, .zi-add-trade select, .zi-attr select {
+        min-height: 44px;
         padding: 6px 8px; border-radius: 8px;
         background: var(--admin-input-bg, #ffffff); border: 1px solid var(--admin-input-border, #cbd5e1);
         color: var(--admin-text-title, #0f172a); font-family: inherit; font-size: 0.72rem; font-weight: 600;
