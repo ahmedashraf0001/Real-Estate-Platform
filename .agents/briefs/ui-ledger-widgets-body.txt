@@ -1,0 +1,41 @@
+TASK ui-ledger-widgets (SURFACE_UI). Page: /fin-os/ar/ledger ("الحسابات ودفتر اليومية").
+
+USER APPROVAL OVERRIDES THE HEADER RULE "never remove or merge a widget/button" FOR EXACTLY THESE ITEMS (user-approved 2026-10-08, PROJECT_SPEC.md):
+1. Remove the chart card "توزيع القيود حسب النوع" (GeneralLedgerView.tsx ~1625 analytical charts block). Keep "حركة القيود المحاسبية" chart; it takes the freed width.
+2. Remove the selected-account summary card from the side rail (the card showing code, name, current balance, debit/credit totals, level, parent, movement count, last movement, "كشف الحساب التفصيلي" button) in zakaria-farid/src/components/admin/erp/v2/views/GeneralLedgerSideWidgets.tsx. Clicking an account in the chart-of-accounts tree must open AccountLedgerModal directly (the same modal the removed button opened, same props).
+3. Merge the side cards "الفترة المحاسبية والرقابة" and "التدقيق والتوازن المالي" into ONE card titled "الفترة والتوازن": period select + open/closed pill on one row, balance pill ("متوازن 0.00" success / "غير متوازن <delta>" danger) on the same row, then one muted row "مدين <total> · دائن <total>". The close-period and close-year actions move into a small "⋯" menu in that card header; both keep their existing handlers and confirmations exactly.
+4. Redesign AccountLedgerModal (zakaria-farid/src/components/admin/erp/AccountLedgerModal.tsx) per R4.
+Nothing else is removed. KPI cards, the chart-of-accounts tree, "الإجراءات السريعة والتصدير" card, the tabs/tables below the charts stay unchanged.
+
+APPROVED MOCKUP (binding for layout/wording): .agents/mockups/ui-calc-pdc-ledger.html section "3. دفتر الأستاذ". Numbers there are fake; data comes from existing props/memos.
+
+REQUIRED
+R1. Item 1. Delete the donut's data memo and imports if no longer used.
+R2. Item 2. Remove now-unused props from GeneralLedgerSideWidgetsProps (selectedAccountStats etc.) and their computation in GeneralLedgerView only if nothing else uses them (grep first; report each).
+R3. Item 3.
+R4. AccountLedgerModal:
+  - Header: account name (title), sub-line "<code> · <parent group name> · طبيعة مدينة|دائنة"; on the trailing side: period select (all / per month present in the lines, default = current page period if passed, else all), search input (description or reference), close ✕.
+  - Figures row (4 equal cells, hairline dividers): رصيد أول المدة | إجمالي المدين | إجمالي الدائن | رصيد آخر المدة (+ "مدين"/"دائن" word by sign and account nature). Opening balance = signed net of all lines dated before the selected period start (0 for "all"). All math with D() from src/lib/erp/math.ts.
+  - Table columns: التاريخ | المرجع | البيان | النوع | مدين | دائن | الرصيد. Chronological ASCENDING by entry_date then entry id/created order (default; keep the existing sort select but default to date_asc). First row "رصيد أول المدة" (muted). الرصيد = running balance in the account's normal-balance direction (debit-nature: opening + Σdr − Σcr; credit-nature: opening + Σcr − Σdr). When the user sorts by anything else, hide the running-balance column (it is only meaningful chronologically).
+  - المرجع: one line, monospace, ellipsis with full value in title attribute; never wraps (today "JE-2026-DIST-5707" and UUID refs wrap over 3-4 lines).
+  - البيان: one line, ellipsis + title. النوع: one soft micro-pill from the line's existing source/module field (reuse whatever label map the modal already uses for its current chips; no new invented categories).
+  - Footer row: "الإجمالي · N حركة" | Σمدين | Σدائن | closing balance.
+  - Clicking a row opens the existing journal-entry detail (whatever the current row click / inspector does); if none exists, rows are not clickable (do not invent one).
+  - Footer buttons: Excel (existing export), PDF (existing print path), إغلاق. Remove obsolete duplicate chips/lines in each row that the new columns replace.
+  - Pagination: keep existing; running balance must stay correct across pages (compute on the full sorted list, then slice).
+R5. FIN-OS rules (~/.claude/skills/fin-os-erp-design/SKILL.md sections 1-3): white panels, 1px hairlines, soft pastel micro-pills, no tinted backgrounds, no new color literals outside existing tokens/CSS variables, tabular numbers.
+R6. Done-grep in zakaria-farid/src returns 0 hits: rg -n "توزيع القيود حسب النوع|التدقيق والتوازن المالي|الفترة المحاسبية والرقابة" src
+
+TESTS (RED first)
+- Existing contract tests that pin the removed items (generalLedgerSideWidgets.test.ts, generalLedgerView.test.ts, generalLedgerWorkstation.test.ts): update them to the approved design and report each changed assertion. generalLedgerView.test.ts:231 is a known pre-existing failure (missing 604000) — leave it failing as is.
+- New tests importing production code (put the statement math in a pure exported function, e.g. src/lib/erp/accountStatement.ts, used by the modal):
+  T1. debit-nature account, lines Dr 2,083,333 / Dr 7,500,000 / Cr 3,000,000 -> running 2,083,333 / 9,583,333 / 6,583,333; closing 6,583,333 "مدين".
+  T2. credit-nature account (e.g. 201000) running balance = Σcr − Σdr.
+  T3. period filter: lines before period start sum into opening balance; opening + period dr − period cr == closing.
+  T4. ties on the same date keep entry order; running balance identical across a page break (page size 2).
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit exit 0.
+- npx tsx --test on touched test files: all pass except the known generalLedgerView.test.ts:231.
+- Done-grep: 0 hits.
+- No screenshots required; Claude checks the page visually.

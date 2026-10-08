@@ -1,0 +1,38 @@
+TASK ui-calculator-repricing (SURFACE_UI + pricing rule). Page: /fin-os/ar/calculator, mode "تسعير عقار مبني".
+Main file: zakaria-farid/src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx (+ CostPricingCalculator.module.css), pricing math: zakaria-farid/src/lib/erp/pricingCalculator.ts, save handler: onUpdateSellingPrice in zakaria-farid/src/components/admin/erp/context/ERPWorkstationContext.tsx (rg "unitPrices" there). The "دراسة جدوى" mode is NOT touched.
+
+BINDING RULE (PROJECT_SPEC.md, [user-confirmed 2026-10-08]):
+Repricing a building: available units get new price per m² × their area (whole EGP, existing Math.round); reserved/contracted units keep their current price. The building's saved price = sum of ALL unit prices (locked + repriced), so it always equals the units' total. Profit and margin use that sum. Properties without units: price = rate × area as today (priceBuiltProperty).
+
+USER APPROVAL OVERRIDES THE HEADER RULE "never remove a widget/button" FOR EXACTLY THESE ITEMS (2026-10-08):
+1. Remove the price slider (and priceSliderBounds if it ends up unused — grep).
+2. Remove the separate "مقارنة الأسعار" scenarios table.
+3. Remove the top 4 summary cards (سعر البيع المقترح / الربح المتوقع / التكلفة الفعلية / الفرق عن السعر الحالي).
+4. Remove the side panels "توزيع التكاليف" (~line 1036) and "سجل الأسعار" (~line 1072); price history opens from a "سجل الأسعار (N)" button in the bottom action bar (modal or drawer reusing ZFModalShell and the existing loadPriceHistory).
+Everything else stays (property select, mode switch, finalize confirm modal, audit link "عرض البنود").
+
+APPROVED MOCKUP (binding for layout/wording): .agents/mockups/ui-calc-pdc-ledger.html section "1. حاسبة التسعير". Numbers there are illustrative; all data comes from existing state.
+
+REQUIRED
+R1. Header row card: property select, completion pill (تحت الإنشاء / جاهز), and for off_plan properties a 2-step indicator: "السعر المبدئي" (✓ + amount when an initial price exists) → "السعر النهائي" (✓ after price_finalized_at). Ready properties show no stepper.
+R2. Card ① "أساس التكلفة": صافي التكلفة المسجلة (audit.totalLoggedCost, net of adjustments), المساحة, تكلفة المتر, "N بنود — عرض" (existing onOpenAuditForProperty). Zero cost keeps the existing warning text.
+R3. Card ② "سعر المتر": number input (existing chosen price state) + chips: التعادل, التكلفة +15%, التكلفة +30% (existing pricePerSqmForMarkup), سعر السوق (existing market state; chip shows ✎ and edits it inline). Chips only fill the input; nothing saves. Below: سعر العقار (per BINDING RULE; when units are locked show muted "متاح X + محجوز/مباع Y"), الربح المتوقع, هامش الربح, عن السعر الحالي. Signs coloured with existing tokens.
+R4. Card ③ "أثر السعر على الوحدات" (only when the property has units): columns الوحدة | الدور | المساحة | الحالة | السعر الحالي | السعر الجديد | الفرق. Locked rows (any status != available, incl. contracted via contracts) show pill "🔒 مباعة — لا تتغير" / "🔒 محجوزة — لا تتغير", new price = current price, الفرق "—", muted text. Footer: totals of current / new / diff, and a pill "مطابق" when Σnew == سعر العقار (must always hold; if not, show "غير مطابق" danger and disable save). Remove the note "للعرض فقط: الحفظ يحدّث سعر العقار ككل. أسعار الوحدات تُعدّل من صفحة العقارات." — it is false now.
+R5. Sticky bottom action bar: "السعر الحالي ← الجديد" summary, "سجل الأسعار (N)" button, and ONE primary button by state: off_plan not finalized -> "حفظ السعر المبدئي" plus secondary "إنهاء الإنشاء واعتماد السعر النهائي" (opens the EXISTING finalize modal, unchanged flow); finalized or ready -> "حفظ السعر". Every save opens a small confirm (ZFModalShell) summarising old → new property price and the number of available units repriced, then calls onUpdateSellingPrice(property.id, Σunits or rate×area, { unitPrices: availableUnitPrices, finalize?, costBasisEgp }).
+R6. Pricing math in pricingCalculator.ts: add one exported pure function, e.g. repriceBuilding(units, pricePerSqm) -> { units: [{unit_id, currentPrice, newPrice, change, locked}], totalPrice, lockedTotal, repricedTotal } using D(); priceUnitsAtRate stays (or is reused inside). The component uses it for card ②, ③ and the save payload. No float math on money.
+R7. Save path: verify in ERPWorkstationContext that unitPrices are persisted for NON-finalize saves too (today the non-finalize save sends no unitPrices). If the handler ignores unitPrices when finalize is false, extend it minimally so available units' price_egp are updated in the same write as the property price; reserved/contracted units must never be written. Price history entry records the new total. No migration. Report file:line of the handler and what changed.
+R8. FIN-OS rules (~/.claude/skills/fin-os-erp-design/SKILL.md sections 1-3): 2-column analytical view (no side widgets), white panels, 1px hairlines, soft pastel micro-pills, no tinted backgrounds, no new color literals outside existing tokens/CSS variables, tabular numbers.
+R9. Done-grep in zakaria-farid/src returns 0 hits: rg -n "للعرض فقط: الحفظ يحدّث|مقارنة الأسعار" src/components/admin/erp/v2/views/calculator
+
+TESTS (RED first), importing production code:
+- T1 repriceBuilding: 6 units × 100 m², unit 1 contracted at 1,000,000, rate 9,000 -> five units 900,000, locked 1,000,000, total 5,500,000, Σunits == total.
+- T2 all available: 6 × 66.67/66.65 m² (from buildBuildingUnits 400 m²) at 10,000/m² -> total == Σ rounded unit prices, every unit whole EGP.
+- T3 reserved unit stays at its price; status 'available' but contracted (contract with building_unit_id) also stays locked.
+- T4 save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged (drive the real context/service function with mocked Supabase, assert the exact update payload).
+- Update pricingCalculator.test.ts and any calculator design-contract test that pins removed items; report each changed assertion.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit exit 0.
+- npx tsx --test on touched test files: all pass.
+- Done-grep: 0 hits.
+- No screenshots required; Claude checks the page visually.
