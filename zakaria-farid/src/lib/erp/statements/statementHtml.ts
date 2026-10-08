@@ -1,12 +1,8 @@
 import { D } from '../math';
-import type { Statement } from './builders';
+import { formatAmount as amount, type Statement } from './builders';
 import { statementCss } from './statementCss';
 
 const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
-function amount(value: string) {
-  const [whole, cents] = D(value).toFixed(2).split('.');
-  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${cents === '00' ? '' : `.${cents}`}`;
-}
 
 /** All record strings are text nodes, never trusted markup. Font URLs must be an HTTP(S) origin. */
 export function statementHtml(model: Statement, fontOrigin: string): string {
