@@ -20,7 +20,7 @@ export interface Property {
   baths: number;
   sqm: number;
   propertyType: 'Apartment' | 'Building (عمارة)' | 'Garage' | string;
-  builtYear: number;
+  builtYear?: number;
   featured?: boolean;
   images: string[];
   videos?: PropertyVideo[];
@@ -30,7 +30,7 @@ export interface Property {
     icon: string;
     title: string;
   }[];
-  mapCoordinates: { x: number; y: number; lat: number; lng: number }; // Geographic coordinates for Leaflet & interactive maps
+  mapCoordinates?: { x: number; y: number; lat: number; lng: number }; // Only when the property has real coordinates
   broker: {
     name: string;
     role: string;

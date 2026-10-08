@@ -88,6 +88,13 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
   const metrics = calculateProjectCardMetrics(property, contracts);
   const imgUrl = getCuratedProjectImage(property, index);
   const isBuilding = property.type === 'building' || (property.title_ar || '').includes('عمارة') || (property.title_en || '').toLowerCase().includes('building') || (property.building_units && property.building_units.length > 0);
+  const displayedPrice = isBuilding ? (property.price_egp || 0) : metrics.minPrice;
+  const formatArea = (value: number) => value.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const areaUnit = isAr ? 'م²' : 'm²';
+  const unitAreaLabel = metrics.minArea !== metrics.maxArea
+    ? `${formatArea(metrics.minArea)} - ${formatArea(metrics.maxArea)}`
+    : formatArea(metrics.minArea);
+  const hasUnitAreas = property.building_units?.some(unit => unit.area_sqm > 0);
 
   const formatEgp = (val: number): string => {
     return `${Math.round(val).toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
@@ -293,13 +300,12 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
           border: '1px solid #f1f5f9',
           borderRadius: '8px',
         }}>
-          {/* Metric 1: Area Range */}
+          {/* Metric 1: Building total and unit area range */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
             <span style={{ fontSize: '0.66rem', color: '#64748b' }}>{isAr ? 'المساحات' : 'Areas'}</span>
             <strong style={{ fontSize: '0.76rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-              {metrics.minArea !== metrics.maxArea
-                ? `${metrics.minArea} - ${metrics.maxArea} م²`
-                : `${metrics.minArea} م²`}
+              <bdi dir="ltr">{`${formatArea(property.area_sqm || 0)} ${areaUnit}`}</bdi>
+              {hasUnitAreas ? <> · {isAr ? 'الوحدات' : 'Units'} <bdi dir="ltr">{unitAreaLabel} {areaUnit}</bdi></> : null}
             </strong>
           </div>
 
@@ -316,11 +322,9 @@ export const ProjectShowcaseCard: React.FC<ProjectShowcaseCardProps> = ({
             <span style={{ fontSize: '0.66rem', color: '#64748b' }}>{isAr ? 'السعر' : 'Price'}</span>
             <strong 
               style={{ fontSize: '0.76rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}
-              title={formatEgp(metrics.minPrice)}
+              title={formatEgp(displayedPrice)}
             >
-              {metrics.minPrice !== metrics.maxPrice
-                ? `${formatCompactEgp(metrics.minPrice)}`
-                : formatCompactEgp(metrics.minPrice)}
+              {formatCompactEgp(displayedPrice)}
             </strong>
           </div>
         </div>

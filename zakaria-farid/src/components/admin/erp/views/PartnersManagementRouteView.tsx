@@ -36,6 +36,7 @@ export function PartnersManagementRouteView() {
       erp.setShowNewPartnerModal(true);
     } else if (action === 'payout') {
       if (partnerName) erp.setPayoutInitialPartner(partnerName);
+      erp.setPayoutInitialPropertyId(searchParams?.get('property') || undefined);
       erp.setShowPartnerPayoutModal(true);
     } else if (action === 'inject') {
       if (partnerName) erp.setInjectionInitialPartner(partnerName);
@@ -54,8 +55,9 @@ export function PartnersManagementRouteView() {
       isAr={erp.isAr}
       isMutating={erp.isMutating}
       onOpenNewPartnerModal={() => erp.setShowNewPartnerModal(true)}
-      onOpenPayout={(name) => {
+      onOpenPayout={(name, propertyId) => {
         erp.setPayoutInitialPartner(name);
+        erp.setPayoutInitialPropertyId(propertyId);
         erp.setShowPartnerPayoutModal(true);
       }}
       onOpenInjection={(name, propId, commitmentId) => {

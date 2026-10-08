@@ -5,33 +5,33 @@ import {
   Building2,
   Calculator,
   ReceiptText,
-  SlidersHorizontal,
   BadgeDollarSign,
   AlertTriangle,
   AlertOctagon,
   Save,
-  LayoutGrid,
-  PieChart,
   TrendingUp,
   Coins,
-  ArrowLeftRight,
-  Table2,
   Target,
+  Flag,
+  History,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
-import { ERPPropertyCostItem, PropertyCostCategory } from '@/lib/erp/types';
+import { ERPPropertyCostItem, ERPPropertyPriceHistoryEntry, PropertyCostCategory } from '@/lib/erp/types';
 import { calculatePropertyAuditMetrics } from '@/lib/erp/propertyCostEngine';
+import { formatUnitDisplayName } from '@/lib/erp/projectStatusHelper';
 import {
   priceBuiltProperty,
   pricePerSqmForMarkup,
-  priceUnitsAtRate,
-  priceSliderBounds,
   estimateFeasibility,
+  repriceBuilding,
 } from '@/lib/erp/pricingCalculator';
+import { D } from '@/lib/erp/math';
 import { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
 import { ZFKpiCard, ZFKpiGrid } from '../../ZFKpiCard';
-import { ZFWorkstationSideWidgets } from '../../common/ZFWorkstationSideWidgets';
 import { useERPWorkstationContext } from '../../../context/ERPWorkstationContext';
+import { ZFModalShell } from '../../common/ZFModalShell';
+import { ZFFacts, ZFEffect, ZFFormFooter } from '../../common/ZFForm';
 import shellStyles from '../../ZFWorkstationShell.module.css';
 import s from './CostPricingCalculator.module.css';
 
@@ -40,7 +40,13 @@ export interface CostPricingCalculatorProps {
   propertyCosts?: ERPPropertyCostItem[];
   initialPropertyId?: string;
   onOpenAuditForProperty?: (p: Property) => void;
-  onUpdateSellingPrice?: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  /** Resolves false when the price was not saved. finalize: off-plan final price (user-confirmed 2026-10-06). */
+  onUpdateSellingPrice?: (
+    propertyId: string,
+    newPriceEgp: number,
+    options?: { finalize?: boolean; unitPrices?: Record<string, number>; costBasisEgp?: string }
+  ) => Promise<boolean | void>;
+  loadPriceHistory?: (propertyId: string) => Promise<ERPPropertyPriceHistoryEntry[]>;
   onNavigateToTab?: (tab: string) => void;
   isAr: boolean;
 }
@@ -52,23 +58,10 @@ const TIERS = [
   { id: 'super_lux', ar: 'سوبر لوكس', en: 'Super lux', cost: 10500 },
 ] as const;
 
-const CATEGORY_LABELS: Record<PropertyCostCategory, { ar: string; en: string }> = {
-  civil_structure: { ar: 'خرسانات وهيكل', en: 'Structure' },
-  mep_infrastructure: { ar: 'كهروميكانيك', en: 'MEP' },
-  finishing_interior: { ar: 'تشطيبات', en: 'Finishing' },
-  site_facade: { ar: 'واجهات ومداخل', en: 'Facade & site' },
-  permits_engineering: { ar: 'تراخيص وإشراف', en: 'Permits & engineering' },
-  taxes_fees: { ar: 'ضرائب ورسوم', en: 'Taxes & fees' },
-  land_allocation: { ar: 'حصة الأرض', en: 'Land share' },
-  labor_subcontractor: { ar: 'مصنعيات', en: 'Labour' },
-};
-
 const n = (v: string | number) => Number(v) || 0;
 const fmt = (v: string | number) => Math.round(n(v)).toLocaleString('en-US');
 const signed = (v: string | number) => (n(v) > 0 ? '+' : '') + fmt(v);
-const pctText = (v: string | null) => (v === null ? '—' : `${n(v) > 0 ? '+' : ''}${v}%`);
 const pctPlain = (v: string | null) => (v === null ? '—' : `${v}%`);
-const clamp = (val: number, min = 0, max = 100) => Math.min(Math.max(val, min), max);
 
 export function CostPricingCalculator({
   properties,
@@ -76,7 +69,8 @@ export function CostPricingCalculator({
   initialPropertyId,
   onOpenAuditForProperty,
   onUpdateSellingPrice,
-  onNavigateToTab,
+  loadPriceHistory,
+  onNavigateToTab: _onNavigateToTab,
   isAr,
 }: CostPricingCalculatorProps) {
   const cur = isAr ? 'ج.م' : 'EGP';
@@ -108,10 +102,9 @@ export function CostPricingCalculator({
   const property = properties.find((p) => p.id === propertyId) ?? null;
   const erpCtx = useERPWorkstationContext();
   const setHasSideWidgets = erpCtx?.setHasSideWidgets;
-  const showSideWidgets = mode === 'built' && Boolean(property);
   useEffect(() => {
-    setHasSideWidgets?.(showSideWidgets);
-  }, [setHasSideWidgets, showSideWidgets]);
+    setHasSideWidgets?.(false);
+  }, [setHasSideWidgets]);
   const area = property?.area_sqm || 0;
   const list = property?.price_egp || 0;
 
@@ -166,6 +159,30 @@ export function CostPricingCalculator({
   }, [propertyId, property, audit.costPerSqm]);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+  const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
+  const [isEditingMarket, setIsEditingMarket] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<ERPPropertyPriceHistoryEntry[]>([]);
+  const [historyVersion, setHistoryVersion] = useState(0);
+
+  useEffect(() => {
+    if (!loadPriceHistory || !propertyId) return;
+    let cancelled = false;
+    loadPriceHistory(propertyId)
+      .then(rows => { if (!cancelled) setPriceHistory(rows); })
+      .catch(() => { if (!cancelled) setPriceHistory([]); });
+    return () => { cancelled = true; };
+  }, [loadPriceHistory, propertyId, historyVersion]);
+
+  // Off-plan properties carry an initial price until construction ends and the final price is approved.
+  const isPriceFinal = Boolean(property?.price_finalized_at);
+  const isInitialPrice = property?.completion_status === 'off_plan' && !isPriceFinal;
+  const currentPriceLabel = isInitialPrice
+    ? (isAr ? 'السعر المبدئي' : 'Initial price')
+    : isPriceFinal
+      ? (isAr ? 'السعر النهائي' : 'Final price')
+      : (isAr ? 'السعر الحالي' : 'Current price');
 
   const [landCost, setLandCost] = useState('0');
   const [builtArea, setBuiltArea] = useState('1000');
@@ -173,6 +190,36 @@ export function CostPricingCalculator({
   const [costPerSqm, setCostPerSqm] = useState('7500');
   const [extrasPct, setExtrasPct] = useState('10');
   const [salePerSqm, setSalePerSqm] = useState('15000');
+
+  const contracts = erpCtx?.data.contracts;
+  // A unit with a live contract is contracted even when the stored unit still says available.
+  const units = useMemo(() => {
+    const raw = property?.building_units ?? [];
+    const contractedIds = new Set(
+      (contracts ?? [])
+        .filter(c => c.status !== 'Rescinded' && c.property_id === property?.id && c.building_unit_id)
+        .map(c => c.building_unit_id as string)
+    );
+    return raw.map(u => (u.status === 'available' && contractedIds.has(u.unit_id) ? { ...u, status: 'contracted' as const } : u));
+  }, [property?.building_units, property?.id, contracts]);
+
+  const repriceResult = useMemo(
+    () => repriceBuilding(units, chosenPerSqm, contracts),
+    [units, chosenPerSqm, contracts]
+  );
+
+  const availableUnitPrices = useMemo(() => {
+    const map: Record<string, number> = {};
+    repriceResult.units.forEach(u => {
+      if (!u.locked && n(u.newPrice) > 0) {
+        map[u.unit_id] = Math.round(n(u.newPrice));
+      }
+    });
+    return map;
+  }, [repriceResult]);
+
+  const availableUnitsCount = repriceResult.repricedCount;
+  const lockedUnitsCount = repriceResult.lockedCount;
 
   const result = useMemo(
     () =>
@@ -182,22 +229,35 @@ export function CostPricingCalculator({
         marketPricePerSqm: marketPerSqm,
         chosenPricePerSqm: chosenPerSqm,
         currentListPrice: list,
+        overrideTotalPrice: units.length > 0 ? repriceResult.totalPrice : undefined,
       }),
-    [audit.totalLoggedCost, area, marketPerSqm, chosenPerSqm, list]
+    [audit.totalLoggedCost, area, marketPerSqm, chosenPerSqm, list, units.length, repriceResult.totalPrice]
   );
 
-  const bounds = useMemo(
-    () => priceSliderBounds(result.costPerSqm, marketPerSqm),
-    [result.costPerSqm, marketPerSqm]
+  const sumCurrent = useMemo(
+    () => units.reduce((acc, u) => acc.plus(u.price_egp || 0), D(0)),
+    [units]
   );
-
-  const listPerSqm = area > 0 ? Math.round(list / area) : 0;
-
-  const units = useMemo(() => property?.building_units ?? [], [property?.building_units]);
-  const unitRows = useMemo(
-    () => priceUnitsAtRate(units, chosenPerSqm),
-    [units, chosenPerSqm]
+  const sumNew = useMemo(
+    () => repriceResult.units.reduce((acc, u) => acc.plus(u.newPrice), D(0)),
+    [repriceResult.units]
   );
+  const sumDiff = useMemo(
+    () => sumNew.minus(sumCurrent),
+    [sumNew, sumCurrent]
+  );
+  const isUnitsSumMatching = units.length === 0 || sumNew.toFixed(2) === D(result.totalPrice).toFixed(2);
+
+  const breakEvenVal = Math.round(n(result.breakEvenPricePerSqm));
+  const markup15Val = Math.round(n(pricePerSqmForMarkup(result.costPerSqm, 15)));
+  const markup30Val = Math.round(n(pricePerSqmForMarkup(result.costPerSqm, 30)));
+  const marketVal = Math.round(n(marketPerSqm));
+
+  const isSaveDisabled =
+    isSaving ||
+    n(result.totalPrice) <= 0 ||
+    Math.round(n(result.totalPrice)) === Math.round(list) ||
+    (units.length > 0 && !isUnitsSumMatching);
 
   const feas = useMemo(
     () =>
@@ -211,129 +271,6 @@ export function CostPricingCalculator({
     [landCost, builtArea, costPerSqm, extrasPct, salePerSqm]
   );
 
-  const categoryList = useMemo(() => {
-    const cats = Object.entries(audit.byCategory) as [PropertyCostCategory, { total: string; count: number }][];
-    const totalCostNum = n(audit.totalLoggedCost);
-    return cats
-      .filter(([, data]) => n(data.total) > 0)
-      .map(([key, data]) => ({
-        key,
-        total: data.total,
-        share: totalCostNum > 0 ? (n(data.total) / totalCostNum) * 100 : 0,
-      }))
-      .sort((a, b) => n(b.total) - n(a.total));
-  }, [audit]);
-
-  // When current price ≈ market (the default), one marker says both instead of two overlapping labels.
-  const listIsMarket = listPerSqm > 0 && Math.abs(listPerSqm - n(marketPerSqm)) <= n(marketPerSqm) * 0.01;
-
-  const scenarios = useMemo(() => {
-    const defs = [
-      {
-        id: 'break-even',
-        label: isAr ? 'التعادل' : 'Break-even',
-        rate: n(result.costPerSqm),
-        isCost: true,
-      },
-      {
-        id: 'cost+15',
-        label: isAr ? 'التكلفة +15%' : 'Cost +15%',
-        rate: n(pricePerSqmForMarkup(result.costPerSqm, 15)),
-        isCost: true,
-      },
-      {
-        id: 'cost+30',
-        label: isAr ? 'التكلفة +30%' : 'Cost +30%',
-        rate: n(pricePerSqmForMarkup(result.costPerSqm, 30)),
-        isCost: true,
-      },
-      {
-        id: 'current',
-        label: isAr ? 'السعر الحالي' : 'Current price',
-        rate: listPerSqm,
-        isCurrent: true,
-      },
-      {
-        id: 'market',
-        label: isAr
-          ? listIsMarket
-            ? 'السوق = السعر الحالي'
-            : 'سعر السوق'
-          : listIsMarket
-          ? 'Market = current'
-          : 'Market',
-        rate: n(marketPerSqm),
-      },
-    ];
-
-    return defs
-      .filter((d) => {
-        if (d.rate <= 0) return false;
-        if (d.isCost && !result.hasCost) return false;
-        if (d.isCurrent && listIsMarket) return false;
-        return true;
-      })
-      .map((d) => {
-        const base = priceBuiltProperty({
-          totalCost: audit.totalLoggedCost,
-          areaSqm: area,
-          marketPricePerSqm: marketPerSqm,
-          chosenPricePerSqm: d.rate,
-          currentListPrice: list,
-        });
-        // Cost-based rows: price from the exact cost, not from a cent-rounded per-m² rate
-        // (666.67 × 150 = 100,000.50 showed break-even as "+1").
-        const factor = d.id === 'break-even' ? 1 : d.id === 'cost+15' ? 1.15 : d.id === 'cost+30' ? 1.3 : null;
-        const cost = n(audit.totalLoggedCost);
-        const r = factor === null ? base : {
-          ...base,
-          totalPrice: (cost * factor).toFixed(2),
-          profit: (cost * (factor - 1)).toFixed(2),
-          marginPct: (((factor - 1) / factor) * 100).toFixed(1),
-        };
-        return {
-          id: d.id,
-          label: d.label,
-          rate: d.rate,
-          r,
-        };
-      });
-  }, [
-    isAr,
-    result.costPerSqm,
-    result.hasCost,
-    listPerSqm,
-    listIsMarket,
-    marketPerSqm,
-    audit.totalLoggedCost,
-    area,
-    list,
-  ]);
-
-  const markers = [
-    {
-      id: 'cost',
-      variant: s.markerCost,
-      label: isAr ? 'التعادل' : 'Break-even',
-      value: n(result.costPerSqm),
-      low: false,
-    },
-    {
-      id: 'list',
-      variant: s.markerList,
-      label: isAr ? 'السعر الحالي' : 'Current',
-      value: listIsMarket ? 0 : listPerSqm,
-      low: true,
-    },
-    {
-      id: 'market',
-      variant: s.markerMarket,
-      label: listIsMarket ? (isAr ? 'السوق والسعر الحالي' : 'Market = current') : (isAr ? 'السوق' : 'Market'),
-      value: n(marketPerSqm),
-      low: false,
-    },
-  ];
-
   return (
     <div className={s.page} dir={isAr ? 'rtl' : 'ltr'}>
       <ZFPageHeader
@@ -341,64 +278,30 @@ export function CostPricingCalculator({
         subtitle={
           mode === 'built'
             ? isAr
-              ? 'اختر سعر بيع العقار بين تكلفته الفعلية وسعر السوق، وشاهد الربح قبل الحفظ.'
-              : 'Pick a selling price between actual cost and market price, and see the profit before saving.'
+              ? 'اختر العقار، حدد سعر المتر، وراجع أثره على الوحدات المتاحة قبل الاعتماد.'
+              : 'Pick a property, set price per m², and review the impact on available units.'
             : isAr
             ? 'تقدير تكلفة وربح مشروع قبل البناء.'
             : 'Estimate cost and profit of a project before building.'
         }
         actions={
-          <>
-            <ZFSegmented
-              ariaLabel={isAr ? 'وضع الحاسبة' : 'Calculator mode'}
-              value={mode}
-              onChange={(val) => setMode(val as 'built' | 'feasibility')}
-              options={[
-                {
-                  id: 'built',
-                  label: isAr ? 'تسعير عقار مبني' : 'Price a built property',
-                  icon: <Building2 size={14} />,
-                },
-                {
-                  id: 'feasibility',
-                  label: isAr ? 'دراسة جدوى' : 'Feasibility',
-                  icon: <Calculator size={14} />,
-                },
-              ]}
-            />
-            {mode === 'built' && onUpdateSellingPrice && property && (
-              <button
-                type="button"
-                className={shellStyles.btnPrimary}
-                title={isAr ? 'يحدّث سعر العقار في الكتالوج والموقع.' : 'Updates the property price in the catalog and website.'}
-                disabled={
-                  isSaving ||
-                  n(result.totalPrice) <= 0 ||
-                  Math.round(n(result.totalPrice)) === Math.round(list)
-                }
-                onClick={async () => {
-                  if (!property) return;
-                  setIsSaving(true);
-                  try {
-                    await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice)));
-                  } finally {
-                    setIsSaving(false);
-                  }
-                }}
-              >
-                <Save size={14} />
-                <span>
-                  {isSaving
-                    ? isAr
-                      ? 'جارٍ الحفظ…'
-                      : 'Saving…'
-                    : isAr
-                    ? 'حفظ السعر'
-                    : 'Save price'}
-                </span>
-              </button>
-            )}
-          </>
+          <ZFSegmented
+            ariaLabel={isAr ? 'وضع الحاسبة' : 'Calculator mode'}
+            value={mode}
+            onChange={(val) => setMode(val as 'built' | 'feasibility')}
+            options={[
+              {
+                id: 'built',
+                label: isAr ? 'تسعير عقار مبني' : 'Price a built property',
+                icon: <Building2 size={14} />,
+              },
+              {
+                id: 'feasibility',
+                label: isAr ? 'دراسة جدوى' : 'Feasibility',
+                icon: <Calculator size={14} />,
+              },
+            ]}
+          />
         }
       />
 
@@ -410,11 +313,12 @@ export function CostPricingCalculator({
 
       {mode === 'built' && property && (
         <>
-          <div className={s.pickerBar}>
-            <label className={s.pickerField}>
-              <span className={s.label}>{isAr ? 'العقار' : 'Property'}</span>
+          {/* R1: Header row card */}
+          <div className={s.headerCard}>
+            <div className={s.headerSelectWrap}>
+              <span className={s.lbl}>{isAr ? 'العقار' : 'Property'}</span>
               <select
-                className={s.select}
+                className={s.headerSelect}
                 value={propertyId}
                 onChange={(e) => setPropertyId(e.target.value)}
               >
@@ -424,259 +328,254 @@ export function CostPricingCalculator({
                   </option>
                 ))}
               </select>
-            </label>
-            <div className={s.facts}>
-              <div className={s.fact}>
-                <span className={s.factLabel}>{isAr ? 'المساحة' : 'Area'}</span>
-                <span className={s.factValue}>{area} {isAr ? 'م²' : 'm²'}</span>
-              </div>
-              <div className={s.fact}>
-                <span className={s.factLabel}>{isAr ? 'السعر الحالي' : 'Current price'}</span>
-                <span className={s.factValue}>{fmt(list)} {cur}</span>
-              </div>
-              <div className={s.fact}>
-                <span className={s.factLabel}>{isAr ? 'التكاليف المسجلة' : 'Recorded costs'}</span>
-                <span className={s.factValue}>{fmt(audit.totalLoggedCost)} {cur}</span>
-              </div>
-              {onOpenAuditForProperty && (
-                <button
-                  type="button"
-                  className={s.linkBtn}
-                  onClick={() => onOpenAuditForProperty(property)}
-                >
-                  <ReceiptText size={13} />
-                  {isAr ? `عرض البنود (${audit.itemsCount})` : `View items (${audit.itemsCount})`}
-                </button>
-              )}
             </div>
+            {property.completion_status === 'off_plan' ? (
+              <span className={`${shellStyles.statusPill} ${shellStyles.statusPillAmber}`}>
+                {isAr ? 'تحت الإنشاء' : 'Off-plan'}
+              </span>
+            ) : (
+              <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
+                {isAr ? 'جاهز' : 'Ready'}
+              </span>
+            )}
+            <div className={s.sp} />
+            {property.completion_status === 'off_plan' && (
+              <div className={s.steps}>
+                <span className={`${s.step} ${s.stepDone}`}>
+                  <b>✓</b>
+                  <span>{isAr ? 'السعر المبدئي' : 'Initial price'}</span>
+                  {list > 0 && <span className={`${s.num} ${s.lbl}`}>{fmt(list)}</span>}
+                </span>
+                <i className={s.stepLine} />
+                <span className={`${s.step} ${isPriceFinal ? s.stepDone : s.stepCur}`}>
+                  <b>{isPriceFinal ? '✓' : '2'}</b>
+                  <span>{isAr ? 'السعر النهائي' : 'Final price'}</span>
+                </span>
+              </div>
+            )}
           </div>
 
-          <ZFKpiGrid>
-            <ZFKpiCard
-              title={isAr ? 'سعر البيع المقترح' : 'Proposed price'}
-              value={fmt(result.totalPrice)}
-              currency={cur}
-              icon={<BadgeDollarSign size={16} />}
-              accentColor="accent"
-              subtitleLabel={isAr ? 'سعر المتر' : 'Per m²'}
-              subtitleValue={`${fmt(chosenPerSqm)} ${perSqm}`}
-            />
-            <ZFKpiCard
-              title={isAr ? 'الربح المتوقع' : 'Expected profit'}
-              value={signed(result.profit)}
-              currency={cur}
-              icon={<TrendingUp size={16} />}
-              accentColor={n(result.profit) < 0 ? 'rose' : 'emerald'}
-              subtitleLabel={isAr ? 'هامش الربح' : 'Margin'}
-              subtitleValue={pctPlain(result.marginPct)}
-            />
-            <ZFKpiCard
-              title={isAr ? 'التكلفة الفعلية' : 'Actual cost'}
-              value={fmt(audit.totalLoggedCost)}
-              currency={cur}
-              icon={<Coins size={16} />}
-              accentColor="slate"
-              subtitleLabel={isAr ? 'تكلفة المتر' : 'Cost per m²'}
-              subtitleValue={`${fmt(result.costPerSqm)} ${perSqm}`}
-            />
-            <ZFKpiCard
-              title={isAr ? 'الفرق عن السعر الحالي' : 'Change vs current'}
-              value={signed(result.changeVsList)}
-              currency={cur}
-              icon={<ArrowLeftRight size={16} />}
-              accentColor="blue"
-              subtitleLabel={isAr ? 'السعر الحالي' : 'Current price'}
-              subtitleValue={`${fmt(list)} ${cur}`}
-            />
-          </ZFKpiGrid>
-
-          <ZFPanel
-            icon={<SlidersHorizontal size={15} />}
-            title={isAr ? 'اختيار سعر المتر' : 'Choose price per m²'}
-            hint={isAr ? 'حرّك المؤشر، اكتب السعر، أو اختر من الجدول' : 'Drag, type, or pick a row below'}
-          >
-            <div className={s.ladder}>
-              <div className={s.track}>
-                {result.hasCost && (
-                  <span
-                    className={s.lossZone}
-                    style={{
-                      width: `${bounds.max > bounds.min ? clamp(((n(result.costPerSqm) - bounds.min) / (bounds.max - bounds.min)) * 100) : 0}%`,
-                    }}
-                  />
-                )}
-                {markers
-                  .filter((m) => m.value > 0)
-                  .map((m) => {
-                    const pos =
-                      bounds.max > bounds.min
-                        ? clamp(((m.value - bounds.min) / (bounds.max - bounds.min)) * 100)
-                        : 0;
-                    const edgeClass =
-                      pos <= 8
-                        ? ` ${s.markerLabelEdgeStart}`
-                        : pos >= 92
-                        ? ` ${s.markerLabelEdgeEnd}`
-                        : '';
-                    const labelStyle =
-                      pos >= 92
-                        ? { insetInlineEnd: `${100 - pos}%` }
-                        : { insetInlineStart: `${pos}%` };
-                    return (
-                      <React.Fragment key={m.id}>
-                        <span
-                          className={`${s.marker} ${m.variant}`}
-                          style={{ insetInlineStart: `${pos}%` }}
-                        />
-                        <span
-                          className={`${s.markerLabel}${m.low ? ` ${s.markerLabelLow}` : ''}${edgeClass}`}
-                          style={labelStyle}
-                        >
-                          {m.label}
-                          <span className={s.markerValue}>{fmt(m.value)}</span>
-                        </span>
-                      </React.Fragment>
-                    );
-                  })}
-                <input
-                  type="range"
-                  className={s.range}
-                  min={bounds.min}
-                  max={bounds.max}
-                  step={bounds.step}
-                  value={clamp(n(chosenPerSqm), bounds.min, bounds.max)}
-                  onChange={(e) => setChosenPerSqm(e.target.value)}
-                  aria-label={isAr ? 'سعر المتر' : 'Price per m²'}
-                />
+          {/* R2 & R3: Two-column analytical work area */}
+          <div className={s.twoColGrid}>
+            {/* Card ①: أساس التكلفة */}
+            <div className={s.card}>
+              <h3 className={s.cardTitle}>
+                <span className={s.sq}>①</span>
+                <span>{isAr ? 'أساس التكلفة' : 'Cost basis'}</span>
+              </h3>
+              <div className={s.costGrid}>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'صافي التكلفة المسجلة' : 'Net recorded cost'}</div>
+                  <div className={`${s.big} ${s.num}`}>{fmt(audit.totalLoggedCost)}</div>
+                </div>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'المساحة' : 'Area'}</div>
+                  <div className={`${s.big} ${s.num}`}>{area} {isAr ? 'م²' : 'm²'}</div>
+                </div>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'تكلفة المتر' : 'Cost per m²'}</div>
+                  <div className={`${s.big} ${s.num}`}>{fmt(result.costPerSqm)}</div>
+                </div>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'بنود التكلفة' : 'Cost items'}</div>
+                  <div style={{ paddingTop: 4 }}>
+                    {onOpenAuditForProperty ? (
+                      <button
+                        type="button"
+                        className={s.linkBtn}
+                        onClick={() => onOpenAuditForProperty(property)}
+                      >
+                        <ReceiptText size={13} />
+                        <span>{isAr ? `${audit.itemsCount} بنود — عرض` : `${audit.itemsCount} items — view`}</span>
+                      </button>
+                    ) : (
+                      <span className={s.lbl}>{audit.itemsCount}</span>
+                    )}
+                  </div>
+                </div>
               </div>
+              <div className={s.noteLbl}>
+                {isAr ? 'الصافي = الأصل + الإضافات − المرتجعات (لكل بند).' : 'Net = base + additions − returns (per item).'}
+              </div>
+              {!result.hasCost && (
+                <div className={`${s.notice} ${s.noticeWarn}`} style={{ marginTop: 10 }}>
+                  <AlertTriangle size={14} />
+                  <span>
+                    {isAr
+                      ? 'لا توجد تكاليف مسجلة لهذا العقار، فالربح المعروض غير دقيق. سجّل المصاريف أولاً.'
+                      : 'No costs are recorded for this property, so the profit shown is not reliable. Record costs first.'}
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className={s.fields}>
-              <div className={s.field}>
-                <label className={s.label}>{isAr ? 'سعر المتر المختار' : 'Chosen price per m²'}</label>
-                <div className={s.inputWrap}>
+            {/* Card ②: سعر المتر */}
+            <div className={s.card}>
+              <h3 className={s.cardTitle}>
+                <span className={s.sq}>②</span>
+                <span>{isAr ? 'سعر المتر' : 'Price per m²'}</span>
+              </h3>
+              <div className={s.sqmRow}>
+                <div className={s.inputNumberBox}>
                   <input
-                    className={s.input}
+                    className={s.sqmInput}
                     type="number"
                     min={0}
                     step="any"
                     inputMode="decimal"
                     value={chosenPerSqm}
                     onChange={(e) => setChosenPerSqm(e.target.value)}
+                    aria-label={isAr ? 'سعر المتر' : 'Price per m²'}
                   />
-                  <span className={s.inputUnit}>{perSqm}</span>
+                  <span className={s.lbl}>{perSqm}</span>
                 </div>
-              </div>
-
-              <div className={s.field}>
-                <label className={s.label}>{isAr ? 'سعر المتر في السوق' : 'Market price per m²'}</label>
-                <div className={s.inputWrap}>
-                  <input
-                    className={s.input}
-                    type="number"
-                    min={0}
-                    step="any"
-                    inputMode="decimal"
-                    value={marketPerSqm}
-                    onChange={(e) => setMarketPerSqm(e.target.value)}
-                  />
-                  <span className={s.inputUnit}>{perSqm}</span>
-                </div>
-                <span className={s.hint}>
-                  {isAr
-                    ? 'افتراضياً: السعر الحالي ÷ المساحة. عدّله حسب أسعار المنطقة.'
-                    : 'Defaults to current price ÷ area. Adjust to local prices.'}
-                </span>
-              </div>
-            </div>
-
-            {!result.hasCost && (
-              <div className={`${s.notice} ${s.noticeWarn}`}>
-                <AlertTriangle size={14} />
-                <span>
-                  {isAr
-                    ? 'لا توجد تكاليف مسجلة لهذا العقار، فالربح المعروض غير دقيق. سجّل المصاريف أولاً.'
-                    : 'No costs are recorded for this property, so the profit shown is not reliable. Record costs first.'}
-                </span>
-              </div>
-            )}
-            {result.belowCost && (
-              <div className={`${s.notice} ${s.noticeDanger}`}>
-                <AlertOctagon size={14} />
-                <span>
-                  {isAr
-                    ? 'السعر المختار أقل من التكلفة الفعلية: البيع به خسارة.'
-                    : 'The chosen price is below actual cost: selling at it loses money.'}
-                </span>
-              </div>
-            )}
-          </ZFPanel>
-
-          <ZFPanel
-            flush
-            icon={<Table2 size={15} />}
-            title={isAr ? 'مقارنة الأسعار' : 'Price scenarios'}
-            hint={isAr ? 'اضغط على صف لاختياره' : 'Click a row to use it'}
-          >
-            <div className={s.tableScroll}>
-              <table className={s.table}>
-                <thead>
-                  <tr>
-                    <th>{isAr ? 'السيناريو' : 'Scenario'}</th>
-                    <th className={s.num}>{isAr ? 'سعر المتر' : 'Per m²'}</th>
-                    <th className={s.num}>{isAr ? 'سعر العقار' : 'Property price'}</th>
-                    <th className={s.num}>{isAr ? 'الربح' : 'Profit'}</th>
-                    <th className={s.num}>{isAr ? 'الهامش' : 'Margin'}</th>
-                    <th className={s.num}>{isAr ? 'مقارنة بالسوق' : 'Vs market'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scenarios.map((sc) => {
-                    const profitNum = n(sc.r.profit);
-                    const isActive = Math.round(n(chosenPerSqm)) === Math.round(sc.rate);
-                    return (
-                      <tr
-                        key={sc.id}
-                        className={`${s.scenarioRow}${isActive ? ` ${s.scenarioActive}` : ''}`}
-                        onClick={() => setChosenPerSqm(String(Math.round(sc.rate)))}
-                        tabIndex={0}
+                <div className={s.chipsRow}>
+                  <button
+                    type="button"
+                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === breakEvenVal && breakEvenVal > 0 ? s.chipActive : ''}`}
+                    onClick={() => breakEvenVal > 0 && setChosenPerSqm(String(breakEvenVal))}
+                  >
+                    <span>{isAr ? 'التعادل' : 'Break-even'}</span>
+                    <i className={s.chipVal}>{fmt(breakEvenVal)}</i>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === markup15Val && markup15Val > 0 ? s.chipActive : ''}`}
+                    onClick={() => markup15Val > 0 && setChosenPerSqm(String(markup15Val))}
+                  >
+                    <span>{isAr ? 'التكلفة +15%' : 'Cost +15%'}</span>
+                    <i className={s.chipVal}>{fmt(markup15Val)}</i>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === markup30Val && markup30Val > 0 ? s.chipActive : ''}`}
+                    onClick={() => markup30Val > 0 && setChosenPerSqm(String(markup30Val))}
+                  >
+                    <span>{isAr ? 'التكلفة +30%' : 'Cost +30%'}</span>
+                    <i className={s.chipVal}>{fmt(markup30Val)}</i>
+                  </button>
+                  <div
+                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === marketVal && marketVal > 0 ? s.chipActive : ''}`}
+                    onClick={() => {
+                      if (!isEditingMarket && marketVal > 0) setChosenPerSqm(String(marketVal));
+                    }}
+                  >
+                    <span>{isAr ? 'سعر السوق' : 'Market'}</span>
+                    {isEditingMarket ? (
+                      <input
+                        type="number"
+                        className={s.marketInput}
+                        autoFocus
+                        value={marketPerSqm}
+                        onChange={(e) => setMarketPerSqm(e.target.value)}
+                        onBlur={() => setIsEditingMarket(false)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setChosenPerSqm(String(Math.round(sc.rate)));
-                          }
+                          if (e.key === 'Enter') setIsEditingMarket(false);
                         }}
-                      >
-                        <td>{sc.label}</td>
-                        <td className={s.num}>{fmt(sc.rate)}</td>
-                        <td className={s.num}>{fmt(sc.r.totalPrice)}</td>
-                        <td className={`${s.num} ${profitNum > 0 ? s.pos : profitNum < 0 ? s.neg : ''}`}>
-                          {signed(sc.r.profit)}
-                        </td>
-                        <td className={s.num}>{pctPlain(sc.r.marginPct)}</td>
-                        <td className={s.num}>{pctText(sc.r.vsMarketPct)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ZFPanel>
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <i className={s.chipVal}>{fmt(marketVal)}</i>
+                    )}
+                    <button
+                      type="button"
+                      className={s.chipEditBtn}
+                      title={isAr ? 'تعديل سعر السوق' : 'Edit market price'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingMarket((prev) => !prev);
+                      }}
+                    >
+                      ✎
+                    </button>
+                  </div>
+                </div>
+              </div>
 
+              <div className={s.statsGrid}>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'سعر العقار' : 'Property price'}</div>
+                  <div className={`${s.big} ${s.num}`} style={{ fontSize: '18px' }}>
+                    {fmt(result.totalPrice)}
+                  </div>
+                  {units.length > 0 && lockedUnitsCount > 0 && (
+                    <div className={s.statSub}>
+                      {isAr
+                        ? `متاح ${fmt(repriceResult.repricedTotal)} + محجوز/مباع ${fmt(repriceResult.lockedTotal)}`
+                        : `Available ${fmt(repriceResult.repricedTotal)} + Locked ${fmt(repriceResult.lockedTotal)}`}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'الربح المتوقع' : 'Expected profit'}</div>
+                  <div
+                    className={`${s.big} ${s.num}`}
+                    style={{
+                      fontSize: '18px',
+                      color: n(result.profit) > 0 ? 'var(--erp-success, #16a34a)' : n(result.profit) < 0 ? 'var(--erp-danger, #dc2626)' : undefined,
+                    }}
+                  >
+                    {signed(result.profit)}
+                  </div>
+                </div>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'هامش الربح' : 'Margin'}</div>
+                  <div className={`${s.big} ${s.num}`} style={{ fontSize: '18px' }}>
+                    {pctPlain(result.marginPct)}
+                  </div>
+                </div>
+                <div>
+                  <div className={s.lbl}>{isAr ? 'عن السعر الحالي' : 'Vs current price'}</div>
+                  <div
+                    className={`${s.big} ${s.num}`}
+                    style={{
+                      fontSize: '18px',
+                      color: n(result.changeVsList) > 0 ? 'var(--erp-success, #16a34a)' : n(result.changeVsList) < 0 ? 'var(--erp-danger, #dc2626)' : undefined,
+                    }}
+                  >
+                    {signed(result.changeVsList)}
+                  </div>
+                </div>
+              </div>
+
+              {result.belowCost && (
+                <div className={`${s.notice} ${s.noticeDanger}`} style={{ marginTop: 8 }}>
+                  <AlertOctagon size={14} />
+                  <span>
+                    {isAr
+                      ? 'السعر المختار أقل من التكلفة الفعلية: البيع به خسارة.'
+                      : 'The chosen price is below actual cost: selling at it loses money.'}
+                  </span>
+                </div>
+              )}
+
+              <div className={s.noteLbl} style={{ marginTop: 8 }}>
+                {isAr
+                  ? 'سعر السوق يُكتب مرة لكل عقار ويُحفظ معه. الأزرار تملأ الخانة فقط؛ لا شيء يُحفظ قبل الضغط على زر الاعتماد.'
+                  : 'Market price is entered once per property. Chips only fill the input; nothing is saved until confirmed.'}
+              </div>
+            </div>
+          </div>
+
+          {/* R4: Card ③ أثر السعر على الوحدات (only when property has units) */}
           {units.length > 0 && (
-            <ZFPanel
-              flush
-              icon={<LayoutGrid size={15} />}
-              title={isAr ? 'الوحدات بنفس سعر المتر' : 'Units at this price per m²'}
-              hint={isAr ? `${units.length} وحدة` : `${units.length} units`}
-            >
+            <div className={s.unitsCard}>
+              <h3 className={s.cardTitle}>
+                <span className={s.sq}>③</span>
+                <span>{isAr ? 'أثر السعر على الوحدات' : 'Impact on unit prices'}</span>
+                <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>
+                  {isAr
+                    ? `${availableUnitsCount} متاحة · ${lockedUnitsCount} محجوزة/مباعة لا تتغير`
+                    : `${availableUnitsCount} available · ${lockedUnitsCount} locked`}
+                </span>
+              </h3>
               <div className={s.tableScroll}>
                 <table className={s.table}>
                   <thead>
                     <tr>
                       <th>{isAr ? 'الوحدة' : 'Unit'}</th>
                       <th>{isAr ? 'الدور' : 'Floor'}</th>
-                      <th>{isAr ? 'المساحة' : 'Area'}</th>
+                      <th className={s.num}>{isAr ? 'المساحة' : 'Area'}</th>
                       <th>{isAr ? 'الحالة' : 'Status'}</th>
                       <th className={s.num}>{isAr ? 'السعر الحالي' : 'Current'}</th>
                       <th className={s.num}>{isAr ? 'السعر الجديد' : 'New'}</th>
@@ -684,57 +583,255 @@ export function CostPricingCalculator({
                     </tr>
                   </thead>
                   <tbody>
-                    {units.map((u, idx) => {
-                      const uRow = unitRows[idx];
-                      const changeNum = uRow ? n(uRow.change) : 0;
-                      const statusCls =
-                        u.status === 'available'
-                          ? shellStyles.statusPillGreen
-                          : u.status === 'reserved'
-                          ? shellStyles.statusPillAmber || shellStyles.statusPillNeutral
-                          : shellStyles.statusPillNeutral;
-                      const statusLabel =
-                        u.status === 'available'
-                          ? isAr
-                            ? 'متاحة'
-                            : 'Available'
-                          : u.status === 'reserved'
-                          ? isAr
-                            ? 'محجوزة'
-                            : 'Reserved'
-                          : isAr
-                          ? 'مباعة'
-                          : 'Sold';
+                    {repriceResult.units.map((uRow, idx) => {
+                      const u = units.find((item) => item.unit_id === uRow.unit_id) || units[idx];
+                      const changeNum = n(uRow.change);
+                      const isLocked = uRow.locked;
 
                       return (
-                        <tr key={u.unit_id || idx}>
-                          <td>{u.unit_number}</td>
-                          <td>{u.floor}</td>
-                          <td>{u.area_sqm} {isAr ? 'م²' : 'm²'}</td>
+                        <tr key={uRow.unit_id || idx} className={isLocked ? s.lockedRow : undefined}>
+                          <td>{formatUnitDisplayName(u?.unit_number, isAr)}</td>
+                          <td>{u?.floor ?? '—'}</td>
+                          <td className={s.num}>{u?.area_sqm ?? 0} {isAr ? 'م²' : 'm²'}</td>
                           <td>
-                            <span className={`${shellStyles.statusPill} ${statusCls}`}>
-                              {statusLabel}
-                            </span>
+                            {isLocked ? (
+                              <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>
+                                🔒 {u?.status === 'reserved'
+                                  ? (isAr ? 'محجوزة — لا تتغير' : 'Reserved — locked')
+                                  : (isAr ? 'مباعة — لا تتغير' : 'Sold — locked')}
+                              </span>
+                            ) : (
+                              <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
+                                {isAr ? 'متاحة' : 'Available'}
+                              </span>
+                            )}
                           </td>
-                          <td className={s.num}>{fmt(uRow?.currentPrice ?? u.price_egp ?? 0)}</td>
-                          <td className={s.num}>{fmt(uRow?.newPrice ?? 0)}</td>
-                          <td className={`${s.num} ${changeNum > 0 ? s.pos : changeNum < 0 ? s.neg : ''}`}>
-                            {signed(changeNum)}
+                          <td className={s.num}>{fmt(uRow.currentPrice)}</td>
+                          <td className={s.num}>{fmt(uRow.newPrice)}</td>
+                          <td className={`${s.num} ${!isLocked && changeNum > 0 ? s.pos : !isLocked && changeNum < 0 ? s.neg : ''}`}>
+                            {isLocked ? '—' : signed(changeNum)}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={4}>
+                        {isAr ? 'الإجمالي = سعر العقار' : 'Total = Property price'}{' '}
+                        {isUnitsSumMatching ? (
+                          <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
+                            {isAr ? 'مطابق' : 'Matching'}
+                          </span>
+                        ) : (
+                          <span className={`${shellStyles.statusPill} ${shellStyles.statusPillRed || shellStyles.statusPillNeutral}`}>
+                            {isAr ? 'غير مطابق' : 'Mismatch'}
+                          </span>
+                        )}
+                      </td>
+                      <td className={s.num}>{fmt(sumCurrent.toFixed(2))}</td>
+                      <td className={s.num}>{fmt(sumNew.toFixed(2))}</td>
+                      <td className={`${s.num} ${sumDiff.gt(0) ? s.pos : sumDiff.lt(0) ? s.neg : ''}`}>
+                        {signed(sumDiff.toFixed(2))}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
-              <div className={s.tableNote}>
+              <div className={s.noteLbl} style={{ marginTop: 6 }}>
                 {isAr
-                  ? 'للعرض فقط: الحفظ يحدّث سعر العقار ككل. أسعار الوحدات تُعدّل من صفحة العقارات.'
-                  : 'Preview only: saving updates the whole-property price. Unit prices are edited on the Properties page.'}
+                  ? 'الوحدات المتاحة = سعر المتر × مساحتها. المباعة والمحجوزة ثابتة على سعر عقدها. سعر العقار = مجموع الوحدات، فيتطابق دائماً.'
+                  : 'Available units = price per m² × area. Sold/reserved units stay at contract price. Property price = sum of units.'}
               </div>
-            </ZFPanel>
+            </div>
           )}
+
+          {/* R5: Sticky Bottom Action Bar */}
+          <div className={s.bottomBar}>
+            <div>
+              <div className={s.lbl}>{isAr ? 'السعر الحالي ← الجديد' : 'Current price → New'}</div>
+              <b className={s.barPrice}>
+                {fmt(list)} ← {fmt(result.totalPrice)} {cur}
+              </b>
+            </div>
+            <div className={s.sp} />
+            {loadPriceHistory && (
+              <button
+                type="button"
+                className={shellStyles.btnSecondary}
+                onClick={() => setIsPriceHistoryOpen(true)}
+              >
+                <History size={14} />
+                <span>{isAr ? `سجل الأسعار (${priceHistory.length})` : `Price history (${priceHistory.length})`}</span>
+              </button>
+            )}
+            {isInitialPrice ? (
+              <>
+                <button
+                  type="button"
+                  className={shellStyles.btnSecondary}
+                  disabled={isSaving || n(result.totalPrice) <= 0 || (units.length > 0 && !isUnitsSumMatching)}
+                  onClick={() => setIsFinalizeOpen(true)}
+                >
+                  <Flag size={14} />
+                  <span>{isAr ? 'إنهاء الإنشاء واعتماد السعر النهائي' : 'Finish construction & set final price'}</span>
+                </button>
+                <button
+                  type="button"
+                  className={shellStyles.btnPrimary}
+                  disabled={isSaveDisabled}
+                  onClick={() => setIsSaveConfirmOpen(true)}
+                >
+                  <Save size={14} />
+                  <span>{isSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'حفظ السعر المبدئي' : 'Save initial price')}</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className={shellStyles.btnPrimary}
+                disabled={isSaveDisabled}
+                onClick={() => setIsSaveConfirmOpen(true)}
+              >
+                <Save size={14} />
+                <span>{isSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'حفظ السعر' : 'Save price')}</span>
+              </button>
+            )}
+          </div>
         </>
+      )}
+
+      {/* R5: Save Confirmation Modal */}
+      {isSaveConfirmOpen && property && onUpdateSellingPrice && (
+        <ZFModalShell
+          isOpen
+          onClose={() => setIsSaveConfirmOpen(false)}
+          title={isInitialPrice ? (isAr ? 'تأكيد حفظ السعر المبدئي' : 'Confirm initial price') : (isAr ? 'تأكيد حفظ السعر' : 'Confirm price update')}
+          subtitle={isAr ? property.title_ar : property.title_en || property.title_ar}
+          icon={<Save size={18} />}
+          isAr={isAr}
+          maxWidth="520px"
+          footer={
+            <ZFFormFooter>
+              <button
+                type="button"
+                className={shellStyles.btnSecondary}
+                onClick={() => setIsSaveConfirmOpen(false)}
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                className={shellStyles.btnPrimary}
+                disabled={isSaving}
+                onClick={async () => {
+                  setIsSaving(true);
+                  try {
+                    const saveTotal = Math.round(n(result.totalPrice));
+                    const ok = await onUpdateSellingPrice(property.id, saveTotal, {
+                      unitPrices: availableUnitPrices,
+                      costBasisEgp: audit.totalLoggedCost,
+                    });
+                    if (ok !== false) {
+                      setIsSaveConfirmOpen(false);
+                      setHistoryVersion((v) => v + 1);
+                    }
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+              >
+                {isSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'تأكيد الحفظ' : 'Confirm save')}
+              </button>
+            </ZFFormFooter>
+          }
+        >
+          <ZFFacts
+            items={[
+              { label: isAr ? 'السعر الحالي' : 'Current price', value: `${fmt(list)} ${cur}` },
+              { label: isAr ? 'السعر الجديد' : 'New price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'الفرق' : 'Difference', value: `${signed(result.changeVsList)} ${cur}` },
+              ...(units.length > 0
+                ? [
+                    {
+                      label: isAr ? 'الوحدات المتاحة المعاد تسعيرها' : 'Available units repriced',
+                      value: isAr ? `${availableUnitsCount} وحدة` : `${availableUnitsCount} units`,
+                    },
+                    ...(lockedUnitsCount > 0
+                      ? [
+                          {
+                            label: isAr ? 'الوحدات المحجوزة/المباعة (ثابتة)' : 'Locked units (unchanged)',
+                            value: isAr ? `${lockedUnitsCount} وحدة` : `${lockedUnitsCount} units`,
+                          },
+                        ]
+                      : []),
+                  ]
+                : []),
+            ]}
+          />
+        </ZFModalShell>
+      )}
+
+      {/* R5: Price History Modal */}
+      {isPriceHistoryOpen && property && (
+        <ZFModalShell
+          isOpen
+          onClose={() => setIsPriceHistoryOpen(false)}
+          title={isAr ? 'سجل الأسعار' : 'Price history'}
+          subtitle={isAr ? property.title_ar : property.title_en || property.title_ar}
+          icon={<History size={18} />}
+          isAr={isAr}
+          maxWidth="540px"
+          footer={
+            <ZFFormFooter>
+              <button
+                type="button"
+                className={shellStyles.btnSecondary}
+                onClick={() => setIsPriceHistoryOpen(false)}
+              >
+                {isAr ? 'إغلاق' : 'Close'}
+              </button>
+            </ZFFormFooter>
+          }
+        >
+          {priceHistory.length === 0 ? (
+            <div className={s.empty}>{isAr ? 'لا يوجد سجل أسعار مسجل بعد لهذا العقار.' : 'No price history recorded yet.'}</div>
+          ) : (
+            <div className={s.historyList}>
+              {priceHistory.map((h) => (
+                <div key={h.history_id} className={s.historyItem}>
+                  <div className={s.historyMeta}>
+                    <span
+                      className={`${shellStyles.statusPill} ${
+                        h.stage === 'final'
+                          ? shellStyles.statusPillGreen
+                          : h.stage === 'initial'
+                          ? shellStyles.statusPillAmber
+                          : shellStyles.statusPillNeutral
+                      }`}
+                    >
+                      {h.stage === 'final'
+                        ? (isAr ? 'نهائي' : 'Final')
+                        : h.stage === 'initial'
+                        ? (isAr ? 'مبدئي' : 'Initial')
+                        : (isAr ? 'تعديل' : 'Revised')}
+                    </span>
+                    <span className={s.historyDate}>{h.created_at.slice(0, 10)}</span>
+                    {h.units_repriced > 0 && (
+                      <span className={s.historyUnits}>
+                        {isAr ? `${h.units_repriced} وحدة متاحة` : `${h.units_repriced} units`}
+                      </span>
+                    )}
+                  </div>
+                  <div className={s.historyPrice}>
+                    <span className={s.num}>{fmt(h.price_egp)}</span>
+                    <span className={s.lbl}>{cur}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ZFModalShell>
       )}
 
       {mode === 'feasibility' && (
@@ -958,44 +1055,73 @@ export function CostPricingCalculator({
       </>
     )}
 
-      {showSideWidgets && property && (
-        <ZFWorkstationSideWidgets>
-          <ZFPanel
-            bodyClassName={s.sidePanelBody}
-            icon={<PieChart size={15} />}
-            title={isAr ? 'توزيع التكاليف' : 'Cost breakdown'}
-            hint={isAr ? property.title_ar : property.title_en || property.title_ar}
-          >
-            {audit.itemsCount === 0 ? (
-              <div className={s.empty}>{isAr ? 'لا توجد تكاليف مسجلة.' : 'No costs recorded.'}</div>
-            ) : (
-              <div className={s.breakdown}>
-                {categoryList.map(({ key, total, share }) => (
-                  <div key={key} className={s.bdRow}>
-                    <div className={s.bdHead}>
-                      <span className={s.bdName}>
-                        {CATEGORY_LABELS[key]?.[isAr ? 'ar' : 'en'] || key}
-                      </span>
-                      <span className={s.bdValue}>{fmt(total)}</span>
-                    </div>
-                    <div className={s.bdTrack}>
-                      <span className={s.bdFill} style={{ width: `${share}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {onNavigateToTab && (
+      {isFinalizeOpen && property && onUpdateSellingPrice && (
+        <ZFModalShell
+          isOpen
+          onClose={() => setIsFinalizeOpen(false)}
+          title={isAr ? 'إنهاء الإنشاء واعتماد السعر النهائي' : 'Finish construction & set the final price'}
+          subtitle={isAr ? property.title_ar : property.title_en || property.title_ar}
+          icon={<Flag size={18} />}
+          isAr={isAr}
+          maxWidth="560px"
+          footer={
+            <ZFFormFooter>
+              <button type="button" className={shellStyles.btnSecondary} onClick={() => setIsFinalizeOpen(false)}>
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
               <button
                 type="button"
-                className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`}
-                onClick={() => onNavigateToTab('construction')}
+                className={shellStyles.btnPrimary}
+                disabled={isSaving || audit.itemsCount === 0 || n(result.totalPrice) <= 0}
+                onClick={async () => {
+                  setIsSaving(true);
+                  try {
+                    const ok = await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice)), {
+                      finalize: true,
+                      unitPrices: availableUnitPrices,
+                      costBasisEgp: audit.totalLoggedCost
+                    });
+                    if (ok !== false) {
+                      setIsFinalizeOpen(false);
+                      setHistoryVersion(v => v + 1);
+                    }
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
               >
-                {isAr ? 'دفتر مصاريف البناء' : 'Construction cost book'}
+                {isSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'اعتماد السعر النهائي' : 'Approve final price')}
               </button>
-            )}
-          </ZFPanel>
-        </ZFWorkstationSideWidgets>
+            </ZFFormFooter>
+          }
+        >
+          <ZFFacts
+            items={[
+              { label: isAr ? 'التكلفة الفعلية' : 'Actual cost', value: `${fmt(audit.totalLoggedCost)} ${cur}` },
+              { label: isAr ? 'السعر المبدئي' : 'Initial price', value: `${fmt(list)} ${cur}` },
+              { label: isAr ? 'السعر النهائي' : 'Final price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'سعر المتر' : 'Per m²', value: `${fmt(chosenPerSqm)} ${perSqm}` }
+            ]}
+          />
+          {audit.itemsCount === 0 ? (
+            <ZFEffect tone="danger">
+              {isAr
+                ? 'مفيش تكاليف مسجلة للعقار ده. سجّل تكاليف البناء الأول عشان السعر النهائي يتحسب على التكلفة الفعلية.'
+                : 'No costs are recorded for this property. Record construction costs first so the final price rests on actual cost.'}
+            </ZFEffect>
+          ) : (
+            <ZFEffect tone="warn">
+              {isAr
+                ? `العقار هيتحول لـ "جاهز" والسعر هيتقفل كسعر نهائي. ${availableUnitsCount} وحدة متاحة هيتغير سعرها${lockedUnitsCount > 0 ? `، و${lockedUnitsCount} وحدة محجوزة أو متعاقد عليها هتفضل بسعرها` : ''}. العقود الموقعة مش هتتغير.`
+                : `The property becomes "ready" and this price is locked as final. ${availableUnitsCount} available units will be repriced${lockedUnitsCount > 0 ? `; ${lockedUnitsCount} reserved or contracted units keep their price` : ''}. Signed contracts do not change.`}
+            </ZFEffect>
+          )}
+          {n(result.profit) < 0 && (
+            <ZFEffect tone="danger">
+              {isAr ? 'السعر ده أقل من التكلفة الفعلية: العقار هيتباع بخسارة.' : 'This price is below actual cost: the property sells at a loss.'}
+            </ZFEffect>
+          )}
+        </ZFModalShell>
       )}
     </div>
   );

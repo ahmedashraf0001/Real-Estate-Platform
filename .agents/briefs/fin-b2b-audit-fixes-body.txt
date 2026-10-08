@@ -1,0 +1,26 @@
+TASK fin-b2b-audit-fixes (FINANCIAL_CORE). Follow-up to fin-b2-units-persist.
+
+The working tree already contains fin-b2-units-persist (uncommitted). Read the original task first: C:/Users/lyr1csan/workspace/Real-Estate-Platform/.agents/briefs/fin-b2-units-persist-body.txt. Do NOT revert or rewrite that work. Fix only the three audit issues below, with minimal hunks.
+
+A1. zakaria-farid/src/app/actions/properties.ts ~129: the contract guard can be bypassed.
+    - Problem: omitting or changing `type` in the payload skips the guard, and the newly accepted unit fields let a client replace or erase contracted units.
+    - Required:
+      - Decide "is a building" and "has stored units" from the STORED row, read server-side before the update. Do not trust the client payload for that.
+      - Never accept client-supplied building_units or total_units_count. The server generates them only, via buildBuildingUnits, when the floors × units-per-floor product changes and no live contract exists.
+      - Changing type away from 'building' while live unit contracts exist is rejected.
+    - Tests (drive the real action with an injected/mocked Supabase):
+      - Edit with `type` omitted on a building with a live contract on apt-1 and a different product: rejected, no update.
+      - A payload carrying building_units: ignored; stored units are unchanged.
+      - Type change to 'apartment' with a live unit contract: rejected.
+A2. zakaria-farid/src/lib/erp/projectStatusHelper.ts ~288: availability is miscounted for legacy contracts.
+    - Problem: some legacy contracts match units by building_unit_number with the old long label ('شقة 1A - الدور 1'). Now that labels are clean ('1A'), these matches fail and availability goes from 3 to 4.
+    - Required: normalize both sides before comparing. Strip the 'شقة ' / 'Apt ' prefix and the ' - الدور N' / ' - Floor N' suffix, then trim.
+    - Test: 4 units, one legacy contract with building_unit_number 'شقة 1B - الدور 1' and no building_unit_id gives 3 available. Also cover the ContractStatus value 'Rescinded'.
+A3. zakaria-farid/src/lib/erp/projectStatusHelper.ts ~181 buildBuildingUnits: fractional prices lose piastres.
+    - Problem: 1,000,001.75 produces units totaling 1,000,001.
+    - Required: keep the equal integer split for every unit except the last. The LAST unit absorbs the whole remainder, including piastres, rounded to 2 decimals with D(). Unit prices sum EXACTLY to priceEgp. No rejection.
+    - Test: 4 units at 1000001.75 gives [250000,250000,250000,250001.75], sum 1000001.75. The existing integer tests stay green.
+Note: the audit's "buildingUnitsHarness.ts absent" is not an issue. That file is untracked, not missing. Keep it.
+
+OUT OF SCOPE: anything else. No UI changes. No DB, no migrations.
+ACCEPTANCE: the new tests are RED before the fix and GREEN after. tsc is clean. npm test shows only the 7 baseline failures. Keep the existing fin-b2 handoff line.

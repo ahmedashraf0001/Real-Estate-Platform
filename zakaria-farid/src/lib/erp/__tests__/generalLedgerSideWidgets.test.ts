@@ -691,20 +691,17 @@ describe('General Ledger Companion Side Widgets Suite (§Redesign & Offloaded Co
       const quickActionsIndex = html.indexOf('data-testid="side-widget-quick-actions"') !== -1
         ? html.indexOf('data-testid="side-widget-quick-actions"')
         : html.indexOf('data-testid="side-widget-reports"');
-      const periodIndex = html.indexOf('data-testid="side-widget-period"');
-      const auditIndex = html.indexOf('data-testid="side-widget-audit"');
+      const periodBalanceIndex = html.indexOf('data-testid="side-widget-period-balance"');
 
       assert.ok(treeIndex !== -1, 'Must render side-widget-coa-tree');
       assert.ok(quickActionsIndex !== -1, 'Must render side-widget-quick-actions');
-      assert.ok(periodIndex !== -1, 'Must render side-widget-period');
-      assert.ok(auditIndex !== -1, 'Must render side-widget-audit');
+      assert.ok(periodBalanceIndex !== -1, 'Must render side-widget-period-balance');
 
       assert.ok(treeIndex < quickActionsIndex, 'COA tree must precede quick actions widget');
-      assert.ok(quickActionsIndex < periodIndex, 'Quick actions widget must precede period widget');
-      assert.ok(periodIndex < auditIndex, 'Period widget must precede audit widget');
+      assert.ok(quickActionsIndex < periodBalanceIndex, 'Quick actions widget must precede period-balance widget');
     });
 
-    it('verifies account inspector is rendered immediately below tree explorer when account is selected', () => {
+    it('verifies account inspector is removed from side rail (clicking account opens modal directly)', () => {
       const acc = CANONICAL_COA['101000'];
       const html = renderToStaticMarkup(
         React.createElement(GeneralLedgerSideWidgets, {
@@ -724,14 +721,12 @@ describe('General Ledger Companion Side Widgets Suite (§Redesign & Offloaded Co
         : html.indexOf('data-testid="side-widget-reports"');
 
       assert.ok(treeIndex !== -1, 'Must render side-widget-coa-tree');
-      assert.ok(inspectorIndex !== -1, 'Must render side-widget-account-inspector');
+      assert.equal(inspectorIndex, -1, 'Side rail must no longer render side-widget-account-inspector');
       assert.ok(quickActionsIndex !== -1, 'Must render side-widget-quick-actions');
-
-      assert.ok(treeIndex < inspectorIndex, 'Tree must precede inspector');
-      assert.ok(inspectorIndex < quickActionsIndex, 'Inspector must be immediately between tree and quick actions');
+      assert.ok(treeIndex < quickActionsIndex, 'COA tree must precede quick actions widget');
     });
 
-    it('verifies account inspector is rendered when selectedAccountId is provided alone without accounts prop', () => {
+    it('verifies account inspector is not rendered when selectedAccountId is provided alone', () => {
       const html = renderToStaticMarkup(
         React.createElement(GeneralLedgerSideWidgets, {
           standalone: true,
@@ -750,9 +745,9 @@ describe('General Ledger Companion Side Widgets Suite (§Redesign & Offloaded Co
         : html.indexOf('data-testid="side-widget-reports"');
 
       assert.ok(treeIndex !== -1, 'Must render side-widget-coa-tree');
-      assert.ok(inspectorIndex !== -1, 'Must render side-widget-account-inspector via selectedAccountId fallback');
+      assert.equal(inspectorIndex, -1, 'Inspector must not be rendered in side rail');
       assert.ok(quickActionsIndex !== -1, 'Must render side-widget-quick-actions');
-      assert.ok(treeIndex < inspectorIndex && inspectorIndex < quickActionsIndex, 'Ordering must remain tree < inspector < quick actions');
+      assert.ok(treeIndex < quickActionsIndex, 'Ordering must remain tree < quick actions');
     });
 
     it('verifies quick actions widget contains all 4 triggers and core financial statement links', () => {
@@ -796,12 +791,14 @@ describe('General Ledger Companion Side Widgets Suite (§Redesign & Offloaded Co
 
       // Verify exact data-testid
       assert.ok(html.includes('data-testid="side-widget-quick-actions"'), 'Must render data-testid="side-widget-quick-actions"');
+      assert.ok(html.includes('data-testid="side-widget-period-balance"'), 'Must render data-testid="side-widget-period-balance"');
+      assert.ok(html.includes('الفترة والتوازن'), 'Must render consolidated "الفترة والتوازن" header');
 
-      // Verify audit balance telemetry rows exist and have tabular-nums
+      // Verify balance telemetry rows exist and have tabular-nums
       assert.ok(html.includes('font-variant-numeric:tabular-nums'), 'Must format telemetry values with tabular-nums');
-      assert.ok(html.includes('إجمالي المدين:'), 'Must render total debits telemetry label');
-      assert.ok(html.includes('إجمالي الدائن:'), 'Must render total credits telemetry label');
-      assert.ok(html.includes('فارق التوازن (Delta):'), 'Must render variance delta telemetry label');
+      assert.ok(html.includes('مدين'), 'Must render total debits telemetry label');
+      assert.ok(html.includes('دائن'), 'Must render total credits telemetry label');
+      assert.ok(html.includes('متوازن 0.00'), 'Must render balanced pill');
     });
   });
 });

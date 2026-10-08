@@ -16,7 +16,6 @@ import {
   FileSpreadsheet, 
   ArrowDownLeft, 
   ArrowUpRight, 
-  PieChart, 
   BarChart3, 
   TrendingUp, 
   Layers, 
@@ -672,154 +671,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       netIncome: ensureSeries(netIncomeSeries, finalNetIncome, [0.45, 0.55, 0.62, 0.74, 0.88, 1.0])
     };
   }, [journalEntries, accountTypeBreakdown]);
-
-  // ─── ANALYTICAL CHARTS DATA (حركة القيود وتوزيعها حسب النوع) ───
-  const entryTypeDistribution = useMemo(() => {
-    let purchasesCount = 0;
-    let salesCount = 0;
-    let expensesCount = 0;
-    let investmentsCount = 0;
-    let otherCount = 0;
-
-    journalEntries.forEach(entry => {
-      const desc = (entry.description || '').toLowerCase();
-      const codes = (entry.lines || []).map(l => l.account_code);
-      const mod = (entry.source_module as string) || '';
-      const num = (entry.entry_number || '').toUpperCase();
-
-      const isCollectionReceipt = 
-        num.startsWith('JE-RCP-') || 
-        num.startsWith('JE-IP-') || 
-        num.startsWith('JE-COL-') || 
-        mod === 'PDC' || 
-        mod === 'COLLECTION' || 
-        codes.some(c => c === '203000' || c === '103200') || 
-        /تحصيل|إيصال|إنستاباي|انستاباي|مقدم|مقدمة|receipt|collection|instapay/i.test(desc);
-
-      const isSales = isCollectionReceipt || mod === 'SALES' || codes.some(c => c.startsWith('4') || c === '103000') || /مبيع|إيراد|بيع|دفعة|تعاقد|حجز|قسط/.test(desc);
-      const isExpenses = codes.some(c => c.startsWith('5') || c.startsWith('6')) || /مصروف|رواتب|أجور|صيانة|إيجار|كهرباء|تشغيل|إدارية/.test(desc);
-      const isPurchases = !isCollectionReceipt && (mod === 'PAYABLES' || codes.some(c => c.startsWith('201') || c.startsWith('202') || c.startsWith('204')) || /شراء|مشتريات|توريد|خامات|أصناف|مقاول/.test(desc));
-      const isInvestment = mod === 'CAPITAL_CALL' || mod === 'PARTNER_EQUITY' || codes.some(c => c.startsWith('3') || c.startsWith('105')) || /رأس المال|استثمار|حصة|أرباح|تمويل|شريك/.test(desc);
-
-      if (isSales) {
-        salesCount++;
-      } else if (isPurchases) {
-        purchasesCount++;
-      } else if (isExpenses) {
-        expensesCount++;
-      } else if (isInvestment) {
-        investmentsCount++;
-      } else {
-        otherCount++;
-      }
-    });
-
-    const total = journalEntries.length;
-    const calcPercent = (count: number) => (total > 0 ? Math.round((count / total) * 100) : 0);
-
-    return [
-      {
-        key: 'purchases',
-        label: isAr ? 'مشتريات' : 'Procurement',
-        count: purchasesCount,
-        percent: calcPercent(purchasesCount),
-        color: '#0ea5e9'
-      },
-      {
-        key: 'sales',
-        label: isAr ? 'مبيعات وإيرادات' : 'Sales & Revenue',
-        count: salesCount,
-        percent: calcPercent(salesCount),
-        color: '#10b981'
-      },
-      {
-        key: 'expenses',
-        label: isAr ? 'مصروفات تشغيلية' : 'Operating Expenses',
-        count: expensesCount,
-        percent: calcPercent(expensesCount),
-        color: '#8b5cf6'
-      },
-      {
-        key: 'investments',
-        label: isAr ? 'استثمارات' : 'Investments',
-        count: investmentsCount,
-        percent: calcPercent(investmentsCount),
-        color: '#f59e0b'
-      },
-      {
-        key: 'other',
-        label: isAr ? 'أخرى' : 'Other',
-        count: otherCount,
-        percent: calcPercent(otherCount),
-        color: '#f43f5e'
-      }
-    ];
-  }, [journalEntries, isAr]);
-
-  const entryTypeDonutSeries = useMemo(() => {
-    const counts = entryTypeDistribution.map(item => item.count);
-    const sum = counts.reduce((a, b) => a + b, 0);
-    return sum > 0 ? counts : [1];
-  }, [entryTypeDistribution]);
-
-  const entryTypeDonutOptions: ApexCharts.ApexOptions = useMemo(() => {
-    const hasData = journalEntries.length > 0;
-    return {
-      chart: {
-        type: 'donut',
-        fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif",
-        toolbar: { show: false },
-        animations: { enabled: true }
-      },
-      labels: hasData ? entryTypeDistribution.map(i => i.label) : [isAr ? 'لا توجد بيانات' : 'No Data'],
-      colors: hasData ? entryTypeDistribution.map(i => i.color) : ['#e2e8f0'],
-      dataLabels: { enabled: false },
-      legend: { show: false },
-      stroke: { width: 2, colors: ['#ffffff'] },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '72%',
-            labels: {
-              show: true,
-              name: {
-                show: true,
-                fontSize: '11px',
-                color: '#64748b',
-                offsetY: 14
-              },
-              value: {
-                show: true,
-                fontSize: '18px',
-                fontWeight: 800,
-                color: '#0f172a',
-                offsetY: -8,
-                formatter: (val: string) => {
-                  const num = parseInt(val, 10);
-                  if (isNaN(num)) return '0';
-                  return num.toLocaleString();
-                }
-              },
-              total: {
-                show: true,
-                label: isAr ? 'إجمالي القيود' : 'Total Entries',
-                fontSize: '10px',
-                color: '#64748b',
-                formatter: () => `${journalEntries.length}`
-              }
-            }
-          }
-        }
-      },
-      tooltip: {
-        theme: 'light',
-        enabled: hasData,
-        y: {
-          formatter: (val: number) => `${val} ${isAr ? 'قيد' : 'entries'}`
-        }
-      }
-    };
-  }, [entryTypeDistribution, journalEntries.length, isAr]);
 
   // Movement stats with granularity support (يومي، أسبوعي، شهري، سنوي)
   const activeFiscalYear = activePeriod?.fiscal_year ?? 2026;
@@ -1495,6 +1346,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           setCurrentPage(1);
         }}
         onSelectAccount={(acc) => {
+          setSelectedAccountForModal(acc);
           if (selectedAccountCode === acc.account_code) {
             setSelectedAccountCode(null);
             setSelectedCategoryInTree(null);
@@ -1519,11 +1371,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           setCurrentPage(1);
           handleTabChange('journal');
         }}
-        selectedAccount={selectedAccountForInspector}
-        selectedAccountId={selectedAccountForInspector?.account_code || selectedAccountCode || undefined}
-        selectedAccountStats={selectedAccountForInspector ? accountStats[selectedAccountForInspector.account_code] : undefined}
-        lastMovementDate={selectedAccountForInspector ? accountLastMovementMap[selectedAccountForInspector.account_code] : undefined}
-        onCloseInspector={() => setSelectedAccountForInspector(null)}
         onTogglePeriodStatus={handleTogglePeriodStatusSafe}
         onCloseFiscalYear={onCloseFiscalYear ? handleCloseFiscalYearSafe : undefined}
         onFilterPeriodInJournal={handleFilterPeriodInJournal}
@@ -1533,10 +1380,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         onNavigateTab={handleTabChange}
         onOpenNewEntry={handleOpenExpense}
         onAddSubAccount={handleAddAccount}
-        onInspectAccount={(acc) => {
-          setSelectedAccountForInspector(acc);
-          setSelectedAccountForModal(acc);
-        }}
         onFilterUnpostedEntries={() => {
           setSelectedStatusFilter('review');
           setCurrentPage(1);
@@ -1622,7 +1465,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         />
       </ZFKpiGrid>
 
-      {/* ─── 2.5 ANALYTICAL CHARTS (حركة القيود & توزيع القيود حسب النوع) ─── */}
+      {/* ─── 2.5 ANALYTICAL CHARTS (حركة القيود المحاسبية) ─── */}
       {(activeTab !== 'balance_sheet' && activeTab !== 'income_statement') && (
         <div className={css.chartsGrid}>
           {/* Chart 1: Movement chart with granularity switchers */}
@@ -1683,45 +1526,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             ) : (
               <p className={css.emptyChart}>{isAr ? 'لا توجد قيود لعرض الحركة.' : 'No entries to chart.'}</p>
             )}
-          </div>
-
-          {/* Chart 2: Donut distribution by entry type */}
-          <div className={css.chartCard}>
-            <div className={css.chartCardHeader}>
-              <div className={css.chartHeaderTitleGroup}>
-                <span className={css.chartIcon}><PieChart size={16} /></span>
-                <h3 className={css.chartTitle}>{isAr ? 'توزيع القيود حسب النوع' : 'Entries by Type'}</h3>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                {isAr ? `${journalEntries.length} قيد مسجل` : `${journalEntries.length} Total`}
-              </span>
-            </div>
-
-            <div className={css.donutContainer}>
-              <div className={css.donutLegendList}>
-                {entryTypeDistribution.map(item => (
-                  <div key={item.key} className={css.donutLegendItem}>
-                    <div className={css.donutLegendLeading}>
-                      <span className={css.donutLegendDot} style={{ background: item.color }} />
-                      <span className={css.donutLegendLabel}>{item.label}</span>
-                    </div>
-                    <span className={css.donutLegendPercent}>
-                      {item.percent}% <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>({item.count})</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className={css.donutChartWrapper}>
-                <ERPApexChart
-                  type="donut"
-                  series={entryTypeDonutSeries}
-                  options={entryTypeDonutOptions}
-                  height={200}
-                  width={200}
-                  isAr={isAr}
-                />
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -2626,6 +2430,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           properties={properties}
           onClose={() => setSelectedAccountForModal(null)}
           isAr={isAr}
+          activePeriod={effectiveSelectedPeriod || activePeriod}
         />
       )}
 

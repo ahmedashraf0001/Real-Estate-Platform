@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>كشوف الحساب — نموذج</title>
+<style>
+@font-face{font-family:'ThmanyahSans';src:url('../../zakaria-farid/public/fonts/thmanyahsans-Regular.woff2') format('woff2');font-weight:400}
+@font-face{font-family:'ThmanyahSans';src:url('../../zakaria-farid/public/fonts/thmanyahsans-Medium.woff2') format('woff2');font-weight:500}
+@font-face{font-family:'ThmanyahSans';src:url('../../zakaria-farid/public/fonts/thmanyahsans-Bold.woff2') format('woff2');font-weight:700}
+:root{
+  --ink:#141a22; --muted:#5d6673; --faint:#8a929d; --rule:#d8dce2; --rule-strong:#141a22;
+  --band:#f3f4f6; --accent:#1f3a5f; --ok:#1d6b45; --bad:#a3261b; --warn:#8a5a00;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e6e8eb;color:var(--ink);font-family:'ThmanyahSans','Cairo','Segoe UI',Tahoma,sans-serif;font-size:10.5pt;line-height:1.5}
+.note{max-width:210mm;margin:16px auto 0;padding:10px 14px;background:#fff;border:1px dashed var(--muted);font-size:10pt;color:var(--muted)}
+.page{width:210mm;min-height:297mm;margin:16px auto;background:#fff;padding:14mm 14mm 12mm;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.num,td.n,th.n{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate;text-align:left;white-space:nowrap}
+/* letterhead */
+.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--rule-strong);padding-bottom:8px}
+.co{font-weight:700;font-size:13pt}
+.co small{display:block;font-weight:400;font-size:8.5pt;color:var(--muted)}
+.doc{text-align:left}
+.doc .t{font-weight:700;font-size:15pt;color:var(--accent);text-align:right}
+.meta{display:grid;grid-template-columns:auto auto;gap:0 10px;font-size:8.5pt;color:var(--muted);margin-top:2px}
+.meta b{color:var(--ink);font-weight:500}
+/* identity */
+.id{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--rule);padding:8px 0;gap:6px 14px;font-size:9pt}
+.id div span{display:block;color:var(--muted);font-size:8pt}
+.id div b{font-weight:500}
+/* summary */
+h2{font-size:10.5pt;font-weight:700;margin:14px 0 6px;display:flex;align-items:baseline;gap:8px}
+h2 i{font-style:normal;font-weight:400;color:var(--faint);font-size:8.5pt}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule)}
+.sum>div{padding:8px 10px;border-left:1px solid var(--rule)}
+.sum>div:last-child{border-left:0}
+.sum .k{font-size:8.5pt;color:var(--muted)}
+.sum .v{font-size:14pt;font-weight:700}
+.sum .s{font-size:8.5pt;color:var(--muted);display:flex;justify-content:space-between;border-top:1px solid var(--rule);margin-top:4px;padding-top:3px}
+.sum .s b{font-weight:500;color:var(--ink)}
+.sum .s b.bad{color:var(--bad)}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:9pt}
+th{font-weight:500;color:var(--muted);font-size:8pt;text-align:right;border-bottom:1px solid var(--rule-strong);padding:4px 5px}
+td{padding:4px 5px;border-bottom:1px solid var(--rule)}
+tfoot td{border-top:1.5px solid var(--rule-strong);border-bottom:0;font-weight:700}
+td.ref{font-size:8pt;color:var(--faint);direction:ltr;text-align:right}
+.st{font-size:8pt;font-weight:500;white-space:nowrap}
+.st.ok{color:var(--ok)} .st.bad{color:var(--bad)} .st.warn{color:var(--warn)} .st.mut{color:var(--faint)}
+tr.overdue td{background:#fbf1f0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* timeline */
+.tl{display:grid;grid-template-columns:repeat(5,1fr);border-top:2px solid var(--accent);margin-top:4px}
+.tl div{padding:5px 4px 0;font-size:8.5pt;position:relative}
+.tl div:before{content:"";position:absolute;top:-5px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.tl div.fut:before{background:#fff;border:2px solid var(--accent)}
+.tl b{display:block;font-weight:500}
+.tl span{color:var(--muted)}
+/* reconciliation */
+.rec{border:1px solid var(--rule);padding:6px 10px;font-size:9pt;display:grid;grid-template-columns:1fr auto auto auto;gap:3px 16px;align-items:center}
+.rec .h{color:var(--muted);font-size:8pt}
+/* footer */
+.grow{flex:1}
+.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:18px;font-size:8.5pt;color:var(--muted)}
+.sign div{border-top:1px solid var(--ink);padding-top:4px}
+.foot{display:flex;justify-content:space-between;border-top:1px solid var(--rule);margin-top:12px;padding-top:5px;font-size:7.5pt;color:var(--faint)}
+.callout{border-right:3px solid var(--accent);background:var(--band);padding:6px 10px;font-size:9pt;margin-top:8px}
+.callout b{font-weight:700}
+@media print{body{background:#fff}.note{display:none}.page{margin:0;box-shadow:none;page-break-after:always}}
+@page{size:A4;margin:0}
+</style>
+</head>
+<body>
+
+<div class="note">نموذج للمراجعة فقط. البيانات تجريبية. ثلاثة كشوف: عقار، عميل، شريك. كل كشف صفحة A4 مطبوعة من HTML بنفس خط النظام.</div>
+
+<!-- ============ 1. PROPERTY STATEMENT ============ -->
+<section class="page">
+  <div class="head">
+    <div class="co">شركة زكريا فريد للتطوير العقاري<small>كشف رسمي مستخرج من دفتر الأستاذ العام</small></div>
+    <div class="doc">
+      <div class="t">كشف حساب عقار</div>
+      <div class="meta"><span>رقم الكشف</span><b class="num">ST-P-2026-0118</b><span>تاريخ الإصدار</span><b class="num">2026-10-08 14:32</b><span>الفترة</span><b>من الإنشاء حتى تاريخه</b></div>
+    </div>
+  </div>
+
+  <div class="id">
+    <div><span>العقار</span><b>عمارة الياسمين</b></div>
+    <div><span>العنوان</span><b>12 ش النصر، المعادي</b></div>
+    <div><span>الحالة</span><b>تحت الإنشاء — اكتمل البناء</b></div>
+    <div><span>الوحدات</span><b>8 وحدات · 5 أدوار شامل الأرضي</b></div>
+    <div><span>الشركاء</span><b>الشركة 50% · محمود رشاد 30% · سعيد منير 20%</b></div>
+    <div><span>سعر المتر</span><b>مبدئي 7,000 · نهائي 7,500 ج.م</b></div>
+    <div><span>كود العقار</span><b class="num">13c805ff</b></div>
+    <div><span>العملة</span><b>جنيه مصري</b></div>
+  </div>
+
+  <h2>الملخص</h2>
+  <div class="sum">
+    <div><div class="k">إجمالي التكلفة الصافية</div><div class="v num">2,300,000</div>
+      <div class="s"><span>مدفوع للمقاولين</span><b class="num">1,860,000</b></div>
+      <div class="s"><span>مستحق للمقاولين</span><b class="num bad">440,000</b></div></div>
+    <div><div class="k">إجمالي المبيعات المتعاقد عليها</div><div class="v num">5,050,000</div>
+      <div class="s"><span>محصّل من العملاء</span><b class="num">2,480,000</b></div>
+      <div class="s"><span>متبقٍ على العملاء</span><b class="num">2,570,000</b></div></div>
+    <div><div class="k">رأس مال الشركاء</div><div class="v num">1,160,000</div>
+      <div class="s"><span>مسدد</span><b class="num">1,060,000</b></div>
+      <div class="s"><span>مديونية على الشركاء</span><b class="num bad">100,000</b></div></div>
+  </div>
+
+  <h2>مراحل العقار</h2>
+  <div class="tl">
+    <div><b>الإنشاء</b><span class="num">2026-01-10</span></div>
+    <div><b>بدء البناء</b><span class="num">2026-02-01</span></div>
+    <div><b>أول عقد بيع</b><span class="num">2026-03-01</span></div>
+    <div><b>اكتمال البناء والتسعير النهائي</b><span class="num">2026-08-20</span></div>
+    <div class="fut"><b>التوزيع على الشركاء</b><span>عند البيع والتحصيل الكامل</span></div>
+  </div>
+
+  <h2>بنود التكلفة <i>صافي = الأصل + الإضافات − المرتجعات</i></h2>
+  <table>
+    <thead><tr><th>البند</th><th>المقاول</th><th class="n">الأصل</th><th class="n">تعديلات</th><th class="n">الصافي</th><th class="n">مدفوع</th><th class="n">متبقٍ</th><th>الحالة</th></tr></thead>
+    <tbody>
+      <tr><td>خرسانة وهيكل</td><td>شركة النور للمقاولات</td><td class="n">1,200,000</td><td class="n">+80,000</td><td class="n">1,280,000</td><td class="n">1,000,000</td><td class="n">280,000</td><td><span class="st warn">مدفوع جزئياً</span></td></tr>
+      <tr><td>تشطيبات</td><td>مؤسسة الأمل</td><td class="n">650,000</td><td class="n">−30,000</td><td class="n">620,000</td><td class="n">620,000</td><td class="n">0</td><td><span class="st ok">مسدد</span></td></tr>
+      <tr><td>كهرباء وسباكة</td><td>الفنية الحديثة</td><td class="n">310,000</td><td class="n">—</td><td class="n">310,000</td><td class="n">150,000</td><td class="n">160,000</td><td><span class="st warn">مدفوع جزئياً</span></td></tr>
+      <tr><td>تراخيص ورسوم</td><td>حي المعادي</td><td class="n">90,000</td><td class="n">—</td><td class="n">90,000</td><td class="n">90,000</td><td class="n">0</td><td><span class="st ok">مسدد</span></td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="2">الإجمالي</td><td class="n">2,250,000</td><td class="n">+50,000</td><td class="n">2,300,000</td><td class="n">1,860,000</td><td class="n">440,000</td><td></td></tr></tfoot>
+  </table>
+
+  <h2>المبيعات والتحصيل</h2>
+  <table>
+    <thead><tr><th>الوحدة</th><th>العميل</th><th>رقم العقد</th><th class="n">م²</th><th class="n">السعر</th><th class="n">محصّل</th><th class="n">متبقٍ</th><th class="n">متأخر</th></tr></thead>
+    <tbody>
+      <tr><td>1-أ</td><td>أحمد سامي</td><td class="ref">ZF-C-0037</td><td class="n">140</td><td class="n">1,050,000</td><td class="n">600,000</td><td class="n">450,000</td><td class="n">0</td></tr>
+      <tr><td>1-ب</td><td>منى خالد</td><td class="ref">ZF-C-0038</td><td class="n">120</td><td class="n">900,000</td><td class="n">900,000</td><td class="n">0</td><td class="n">0</td></tr>
+      <tr class="overdue"><td>2-أ</td><td>كريم عادل</td><td class="ref">ZF-C-0041</td><td class="n">140</td><td class="n">1,080,000</td><td class="n">300,000</td><td class="n">780,000</td><td class="n" style="color:var(--bad)">132,000</td></tr>
+      <tr><td>2-ب</td><td>هالة يوسف</td><td class="ref">ZF-C-0044</td><td class="n">120</td><td class="n">920,000</td><td class="n">460,000</td><td class="n">460,000</td><td class="n">0</td></tr>
+      <tr><td>3-أ</td><td>عمر فاروق</td><td class="ref">ZF-C-0049</td><td class="n">140</td><td class="n">1,100,000</td><td class="n">220,000</td><td class="n">880,000</td><td class="n">0</td></tr>
+      <tr><td colspan="8" style="color:var(--muted)">متاح للبيع: 3-ب، 4-أ، 4-ب (السعر النهائي 7,500 ج.م/م²)</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="4">الإجمالي (5 عقود)</td><td class="n">5,050,000</td><td class="n">2,480,000</td><td class="n">2,570,000</td><td class="n">132,000</td></tr></tfoot>
+  </table>
+
+  <h2>مطابقة دفتر الأستاذ</h2>
+  <div class="rec">
+    <span class="h">الحساب</span><span class="h num">الدفتر العام</span><span class="h num">السجل الفرعي</span><span class="h">النتيجة</span>
+    <span>أعمال تحت التنفيذ (WIP)</span><span class="num">2,300,000</span><span class="num">2,300,000</span><span class="st ok">مطابق</span>
+    <span>دائنون — مقاولون 201000</span><span class="num">440,000</span><span class="num">440,000</span><span class="st ok">مطابق</span>
+    <span>عملاء — أقساط مستحقة</span><span class="num">2,570,000</span><span class="num">2,570,000</span><span class="st ok">مطابق</span>
+  </div>
+
+  <div class="grow"></div>
+  <div class="sign"><div>المحاسب</div><div>المدير المالي</div><div>اعتماد الإدارة</div></div>
+  <div class="foot"><span>الأرقام بالجنيه المصري. كل مبلغ له قيد يومية بالرقم المرجعي في النظام.</span><span class="num">ST-P-2026-0118 · صفحة 1 من 3</span></div>
+</section>
+
+<!-- ============ 2. CLIENT STATEMENT ============ -->
+<section class="page">
+  <div class="head">
+    <div class="co">شركة زكريا فريد للتطوير العقاري<small>كشف رسمي مستخرج من دفتر الأستاذ العام</small></div>
+    <div class="doc">
+      <div class="t">كشف حساب عميل</div>
+      <div class="meta"><span>رقم الكشف</span><b class="num">ST-C-2026-0402</b><span>تاريخ الإصدار</span><b class="num">2026-10-08 14:35</b><span>حتى تاريخ</span><b class="num">2026-10-08</b></div>
+    </div>
+  </div>
+
+  <div class="id">
+    <div><span>العميل</span><b>كريم عادل</b></div>
+    <div><span>الرقم القومي</span><b class="num">2890•••••••014</b></div>
+    <div><span>الهاتف</span><b class="num">0100 •••• 482</b></div>
+    <div><span>رقم العقد</span><b class="num">ZF-C-0041</b></div>
+    <div><span>الوحدة</span><b>عمارة الياسمين · 2-أ · 140 م²</b></div>
+    <div><span>تاريخ العقد</span><b class="num">2026-03-01</b></div>
+    <div><span>نظام السداد</span><b>مقدم 20% + 8 أقساط ربع سنوية</b></div>
+    <div><span>حالة العقد</span><b>ساري</b></div>
+  </div>
+
+  <h2>الملخص</h2>
+  <div class="sum">
+    <div><div class="k">سعر الوحدة</div><div class="v num">1,080,000</div></div>
+    <div><div class="k">إجمالي المسدد</div><div class="v num">300,000</div><div class="s"><span>نسبة السداد</span><b class="num">27.8%</b></div></div>
+    <div><div class="k">المتبقي</div><div class="v num">780,000</div><div class="s"><span>منه متأخر</span><b class="num bad">132,000</b></div></div>
+  </div>
+  <div class="callout">على العميل مبلغ متأخر <b class="num">132,000</b> ج.م من قسطين: الأول متأخر <b class="num">129</b> يوماً، والثاني متأخر <b class="num">37</b> يوماً.</div>
+
+  <h2>جدول الأقساط</h2>
+  <table>
+    <thead><tr><th>القسط</th><th class="n">تاريخ الاستحقاق</th><th class="n">القيمة</th><th class="n">مسدد</th><th class="n">متبقٍ</th><th>الحالة</th></tr></thead>
+    <tbody>
+      <tr><td>المقدم</td><td class="n">2026-03-01</td><td class="n">216,000</td><td class="n">216,000</td><td class="n">0</td><td><span class="st ok">مسدد</span></td></tr>
+      <tr class="overdue"><td>قسط 1</td><td class="n">2026-06-01</td><td class="n">108,000</td><td class="n">84,000</td><td class="n">24,000</td><td><span class="st bad">متأخر 129 يوم</span></td></tr>
+      <tr class="overdue"><td>قسط 2</td><td class="n">2026-09-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st bad">متأخر 37 يوم</span></td></tr>
+      <tr><td>قسط 3</td><td class="n">2026-12-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st mut">قادم</span></td></tr>
+      <tr><td>قسط 4</td><td class="n">2027-03-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st mut">قادم</span></td></tr>
+      <tr><td>قسط 5</td><td class="n">2027-06-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st mut">قادم</span></td></tr>
+      <tr><td>قسط 6</td><td class="n">2027-09-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st mut">قادم</span></td></tr>
+      <tr><td>قسط 7</td><td class="n">2027-12-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st mut">قادم</span></td></tr>
+      <tr><td>قسط 8</td><td class="n">2028-03-01</td><td class="n">108,000</td><td class="n">0</td><td class="n">108,000</td><td><span class="st mut">قادم</span></td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="2">الإجمالي</td><td class="n">1,080,000</td><td class="n">300,000</td><td class="n">780,000</td><td></td></tr></tfoot>
+  </table>
+
+  <h2>إيصالات السداد</h2>
+  <table>
+    <thead><tr><th class="n">التاريخ</th><th>رقم الإيصال</th><th>طريقة الدفع</th><th>مخصوم من</th><th class="n">المبلغ</th><th>القيد</th></tr></thead>
+    <tbody>
+      <tr><td class="n">2026-03-01</td><td class="ref">RV-0112</td><td>نقدي</td><td>المقدم</td><td class="n">216,000</td><td class="ref">JE-2026-0311</td></tr>
+      <tr><td class="n">2026-06-10</td><td class="ref">RV-0187</td><td>إنستاباي</td><td>قسط 1</td><td class="n">50,000</td><td class="ref">JE-2026-0598</td></tr>
+      <tr><td class="n">2026-07-02</td><td class="ref">RV-0203</td><td>نقدي</td><td>قسط 1</td><td class="n">34,000</td><td class="ref">JE-2026-0644</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="4">الإجمالي</td><td class="n">300,000</td><td></td></tr></tfoot>
+  </table>
+
+  <div class="grow"></div>
+  <div class="sign"><div>المحاسب</div><div>اعتماد الإدارة</div><div>توقيع العميل بالاستلام</div></div>
+  <div class="foot"><span>أي اعتراض على هذا الكشف يُقدَّم خلال 15 يوماً من تاريخ الإصدار.</span><span class="num">ST-C-2026-0402 · صفحة 1 من 1</span></div>
+</section>
+
+<!-- ============ 3. PARTNER STATEMENT ============ -->
+<section class="page">
+  <div class="head">
+    <div class="co">شركة زكريا فريد للتطوير العقاري<small>كشف رسمي مستخرج من دفتر الأستاذ العام</small></div>
+    <div class="doc">
+      <div class="t">كشف حساب شريك</div>
+      <div class="meta"><span>رقم الكشف</span><b class="num">ST-R-2026-0027</b><span>تاريخ الإصدار</span><b class="num">2026-10-08 14:38</b><span>حتى تاريخ</span><b class="num">2026-10-08</b></div>
+    </div>
+  </div>
+
+  <div class="id">
+    <div><span>الشريك</span><b>محمود رشاد</b></div>
+    <div><span>الرقم القومي</span><b class="num">2750•••••••233</b></div>
+    <div><span>المشروعات</span><b>عمارة الياسمين · برج النخيل</b></div>
+    <div><span>كود الشريك</span><b class="num">a91f02c4</b></div>
+  </div>
+
+  <h2>الموقف حسب المشروع</h2>
+  <table>
+    <thead><tr><th>المشروع</th><th class="n">النسبة</th><th class="n">نصيبه من التكلفة</th><th class="n">رأس مال ملتزم</th><th class="n">مسدد</th><th class="n">مديونية</th><th class="n">نصيبه من التحصيل</th><th class="n">صُرف له</th><th class="n">متاح للصرف</th></tr></thead>
+    <tbody>
+      <tr><td>عمارة الياسمين</td><td class="n">30%</td><td class="n">690,000</td><td class="n">700,000</td><td class="n">600,000</td><td class="n" style="color:var(--bad)">100,000</td><td class="n">744,000</td><td class="n">300,000</td><td class="n"><b>344,000</b></td></tr>
+      <tr><td>برج النخيل</td><td class="n">25%</td><td class="n">480,000</td><td class="n">500,000</td><td class="n">500,000</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="3">الإجمالي</td><td class="n">1,200,000</td><td class="n">1,100,000</td><td class="n">100,000</td><td class="n">744,000</td><td class="n">300,000</td><td class="n">344,000</td></tr></tfoot>
+  </table>
+  <div class="callout">متاح للصرف في عمارة الياسمين = نصيبه من التحصيل <b class="num">744,000</b> − ما صُرف له <b class="num">300,000</b> − مديونية رأس المال <b class="num">100,000</b> = <b class="num">344,000</b> ج.م. عند الصرف تُخصم المديونية أولاً تلقائياً.</div>
+
+  <h2>حركة الحساب</h2>
+  <table>
+    <thead><tr><th class="n">التاريخ</th><th>المرجع</th><th>المشروع</th><th>البيان</th><th class="n">دفعه الشريك</th><th class="n">صُرف للشريك</th><th>القيد</th></tr></thead>
+    <tbody>
+      <tr><td class="n">2026-01-15</td><td class="ref">CI-0009</td><td>الياسمين</td><td>دفعة رأس مال</td><td class="n">400,000</td><td class="n">—</td><td class="ref">JE-2026-0041</td></tr>
+      <tr><td class="n">2026-04-02</td><td class="ref">CI-0021</td><td>الياسمين</td><td>دفعة رأس مال</td><td class="n">200,000</td><td class="n">—</td><td class="ref">JE-2026-0402</td></tr>
+      <tr><td class="n">2026-05-10</td><td class="ref">CI-0026</td><td>النخيل</td><td>دفعة رأس مال</td><td class="n">500,000</td><td class="n">—</td><td class="ref">JE-2026-0517</td></tr>
+      <tr><td class="n">2026-07-20</td><td class="ref">PO-0004</td><td>الياسمين</td><td>صرف أرباح — نقدي</td><td class="n">—</td><td class="n">300,000</td><td class="ref">JE-2026-0701</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="4">الإجمالي</td><td class="n">1,100,000</td><td class="n">300,000</td><td></td></tr></tfoot>
+  </table>
+
+  <h2>التزامات رأس المال المفتوحة</h2>
+  <table>
+    <thead><tr><th>المشروع</th><th class="n">تاريخ الاستحقاق</th><th class="n">الملتزم</th><th class="n">المسدد</th><th class="n">المتبقي</th><th>الحالة</th></tr></thead>
+    <tbody>
+      <tr class="overdue"><td>عمارة الياسمين</td><td class="n">2026-06-30</td><td class="n">700,000</td><td class="n">600,000</td><td class="n">100,000</td><td><span class="st bad">متأخر 100 يوم</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="grow"></div>
+  <div class="sign"><div>المحاسب</div><div>اعتماد الإدارة</div><div>توقيع الشريك بالاستلام</div></div>
+  <div class="foot"><span>نصيب التحصيل محسوب من المبالغ المحصلة فعلياً، وليس من قيمة العقود.</span><span class="num">ST-R-2026-0027 · صفحة 1 من 1</span></div>
+</section>
+
+</body>
+</html>

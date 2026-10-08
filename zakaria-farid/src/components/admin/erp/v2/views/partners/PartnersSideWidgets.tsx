@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { usePropertyCosts } from '../../../context/ERPWorkstationContext';
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -15,16 +14,16 @@ import {
   Building2,
   ArrowRightLeft,
   Zap,
-  BookOpen
+  BookOpen,
+  CalendarPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import { Property } from '@/lib/supabase/types';
 import { 
   PartnerFinancialSummary, 
-  computeDynamicBuildingCapital,
   checkBuildingEquityBalance
 } from '@/lib/erp/partnersEngine';
-import { ERPPartnerTransaction } from '@/lib/erp/types';
+import { ERPPartnerTransaction, ERPPartnerCommitment } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../../common/ZFWorkstationSideWidgets';
 import styles from '../../ZFWorkstationShell.module.css';
@@ -33,8 +32,10 @@ export interface PartnersSideWidgetsProps {
   properties?: Property[];
   summaries?: PartnerFinancialSummary[];
   transactions?: ERPPartnerTransaction[];
+  commitments?: ERPPartnerCommitment[];
   isAr?: boolean;
   onOpenNewPartner?: () => void;
+  onOpenCommitmentModal?: () => void;
   onOpenInjection?: (partnerName?: string, propertyId?: string) => void;
   onOpenPayout?: () => void;
   onOpenReallocation?: (property: Property) => void;
@@ -45,19 +46,20 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
   properties = [],
   summaries = [],
   transactions = [],
+  commitments = [],
   isAr = true,
   onOpenNewPartner,
+  onOpenCommitmentModal,
   onOpenInjection,
   onOpenPayout,
   onOpenReallocation,
   onExportExcel
 }) => {
-  const propertyCosts = usePropertyCosts();
   const buildingProperties = useMemo(() => {
     return properties.filter(p => p.type === 'building' || (p as any).is_building);
   }, [properties]);
 
-  // Check equity balance and arrears
+  // Check equity balance and unpaid capital commitments (user-confirmed 2026-10-07: commitment debt only, no share-based arrears)
   const { imbalancedBuildings, partnersWithArrears } = useMemo(() => {
     const imbalanced: Array<{ property: Property; totalPct: number; deviationPct: number }> = [];
     const inArrears: Array<{ partnerName: string; propertyId: string; buildingTitle: string; arrearsEgp: string }> = [];
@@ -71,22 +73,31 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
           deviationPct: balanceReport.deviationPct
         });
       }
-
-      const capInfo = computeDynamicBuildingCapital(b, transactions, propertyCosts);
-      capInfo.partnerStatuses.forEach(p => {
-        if (p.hasArrears && D(p.arrearsEgp).gt(100)) {
-          inArrears.push({
-            partnerName: p.partnerName,
-            propertyId: b.id,
-            buildingTitle: b.title_ar || b.title_en || 'مشروع عقاري',
-            arrearsEgp: p.arrearsEgp
-          });
-        }
-      });
     });
 
+    const debtByKey = new Map<string, { partnerName: string; propertyId: string; debt: ReturnType<typeof D> }>();
+    commitments.forEach(c => {
+      if (c.status === 'CANCELLED' || c.status === 'PAID') return;
+      const unpaid = D(c.committed_amount || 0).minus(c.paid_amount || 0);
+      if (!unpaid.gt(0)) return;
+      const key = `${c.partner_name.trim()}|${c.property_id}`;
+      const entry = debtByKey.get(key) || { partnerName: c.partner_name.trim(), propertyId: c.property_id, debt: D(0) };
+      entry.debt = entry.debt.plus(unpaid);
+      debtByKey.set(key, entry);
+    });
+    debtByKey.forEach(({ partnerName, propertyId, debt }) => {
+      const prop = properties.find(p => p.id === propertyId);
+      inArrears.push({
+        partnerName,
+        propertyId,
+        buildingTitle: prop?.title_ar || prop?.title_en || 'مشروع عقاري',
+        arrearsEgp: debt.toFixed(2)
+      });
+    });
+    inArrears.sort((a, b) => (D(b.arrearsEgp).gt(a.arrearsEgp) ? 1 : D(b.arrearsEgp).lt(a.arrearsEgp) ? -1 : 0));
+
     return { imbalancedBuildings: imbalanced, partnersWithArrears: inArrears };
-  }, [buildingProperties, transactions, propertyCosts]);
+  }, [buildingProperties, properties, commitments]);
 
   const hasUrgentAlerts = imbalancedBuildings.length > 0 || partnersWithArrears.length > 0;
 
@@ -214,7 +225,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
           {partnersWithArrears.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#d97706' }}>
-                {isAr ? 'متأخرات مساهمات تمويل معلقة:' : 'Pending Capital Arrears:'}
+                {isAr ? 'التزامات رأس مال غير مسددة:' : 'Unpaid Capital Commitments:'}
               </span>
               {partnersWithArrears.slice(0, 4).map((item, idx) => (
                 <div
@@ -341,7 +352,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
               )}
               {arrearsCount > 0 && (
                 <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.75rem' }}>
-                  {isAr ? `متأخرات معلقة: ${arrearsCount}` : `Arrears: ${arrearsCount}`}
+                  {isAr ? `مديونيات معلقة: ${arrearsCount}` : `Unpaid commitments: ${arrearsCount}`}
                 </span>
               )}
             </div>
@@ -432,6 +443,52 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                   </div>
                 </div>
                 {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
+              </button>
+            )}
+
+            {onOpenCommitmentModal && (
+              <button
+                type="button"
+                onClick={() => onOpenCommitmentModal()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  background: 'var(--erp-bg-panel)',
+                  border: '1px solid var(--erp-border)',
+                  color: 'var(--erp-text-title)',
+                  cursor: 'pointer',
+                  textAlign: isAr ? 'right' : 'left',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '7px',
+                    background: 'var(--erp-accent-subtle)',
+                    border: '1px solid var(--erp-accent-tint)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--erp-accent)',
+                    flexShrink: 0
+                  }}>
+                    <CalendarPlus size={14} />
+                  </div>
+                  <div>
+                    <strong style={{ color: 'var(--erp-text-title)', display: 'block', fontSize: '0.75rem' }}>
+                      {isAr ? 'التزام رأس مال جديد' : 'New capital commitment'}
+                    </strong>
+                    <span style={{ color: 'var(--erp-text-muted)', fontSize: '0.75rem' }}>
+                      {isAr ? 'تسجيل التزام تمويل مشروع' : 'Register project funding commitment'}
+                    </span>
+                  </div>
+                </div>
+                {isAr ? <ChevronLeft size={14} color="var(--erp-text-muted)" /> : <ChevronRight size={14} color="var(--erp-text-muted)" />}
               </button>
             )}
 

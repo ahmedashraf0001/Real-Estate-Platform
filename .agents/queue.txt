@@ -1,0 +1,18 @@
+# <task-id> <status>
+fin-b1-cost-journals done ff0ac03 (incl. fin-b1b)
+fin-b2-units-persist done cc1edfc (incl. fin-b2b)
+fin-b4-price-basis done f889ee4
+ui-small-fixes done 7175234
+# B6 folded into ui-small-fixes R8; B7 dropped (user 2026-10-07)
+fin-b9-floors-include-ground done ecf8675
+fin-c1-tranche-resplit done 8b1efae
+fin-c2-partner-id-lines done 4a021ff
+fin-c2b-partner-id-race done 1f02bd4
+ui-c3-real-display-values done 958bed3 (ZFKpiCard neutral rates)
+sim-area-field-bug closed not-reproduced (DB area 400; form renders 400; 390px fixed wizard footer covers field; regression test added)
+unit-area-split running (codex high; incl. card area line)
+manual-checks todo (payout post, cost-edit JE, 2x2 building units; payout confirm needs user)
+pdf-reports todo (HTML-based PDF: property lifecycle money/paid/debt, client statement, partner statement; mockup first)
+ui-calculator-repricing todo (repricing UI weird/buggy; mockup first)
+ui-pdc-one-table todo (merge 2 tables + filters; filter count shows 2 but empty table; redesign schedule calendar widget; mockup + removal approval)
+ui-ledger-widgets todo (trim bloated widget row; clearer account popup; mockup + removal approval)

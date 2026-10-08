@@ -1,0 +1,83 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel {
+  border-color: var(--erp-accent);
+  box-shadow: inset 3px 0 0 var(--erp-accent);
+}
+
+:global([dir='rtl']) .panel {
+  box-shadow: inset -3px 0 0 var(--erp-accent);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  min-width: 560px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.table th {
+  text-align: start;
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: var(--erp-text-muted);
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--erp-card-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--erp-card-border);
+  color: var(--erp-text-body);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.num {
+  text-align: end !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.name {
+  font-weight: 600;
+  color: var(--erp-text-title);
+}
+
+.strong {
+  font-weight: 700;
+  color: var(--erp-text-title);
+}
+
+.neg {
+  color: var(--erp-danger);
+}
+
+.muted {
+  color: var(--erp-text-subtle);
+}
+
+.action {
+  text-align: end;
+  width: 1%;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .table th,
+  .table td {
+    padding: 0.5rem 0.6rem;
+  }
+}

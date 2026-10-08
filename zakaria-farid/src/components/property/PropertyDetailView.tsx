@@ -45,7 +45,6 @@ import {
   LocateFixed,
   RefreshCw,
   Clock,
-  Landmark,
   Send,
   Film,
   Play,
@@ -192,7 +191,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     : (rawProperty?.description_en || rawProperty?.narrative || rawProperty?.description_ar || '');
 
   // Strip raw HTML tags cleanly from narrative and decode all HTML entities
-  const cleanNarrative = cleanHtmlToPlainText(rawNarrative) || (isAr ? 'تحفة معمارية استثنائية صُممت بأعلى معايير الفخامة والدقة الهندسية.' : 'An extraordinary architectural masterpiece crafted with the highest standards of luxury and precision.');
+  // Only what the admin wrote; no invented marketing copy.
+  const cleanNarrative = cleanHtmlToPlainText(rawNarrative);
+  const hasCoordinates = !!(rawProperty?.mapCoordinates || (rawProperty?.latitude && rawProperty?.longitude));
 
   const property: Property = rawProperty ? {
     id: rawProperty.slug || rawProperty.id || '',
@@ -207,8 +208,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     baths: rawProperty.baths || rawProperty.bathrooms || 0,
     sqm: rawProperty.sqm || rawProperty.area_sqm || 0,
     propertyType: rawProperty.propertyType || rawProperty.type || 'Apartment',
-    builtYear: rawProperty.builtYear || rawProperty.year_built || 2025,
-    featured: rawProperty.featured ?? rawProperty.is_featured ?? true,
+    builtYear: rawProperty.builtYear || rawProperty.year_built || undefined,
+    featured: rawProperty.featured ?? rawProperty.is_featured ?? false,
     listing_status: rawProperty.listing_status,
     images: (rawProperty.images && rawProperty.images.length > 0) 
       ? rawProperty.images 
@@ -217,13 +218,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         : [],
     narrative: cleanNarrative,
     amenities: rawProperty.amenities || [],
-    mapCoordinates: rawProperty.mapCoordinates || (rawProperty.latitude && rawProperty.longitude ? { x: 38, y: 44, lat: Number(rawProperty.latitude), lng: Number(rawProperty.longitude) } : { x: 38, y: 44, lat: 30.0131, lng: 31.4913 }),
+    mapCoordinates: rawProperty.mapCoordinates || (rawProperty.latitude && rawProperty.longitude ? { x: 38, y: 44, lat: Number(rawProperty.latitude), lng: Number(rawProperty.longitude) } : { x: 0, y: 0, lat: 0, lng: 0 }),
     broker: rawProperty.broker || {
       name: isAr ? 'زكريا فريد' : 'Zakaria Farid',
       role: isAr ? 'المالك المباشر والمستشار الأول' : 'Senior Acquisition Lead',
       phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}` : '+201009970776',
-      email: 'contact@zakariafarid.com',
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80'
+      email: '',
+      avatar: ''
     },
     videos: (rawProperty as any)?.videos || ((rawProperty as any)?.video_url ? [{ id: 'v-1', url: (rawProperty as any).video_url, title_en: rawProperty.title_en || 'Property Video Tour', title_ar: rawProperty.title_ar || 'جولة فيديو داخل العقار', category: 'tour' }] : undefined),
     video_url: (rawProperty as any)?.video_url || ((rawProperty as any)?.videos && (rawProperty as any).videos[0]?.url) || undefined,
@@ -240,7 +241,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     baths: 0,
     sqm: 0,
     propertyType: 'Apartment',
-    builtYear: 2025,
+    builtYear: undefined,
     featured: false,
     images: [],
     narrative: '',
@@ -434,16 +435,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         category: 'tour',
       }];
     }
-    // High-end architectural luxury demo walkthrough video
-    return [
-      {
-        id: 'v-demo-primary',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        title_en: 'Sovereign Architectural Vista & Full Interior Tour',
-        title_ar: 'الجولة السينمائية الفاخرة والمعاينة الداخلية',
-        category: 'tour',
-      },
-    ];
+    return [];
   }, [rawPropVideos, property]);
   
   // Live User Geolocation & Distance State
@@ -502,20 +494,23 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     requestLocation();
   }, []);
 
+  // Only used when hasCoordinates; the location section is hidden otherwise.
+  const mapCoords = property.mapCoordinates ?? { x: 0, y: 0, lat: 0, lng: 0 };
+
   // Haversine Distance Calculation
   const activeOrigin = userCoords || { lat: 30.0444, lng: 31.2357 };
   const directDistanceKm = useMemo(() => {
     const R = 6371; // Earth radius in km
-    const dLat = ((property.mapCoordinates.lat - activeOrigin.lat) * Math.PI) / 180;
-    const dLon = ((property.mapCoordinates.lng - activeOrigin.lng) * Math.PI) / 180;
+    const dLat = ((mapCoords.lat - activeOrigin.lat) * Math.PI) / 180;
+    const dLon = ((mapCoords.lng - activeOrigin.lng) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((activeOrigin.lat * Math.PI) / 180) *
-      Math.cos((property.mapCoordinates.lat * Math.PI) / 180) *
+      Math.cos((mapCoords.lat * Math.PI) / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
-  }, [property.mapCoordinates, activeOrigin]);
+  }, [mapCoords, activeOrigin]);
 
   const roadDistanceKm = directDistanceKm * 1.28;
 
@@ -549,21 +544,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         time: formatDuration((roadDistanceKm / 45) * 60 + 8),
         icon: Train
       },
-      isNearby ? {
+      // Walking only when it is actually close; no invented "nearby services" times.
+      ...(isNearby ? [{
         mode: isAr ? 'سيراً على الأقدام' : 'Walking',
         sub: isAr 
           ? `${roadDistanceKm.toFixed(1)} كم مسار مشي مباشر` 
           : `${roadDistanceKm.toFixed(1)} km direct walking route`,
         time: formatDuration((roadDistanceKm / 4.8) * 60),
         icon: Footprints
-      } : {
-        mode: isAr ? 'أهم الخدمات والمحاور' : 'Nearby Hubs & Services',
-        sub: isAr 
-          ? 'مدارس، مراكز تجارية، ومستشفيات قريبة' 
-          : 'Minutes to local retail, schools & medical',
-        time: isAr ? '5 - 10 دقائق' : '5–10 mins',
-        icon: Landmark
-      }
+      }] : [])
     ];
   }, [roadDistanceKm, isAr]);
 
@@ -695,10 +684,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               <div className="property-location-bar">
                 <MapPin size={15} className="location-pin" />
                 <span>{property.location}</span>
-                <span className="verified-trust-inline">
-                  <ShieldCheck size={14} />
-                  <span>{isAr ? 'عقار موثق' : 'Verified'}</span>
-                </span>
               </div>
             </div>
 
@@ -722,8 +707,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                       {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
                     </div>
                     <span className="price-tax-note">
-                      {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m² • ` : ''}
-                      {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
+                      {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m²` : ''}
                     </span>
                   </>
                 )}
@@ -866,6 +850,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               </div>
 
               <div className="main-image-frame">
+                {/* Same photo, blurred, fills the frame behind a contained image (portrait or landscape). */}
+                <div
+                  className="main-image-backdrop"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})` }}
+                />
                 <AnimatePresence initial={false} custom={slideDirection}>
                   <motion.img
                     key={activeImageIndex}
@@ -955,11 +945,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 whileTap={{ scale: 0.97 }}
                 title={isAr ? 'مشاهدة جولة الفيديو' : 'Watch Video Tour'}
               >
+                {propertyVideos[0].thumbnail ? (
+                  <img src={propertyVideos[0].thumbnail} alt="" className="thumb-img" />
+                ) : (
+                  <video
+                    className="thumb-img"
+                    src={`${propertyVideos[0].url}#t=0.5`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    aria-hidden="true"
+                  />
+                )}
                 <div className="thumb-video-inner">
                   <div className="thumb-play-circle">
-                    <Play size={13} fill="#DDA752" color="#DDA752" />
+                    <Play size={14} fill="currentColor" />
                   </div>
-                  <span className="thumb-video-label">{isAr ? 'جولة فيديو' : 'Video Tour'}</span>
+                  <span className="thumb-video-label">
+                    {isAr ? 'فيديو' : 'Video'}
+                    {propertyVideos.length > 1 ? ` · ${propertyVideos.length}` : ''}
+                  </span>
                 </div>
               </motion.div>
             )}
@@ -1295,26 +1300,21 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     </div>
                   </div>
                 )}
-                <div className="spec-stat-card card-highlight-gold">
-                  <div className="spec-stat-icon-wrap gold-icon-wrap">
-                    <ShieldCheck size={18} className="spec-stat-icon gold-icon" />
-                  </div>
-                  <div className="spec-stat-info">
-                    <span className="spec-stat-label gold-label">{isAr ? 'حالة التوثيق' : 'VERIFICATION'}</span>
-                    <span className="spec-stat-value gold-val">{isAr ? 'عقار موثق' : 'Verified Property'}</span>
-                  </div>
-                </div>
               </div>
 
-              <div className="section-title-wrap narrative-section-header">
-                <span className="section-eyebrow">{isAr ? 'الملف المعماري الحصري' : 'CURATED MONOGRAPH'}</span>
-                <h3 className="section-subtitle">{isAr ? 'عن هذا الصرح' : 'About this Estate'}</h3>
-              </div>
-              <div className="narrative-text">
-                {property.narrative.split('\n\n').map((paragraph, i) => (
-                  <p key={i} className="narrative-para">{paragraph}</p>
-                ))}
-              </div>
+              {property.narrative && (
+                <>
+                  <div className="section-title-wrap narrative-section-header">
+                    <span className="section-eyebrow">{isAr ? 'الملف المعماري الحصري' : 'CURATED MONOGRAPH'}</span>
+                    <h3 className="section-subtitle">{isAr ? 'عن هذا الصرح' : 'About this Estate'}</h3>
+                  </div>
+                  <div className="narrative-text">
+                    {property.narrative.split('\n\n').map((paragraph, i) => (
+                      <p key={i} className="narrative-para">{paragraph}</p>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
           </div>
@@ -1325,14 +1325,19 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             {/* Unified Private Acquisition & Advisory Suite Card */}
             <div className="broker-card unified-advisory-card" id="request-viewing-section">
               <div className="broker-profile">
-                <img src={property.broker.avatar} alt={property.broker.name} className="broker-avatar" />
+                {property.broker.avatar ? (
+                  <img src={property.broker.avatar} alt={property.broker.name} className="broker-avatar" />
+                ) : (
+                  <span className="broker-avatar broker-avatar-initials" aria-hidden="true">
+                    {(property.broker.name || '').trim().charAt(0)}
+                  </span>
+                )}
                 <div className="broker-meta">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <h3 className="broker-name">{property.broker.name}</h3>
                     <ShieldCheck size={14} className="badge-gold-icon" />
                   </div>
                   <span className="broker-role">{property.broker.role}</span>
-                  <span className="broker-stat">{isAr ? 'المكتب الاستشاري الحصري • توثيق فوري' : 'Direct Advisory Desk • Instant Verification'}</span>
                 </div>
               </div>
 
@@ -1411,7 +1416,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           </aside>
         </div>
 
-        {/* 6. Location & Connectivity Suite (Full-Width Row with Big Map & Aligned Radar) */}
+        {/* 6. Location & Connectivity Suite: only when the property has real coordinates */}
+        {hasCoordinates && (
         <div className="location-suite-section" id="location-section">
           {/* Main Section Header above the 2-column grid */}
           <div className="section-title-wrap proximity-header-row" style={{ marginBottom: '1.75rem' }}>
@@ -1443,8 +1449,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             <div className="location-suite-main">
               <div className="sanctum-map-full-wrap">
                 <SanctumSatelliteMap 
-                  lat={property.mapCoordinates.lat} 
-                  lng={property.mapCoordinates.lng} 
+                  lat={mapCoords.lat} 
+                  lng={mapCoords.lng} 
                   title={property.title} 
                   district={property.district} 
                   isAr={isAr}
@@ -1503,7 +1509,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           </div>
         </div>
 
-        {/* E. Architectural CAD Blueprint Section — Full-Width Concluding Showcase Section */}
+        )}
+
+        {/* E. Architectural CAD Blueprint Section: only when the admin built a plan */}
+        {(rawProperty.spec_layers || []).length > 0 && (
         <div className="content-section cad-blueprint-full-section" id="architectural-cad-section">
           <ArchitecturalBlueprintInspector 
             zones={rawProperty.spec_layers || []} 
@@ -1513,8 +1522,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             propertyImages={property.images} 
           />
         </div>
+        )}
 
-        {/* 6. Similar Architectural Statements */}
+        {/* 6. Similar Architectural Statements (only when there are some) */}
+        {similarProperties.length > 0 && (
         <section className="similar-section">
           <div className="similar-header">
             <span className="eyebrow-gold">{isAr ? 'صروح معمارية مقترحة' : 'RECOMMENDED PROPERTIES'}</span>
@@ -1532,6 +1543,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             ))}
           </div>
         </section>
+        )}
       </div>
 
       {/* Mobile Sticky Bottom Lead Bar (portaled: the page-transition wrapper's filter breaks position:fixed) */}
@@ -1554,8 +1566,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
               </div>
               <span className="price-tax-note">
-                {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m² • ` : ''}
-                {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
+                {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m²` : ''}
               </span>
             </>
           )}
@@ -2111,12 +2122,21 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           background: #080A0E;
         }
 
+        .main-image-backdrop {
+          position: absolute;
+          inset: -40px;
+          background-size: cover;
+          background-position: center;
+          filter: blur(32px) brightness(0.55) saturate(1.2);
+          transform: scale(1.05);
+        }
+
         .main-hero-img {
           position: absolute;
           inset: 0;
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
           will-change: opacity;
         }
 
@@ -2342,92 +2362,77 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .thumbnails-strip {
           position: relative;
           z-index: 5;
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-          gap: 1rem;
+          display: flex;
+          gap: 0.75rem;
+          overflow-x: auto;
+          padding: 2px 2px 6px;
+          scrollbar-width: thin;
+          scroll-snap-type: x proximity;
         }
 
         .thumb-item {
           position: relative;
-          height: 100px;
-          border-radius: 16px;
+          flex: 0 0 auto;
+          width: 132px;
+          aspect-ratio: 4 / 3;
+          border-radius: 14px;
           overflow: hidden;
           border: 2px solid transparent;
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: opacity var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
           opacity: 0.6;
           background: #0E121A;
+          scroll-snap-align: start;
         }
 
-        /* WhatsApp-style "+N" overlay on the last visible thumbnail (mobile) */
+        /* "+N" overlay is only used by the old mobile grid; the strip now scrolls. */
         .thumb-more-overlay {
           display: none;
-          position: absolute;
-          inset: 0;
-          align-items: center;
-          justify-content: center;
-          background: rgba(8, 10, 14, 0.62);
-          backdrop-filter: blur(2px);
-          -webkit-backdrop-filter: blur(2px);
-          border: none;
-          color: #FFFFFF;
-          font-family: var(--font-heading);
-          font-size: 1.35rem;
-          font-weight: 800;
-          cursor: pointer;
         }
 
         .thumb-item:hover {
           opacity: 0.95;
-          transform: translateY(-2px);
         }
 
         .thumb-item.active {
           border-color: var(--gold-primary);
           opacity: 1;
-          box-shadow: 0 0 24px var(--gold-glow);
+          box-shadow: 0 0 18px var(--gold-glow);
         }
 
         .thumb-video-item {
-          background: linear-gradient(145deg, rgba(221, 167, 82, 0.22) 0%, rgba(10, 14, 24, 0.95) 100%);
-          border: 1px solid rgba(221, 167, 82, 0.45);
           opacity: 0.9;
         }
 
-        .thumb-video-item:hover {
-          opacity: 1;
-          border-color: #DDA752;
-          box-shadow: 0 0 18px rgba(221, 167, 82, 0.35);
-        }
-
         .thumb-video-inner {
-          width: 100%;
-          height: 100%;
+          position: absolute;
+          inset: 0;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 4px;
-          padding: 6px;
+          gap: 6px;
+          background: linear-gradient(180deg, rgba(8, 10, 14, 0.15) 0%, rgba(8, 10, 14, 0.65) 100%);
         }
 
         .thumb-play-circle {
-          width: 26px;
-          height: 26px;
+          width: 34px;
+          height: 34px;
           border-radius: 50%;
-          background: rgba(221, 167, 82, 0.25);
+          background: rgba(255, 255, 255, 0.92);
+          color: #0A0C10;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid rgba(221, 167, 82, 0.5);
+          padding-inline-start: 2px;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
         }
 
         .thumb-video-label {
-          font-size: 0.65rem;
-          font-weight: 800;
-          color: #FFFDF5;
-          text-align: center;
-          line-height: 1.1;
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #FFFFFF;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
         }
 
         .gallery-video-play-btn {
@@ -2463,6 +2468,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .thumb-img {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
@@ -4301,6 +4307,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           margin-bottom: 1.15rem;
         }
 
+        .broker-avatar-initials {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
+          color: #0A0C10;
+          font-weight: 800;
+          font-size: 1.25rem;
+        }
+
         .broker-avatar {
           width: 60px;
           height: 60px;
@@ -4885,15 +4901,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             min-width: 0;
             flex: 1;
           }
-          .thumbnails-strip {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          /* WhatsApp-style: one row of 3, "+N" on the last tile */
-          .thumb-item:nth-child(n+4) {
-            display: none;
-          }
-          .thumb-more-overlay {
-            display: flex;
+          .thumb-item {
+            width: 96px;
           }
           .detail-sidebar-col {
             grid-template-columns: 1fr;

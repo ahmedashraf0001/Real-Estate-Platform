@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Clock,
-  HardHat,
   ReceiptText,
   Smartphone,
   Wallet
@@ -37,7 +36,6 @@ import {
   ZFFormFooter
 } from '../common/ZFForm';
 import { ZFModalShell } from '../common/ZFModalShell';
-import { ZFSegmented } from '../common/ZFPageHeader';
 import shellStyles from '../ZFWorkstationShell.module.css';
 import styles from './ZFDirectExpenseModal.module.css';
 
@@ -50,7 +48,6 @@ export interface ZFDirectExpenseModalProps {
   periods?: ERPAccountingPeriod[];
   onSaveEntry: (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => Promise<void>;
   initialPropertyId?: string;
-  purpose?: 'claim' | 'site';
   initialPaymentSource?: ConstructionExpensePaymentSource;
 }
 
@@ -78,12 +75,9 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
   periods,
   onSaveEntry,
   initialPropertyId,
-  purpose,
   initialPaymentSource = '101000'
 }) => {
   const amountInputRef = useRef<HTMLInputElement>(null);
-
-  const [kind, setKind] = useState<'claim' | 'site'>(purpose ?? 'site');
 
   // Fields State
   const [entryDate, setEntryDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -98,10 +92,10 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('مقطوعية');
 
-  const initialMethod: StrictPaymentMethod =
-    kind === 'site'
-      ? (initialPaymentSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000')
-      : (initialPaymentSource === '201000' ? 'DEFERRED_201000' : initialPaymentSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000');
+  // One form for every construction cost: materials or labour, paid now or owed (user-confirmed 2026-10-05).
+  const methodFor = (source?: ConstructionExpensePaymentSource): StrictPaymentMethod =>
+    source === '201000' ? 'DEFERRED_201000' : source === '102000' ? 'INSTAPAY_102000' : 'CASH_101000';
+  const initialMethod: StrictPaymentMethod = methodFor(initialPaymentSource);
 
   const [paymentMethod, setPaymentMethod] = useState<StrictPaymentMethod>(initialMethod);
   const [instapayRef, setInstapayRef] = useState('');
@@ -134,13 +128,6 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     return n.toLocaleString('en-US', { maximumFractionDigits: 2 }) + (isAr ? ' ج.م' : ' EGP');
   };
 
-  const handleKindChange = (nextKind: 'claim' | 'site') => {
-    setKind(nextKind);
-    if (nextKind === 'site' && paymentMethod === 'DEFERRED_201000') {
-      setPaymentMethod('CASH_101000');
-    }
-  };
-
   const resetEntryFields = () => {
     setItemName('');
     setSupplier('');
@@ -159,16 +146,14 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
   const resetPropsRef = useRef({
     underConstructionProperties,
     initialPropertyId,
-    initialPaymentSource,
-    purpose
+    initialPaymentSource
   });
 
   useEffect(() => {
     resetPropsRef.current = {
       underConstructionProperties,
       initialPropertyId,
-      initialPaymentSource,
-      purpose
+      initialPaymentSource
     };
   });
 
@@ -183,17 +168,10 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         const {
           underConstructionProperties: curProps,
           initialPropertyId: curPropId,
-          initialPaymentSource: curSource,
-          purpose: curPurpose
+          initialPaymentSource: curSource
         } = resetPropsRef.current;
-        const nextKind = curPurpose ?? 'site';
-        setKind(nextKind);
         setPropertyId(curPropId || curProps[0]?.id || '');
-        setPaymentMethod(
-          nextKind === 'site'
-            ? (curSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000')
-            : (curSource === '201000' ? 'DEFERRED_201000' : curSource === '102000' ? 'INSTAPAY_102000' : 'CASH_101000')
-        );
+        setPaymentMethod(methodFor(curSource));
         setScheduleNow(false);
         resetEntryFields();
       }, 0);
@@ -209,37 +187,32 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
   const property = properties.find(candidate => candidate.id === propertyId);
   const propertyTitle = property ? (isAr ? property.title_ar : property.title_en) : propertyId;
 
-  const paymentOptions = useMemo(() => {
-    const opts: ZFChoiceOption<StrictPaymentMethod>[] = [
-      {
-        id: 'CASH_101000',
-        label: kind === 'site' ? (isAr ? 'نقداً' : 'Cash') : (isAr ? 'نقداً الآن' : 'Cash now'),
-        sub: isAr ? 'من الخزينة' : 'From the safe',
-        icon: <Wallet size={16} />
-      },
-      {
-        id: 'INSTAPAY_102000',
-        label: kind === 'site' ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'إنستاباي الآن' : 'InstaPay now'),
-        sub: isAr ? 'من حساب إنستاباي' : 'From InstaPay',
-        icon: <Smartphone size={16} />
-      }
-    ];
-    if (kind === 'claim') {
-      opts.push({
-        id: 'DEFERRED_201000',
-        label: isAr ? 'لاحقاً' : 'Later',
-        sub: isAr ? 'يُسجل مستحقاً للمقاول' : 'Recorded as owed to the contractor',
-        icon: <Clock size={16} />
-      });
+  const paymentOptions = useMemo<ZFChoiceOption<StrictPaymentMethod>[]>(() => [
+    {
+      id: 'CASH_101000',
+      label: isAr ? 'نقداً الآن' : 'Cash now',
+      sub: isAr ? 'من الخزينة' : 'From the safe',
+      icon: <Wallet size={16} />
+    },
+    {
+      id: 'INSTAPAY_102000',
+      label: isAr ? 'إنستاباي الآن' : 'InstaPay now',
+      sub: isAr ? 'من حساب إنستاباي' : 'From InstaPay',
+      icon: <Smartphone size={16} />
+    },
+    {
+      id: 'DEFERRED_201000',
+      label: isAr ? 'آجل' : 'Later',
+      sub: isAr ? 'يُسجل مستحقاً للمورد أو المقاول' : 'Recorded as owed to the supplier or contractor',
+      icon: <Clock size={16} />
     }
-    return opts;
-  }, [kind, isAr]);
+  ], [isAr]);
 
   const memoPreview = useMemo(() => {
     const parts = [
       itemName.trim() || (isAr ? 'مصروف بناء' : 'Construction expense'),
       propertyTitle ? `${isAr ? 'مشروع' : 'Project'}: ${propertyTitle}` : '',
-      supplier.trim() ? `${kind === 'claim' ? (isAr ? 'المقاول' : 'Contractor') : (isAr ? 'المورد/المحل' : 'Supplier')}: ${supplier.trim()}` : '',
+      supplier.trim() ? `${isAr ? 'المورد/المقاول' : 'Supplier/contractor'}: ${supplier.trim()}` : '',
       invoiceRef.trim() ? `${isAr ? 'مرجع' : 'Ref'}: ${invoiceRef.trim()}` : '',
       paymentMethod === 'INSTAPAY_102000'
         ? (instapayRef.trim() ? `[إنستاباي: ${instapayRef.trim()}]` : '[إنستاباي / InstaPay]')
@@ -248,7 +221,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
           : '[آجل على المورد]'
     ];
     return parts.filter(Boolean).join(' • ');
-  }, [itemName, propertyTitle, supplier, kind, invoiceRef, paymentMethod, instapayRef, isAr]);
+  }, [itemName, propertyTitle, supplier, invoiceRef, paymentMethod, instapayRef, isAr]);
 
   const journalLines = useMemo(() => {
     const tot = D(amount || 0);
@@ -310,9 +283,9 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
       );
       return;
     }
-    // 4. Supplier required for claim
-    if (kind === 'claim' && !supplier.trim()) {
-      toast.error(isAr ? 'أدخل اسم المقاول للمستخلص' : 'Enter the contractor name');
+    // 4. An owed amount must say who it is owed to
+    if (paymentMethod === 'DEFERRED_201000' && !supplier.trim()) {
+      toast.error(isAr ? 'أدخل اسم المورد أو المقاول المستحق له المبلغ' : 'Enter who the amount is owed to');
       return;
     }
     // 5. Description validation
@@ -357,7 +330,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     const memoParts = [
       itemName.trim(),
       propertyTitle ? `${isAr ? 'مشروع' : 'Project'}: ${propertyTitle}` : '',
-      supplier.trim() ? `${kind === 'claim' ? (isAr ? 'المقاول' : 'Contractor') : (isAr ? 'المورد/المقاول' : 'Supplier')}: ${supplier.trim()}` : '',
+      supplier.trim() ? `${isAr ? 'المورد/المقاول' : 'Supplier/contractor'}: ${supplier.trim()}` : '',
       invoiceRef.trim() ? `${isAr ? 'مرجع' : 'Ref'}: ${invoiceRef.trim()}` : '',
       paymentMethod === 'INSTAPAY_102000'
         ? (instapayRef.trim() ? `[إنستاباي: ${instapayRef.trim()}]` : '[إنستاباي / InstaPay]')
@@ -390,7 +363,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         frequencyMonths: parseInt(frequencyMonths, 10) || 1,
         quantity: quantityValue,
         unit,
-        notes: [`[FIN_OS_SECTION:${kind === 'claim' ? 'contractors' : 'site'}]`, finalNotes].filter(Boolean).join(' | '),
+        notes: finalNotes,
         loggedDate: entryDate,
         loggedBy: 'CFO_FARID'
       });
@@ -488,11 +461,11 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         <ZFEffect>
           {isAr ? (
             <>
-              سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong>: يُدفع <strong>{money(down)}</strong> الآن من الخزينة والباقي <strong>{money(remaining)}</strong> مستحق للمقاول.
+              سيُضاف <strong>{money(total)}</strong> لتكلفة <strong>{propertyTitle}</strong>: يُدفع <strong>{money(down)}</strong> الآن من الخزينة والباقي <strong>{money(remaining)}</strong> مستحق للمورد أو المقاول.
             </>
           ) : (
             <>
-              <strong>{money(total)}</strong> will be added to the cost of <strong>{propertyTitle}</strong>: <strong>{money(down)}</strong> paid now from the safe and the remaining <strong>{money(remaining)}</strong> owed to the contractor.
+              <strong>{money(total)}</strong> will be added to the cost of <strong>{propertyTitle}</strong>: <strong>{money(down)}</strong> paid now from the safe and the remaining <strong>{money(remaining)}</strong> owed to the supplier or contractor.
             </>
           )}
         </ZFEffect>
@@ -543,9 +516,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
       >
         {isSubmitting
           ? (isAr ? 'جارٍ الحفظ…' : 'Saving…')
-          : kind === 'claim'
-            ? (isAr ? 'حفظ المستخلص' : 'Save bill')
-            : (isAr ? 'حفظ المصروف' : 'Save expense')}
+          : (isAr ? 'حفظ التكلفة' : 'Save cost')}
       </button>
     </ZFFormFooter>
   );
@@ -555,37 +526,16 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       maxWidth="640px"
-      icon={kind === 'claim' ? <HardHat size={18} /> : <ReceiptText size={18} />}
-      title={
-        purpose === undefined
-          ? (isAr ? 'تسجيل تكلفة بناء' : 'Record construction cost')
-          : kind === 'claim'
-            ? (isAr ? 'مستخلص مقاول' : 'Contractor bill')
-            : (isAr ? 'مصروف موقع' : 'Site expense')
-      }
-      subtitle={
-        kind === 'claim'
-          ? (isAr ? 'مبلغ لمقاول عن أعمال تمت. يُضاف لتكلفة المشروع ويُدفع الآن أو يُسجل مستحقاً عليه.' : 'Money owed to a contractor for completed work. Added to project cost; paid now or recorded as owed.')
-          : (isAr ? 'مشتريات ومصاريف دُفعت في الموقع. تُضاف لتكلفة المشروع وتُخصم من الخزينة أو إنستاباي.' : 'Purchases and costs paid on site. Added to project cost and paid from the safe or InstaPay.')
-      }
+      icon={<ReceiptText size={18} />}
+      title={isAr ? 'تسجيل تكلفة بناء' : 'Record construction cost'}
+      subtitle={isAr
+        ? 'خامات أو مصنعيات أو مستخلص مقاول. تُضاف لتكلفة المشروع وتُدفع الآن أو تُسجل مستحقة.'
+        : 'Materials, labour or a contractor bill. Added to project cost; paid now or recorded as owed.'}
       isAr={isAr}
       footer={footer}
       closeOnBackdropClick={!isSubmitting}
     >
       <form id="zf-cost-form" className={zfForm.form} onSubmit={handleSubmit}>
-        {/* 0. Segmented selector if purpose is undefined */}
-        {purpose === undefined && (
-          <ZFSegmented
-            value={kind}
-            onChange={handleKindChange}
-            ariaLabel={isAr ? 'النوع' : 'Type'}
-            options={[
-              { id: 'claim', label: isAr ? 'مستخلص مقاول' : 'Contractor bill', icon: <HardHat size={14} /> },
-              { id: 'site', label: isAr ? 'مصروف موقع' : 'Site expense', icon: <ReceiptText size={14} /> }
-            ]}
-          />
-        )}
-
         {/* 1. Project & Date row */}
         <div className={zfForm.row}>
           <ZFField label={isAr ? 'المشروع' : 'Project'} required>
@@ -619,46 +569,29 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         </div>
 
         {/* 2. Counterparty & Reference row */}
-        {kind === 'claim' ? (
-          <div className={zfForm.row}>
-            <ZFField label={isAr ? 'المقاول' : 'Contractor'} required>
-              <input
-                className={zfForm.control}
-                value={supplier}
-                onChange={e => setSupplier(e.target.value)}
-                placeholder={isAr ? 'اسم شركة المقاولات أو المقاول' : 'Contractor name'}
-                required
-              />
-            </ZFField>
-            <ZFField label={isAr ? 'رقم المستخلص' : 'Bill no.'}>
-              <input
-                className={`${zfForm.control} ${zfForm.mono}`}
-                value={invoiceRef}
-                onChange={e => setInvoiceRef(e.target.value)}
-                placeholder={isAr ? 'اختياري' : 'Optional'}
-              />
-            </ZFField>
-          </div>
-        ) : (
-          <div className={zfForm.row}>
-            <ZFField label={isAr ? 'المورد أو المحل' : 'Supplier or shop'}>
-              <input
-                className={zfForm.control}
-                value={supplier}
-                onChange={e => setSupplier(e.target.value)}
-                placeholder={isAr ? 'اختياري' : 'Optional'}
-              />
-            </ZFField>
-            <ZFField label={isAr ? 'رقم الفاتورة' : 'Invoice no.'}>
-              <input
-                className={`${zfForm.control} ${zfForm.mono}`}
-                value={invoiceRef}
-                onChange={e => setInvoiceRef(e.target.value)}
-                placeholder={isAr ? 'اختياري' : 'Optional'}
-              />
-            </ZFField>
-          </div>
-        )}
+        <div className={zfForm.row}>
+          <ZFField
+            label={isAr ? 'المورد أو المقاول' : 'Supplier or contractor'}
+            required={paymentMethod === 'DEFERRED_201000'}
+            hint={paymentMethod === 'DEFERRED_201000' ? undefined : (isAr ? 'اختياري عند الدفع الآن' : 'Optional when paid now')}
+          >
+            <input
+              className={zfForm.control}
+              value={supplier}
+              onChange={e => setSupplier(e.target.value)}
+              placeholder={isAr ? 'اسم المورد أو المحل أو المقاول' : 'Supplier, shop or contractor'}
+              required={paymentMethod === 'DEFERRED_201000'}
+            />
+          </ZFField>
+          <ZFField label={isAr ? 'رقم الفاتورة أو المستخلص' : 'Invoice or bill no.'}>
+            <input
+              className={`${zfForm.control} ${zfForm.mono}`}
+              value={invoiceRef}
+              onChange={e => setInvoiceRef(e.target.value)}
+              placeholder={isAr ? 'اختياري' : 'Optional'}
+            />
+          </ZFField>
+        </div>
 
         {/* 3. Description field */}
         <ZFField label={isAr ? 'البيان' : 'Description'} required>
@@ -666,11 +599,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
             className={zfForm.control}
             value={itemName}
             onChange={e => setItemName(e.target.value)}
-            placeholder={
-              kind === 'claim'
-                ? (isAr ? 'مثال: مستخلص 3 – خرسانة الدور الثاني' : 'e.g. Bill 3 – 2nd floor concrete')
-                : (isAr ? 'مثال: أسمنت ورمل لصبة السقف' : 'e.g. Cement and sand for the roof slab')
-            }
+            placeholder={isAr ? 'مثال: أسمنت ورمل لصبة السقف، أو مستخلص 3 – خرسانة الدور الثاني' : 'e.g. Cement for the roof slab, or Bill 3 – 2nd floor concrete'}
             required
           />
         </ZFField>
@@ -721,7 +650,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         </ZFField>
 
         {/* 6. Payment method choices */}
-        <ZFField label={kind === 'claim' ? (isAr ? 'الدفع' : 'Payment') : (isAr ? 'دُفع من' : 'Paid from')}>
+        <ZFField label={isAr ? 'الدفع' : 'Payment'}>
           <ZFChoices
             value={paymentMethod}
             onChange={val => setPaymentMethod(val as StrictPaymentMethod)}

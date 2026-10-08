@@ -37,6 +37,7 @@ import { useRouter } from 'next/navigation';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem, ERPCostAllocation, ERPJournalEntry } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
+import { calculateProjectSalesValue } from '@/lib/erp/projectStatusHelper';
 import { 
   FlatInventoryUnit, 
   SHOWCASE_DEFAULT_PAGE_SIZE,
@@ -525,7 +526,6 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
     let contUnits = 0;
     let catVal = D(0);
     let availVal = D(0);
-    let contVal = D(0);
     let areaTot = D(0);
 
     allInventoryUnits.forEach(u => {
@@ -534,7 +534,6 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
       areaTot = areaTot.plus(u.areaSqm);
       if (u.status === 'contracted') {
         contUnits++;
-        contVal = contVal.plus(u.totalPrice);
       } else if (u.status === 'reserved') {
         // reserved
       } else {
@@ -544,7 +543,14 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
     });
 
     const avgPrice = areaTot.isZero() ? D(0) : catVal.div(areaTot);
-    const wipTotal = propertyCosts.reduce((acc, c) => acc.plus(c.total_cost_egp || c.total_amount || 0), D(0));
+
+    let contVal = D(0);
+    let netCostVal = D(0);
+    properties.forEach(p => {
+      const basis = calculateProjectSalesValue(p, contracts, propertyCosts);
+      contVal = contVal.plus(basis.contractedSales);
+      netCostVal = netCostVal.plus(basis.netCost);
+    });
 
     return {
       totalUnitsCount: totUnits,
@@ -555,9 +561,9 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
       contractedSalesVal: contVal,
       totalAreaSqm: areaTot,
       avgPricePerSqm: avgPrice,
-      totalWipInvested: wipTotal,
+      totalWipInvested: netCostVal,
     };
-  }, [allInventoryUnits, propertyCosts]);
+  }, [allInventoryUnits, properties, contracts, propertyCosts]);
 
   const soldPct = totalCatalogVal.isZero() 
     ? 0 

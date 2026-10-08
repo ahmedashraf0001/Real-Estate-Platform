@@ -23,8 +23,9 @@ import { buildCalendarMonthPeriod } from '@/lib/erp/ledger';
 import { ERPSupabaseService } from '@/lib/erp/supabaseService';
 import { createClient } from '@/lib/supabase/client';
 import { generateUUID, D } from '@/lib/erp/math';
-import { ERPAccountingPeriod } from '@/lib/erp/types';
+import { ERPAccountingPeriod, ERPContract } from '@/lib/erp/types';
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
+import { normalizeERPProperty } from '@/lib/erp/projectStatusHelper';
 
 interface LeadPipelineProps {
   initialLeads: Lead[];
@@ -136,6 +137,49 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
   });
 
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
+  const [liveContracts, setLiveContracts] = useState<ERPContract[]>([]);
+  const [isLoadingContracts, setIsLoadingContracts] = useState<boolean>(false);
+  const [contractsError, setContractsError] = useState<string | null>(null);
+  const [contractsLoadedFor, setContractsLoadedFor] = useState<Lead | null>(null);
+
+  useEffect(() => {
+    if (!convertingLead) {
+      setContractsLoadedFor(null);
+      setLiveContracts([]);
+      setIsLoadingContracts(false);
+      setContractsError(null);
+      return;
+    }
+    let active = true;
+    setContractsLoadedFor(null);
+    setIsLoadingContracts(true);
+    setContractsError(null);
+    setLiveContracts([]);
+    const supabase = createClient();
+    ERPSupabaseService.fetchContracts(supabase)
+      .then(fetched => {
+        if (active) {
+          setLiveContracts(fetched);
+          setContractsLoadedFor(convertingLead);
+          setIsLoadingContracts(false);
+          setContractsError(null);
+        }
+      })
+      .catch(err => {
+        console.error('Error loading live contracts for lead wizard:', err);
+        if (active) {
+          setIsLoadingContracts(false);
+          setLiveContracts([]);
+          setContractsError(err?.message || (isAr ? 'فشل تحميل بيانات العقود' : 'Failed to load contracts data'));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [convertingLead, isAr]);
+
+  const normalizedProperties = useMemo(() => (properties || []).map(normalizeERPProperty), [properties]);
 
   // The wizard needs a period only for display; contracts post no journal entry at creation.
   const defaultActivePeriod: ERPAccountingPeriod = useMemo(() => buildCalendarMonthPeriod(), []);
@@ -2923,14 +2967,21 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
       {convertingLead && (
         <NewContractWizardModal
           isOpen={!!convertingLead}
-          onClose={() => setConvertingLead(null)}
+          onClose={() => {
+            setConvertingLead(null);
+            setLiveContracts([]);
+            setIsLoadingContracts(false);
+            setContractsError(null);
+          }}
           initialPropertyId={convertingLead.property_id || undefined}
           initialBuyerName={convertingLead.name || ''}
           initialBuyerPhone={convertingLead.phone || ''}
           initialBuyerEmail={convertingLead.email || ''}
           initialLeadId={convertingLead.id}
-          properties={properties}
-          contracts={[]}
+          properties={normalizedProperties}
+          contracts={liveContracts}
+          isLoadingContracts={isLoadingContracts || contractsLoadedFor !== convertingLead}
+          contractsError={contractsError}
           leads={leads}
           activePeriod={defaultActivePeriod}
           unifiedPartners={[{ name: PRIMARY_DEVELOPER_NAME, role: 'PRIMARY_DEVELOPER' }]}

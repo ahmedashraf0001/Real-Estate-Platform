@@ -121,7 +121,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   is_featured: item.is_featured ?? item.featured ?? false,
                   images: images.length > 0 ? images : ['/images/hero-modern-villa.png'],
                   amenities: item.amenities || [],
-                  mapCoordinates: item.mapCoordinates || { x: 50, y: 50, lat: item.latitude || 30.0444, lng: item.longitude || 31.2357 },
+                  mapCoordinates: item.mapCoordinates || (item.latitude != null && item.longitude != null ? { x: 50, y: 50, lat: Number(item.latitude), lng: Number(item.longitude) } : undefined),
                   broker: item.broker || {
                     name: 'Zakaria Farid',
                     role: 'Direct Owner',

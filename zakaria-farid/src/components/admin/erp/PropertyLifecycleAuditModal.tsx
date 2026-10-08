@@ -33,6 +33,11 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { ZFModalShell } from './v2/common/ZFModalShell';
+import { useERPWorkstationContext } from './context/ERPWorkstationContext';
+import { buildPropertyStatement } from '@/lib/erp/statements/builders';
+import { printStatement } from '@/lib/erp/statements/printStatement';
+import { toast } from 'sonner';
+import shellStyles from './v2/ZFWorkstationShell.module.css';
 import styles from './PropertyLifecycleAuditModal.module.css';
 
 export interface PropertyLifecycleAuditModalProps {
@@ -75,6 +80,8 @@ export function PropertyLifecycleAuditModal({
   onDeleteCostItem,
   onOpenCalculatorForProperty
 }: PropertyLifecycleAuditModalProps) {
+  const erpContext = useERPWorkstationContext();
+  const [isPrinting, setIsPrinting] = useState(false);
   // Master Property Selection
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => property?.id || (properties && properties[0]?.id) || '');
   const [propSearchQuery, setPropSearchQuery] = useState('');
@@ -331,6 +338,21 @@ export function PropertyLifecycleAuditModal({
           </div>
 
           <div className={styles.footerActions}>
+            <button type="button" className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
+              disabled={isPrinting || !erpContext || erpContext.isLoading}
+              onClick={async () => {
+                if (!erpContext) return;
+                setIsPrinting(true);
+                try {
+                  await printStatement(buildPropertyStatement(activeProperty, {
+                    ...erpContext.data, propertyCosts: allCosts, partnerTransactions: erpContext.partnerTransactions,
+                  }, new Date()));
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'تعذر تصدير كشف الحساب');
+                } finally { setIsPrinting(false); }
+              }}>
+              <FileText size={14} /><span>{isPrinting ? 'جارٍ التصدير…' : 'تصدير PDF'}</span>
+            </button>
             <button
               type="button"
               onClick={() => {

@@ -153,7 +153,7 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     sqm: property.area_sqm || 0,
     propertyType: (PROPERTY_TYPE_MAP[derivedType] || derivedType || 'Apartment') as any,
     type: derivedType as any,
-    builtYear: 2025,
+    builtYear: undefined,
     featured: property.is_featured,
     is_featured: property.is_featured,
     is_archived: property.is_archived,
@@ -163,16 +163,12 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     view: property.view ?? null,
     finishing: property.finishing ?? (property.completion_status === 'off_plan' ? 'red_brick' : 'fully_finished'),
     furnishing: property.furnishing ?? 'unfurnished',
-    images: images.length > 0 ? images : [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85'
-    ],
+    // Neutral "no photos yet" graphic, never a stock photo of another building.
+    images: images.length > 0 ? images : ['/images/no-photo.svg'],
     amenities,
-    mapCoordinates: {
-      x: 50,
-      y: 50,
-      lat: property.latitude ?? 30.0444,
-      lng: property.longitude ?? 31.2357,
-    },
+    mapCoordinates: property.latitude != null && property.longitude != null
+      ? { x: 50, y: 50, lat: Number(property.latitude), lng: Number(property.longitude) }
+      : undefined,
     spec_layers: property.spec_layers,
     property_images: property.property_images,
     property_amenities: property.property_amenities,
@@ -190,9 +186,9 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
       role: isAr ? 'المالك المباشر' : 'Direct Owner & Principal',
       phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
         ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`
-        : '+201000000000',
-      email: 'contact@zakariafarid.com',
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80',
+        : '',
+      email: '',
+      avatar: '',
     },
   };
 }

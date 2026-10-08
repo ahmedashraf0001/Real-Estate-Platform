@@ -1,0 +1,37 @@
+TASK fin-b9-floors-include-ground (FINANCIAL_CORE: unit count drives per-unit prices)
+
+GOAL
+The admin building form has "عدد الأدوار" (total_floors) and units_per_floor. The floor plan and the saved units disagree:
+- Floor plan: zakaria-farid/src/lib/layering/instances.ts buildBuildingStructureAndUnits (~322-350) draws a ground floor with no flats plus typicalFloors = Math.min(14, Math.max(1, totalFloors - 1)) residential floors.
+- Saved units: zakaria-farid/src/app/actions/properties.ts calls buildBuildingUnits with totalFloors = total_floors, so it saves total_floors × units_per_floor units.
+Live repro: total_floors 3, units_per_floor 2. The plan shows Flat 1A–2B (4 flats). The DB saved 1A–3B (6 units).
+
+RULE ([user-confirmed 2026-10-07], PROJECT_SPEC.md "Partner payouts and final pricing")
+"عدد الأدوار" includes the ground floor, and the ground floor has no units. Saved units = (total floors − 1) × units per floor, numbered from floor 1. A 1-floor building keeps one residential floor (same as the plan generator: Math.max(1, totalFloors - 1)).
+
+READ FIRST
+- zakaria-farid/src/app/actions/properties.ts ~120-290: totalFloors/unitsPerFloor parsing (~128), the edit path that decides whether units change and rebuilds them (~135-222), the create path (~265-290).
+- zakaria-farid/src/lib/erp/projectStatusHelper.ts buildBuildingUnits (~291). Its totalFloors parameter means residential floors. normalizeERPProperty (~412) also calls it with residential floors. Do NOT change buildBuildingUnits or normalizeERPProperty.
+- zakaria-farid/src/components/admin/AdminPropertyForm.tsx hydrateBuildingConfig (~218-234): derives the form's total_floors from stored units (max floor).
+- Tests that pass total_floors to the action: zakaria-farid/src/lib/erp/__tests__/buildingUnits.test.ts (~415-520) and buildingUnitsAuditFixes.test.ts (~60-240).
+
+REQUIRED
+R1. In properties.ts, convert once at parse time: residentialFloors = Math.min(14, Math.max(1, total_floors - 1)). Use residentialFloors everywhere the action currently uses totalFloors for unit count, buildBuildingUnits, total_units_count, and the "did the configuration change" comparison against stored units. One small helper or one local const; no duplicated formulas.
+R2. In AdminPropertyForm.tsx hydrateBuildingConfig: totalFloors = maxFloor + 1 (stored units start at floor 1; the ground floor is added back). So editing an existing building and saving without changes regenerates the same units and does not trigger a rebuild.
+R3. Do not change the floor plan generator, buildBuildingUnits, normalizeERPProperty, the form's min/max validation, labels or layout.
+R4. No data migration or backfill. Existing stored units stay as they are.
+
+TESTS (RED first)
+T1. Create path: total_floors 3, units_per_floor 2 saves 4 units, numbers 1A, 1B, 2A, 2B, total_units_count 4, and the unit prices sum to price_egp exactly.
+T2. Create path: total_floors 1, units_per_floor 4 saves 4 units on floor 1.
+T3. Edit path: stored units 1A–2B (2 residential floors × 2) and payload total_floors 3, units_per_floor 2 is "no change": no rebuild, stored units unchanged.
+T4. hydrateBuildingConfig on units 1A–2B returns totalFloors 3, unitsPerFloor 2. If it is not exported, test it through the smallest existing seam; do not export new public API just for this if a seam exists, otherwise export it.
+Update the existing tests that pass total_floors so their expectations follow the rule (for example total_floors 3 × 2 now means 4 units, not 6; the "changed from stored 2x2" cases need total_floors 4 to mean 3×2 = 6). Change only the numbers and comments needed; keep each test's intent. Report every existing test you changed, with file:line and old → new.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit is clean.
+- npm test: 825+ tests, only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+- Report the manual check: create a building with total_floors 3 × 2 units; the plan shows 4 flats and DB properties.building_units has 4 rows (1A–2B).
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.

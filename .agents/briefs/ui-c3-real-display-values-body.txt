@@ -1,0 +1,30 @@
+TASK ui-c3-real-display-values (SURFACE_UI: replace fake display values with real ones; no layout change)
+
+RULE ([user-confirmed 2026-10-07], PROJECT_SPEC.md "Partner payouts and final pricing")
+No hardcoded display values: the contractor tax id comes from the contractor record (hidden if empty), and KPI deltas are computed against the previous period (hidden if there is no prior data). Keep the FIN-OS layout and style (PROJECT_SPEC.md:179 rule). Do not remove any card, widget or button.
+
+INVENTORY (fix exactly these)
+F1. zakaria-farid/src/components/admin/erp/v2/views/ConstructionPayablesView.tsx ~2338: tax id falls back to the literal '492-810-332'. Use the real contractor/supplier tax id if the data model has one (check types.ts and the contractor/supplier records); if the value is empty, hide that fact row (label + value). Never show a literal.
+F2. zakaria-farid/src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx ~884, 907, 930, 953: hardcoded sparklineData arrays. Build each sparkline from real data already in the view (e.g. last 8 months of the card's own series: collected inflows per month, paid outflows per month, etc.). If a series has fewer than 2 non-zero points, pass showSparkline={false}.
+F3. Same file ~885-888 and ~908-911: the collection / settlement RATE is shown as a delta with isPositive: true, so ZFKpiCard renders "▲ 68%" as if it were growth. Show the rate without a growth arrow: use the existing ZFKpiCard API for a neutral delta (read ZFKpiCard.tsx ~520-550; isPositive undefined renders no arrow) and keep the label meaning "collection rate"/"settlement rate". Check cards 3 and 4 for the same issue.
+F4. zakaria-farid/src/components/admin/erp/v2/views/PropertyAnalysisView.tsx ~1944-1983: fake deltas '+8.4%', '+12.1%', '+15.3%' and fake sparklines. Compute each delta vs the previous period from real data (properties created, net cost logged, contract values by date) with one small pure helper; if the previous period has no data, omit the delta prop. Sparklines from the same monthly series, or showSparkline false if under 2 points.
+F5. zakaria-farid/src/components/admin/erp/v2/views/CockpitView.tsx ~333-338 formatDelta: when prior is zero and current is non-zero it returns '+100.0%'. Return null (hide the delta) per the rule; check callers handle null (they already accept string | null).
+F6. ContractsRegistryView.tsx ~570: `+${collectionPct}%` with isPositive true is a rate, not growth: same treatment as F3.
+
+REQUIRED
+- One exported pure helper for "previous-period delta" and one for "monthly series" in zakaria-farid/src/lib/erp/ (reuse an existing one if graphify/grep finds it). Money with D(); no float money math.
+- No new widgets, no removed cards, no CSS or layout changes beyond hiding a value/row when data is missing.
+
+TESTS (RED first), new file zakaria-farid/src/lib/erp/__tests__/realDisplayValues.test.ts importing production code:
+T1. delta helper: prior 0 -> null; prior 100, current 150 -> '+50.0%' positive; prior 200, current 150 -> '-25.0%' negative.
+T2. monthly series helper buckets dated amounts into the last N months, oldest first, zeros for empty months.
+T3. Source-level guard: none of the literals '492-810-332', '+8.4%', '+12.1%', '+15.3%', '[15, 24, 18, 32' remain in zakaria-farid/src/components (read files, assert absence).
+Update baseline-failing tests only if your change touches them; report any existing test you change with old -> new.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+- UI=1: screenshots of the vault view and property analysis view at 1280 if a running authenticated session is available; otherwise say so.
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.

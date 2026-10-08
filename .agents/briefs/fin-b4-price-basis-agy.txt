@@ -1,0 +1,92 @@
+ROLE
+You are the implementer for task fin-b4-price-basis in the repo at C:/Users/lyr1csan/workspace/Real-Estate-Platform (Windows, Git Bash; the Next.js app is in zakaria-farid/, run npm/npx from there).
+Another agent (Codex) reviews every line you write, and Claude commits. Do NOT run git commit/add/push.
+git in this checkout needs: git -c "safe.directory=C:/Users/lyr1csan/workspace/Real-Estate-Platform" <cmd>
+
+<execution_rules>
+- Implement in your current agent. Run every shell command in the FOREGROUND and wait for it. Never create background tasks, terminals or sub-agents, and never "wait for" a background job.
+- Write the TESTS first and capture RED once, then implement, then GREEN once.
+- While working run only the task's test files (cd zakaria-farid && npx tsx --test src/lib/erp/__tests__/<file>.test.ts) and cd zakaria-farid && npx tsc --noEmit at the end. The reviewer runs the full gates.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Edit in place with minimal hunks. Never regenerate a whole file. Never remove or rename existing exports.
+- Always finish with the REPORT below, even if incomplete. List concrete changed paths.
+- Use the `caveman` skill for all prose and the report: terse, no recap, payload (paths, lines, counts, errors) verbatim.
+</execution_rules>
+
+<quality_rules>
+The reviewer rejects work that breaks any of these:
+- No hardcoded or placeholder data: no invented names, counts, IDs, dates, prices or sample rows in production code. Data comes from the real state/API source named in the task.
+- No fake tests: every test imports production code or drives real handlers, asserts real outputs, and would fail if the feature were removed. No copied helpers, no assertion-free tests, no tests that only check a mock was called.
+- No dead code: no unused exports, files, props, branches, commented-out code or leftover fallbacks. Remove what you replace; grep for 0 references after removing a symbol.
+- No bloat: reuse existing components, helpers and tokens before adding new ones. No new abstraction for a single use. No speculative options.
+- No shortcuts: wire every new module into its real production caller; no TODO stubs, no no-op callbacks, no "handled elsewhere" without a path.
+- Do not invent fields: read the existing types first and use their exact names.
+</quality_rules>
+
+PROJECT RULES (read first)
+- AGENTS.md (repo root), zakaria-farid/AGENTS.md (this Next.js has breaking changes: read node_modules/next/dist/docs before Next-specific code), PROJECT_SPEC.md (rules tagged [user-confirmed] are binding), zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, zakaria-farid/.agents/audits/SIM-2026-10-07-admin-lifecycle.md.
+- Money math uses D() from zakaria-farid/src/lib/erp/math.ts (custom Decimal: plus, minus, timesRatio, dividedBy, gt, lt, isZero, toFixed; there is NO comparedTo). Never use JS float math on money. Every journal entry must balance (debit = credit). Posted journals are immutable: correct them with new entries, never by editing old lines.
+- Keep the existing FIN-OS UI layout and style. Change UI only where the task says. Never remove or merge a page, widget or button.
+- Never apply or re-apply Supabase migrations. Never touch .env files. No DB access.
+- Arabic strings: preserve UTF-8.
+- New dependencies: pin exact versions and list them in the report. No cloud accounts, real credentials, deployment or real data.
+- No business-rule or wording meaning changes unless the task says so.
+
+REPORT (final message)
+- Files changed and why; dependencies added.
+- Tests added (names); RED evidence (decisive failure line); GREEN counts; typecheck exit code.
+- Every requirement of the task: done / not done (and why).
+- Anything you skipped, guessed or left unfinished.
+
+TASK
+TASK fin-b4-price-basis (FINANCIAL_CORE: KPIs only, no postings)
+
+GOAL
+Project KPIs must compare like with like. The audit (zakaria-farid/.agents/audits/SIM-2026-10-07-admin-lifecycle.md, B4) found these problems:
+- The dashboard project comparison shows "بيع 1.0 م / تكلفة 1.8 م, -78%" for a 6,000,000 building with one unit sold. The sales bar uses only contracted value, against whole-building cost.
+- The properties page shows "1 مليون" as the price of a 6,000,000 building.
+- "قيمة المبيعات المتعاقد عليها" sums catalog unit prices (3,083,317) instead of contract values (3,083,334).
+- The WIP total uses gross cost, which breaks the [user-confirmed 2026-10-07] "net of cost adjustments everywhere" rule.
+
+DEFINITIONS (approved by the user)
+- Project sales value = sum of gross_contract_value of live contracts (status <> 'Rescinded') on the project + catalog price (price_egp + tax_amount_egp) of every unit with no live contract. For a non-building or a building with no units: its contract value if contracted, else property price_egp.
+- Contracted sales = sum of gross_contract_value of live contracts. Never catalog prices.
+- Cost = net effective cost (calculateCostItemEffectiveTotals(item).netEffectiveCost from zakaria-farid/src/lib/erp/propertyCostEngine.ts), the same basis as calculatePropertyAuditMetrics.
+- Margin = (sales value − cost) / sales value.
+
+READ FIRST
+- zakaria-farid/src/components/admin/erp/v2/views/CockpitView.tsx ~640-670 (comparison rows: sales from contracts only, costs via getConstructionWIP).
+- zakaria-farid/src/components/admin/erp/v2/views/CockpitDualCharts.tsx ~80-105 (margin calc, the 0.5M "unentered" threshold).
+- zakaria-farid/src/components/admin/erp/v2/views/PropertiesPortfolioView.tsx: allInventoryUnits (~230-265), KPI memo (~511-560), and wherever a building row or card shows its price (find the "1 مليون" for a 6M building: a per-unit average shown as the building price).
+- getConstructionWIP (grep it): check whether it is gross or net.
+
+REQUIRED
+R1. Add ONE exported pure helper in zakaria-farid/src/lib/erp/ (e.g. propertyCostEngine.ts or projectStatusHelper.ts) that returns { salesValue, contractedSales, netCost } as Decimal for a property, given the property, contracts and cost items, per DEFINITIONS. Match units to contracts by building_unit_id, the same as projectStatusHelper.ts ~56.
+R2. CockpitView comparison rows: sales = salesValue, costs = netCost from R1. Leave the CockpitDualCharts chart layout as it is. Keep its "unentered" threshold logic unless it now contradicts R1; report what you decided.
+R3. PropertiesPortfolioView:
+    - contractedSalesVal = sum of live contract values (from R1).
+    - totalWipInvested = net cost.
+    - The building price shown for a building row or card = the building's sales value or its price_egp, not a per-unit average. Report the exact file:line you changed.
+    - Unit rows keep per-unit prices.
+R4. No float math on money: use D(). Display formatting stays as it is.
+
+OUT OF SCOPE
+- No layout or styling changes. No new widgets. No journal or DB changes.
+- Do not touch the partners engine, the calculator, or final pricing.
+
+TESTS (RED first). New file zakaria-farid/src/lib/erp/__tests__/projectSalesValue.test.ts, importing production code:
+T1. A building with 4 units at 1,500,000 each (tax 0), one live contract on apt-1 for 1,500,010, and cost items net 1,800,001 (one item 500,000 with a 20,000 refund adjustment and one item 1,320,001):
+    - salesValue 6,000,010;
+    - contractedSales 1,500,010;
+    - netCost 1,800,001.
+T2. Same building, but the contract has status 'Rescinded': salesValue 6,000,000 and contractedSales 0.
+T3. A non-building property with price 2,000,000 and no contract: salesValue 2,000,000.
+T4. Cost on another property_id is excluded.
+
+ACCEPTANCE
+- The helper is used by CockpitView and PropertiesPortfolioView (grep shows both).
+- tsc clean. npm test: only the 7 baseline failures.
+- In the report, state the manual check: the dashboard comparison for a building with one unit sold shows its full sales value, not one unit.
+
+DOCS
+One line under "Commits on this branch" in zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md, sha TBD.

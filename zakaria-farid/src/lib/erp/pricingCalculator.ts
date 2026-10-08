@@ -23,6 +23,8 @@ export interface BuiltPricingInput {
   chosenPricePerSqm: Num;
   /** Current catalog price for the whole property (price_egp). */
   currentListPrice: Num;
+  /** Optional override for total price (e.g. sum of unit prices for multi-unit buildings). */
+  overrideTotalPrice?: Num;
 }
 
 export interface BuiltPricingResult {
@@ -51,7 +53,7 @@ export function priceBuiltProperty(input: BuiltPricingInput): BuiltPricingResult
   const list = D(input.currentListPrice || 0);
 
   const costPerSqm = area.isZero() ? D(0) : cost.dividedBy(area);
-  const totalPrice = chosen.times(area);
+  const totalPrice = input.overrideTotalPrice != null ? D(input.overrideTotalPrice) : chosen.times(area);
   const profit = totalPrice.minus(cost);
   const change = totalPrice.minus(list);
 
@@ -81,6 +83,7 @@ export interface UnitPriceRow {
   area_sqm: number;
   price_egp?: number;
   status?: string;
+  contract_id?: string | null;
 }
 
 export interface UnitPriceResult {
@@ -88,6 +91,19 @@ export interface UnitPriceResult {
   currentPrice: string;
   newPrice: string;
   change: string;
+}
+
+export interface RepriceUnitRowResult extends UnitPriceResult {
+  locked: boolean;
+}
+
+export interface RepriceBuildingResult {
+  units: RepriceUnitRowResult[];
+  totalPrice: string;
+  lockedTotal: string;
+  repricedTotal: string;
+  lockedCount: number;
+  repricedCount: number;
 }
 
 /** Unit prices at a uniform price per m² (whole-property choice spread by area). */
@@ -103,6 +119,85 @@ export function priceUnitsAtRate(units: UnitPriceRow[], pricePerSqm: Num): UnitP
       change: next.minus(current).toFixed(2),
     };
   });
+}
+
+/**
+ * Reprice a building with units (BINDING RULE 2026-10-08):
+ * - available units get new price per m² × their area (whole EGP via Math.round)
+ * - reserved/contracted units keep their current price (locked)
+ * - total building price = sum of ALL units (locked + repriced)
+ */
+export function repriceBuilding(
+  units: UnitPriceRow[],
+  pricePerSqm: Num,
+  contractsOrContractedIds?: Iterable<string> | Array<{ building_unit_id?: string | null; status?: string }>
+): RepriceBuildingResult {
+  const rate = D(pricePerSqm || 0);
+
+  const contractedIds = new Set<string>();
+  if (contractsOrContractedIds) {
+    if (typeof (contractsOrContractedIds as any)[Symbol.iterator] === 'function') {
+      for (const item of contractsOrContractedIds as any) {
+        if (typeof item === 'string') {
+          contractedIds.add(item);
+        } else if (item && typeof item === 'object') {
+          if ((!item.status || item.status !== 'Rescinded') && item.building_unit_id) {
+            contractedIds.add(item.building_unit_id);
+          }
+        }
+      }
+    }
+  }
+
+  let lockedTotal = D(0);
+  let repricedTotal = D(0);
+  let lockedCount = 0;
+  let repricedCount = 0;
+
+  const unitResults: RepriceUnitRowResult[] = units.map((u) => {
+    const current = D(u.price_egp || 0);
+    const isLocked =
+      Boolean(u.status && u.status !== 'available') ||
+      Boolean(u.contract_id) ||
+      contractedIds.has(u.unit_id);
+
+    if (isLocked) {
+      lockedTotal = lockedTotal.plus(current);
+      lockedCount++;
+      return {
+        unit_id: u.unit_id,
+        currentPrice: current.toFixed(2),
+        newPrice: current.toFixed(2),
+        change: '0.00',
+        locked: true,
+      };
+    }
+
+    const area = D(u.area_sqm > 0 ? u.area_sqm : 0);
+    const roundedPrice = Math.round(rate.times(area).toNumber());
+    const next = D(roundedPrice);
+    repricedTotal = repricedTotal.plus(next);
+    repricedCount++;
+
+    return {
+      unit_id: u.unit_id,
+      currentPrice: current.toFixed(2),
+      newPrice: next.toFixed(2),
+      change: next.minus(current).toFixed(2),
+      locked: false,
+    };
+  });
+
+  const totalPrice = lockedTotal.plus(repricedTotal);
+
+  return {
+    units: unitResults,
+    totalPrice: totalPrice.toFixed(2),
+    lockedTotal: lockedTotal.toFixed(2),
+    repricedTotal: repricedTotal.toFixed(2),
+    lockedCount,
+    repricedCount,
+  };
 }
 
 /** Slider bounds: from 80% of the lower anchor to 130% of the higher anchor, rounded to 100 EGP/m². */

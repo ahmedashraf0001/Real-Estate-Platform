@@ -12,6 +12,7 @@ import {
   ERPCostAllocation, 
   ERPInstallmentSchedule, 
   ERPJournalEntry, 
+  ERPJournalLine,
   ERPMakerCheckerRequest, 
   ERPPartnerCall, 
   ERPPartnerCommitment,
@@ -36,12 +37,15 @@ import {
   PropertyCostCategory,
   PropertyLifecyclePhase,
   ERPUnitEstimate,
-  ERPConstructionPurchaseOrder
+  ERPConstructionPurchaseOrder,
+  ERPPropertyPriceHistoryEntry,
+  PropertyPriceStage
 } from './types';
-import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
+import { Property, Lead } from '@/lib/supabase/types';
 import { D, generateUUID, isUUID, ensureUUID, ratio } from './math';
 import { CANONICAL_COA } from './ledger';
 import { prepareConstructionSettlement } from './constructionSettlement';
+import { normalizeERPProperty } from './projectStatusHelper';
 
 export interface LiveERPDataset {
   periods: ERPAccountingPeriod[];
@@ -105,64 +109,7 @@ export class ERPSupabaseService {
     const rawProps = (propertiesData as Property[]) || [];
     const baseProperties = rawProps;
 
-    const properties: Property[] = baseProperties.map(p => {
-      const isBuilding = p.type === 'building' || (p.title_ar || '').includes('عمارة') || (p.title_en || '').toLowerCase().includes('building');
-      if (isBuilding) {
-        const unitsCount = p.total_units_count && p.total_units_count > 1 ? p.total_units_count : 6;
-        const saleMode = p.sale_mode || 'both_flexible';
-        let units: BuildingUnitItem[] = (p.building_units as BuildingUnitItem[]) || [];
-        if (!units || units.length === 0) {
-          const unitArea = Math.round((p.area_sqm || 1200) / unitsCount);
-          const unitPrice = Math.round((p.price_egp || 35000000) / unitsCount);
-          units = Array.from({ length: unitsCount }, (_, i) => {
-            const floor = Math.floor(i / 2) + 1;
-            const letter = (i % 2 === 0) ? 'A' : 'B';
-            return {
-              unit_id: `${p.id}-apt-${i + 1}`,
-              unit_number: `شقة ${floor}${letter} - الدور ${floor}`,
-              floor,
-              area_sqm: unitArea,
-              bedrooms: 3,
-              bathrooms: 2,
-              price_egp: unitPrice,
-              status: 'available' as const
-            };
-          });
-        }
-        return {
-          ...p,
-          type: 'building' as const,
-          sale_mode: saleMode,
-          total_units_count: units.length,
-          building_units: units,
-          partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
-            ((p.title_ar || '').includes('الشيخ زايد') || (p.title_ar || '').includes('النرجس') || (p.title_ar || '').includes('الفردوس') || (p.title_ar || '').includes('الأوبسيديان'))
-              ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
-              : (((p.title_ar || '').includes('الساحل') || (p.title_ar || '').includes('هاسبيندا') || (p.title_ar || '').includes('هاسيندا') || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
-                ? [{ partner_name: 'زكريا فريد', share_percentage: 75 }, { partner_name: 'د. هاني المنياوي', share_percentage: 25 }]
-                : (((p.title_ar || '').includes('السخنة') || (p.title_ar || '').includes('البحر الأحمر'))
-                  ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
-                  : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
-                )
-              )
-          )
-        };
-      }
-      return {
-        ...p,
-        partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
-          ((p.title_ar || '').includes('الشيخ زايد') || (p.title_ar || '').includes('النرجس') || (p.title_ar || '').includes('الفردوس') || (p.title_ar || '').includes('الأوبسيديان'))
-            ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
-            : (((p.title_ar || '').includes('الساحل') || (p.title_ar || '').includes('هاسبيندا') || (p.title_ar || '').includes('هاسيندا') || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
-              ? [{ partner_name: 'زكريا فريد', share_percentage: 75 }, { partner_name: 'د. هاني المنياوي', share_percentage: 25 }]
-              : (((p.title_ar || '').includes('السخنة') || (p.title_ar || '').includes('البحر الأحمر'))
-                ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
-                : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
-              )
-            )
-        )
-      };
-    });
+    const properties: Property[] = baseProperties.map(normalizeERPProperty);
 
     // 1b. Fetch Active CRM Leads from Supabase
     let leads: Lead[] = [];
@@ -257,7 +204,7 @@ export class ERPSupabaseService {
       }));
     }
 
-    let contractsData: Record<string, unknown>[] | null = null;
+    let contractsList: ERPContract[] = [];
     let schedulesData: Record<string, unknown>[] | null = null;
     let entriesData: Record<string, unknown>[] | null = null;
     let pdcData: Record<string, unknown>[] | null = null;
@@ -272,9 +219,10 @@ export class ERPSupabaseService {
     let partnerCommitmentsData: Record<string, unknown>[] | null = null;
 
     if (isSchemaMigrated) {
+      // Availability must never use an empty dataset after a failed contracts read.
+      contractsList = await ERPSupabaseService.fetchContracts(supabase);
       try {
-        const [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, mcRes] = await Promise.all([
-          supabase.from('erp_contracts').select('*').order('created_at', { ascending: false }),
+        const [sRes, eRes, pRes, rRes, aRes, caRes, tRes, mcRes] = await Promise.all([
           supabase.from('erp_installment_schedules').select('*').order('tranche_number', { ascending: true }),
           supabase.from('erp_journal_entries').select('*, erp_journal_lines(*)').order('entry_date', { ascending: false }),
           supabase.from('erp_pdc_records').select('*').order('due_date', { ascending: true }),
@@ -285,14 +233,13 @@ export class ERPSupabaseService {
           supabase.from('erp_maker_checker').select('*').order('created_at', { ascending: false })
         ]);
 
-        const responses = [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, mcRes];
+        const responses = [sRes, eRes, pRes, rRes, aRes, caRes, tRes, mcRes];
         for (const res of responses) {
           if (res?.error && isAuthError(res.error)) {
             throw res.error;
           }
         }
 
-        contractsData = cRes.data;
         schedulesData = sRes.data;
         entriesData = eRes.data;
         pdcData = pRes.data;
@@ -351,32 +298,7 @@ export class ERPSupabaseService {
     }
 
     // 3. Contracts
-    const contracts: ERPContract[] = (contractsData && contractsData.length > 0)
-      ? contractsData.map(c => ({
-          contract_id: c.contract_id as string,
-          contract_number: c.contract_number as string,
-          unit_id: c.unit_id as string,
-          property_id: (c.property_id as string) || undefined,
-          building_unit_id: (c.building_unit_id as string) || undefined,
-          building_unit_number: (c.building_unit_number as string) || undefined,
-          is_whole_building_sale: typeof c.is_whole_building_sale === 'boolean' ? c.is_whole_building_sale : undefined,
-          buyer_name: c.buyer_name as string,
-          buyer_national_id: c.buyer_national_id as string | undefined,
-          base_price: c.base_price ? D(c.base_price as string | number).toFixed() : undefined,
-          tax_amount: c.tax_amount ? D(c.tax_amount as string | number).toFixed() : undefined,
-          tax_description: (c.tax_description as string) || undefined,
-          gross_contract_value: D((c.gross_contract_value as string | number) || 0).toFixed(),
-          currency: (c.currency as CurrencyCode) || 'EGP',
-          exchange_rate: D((c.exchange_rate as string | number) || 1).toFixed(),
-          contract_date: c.contract_date as string,
-          handover_date: c.handover_date as string | undefined,
-          handover_status: (c.handover_status as HandoverStatus) || 'Pending',
-          total_cash_collected: D((c.total_cash_collected as string | number) || 0).toFixed(),
-          status: (c.status as ContractStatus) || 'Active',
-          payment_plan_type: (c.payment_plan_type as ERPContract['payment_plan_type']) || undefined,
-          sale_model: (c.sale_model as ERPContract['sale_model']) || undefined,
-        }))
-      : [];
+    const contracts: ERPContract[] = contractsList;
 
     // 4. Installment Schedules
     const schedules: ERPInstallmentSchedule[] = (schedulesData && schedulesData.length > 0)
@@ -599,6 +521,46 @@ export class ERPSupabaseService {
     return err.code === 'PGRST205' || String(err.message || '').includes('schema cache');
   }
 
+  static mapERPContract(c: Record<string, unknown>): ERPContract {
+    return {
+      contract_id: c.contract_id as string,
+      contract_number: c.contract_number as string,
+      unit_id: c.unit_id as string,
+      property_id: (c.property_id as string) || undefined,
+      building_unit_id: (c.building_unit_id as string) || undefined,
+      building_unit_number: (c.building_unit_number as string) || undefined,
+      is_whole_building_sale: typeof c.is_whole_building_sale === 'boolean' ? c.is_whole_building_sale : undefined,
+      buyer_name: c.buyer_name as string,
+      buyer_national_id: c.buyer_national_id as string | undefined,
+      base_price: c.base_price ? D(c.base_price as string | number).toFixed() : undefined,
+      tax_amount: c.tax_amount ? D(c.tax_amount as string | number).toFixed() : undefined,
+      tax_description: (c.tax_description as string) || undefined,
+      gross_contract_value: D((c.gross_contract_value as string | number) || 0).toFixed(),
+      currency: (c.currency as CurrencyCode) || 'EGP',
+      exchange_rate: D((c.exchange_rate as string | number) || 1).toFixed(),
+      contract_date: c.contract_date as string,
+      handover_date: c.handover_date as string | undefined,
+      handover_status: (c.handover_status as HandoverStatus) || 'Pending',
+      total_cash_collected: D((c.total_cash_collected as string | number) || 0).toFixed(),
+      status: (c.status as ContractStatus) || 'Active',
+      payment_plan_type: (c.payment_plan_type as ERPContract['payment_plan_type']) || undefined,
+      sale_model: (c.sale_model as ERPContract['sale_model']) || undefined,
+    };
+  }
+
+  static async fetchContracts(supabase: SupabaseClient): Promise<ERPContract[]> {
+    const { data, error } = await supabase
+      .from('erp_contracts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return (data || []).map((row) => ERPSupabaseService.mapERPContract(row as Record<string, unknown>));
+  }
+
   /**
    * Persist a New Real Contract & Generated Tranches to Supabase.
    */
@@ -791,6 +753,31 @@ export class ERPSupabaseService {
   }
 
   /**
+   * Maps an in-memory journal line to its Supabase row representation (INV-4.1).
+   */
+  static mapJournalLineForPersistence(
+    l: ERPJournalLine,
+    entryId: string,
+    idx = 0
+  ) {
+    const lineId = ensureUUID(l.line_id);
+    l.line_id = lineId;
+    l.entry_id = entryId;
+    return {
+      line_id: lineId,
+      entry_id: entryId,
+      line_number: l.line_number || idx + 1,
+      account_code: l.account_code,
+      debit_amount: l.debit_amount,
+      credit_amount: l.credit_amount,
+      unit_id: l.unit_id ? l.unit_id.slice(0, 50) : null,
+      contract_id: l.contract_id && isUUID(l.contract_id) ? l.contract_id : null,
+      partner_id: l.partner_id && isUUID(l.partner_id) ? l.partner_id : null,
+      memo: l.memo || null
+    };
+  }
+
+  /**
    * Persist a Double-Entry Journal Entry and its Lines.
    */
   static async persistJournalEntry(
@@ -869,23 +856,7 @@ export class ERPSupabaseService {
         throw entryError;
       }
 
-      const lineRows = entry.lines.map((l, idx) => {
-        const lineId = ensureUUID(l.line_id);
-        l.line_id = lineId;
-        l.entry_id = entryId;
-        return {
-          line_id: lineId,
-          entry_id: entryId,
-          line_number: l.line_number || idx + 1,
-          account_code: l.account_code,
-          debit_amount: l.debit_amount,
-          credit_amount: l.credit_amount,
-          unit_id: l.unit_id ? l.unit_id.slice(0, 50) : null,
-          contract_id: l.contract_id && isUUID(l.contract_id) ? l.contract_id : null,
-          partner_id: l.partner_id && isUUID(l.partner_id) ? l.partner_id : null,
-          memo: l.memo || null
-        };
-      });
+      const lineRows = entry.lines.map((l, idx) => ERPSupabaseService.mapJournalLineForPersistence(l, entryId, idx));
 
       let { error: lineError } = await supabase.from('erp_journal_lines').insert(lineRows);
       if (lineError && (lineError.code === '23503' || lineError.message?.includes('foreign key') || lineError.message?.includes('erp_accounts') || lineError.message?.includes('account_code'))) {
@@ -1687,22 +1658,111 @@ export class ERPSupabaseService {
   }
 
   /**
-   * Update Property Catalog Selling Price (from Calculator).
+   * Change a property's selling price through `record_property_price` (user-confirmed 2026-10-06).
+   * finalize = true: off-plan only, once — marks construction complete, prices available units, logs a 'final' row.
+   * Errors are thrown, never swallowed.
    */
-  static async updatePropertySellingPrice(
+  static async recordPropertyPrice(
     supabase: SupabaseClient,
-    propertyId: string,
-    newPriceEgp: number
-  ): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('properties')
-        .update({ price_egp: newPriceEgp })
-        .eq('id', propertyId);
-      if (error) throw error;
-    } catch (err) {
-      console.warn('Silent fallback on property price_egp update:', err);
+    params: {
+      propertyId: string;
+      priceEgp: number;
+      finalize?: boolean;
+      unitPrices?: Record<string, number>;
+      costBasisEgp?: string | number;
+      note?: string;
     }
+  ): Promise<{ stage: PropertyPriceStage; units_repriced: number }> {
+    const { data, error } = await supabase.rpc('record_property_price', {
+      p_property_id: params.propertyId,
+      p_price_egp: params.priceEgp,
+      p_finalize: Boolean(params.finalize),
+      p_unit_prices: params.unitPrices || {},
+      p_cost_basis_egp: params.costBasisEgp != null ? Number(params.costBasisEgp) : null,
+      p_note: params.note || null
+    });
+    if (!error) {
+      if (!params.finalize && params.unitPrices && Object.keys(params.unitPrices).length > 0) {
+        const { data: prop, error: readErr } = await supabase
+          .from('properties')
+          .select('building_units')
+          .eq('id', params.propertyId)
+          .single();
+        if (readErr) throw readErr;
+        if (prop && Array.isArray(prop.building_units)) {
+          let unitsRepriced = 0;
+          const updatedUnits = prop.building_units.map((u: any) => {
+            if (u.status === 'available' && params.unitPrices![u.unit_id] != null) {
+              unitsRepriced++;
+              return { ...u, price_egp: params.unitPrices![u.unit_id] };
+            }
+            return u;
+          });
+          const { error: updErr } = await supabase
+            .from('properties')
+            .update({ price_egp: params.priceEgp, building_units: updatedUnits })
+            .eq('id', params.propertyId);
+          if (updErr) throw updErr;
+          return { ...(data as any), units_repriced: unitsRepriced };
+        }
+      }
+      return data as { stage: PropertyPriceStage; units_repriced: number };
+    }
+
+    // Before the price-history migration is applied: a plain revision still works.
+    const missingFn = (error as { code?: string }).code === 'PGRST202' || String(error.message || '').includes('record_property_price');
+    if (missingFn && !params.finalize) {
+      let unitsRepriced = 0;
+      let updatePayload: any = { price_egp: params.priceEgp };
+      if (params.unitPrices && Object.keys(params.unitPrices).length > 0) {
+        const { data: prop, error: readErr } = await supabase
+          .from('properties')
+          .select('building_units')
+          .eq('id', params.propertyId)
+          .single();
+        if (readErr) throw readErr;
+        if (prop && Array.isArray(prop.building_units)) {
+          updatePayload.building_units = prop.building_units.map((u: any) => {
+            if (u.status === 'available' && params.unitPrices![u.unit_id] != null) {
+              unitsRepriced++;
+              return { ...u, price_egp: params.unitPrices![u.unit_id] };
+            }
+            return u;
+          });
+        }
+      }
+      const { error: updErr } = await supabase.from('properties').update(updatePayload).eq('id', params.propertyId);
+      if (updErr) throw updErr;
+      return { stage: 'revised', units_repriced: unitsRepriced };
+    }
+    throw error;
+  }
+
+  /** Price history of one property, newest first. Empty before the migration is applied. */
+  static async loadPropertyPriceHistory(
+    supabase: SupabaseClient,
+    propertyId: string
+  ): Promise<ERPPropertyPriceHistoryEntry[]> {
+    const { data, error } = await supabase
+      .from('erp_property_price_history')
+      .select('history_id, property_id, price_egp, stage, cost_basis_egp, area_m2, units_repriced, note, created_at')
+      .eq('property_id', propertyId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      if (this.isSchemaCacheError(error)) return [];
+      throw error;
+    }
+    return (data || []).map(row => ({
+      history_id: row.history_id as string,
+      property_id: row.property_id as string,
+      price_egp: D((row.price_egp as string | number) || 0).toFixed(2),
+      stage: row.stage as PropertyPriceStage,
+      cost_basis_egp: row.cost_basis_egp != null ? D(row.cost_basis_egp as string | number).toFixed(2) : undefined,
+      area_m2: row.area_m2 != null ? Number(row.area_m2) : undefined,
+      units_repriced: Number(row.units_repriced || 0),
+      note: (row.note as string) || undefined,
+      created_at: row.created_at as string
+    }));
   }
 
   /**
@@ -1909,7 +1969,7 @@ export class ERPSupabaseService {
         property_id: (row.property_id as string) || undefined,
         property_title: (row.property_title as string) || undefined,
         commitment_id: (row.commitment_id as string) || undefined,
-        payment_method: row.routing_account === '101000' 
+        payment_method: row.routing_account === 'DEBT_OFFSET' ? 'DEBT_OFFSET' as const : row.routing_account === '101000' 
           ? (String(row.notes || '').toLowerCase().includes('instapay') || String(row.notes || '').includes('إنستاباي') ? 'INSTAPAY_102000' : 'CASH_101000') 
           : 'BANK_102000',
         journal_entry_number: undefined,
@@ -2035,12 +2095,30 @@ export class ERPSupabaseService {
       notes?: string;
       joined_date?: string;
     }
-  ): Promise<void> {
-    const rawId = (profile as any).partner_id || profile.id || generateUUID();
-    const cleanId = ensureUUID(rawId);
-    const row = {
-      partner_id: cleanId,
-      name: profile.name,
+  ): Promise<string | undefined> {
+    const rawId = (profile as any).partner_id || profile.id;
+    let cleanId = rawId && isUUID(rawId) ? rawId.trim() : undefined;
+    if (!cleanId) {
+      try {
+        const { data: existingRows, error: lookupError } = await supabase
+          .from('erp_partner_profiles')
+          .select('partner_id')
+          .eq('name', profile.name)
+          .limit(1);
+        if (lookupError) throw lookupError;
+        if (existingRows && existingRows.length > 0 && existingRows[0]?.partner_id && isUUID(existingRows[0].partner_id)) {
+          cleanId = existingRows[0].partner_id;
+        }
+      } catch (lookupError) {
+        if (this.isSchemaCacheError(lookupError)) return undefined;
+        throw lookupError;
+      }
+    }
+    if (!cleanId) {
+      cleanId = generateUUID();
+    }
+
+    const fields = {
       phone: profile.phone || null,
       email: (profile as any).email || null,
       national_id: profile.national_id || null,
@@ -2048,17 +2126,35 @@ export class ERPSupabaseService {
       updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase
-      .from('erp_partner_profiles')
-      .upsert(row, { onConflict: 'name' });
+    try {
+      const { error: insertError } = await supabase
+        .from('erp_partner_profiles')
+        .upsert({ partner_id: cleanId, name: profile.name, ...fields }, { onConflict: 'name', ignoreDuplicates: true });
+      if (insertError) throw insertError;
 
-    if (error) {
+      const { error: updateError } = await supabase
+        .from('erp_partner_profiles')
+        .update(fields)
+        .eq('name', profile.name);
+      if (updateError) throw updateError;
+
+      const { data: storedRows, error: readError } = await supabase
+        .from('erp_partner_profiles')
+        .select('partner_id')
+        .eq('name', profile.name)
+        .limit(1);
+      if (readError) throw readError;
+      const storedId = storedRows?.[0]?.partner_id;
+      if (!storedId || !isUUID(storedId)) throw new Error('Stored partner profile UUID is missing or invalid.');
+      return storedId;
+    } catch (error) {
       if (this.isSchemaCacheError(error)) {
         console.warn('erp_partner_profiles table not yet in schema cache. Kept in memory.');
-        return;
+        return undefined;
       }
       throw error;
     }
+
   }
 
   /**
@@ -2209,5 +2305,3 @@ export class ERPSupabaseService {
     return taxRow;
   }
 }
-
-

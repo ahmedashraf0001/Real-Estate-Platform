@@ -1261,25 +1261,29 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
       )}
 
       {/* PARTNER PROFIT PAYOUT MODAL */}
-      <PartnerPayoutModal 
-        isOpen={erp.showPartnerPayoutModal}
-        onClose={() => {
-          erp.setShowPartnerPayoutModal(false);
-          erp.setPayoutInitialPartner(undefined);
-        }}
-        partners={erp.partnerSummaries}
-        properties={erp.data.properties}
-        initialPartnerName={erp.payoutInitialPartner}
-        activePeriod={erp.activePeriod}
-        periods={erp.data.periods}
-        isAr={erp.isAr}
-        isMutating={erp.isMutating}
-        onConfirmPayout={async (details) => {
-          await erp.handleConfirmPartnerPayout(details);
-          erp.setShowPartnerPayoutModal(false);
-          erp.setPayoutInitialPartner(undefined);
-        }}
-      />
+      {/* Mounted only while open so every opening starts from a clean form */}
+      {erp.showPartnerPayoutModal && (
+        <PartnerPayoutModal
+          isOpen
+          onClose={() => {
+            erp.setShowPartnerPayoutModal(false);
+            erp.setPayoutInitialPartner(undefined);
+            erp.setPayoutInitialPropertyId(undefined);
+          }}
+          partners={erp.partnerSummaries}
+          properties={erp.data.properties}
+          contracts={erp.data.contracts}
+          transactions={erp.partnerTransactions}
+          commitments={erp.data.partnerCommitments}
+          initialPartnerName={erp.payoutInitialPartner}
+          initialPropertyId={erp.payoutInitialPropertyId}
+          activePeriod={erp.activePeriod}
+          periods={erp.data.periods}
+          isAr={erp.isAr}
+          isMutating={erp.isMutating}
+          onConfirmPayout={erp.handleConfirmPartnerPayout}
+        />
+      )}
 
       {/* DEDICATED STATUTORY PARTNER ONBOARDING MODAL */}
       <NewPartnerProfileModal

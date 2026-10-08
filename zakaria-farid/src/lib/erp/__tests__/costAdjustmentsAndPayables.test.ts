@@ -4,6 +4,7 @@ import {
   isItemWithinGracePeriod,
   getRemainingGraceHours,
   calculateCostItemEffectiveTotals,
+  calculatePropertyAuditMetrics,
   addCostAdjustment,
   generatePayableInstallmentSchedule,
   recordPayableInstallmentPayment,
@@ -110,6 +111,33 @@ describe('Project Cost Lifecycle: 24-Hour Grace Period & Sub-Item Adjustments', 
     assert.equal(totals.totalSupplements, '60000.00');
     assert.equal(totals.netAdjustments, '60000.00');
     assert.equal(totals.netEffectiveCost, '900000.00');
+  });
+
+  it('property audit metrics (calculator cost basis) use net effective cost after adjustments', () => {
+    const refunded = addCostAdjustment(baseItem, {
+      parent_item_id: baseItem.item_id,
+      adjustment_type: 'REFUND_OVERPAYMENT',
+      amount_egp: '40000.00',
+      reason: 'استرداد',
+      payment_method: 'CASH_101000',
+      logged_by: 'مدير الحسابات'
+    });
+    const supplemented = addCostAdjustment({ ...baseItem, item_id: 'cost-test-02' }, {
+      parent_item_id: 'cost-test-02',
+      adjustment_type: 'SUPPLEMENT_UNDERPAYMENT',
+      amount_egp: '60000.00',
+      reason: 'ملحق',
+      payment_method: 'INSTAPAY_102000',
+      logged_by: 'مدير الحسابات'
+    });
+    const otherProperty = { ...baseItem, item_id: 'cost-test-03', property_id: 'prop-other' };
+
+    const audit = calculatePropertyAuditMetrics(baseItem.property_id, 100, [refunded, supplemented, otherProperty]);
+    // 800,000 + 900,000 (base 840,000 each, −40k refund, +60k supplement)
+    assert.equal(audit.totalLoggedCost, '1700000.00');
+    assert.equal(audit.costPerSqm, '17000.00');
+    assert.equal(audit.byCategory.civil_structure?.total, '1700000.00');
+    assert.equal(audit.byPhase.structural_skeleton?.total, '1700000.00');
   });
 
   it('generates payable installment schedule and tracks partial/full settlement', () => {

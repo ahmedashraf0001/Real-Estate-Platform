@@ -2,12 +2,17 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Plus, 
-  Trash2, 
-  Wallet, 
-  Smartphone, 
-  Scale
+import {
+  Plus,
+  Trash2,
+  Wallet,
+  Smartphone,
+  Scale,
+  Check,
+  ChevronDown,
+  Banknote,
+  CalendarClock,
+  FileSignature
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { 
@@ -42,7 +47,9 @@ import {
   getAvailableUnitsForProperty,
   canSellWholeBuilding,
 } from '@/lib/erp/propertiesPortfolioCalculations';
+import { cleanUnitNumber } from '@/lib/erp/projectStatusHelper';
 import shellStyles from '../ZFWorkstationShell.module.css';
+import w from './NewContractWizardModal.module.css';
 
 export interface NewContractWizardPayload {
   propertyId: string;
@@ -81,6 +88,8 @@ interface NewContractWizardModalProps {
   initialLeadId?: string;
   properties: Property[];
   contracts: ERPContract[];
+  isLoadingContracts?: boolean;
+  contractsError?: string | null;
   leads?: any[];
   activePeriod: ERPAccountingPeriod;
   unifiedPartners: Array<{ name: string; role: string }>;
@@ -100,6 +109,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   initialLeadId,
   properties,
   contracts,
+  isLoadingContracts = false,
+  contractsError,
   leads = [],
   unifiedPartners,
   isMutating = false,
@@ -108,6 +119,9 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [contractErrors, setContractErrors] = useState<Record<string, string>>({});
+  const isContractsPending = isLoadingContracts === true;
+  const hasContractsError = Boolean(contractsError);
+  const isContractsBlocked = isContractsPending || hasContractsError;
 
   // Step 1: Unit & Buyer
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
@@ -136,7 +150,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   // Step 3: Equity Splits & Destination
   const [partnerSplits, setPartnerSplits] = useState<PartnerShareItem[]>(() => normalizePartnerSplits(null));
-  const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
   const [destinationTreasury, setDestinationTreasury] = useState<'101000' | '102000'>('101000');
 
@@ -156,15 +169,19 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     const prop = properties.find(p => p.id === id);
     if (prop) {
       const canSellWhole = canSellWholeBuilding(prop, contracts);
-      const availableUnits = getAvailableUnitsForProperty(prop, contracts);
+      const availableUnits = isContractsBlocked ? [] : getAvailableUnitsForProperty(prop, contracts);
       let targetUnitId = unitId || '';
 
-      if (targetUnitId && !availableUnits.some(u => u.unit_id === targetUnitId)) {
+      if (isContractsBlocked) {
         targetUnitId = '';
-      }
+      } else {
+        if (targetUnitId && !availableUnits.some(u => u.unit_id === targetUnitId)) {
+          targetUnitId = '';
+        }
 
-      if (!targetUnitId && !canSellWhole && availableUnits.length > 0) {
-        targetUnitId = availableUnits[0].unit_id;
+        if (!targetUnitId && !canSellWhole && availableUnits.length > 0) {
+          targetUnitId = availableUnits[0].unit_id;
+        }
       }
 
       setSelectedBuildingUnitId(targetUnitId);
@@ -186,13 +203,15 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         setPartnerSplits(normalizePartnerSplits(null));
       }
     }
-  }, [properties, contracts]);
+  }, [properties, contracts, isContractsBlocked]);
 
   const handlePropertyChange = (id: string) => {
+    if (isContractsBlocked) return;
     applyPropertySelection(id, '');
   };
 
   const handleBuildingUnitChange = (unitId: string) => {
+    if (isContractsBlocked) return;
     setSelectedBuildingUnitId(unitId);
     const prop = properties.find(p => p.id === selectedPropertyId);
     if (!prop) return;
@@ -312,9 +331,33 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   }, [selectedProperty, selectedBuildingUnitId]);
 
   const availableBuildingUnits = useMemo(() => {
+    if (isContractsBlocked) return [];
     if (!selectedProperty || selectedProperty.type !== 'building' || !selectedProperty.building_units) return [];
     return getAvailableUnitsForProperty(selectedProperty, contracts);
-  }, [selectedProperty, contracts]);
+  }, [selectedProperty, contracts, isContractsBlocked]);
+
+  useEffect(() => {
+    if (isContractsBlocked) {
+      if (selectedBuildingUnitId) setSelectedBuildingUnitId('');
+      return;
+    }
+    if (!selectedProperty || selectedProperty.type !== 'building') return;
+    if (selectedBuildingUnitId && !availableBuildingUnits.some(u => u.unit_id === selectedBuildingUnitId)) {
+      const nextUnitId = availableBuildingUnits[0]?.unit_id || '';
+      setSelectedBuildingUnitId(nextUnitId);
+      if (nextUnitId) {
+        const u = selectedProperty.building_units?.find(unit => unit.unit_id === nextUnitId);
+        if (u) setBasePriceInput((u.price_egp || 0).toString());
+      }
+    } else if (!selectedBuildingUnitId && !canSellWhole && availableBuildingUnits.length > 0) {
+      const nextUnitId = availableBuildingUnits[0]?.unit_id || '';
+      setSelectedBuildingUnitId(nextUnitId);
+      if (nextUnitId) {
+        const u = selectedProperty.building_units?.find(unit => unit.unit_id === nextUnitId);
+        if (u) setBasePriceInput((u.price_egp || 0).toString());
+      }
+    }
+  }, [selectedProperty, availableBuildingUnits, selectedBuildingUnitId, canSellWhole, isContractsBlocked]);
 
   const handleLeadChange = (leadId: string) => {
     setSelectedLeadId(leadId);
@@ -355,6 +398,13 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   const validateStep1 = (): boolean => {
     const errs: Record<string, string> = {};
+    if (isContractsBlocked) {
+      errs.property = contractsError
+        ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+        : (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Loading contracts data, please wait...');
+      setContractErrors(errs);
+      return false;
+    }
     if (!selectedPropertyId) {
       errs.property = isAr ? 'يرجى اختيار الوحدة العقارية' : 'Please select a property unit';
     } else if (selectedPropertyId === 'custom_unit' && !customUnitName.trim()) {
@@ -393,6 +443,15 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isContractsBlocked) {
+      setContractErrors({
+        property: contractsError
+          ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+          : (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Loading contracts data, please wait...')
+      });
+      setStep(1);
+      return;
+    }
     if (Math.abs(totalSplitsPct - 100) > 0.01) {
       setContractErrors({ splits: isAr ? 'يجب أن يكون مجموع نسب الشركاء 100% بالضبط' : 'Partner shares must sum to exactly 100%' });
       return;
@@ -441,6 +500,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   };
 
   const propertySections: ZFCustomSelectSection[] = useMemo(() => {
+    if (isContractsBlocked) return [];
     const sectionsMap = new Map<string, ZFCustomSelectSection>();
 
     const getPropertySection = (p: Property): { id: string; titleAr: string; titleEn: string } => {
@@ -515,88 +575,86 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     });
 
     return Array.from(sectionsMap.values());
-  }, [properties, contracts, isAr]);
+  }, [properties, contracts, isAr, isContractsBlocked]);
 
   if (!isOpen) return null;
 
+  const unit = isAr ? 'ج.م' : 'EGP';
+  const fmt = (v: number | string) =>
+    Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const remainingAfterDp = Math.max(0, totalNominalValue - modalDpAmount);
+  const dpPctOfPrice = totalNominalValue > 0 ? (modalDpAmount / totalNominalValue) * 100 : 0;
+  const splitsBalanced = Math.abs(totalSplitsPct - 100) <= 0.01;
+  const partnerColors = ['var(--erp-accent, #2563eb)', '#0ea5e9', '#16a34a', '#f59e0b', '#8b5cf6', '#ec4899'];
+  const availablePartnerNames = unifiedPartners
+    .map(p => p.name)
+    .filter(name => !partnerSplits.some(ps => ps.partnerName === name));
+
+  const addPartner = () => {
+    const name = customPartnerNameInput.trim();
+    if (!name || partnerSplits.some(ps => ps.partnerName === name)) return;
+    setPartnerSplits(smartAddPartner(partnerSplits, name, 10));
+    setCustomPartnerNameInput('');
+  };
+
+  const goToStep = (s: 1 | 2 | 3) => {
+    if (isContractsBlocked) {
+      setContractErrors({
+        property: contractsError
+          ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+          : (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Loading contracts data, please wait...')
+      });
+      return;
+    }
+    if (s > 1 && step === 1 && !validateStep1()) return;
+    if (s === 3 && step <= 2) {
+      if (!validateStep1()) { setStep(1); return; }
+      if (!validateStep2()) { setStep(2); return; }
+    }
+    setStep(s);
+  };
+
+  const steps: Array<{ id: 1 | 2 | 3; label: string; sub: string }> = [
+    { id: 1, label: isAr ? 'الوحدة والمشتري' : 'Unit & buyer', sub: isAr ? 'ماذا يُباع ولمن' : 'What is sold, to whom' },
+    { id: 2, label: isAr ? 'السعر والسداد' : 'Price & payment', sub: isAr ? 'المقدم والأقساط' : 'Down payment, installments' },
+    { id: 3, label: isAr ? 'الشركاء والاعتماد' : 'Partners & confirm', sub: isAr ? 'الحصص والخزينة' : 'Shares, treasury' }
+  ];
+
+  // Errors already shown under their own field are not repeated in the banner.
+  const bannerErrors = [
+    contractErrors.splits,
+    contractsError ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts data: ${contractsError}`) : null
+  ].filter(Boolean);
+
   const footer = (
-    <ZFFormFooter>
-      {step === 1 && (
-        <>
-          <button
-            type="button"
-            className={shellStyles.btnSecondary}
-            onClick={handleModalClose}
-          >
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-          <button
-            type="button"
-            className={shellStyles.btnPrimary}
-            onClick={() => {
-              if (validateStep1()) setStep(2);
-            }}
-          >
-            {isAr ? 'التالي: شروط السداد' : 'Next: Payment Terms'}
-          </button>
-        </>
+    <ZFFormFooter aside={isAr ? `الخطوة ${step} من 3` : `Step ${step} of 3`}>
+      <button type="button" className={shellStyles.btnGhost} onClick={handleModalClose}>
+        {isAr ? 'إلغاء' : 'Cancel'}
+      </button>
+      {step > 1 && (
+        <button
+          type="button"
+          className={shellStyles.btnSecondary}
+          onClick={() => setStep((step - 1) as 1 | 2)}
+        >
+          {isAr ? 'السابق' : 'Back'}
+        </button>
       )}
-
-      {step === 2 && (
-        <>
-          <button
-            type="button"
-            className={shellStyles.btnSecondary}
-            onClick={() => setStep(1)}
-          >
-            {isAr ? 'السابق' : 'Back'}
-          </button>
-          <button
-            type="button"
-            className={shellStyles.btnGhost}
-            onClick={handleModalClose}
-          >
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-          <button
-            type="button"
-            className={shellStyles.btnPrimary}
-            onClick={() => {
-              if (validateStep2()) setStep(3);
-            }}
-          >
-            {isAr ? 'التالي: حصص الشركاء' : 'Next: Partner Splits'}
-          </button>
-        </>
-      )}
-
-      {step === 3 && (
-        <>
-          <button
-            type="button"
-            className={shellStyles.btnSecondary}
-            onClick={() => setStep(2)}
-          >
-            {isAr ? 'السابق' : 'Back'}
-          </button>
-          <button
-            type="button"
-            className={shellStyles.btnGhost}
-            onClick={handleModalClose}
-          >
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-          <button
-            type="submit"
-            form="zf-new-contract-form"
-            className={shellStyles.btnPrimary}
-            disabled={isMutating || Math.abs(totalSplitsPct - 100) > 0.01}
-          >
-            {isMutating 
-              ? (isAr ? 'جارٍ الاعتماد…' : 'Posting…') 
-              : (isAr ? 'اعتماد وتوثيق العقد' : 'Execute Contract')}
-          </button>
-        </>
+      {/* Distinct keys: React must not reuse the Next button as the submit button, or the same click submits. */}
+      {step < 3 ? (
+        <button key="next" type="button" className={shellStyles.btnPrimary} disabled={isContractsBlocked} onClick={() => goToStep((step + 1) as 2 | 3)}>
+          {isAr ? 'التالي' : 'Next'}
+        </button>
+      ) : (
+        <button
+          key="submit"
+          type="submit"
+          form="zf-new-contract-form"
+          className={shellStyles.btnPrimary}
+          disabled={isMutating || !splitsBalanced || isContractsBlocked}
+        >
+          {isMutating ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'اعتماد العقد' : 'Create contract')}
+        </button>
       )}
     </ZFFormFooter>
   );
@@ -606,68 +664,67 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       isOpen={isOpen}
       onClose={handleModalClose}
       isAr={isAr}
-      title={isAr ? 'عقد بيع جديد' : 'New Sales Contract'}
-      subtitle={isAr 
-        ? 'ربط الوحدة العقارية وجدولة أقساط السداد وتحديد حصص الشركاء.' 
-        : 'Link property unit, schedule installments, and set partner equity splits.'}
-      icon={<Plus size={18} />}
-      maxWidth="min(1100px, 94vw)"
+      title={isAr ? 'عقد بيع جديد' : 'New sales contract'}
+      subtitle={isAr
+        ? 'اختر الوحدة والمشتري، ثم السعر وطريقة السداد، ثم حصص الشركاء.'
+        : 'Pick the unit and buyer, then price and payment, then partner shares.'}
+      icon={<FileSignature size={18} />}
+      maxWidth="780px"
       maxHeight="92vh"
       footer={footer}
     >
       <form id="zf-new-contract-form" className={zfForm.form} onSubmit={handleFinalSubmit}>
-        {/* Step Navigation Bar */}
-        <ZFChoices<'1' | '2' | '3'>
-          value={String(step) as '1' | '2' | '3'}
-          onChange={(val) => {
-            const s = Number(val) as 1 | 2 | 3;
-            if (s === 2 && !validateStep1()) return;
-            if (s === 3) {
-              if (!validateStep1()) { setStep(1); return; }
-              if (!validateStep2()) { setStep(2); return; }
-            }
-            setStep(s);
-          }}
-          options={[
-            { id: '1', label: isAr ? '١. أطراف التعاقد والوحدة' : '1. Unit & Buyer', sub: isAr ? 'الوحدة والمشتري' : 'Property & Buyer' },
-            { id: '2', label: isAr ? '٢. الشروط وجدولة السداد' : '2. Payment Terms', sub: isAr ? 'السعر والمقدم والأقساط' : 'Price & Tranches' },
-            { id: '3', label: isAr ? '٣. الشركاء والاعتماد' : '3. Equity & Posting', sub: isAr ? 'حصص التمويل والتوجيه' : 'Splits & Ledger' }
-          ]}
-        />
+        <ol className={w.stepper} aria-label={isAr ? 'خطوات العقد' : 'Contract steps'}>
+          {steps.map((s, i) => (
+            <li
+              key={s.id}
+              className={`${w.step}${s.id === step ? ` ${w.stepActive}` : ''}${s.id < step ? ` ${w.stepDone}` : ''}`}
+            >
+              <button
+                type="button"
+                className={w.stepBtn}
+                onClick={() => goToStep(s.id)}
+                aria-current={s.id === step ? 'step' : undefined}
+              >
+                <span className={w.stepDot}>{s.id < step ? <Check size={14} strokeWidth={3} /> : s.id}</span>
+                <span className={w.stepTexts}>
+                  <span className={w.stepLabel}>{s.label}</span>
+                  <span className={w.stepSub}>{s.sub}</span>
+                </span>
+              </button>
+              {i < steps.length - 1 && <span className={w.stepLine} aria-hidden="true" />}
+            </li>
+          ))}
+        </ol>
 
-        {/* Global Error Banner */}
-        {Object.keys(contractErrors).length > 0 && (
-          <ZFEffect tone="danger">
-            {Object.values(contractErrors).filter(Boolean).join(' • ')}
-          </ZFEffect>
-        )}
+        {bannerErrors.length > 0 && <ZFEffect tone="danger">{bannerErrors.join(' • ')}</ZFEffect>}
 
         {/* STEP 1: PROPERTY & BUYER */}
         {step === 1 && (
           <>
             <div className={zfForm.section}>
-              <h4 className={zfForm.sectionTitle}>{isAr ? 'الوحدة العقارية موضوع التعاقد' : 'Target Property Unit'}</h4>
-              
-              <ZFField label={isAr ? 'العقار أو المشروع' : 'Property / Project'} required error={contractErrors.property}>
-                <ZFCustomSelect 
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'الوحدة' : 'Unit'}</h4>
+
+              <ZFField label={isAr ? 'العقار أو المشروع' : 'Property or project'} required error={contractErrors.property}>
+                <ZFCustomSelect
                   value={selectedPropertyId}
                   onChange={(val: string) => handlePropertyChange(val)}
                   sections={propertySections}
-                  placeholderAr="-- اختر الوحدة العقارية من الكتالوج --"
-                  placeholderEn="-- Choose Property Unit from Catalog --"
+                  placeholderAr="اختر من العقارات المتاحة"
+                  placeholderEn="Choose an available property"
                   isAr={isAr}
+                  disabled={isContractsBlocked}
                   hasError={!!contractErrors.property}
-                  errorMessage={contractErrors.property}
                   customAction={{
-                    labelAr: '+ إدخال وحدة أو مشروع مخصص لزكريا فريد',
-                    labelEn: '+ Custom Developer Project / Unit',
+                    labelAr: '+ وحدة غير موجودة في الكتالوج',
+                    labelEn: '+ Unit not in the catalog',
                     onClick: () => handlePropertyChange('custom_unit')
                   }}
                 />
               </ZFField>
 
               {selectedPropertyId === 'custom_unit' && (
-                <ZFField label={isAr ? 'اسم المشروع أو الوحدة المخصصة' : 'Custom Project / Unit Name'} required>
+                <ZFField label={isAr ? 'اسم الوحدة' : 'Unit name'} required>
                   <input
                     type="text"
                     className={zfForm.control}
@@ -680,20 +737,36 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
               )}
 
               {selectedProperty && selectedProperty.building_units && selectedProperty.building_units.length > 0 && (
-                <ZFField label={isAr ? 'الشقة المحددة داخل العمارة' : 'Specific Apartment / Unit'} required={!canSellWhole}>
+                <ZFField
+                  label={isAr ? 'الشقة' : 'Apartment'}
+                  required={!canSellWhole}
+                  hint={isContractsPending
+                    ? (isAr ? 'جاري التحقق من العقود والوحدات المتاحة...' : 'Checking contracts and available units...')
+                    : hasContractsError
+                    ? (isAr ? `تعذر تحميل بيانات العقود: ${contractsError}` : `Failed to load contracts: ${contractsError}`)
+                    : (isAr
+                      ? `${availableBuildingUnits.length} شقة متاحة في هذه العمارة`
+                      : `${availableBuildingUnits.length} apartments available in this building`)}
+                >
                   <select
                     className={zfForm.control}
                     value={selectedBuildingUnitId}
                     onChange={e => handleBuildingUnitChange(e.target.value)}
+                    disabled={isContractsBlocked}
                   >
                     {canSellWhole && (
-                      <option value="">{isAr ? 'بيع العمارة بالكامل (كافة الوحدات)' : 'Sell Whole Building (All Units)'}</option>
+                      <option value="">{isAr ? 'العمارة بالكامل' : 'Whole building'}</option>
                     )}
-                    {availableBuildingUnits.map(u => (
-                      <option key={u.unit_id} value={u.unit_id}>
-                        {`${u.unit_number} (الدور ${u.floor}) - ${Number(u.price_egp || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`}
-                      </option>
-                    ))}
+                    {availableBuildingUnits.map(u => {
+                      const displayUnitNumber = cleanUnitNumber(u.unit_number) || u.unit_number;
+                      return (
+                        <option key={u.unit_id} value={u.unit_id}>
+                          {isAr
+                            ? `شقة ${displayUnitNumber} • الدور ${u.floor} • ${fmt(u.price_egp || 0)} ج.م`
+                            : `Apt ${displayUnitNumber} • Floor ${u.floor} • ${fmt(u.price_egp || 0)} EGP`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </ZFField>
               )}
@@ -702,36 +775,46 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                 <ZFFacts
                   items={[
                     { label: isAr ? 'الموقع' : 'Location', value: selectedProperty.location || '—' },
-                    { label: isAr ? 'المساحة' : 'Area', value: `${selectedBuildingUnit?.area_sqm || selectedProperty.area_sqm || 0} م²` },
-                    { label: isAr ? 'السعر الاسترشادي' : 'Catalog Price', value: `${Number(selectedBuildingUnit?.price_egp || selectedProperty.price_egp || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
-                    { label: isAr ? 'حالة البناء' : 'Status', value: selectedProperty.completion_status === 'ready' ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'تحت الإنشاء' : 'Off-Plan') }
+                    { label: isAr ? 'المساحة' : 'Area', value: `${selectedBuildingUnit?.area_sqm || selectedProperty.area_sqm || 0} m²` },
+                    { label: isAr ? 'سعر الكتالوج' : 'Catalog price', value: `${fmt(selectedBuildingUnit?.price_egp || selectedProperty.price_egp || 0)} ${unit}` },
+                    { label: isAr ? 'الحالة' : 'Status', value: selectedProperty.completion_status === 'ready' ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'تحت الإنشاء' : 'Off-plan') }
                   ]}
                 />
               )}
             </div>
 
             <div className={zfForm.section}>
-              <h4 className={zfForm.sectionTitle}>{isAr ? 'بيانات المشتري' : 'Buyer Details'}</h4>
-
-              {leads.length > 0 && (
-                <ZFChoices<'NEW_LEAD' | 'EXISTING_LEAD'>
-                  value={leadSelectionMode}
-                  onChange={setLeadSelectionMode}
-                  options={[
-                    { id: 'NEW_LEAD', label: isAr ? 'تسجيل عميل جديد' : 'New Client' },
-                    { id: 'EXISTING_LEAD', label: isAr ? 'اختيار من قائمة العملاء' : 'Existing Lead' }
-                  ]}
-                />
-              )}
+              <div className={w.sectionHead}>
+                <h4 className={zfForm.sectionTitle}>{isAr ? 'المشتري' : 'Buyer'}</h4>
+                {leads.length > 0 && (
+                  <div className={w.segment} role="radiogroup" aria-label={isAr ? 'مصدر المشتري' : 'Buyer source'}>
+                    {([
+                      ['NEW_LEAD', isAr ? 'عميل جديد' : 'New client'],
+                      ['EXISTING_LEAD', isAr ? 'من العملاء' : 'From leads']
+                    ] as const).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={leadSelectionMode === id}
+                        className={`${w.segmentBtn}${leadSelectionMode === id ? ` ${w.segmentBtnActive}` : ''}`}
+                        onClick={() => setLeadSelectionMode(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {leadSelectionMode === 'EXISTING_LEAD' && leads.length > 0 && (
-                <ZFField label={isAr ? 'العميل المسجل' : 'Registered Client'}>
+                <ZFField label={isAr ? 'العميل' : 'Client'}>
                   <select
                     className={zfForm.control}
                     value={selectedLeadId}
                     onChange={e => handleLeadChange(e.target.value)}
                   >
-                    <option value="">{isAr ? '-- اختر العميل --' : '-- Choose Client --'}</option>
+                    <option value="">{isAr ? 'اختر العميل' : 'Choose a client'}</option>
                     {leads.map(l => (
                       <option key={l.id} value={l.id}>
                         {`${l.name} • ${l.phone || l.email || ''}`}
@@ -742,11 +825,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
               )}
 
               <div className={zfForm.row}>
-                <ZFField label={isAr ? 'اسم المشتري' : 'Buyer Name'} required error={contractErrors.buyerName}>
+                <ZFField label={isAr ? 'الاسم بالكامل' : 'Full name'} required error={contractErrors.buyerName}>
                   <input
                     type="text"
-                    className={zfForm.control}
-                    placeholder={isAr ? 'الاسم بالكامل' : 'Full name'}
+                    className={`${zfForm.control}${contractErrors.buyerName ? ` ${zfForm.controlInvalid}` : ''}`}
                     value={buyerName}
                     onChange={e => {
                       setBuyerName(e.target.value);
@@ -755,11 +837,11 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     required
                   />
                 </ZFField>
-                <ZFField label={isAr ? 'الرقم القومي / جواز السفر' : 'National ID / Passport'} required error={contractErrors.buyerNationalId}>
+                <ZFField label={isAr ? 'الرقم القومي أو جواز السفر' : 'National ID or passport'} required error={contractErrors.buyerNationalId}>
                   <input
                     type="text"
-                    className={`${zfForm.control} ${zfForm.mono}`}
-                    placeholder="289XXXXXXXXXXXXX"
+                    inputMode="numeric"
+                    className={`${zfForm.control} ${zfForm.mono}${contractErrors.buyerNationalId ? ` ${zfForm.controlInvalid}` : ''}`}
                     value={buyerNationalId}
                     onChange={e => {
                       setBuyerNationalId(e.target.value);
@@ -776,17 +858,16 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     type="tel"
                     dir="ltr"
                     className={zfForm.control}
-                    placeholder="010XXXXXXXX"
+                    placeholder="01XXXXXXXXX"
                     value={buyerPhone}
                     onChange={e => setBuyerPhone(e.target.value)}
                   />
                 </ZFField>
-                <ZFField label={isAr ? 'البريد الإلكتروني' : 'Email'}>
+                <ZFField label={isAr ? 'البريد الإلكتروني' : 'Email'} hint={isAr ? 'اختياري' : 'Optional'}>
                   <input
                     type="email"
                     dir="ltr"
                     className={zfForm.control}
-                    placeholder="client@example.com"
                     value={buyerEmail}
                     onChange={e => setBuyerEmail(e.target.value)}
                   />
@@ -796,84 +877,121 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
           </>
         )}
 
-        {/* STEP 2: PAYMENT TERMS */}
+        {/* STEP 2: PRICE & PAYMENT */}
         {step === 2 && (
           <>
             <div className={zfForm.section}>
-              <h4 className={zfForm.sectionTitle}>{isAr ? 'الشروط المالية ونظام السداد' : 'Payment Terms'}</h4>
-              
+              <ZFChoices<'INSTALLMENTS' | 'FULL_CASH'>
+                value={paymentPlanType}
+                onChange={setPaymentPlanType}
+                ariaLabel={isAr ? 'طريقة السداد' : 'Payment plan'}
+                options={[
+                  {
+                    id: 'INSTALLMENTS',
+                    label: isAr ? 'مقدم وأقساط' : 'Down payment + installments',
+                    sub: isAr ? 'جدول سداد على فترات' : 'Paid over a schedule',
+                    icon: <CalendarClock size={16} />
+                  },
+                  {
+                    id: 'FULL_CASH',
+                    label: isAr ? 'كاش بالكامل' : 'Full cash',
+                    sub: isAr ? 'المبلغ كله عند التعاقد' : 'Whole amount at signing',
+                    icon: <Banknote size={16} />
+                  }
+                ]}
+              />
+
               <div className={zfForm.row}>
-                <ZFField label={isAr ? 'سعر البيع التعاقدي الإجمالي' : 'Gross Contract Price'} required error={contractErrors.price}>
+                <ZFField label={isAr ? 'سعر البيع' : 'Sale price'} required error={contractErrors.price}>
                   <ZFMoneyInput
                     value={basePriceInput}
                     onChange={e => {
                       setBasePriceInput(e.target.value);
                       if (contractErrors.price) setContractErrors(prev => ({ ...prev, price: '' }));
                     }}
-                    unit={isAr ? 'ج.م' : 'EGP'}
+                    unit={unit}
+                    invalid={!!contractErrors.price}
                     required
                   />
                 </ZFField>
-                <ZFField label={isAr ? 'نظام السداد' : 'Payment Plan Type'} required>
-                  <ZFChoices<'INSTALLMENTS' | 'FULL_CASH'>
-                    value={paymentPlanType}
-                    onChange={setPaymentPlanType}
-                    options={[
-                      { id: 'INSTALLMENTS', label: isAr ? 'أقساط مجدولة' : 'Installments' },
-                      { id: 'FULL_CASH', label: isAr ? 'سداد نقدي كامل' : 'Full Cash' }
-                    ]}
+                <ZFField label={isAr ? 'تاريخ التعاقد' : 'Contract date'} required>
+                  <input
+                    type="date"
+                    className={zfForm.control}
+                    value={firstPaymentDate}
+                    onChange={e => setFirstPaymentDate(e.target.value)}
+                    required
                   />
                 </ZFField>
               </div>
+            </div>
 
-              {paymentPlanType === 'INSTALLMENTS' && (
-                <>
-                  <div className={zfForm.row}>
-                    <ZFField label={isAr ? 'دفعة الحجز والمقدم' : 'Down Payment Amount'} required error={contractErrors.downPayment}>
-                      <ZFMoneyInput
-                        value={downPaymentAmountInput !== '' ? downPaymentAmountInput : modalDpAmount.toString()}
-                        onChange={e => setDownPaymentAmountInput(e.target.value)}
-                        unit={isAr ? 'ج.م' : 'EGP'}
-                        required
-                      />
-                    </ZFField>
-                    <ZFField label={isAr ? 'عدد الأقساط الدورية' : 'Number of Installments'} required>
-                      <input
-                        type="number"
-                        min={1}
-                        max={60}
-                        className={zfForm.control}
-                        value={numInstallments}
-                        onChange={e => setNumInstallments(e.target.value)}
-                        required
-                      />
-                    </ZFField>
-                  </div>
+            {paymentPlanType === 'INSTALLMENTS' && (
+              <div className={zfForm.section}>
+                <h4 className={zfForm.sectionTitle}>{isAr ? 'المقدم والأقساط' : 'Down payment and installments'}</h4>
 
-                  <div className={zfForm.row}>
-                    <ZFField label={isAr ? 'دورية استحقاق الأقساط' : 'Installment Frequency'}>
-                      <ZFChoices<'QUARTERLY' | 'MONTHLY' | 'SEMI_ANNUAL'>
-                        value={installmentFrequency}
-                        onChange={setInstallmentFrequency}
-                        options={[
-                          { id: 'QUARTERLY', label: isAr ? 'ربع سنوي' : 'Quarterly' },
-                          { id: 'MONTHLY', label: isAr ? 'شهري' : 'Monthly' },
-                          { id: 'SEMI_ANNUAL', label: isAr ? 'نصف سنوي' : 'Semi-Annual' }
-                        ]}
-                      />
-                    </ZFField>
-                    <ZFField label={isAr ? 'تاريخ توقيع العقد والدفعة الأولى' : 'Contract Date & First Payment'} required>
-                      <input
-                        type="date"
-                        className={zfForm.control}
-                        value={firstPaymentDate}
-                        onChange={e => setFirstPaymentDate(e.target.value)}
-                        required
-                      />
-                    </ZFField>
-                  </div>
+                <ZFField
+                  label={isAr ? 'المقدم' : 'Down payment'}
+                  required
+                  error={contractErrors.downPayment}
+                  aside={
+                    <span className={w.chips}>
+                      {['10', '15', '20', '25', '30'].map(p => {
+                        const active = downPaymentAmountInput === '' && downPaymentInputPct === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            className={`${w.chip}${active ? ` ${w.chipActive}` : ''}`}
+                            onClick={() => {
+                              setDownPaymentInputPct(p);
+                              setDownPaymentAmountInput('');
+                              if (contractErrors.downPayment) setContractErrors(prev => ({ ...prev, downPayment: '' }));
+                            }}
+                          >
+                            {p}%
+                          </button>
+                        );
+                      })}
+                    </span>
+                  }
+                >
+                  <ZFMoneyInput
+                    value={downPaymentAmountInput !== '' ? downPaymentAmountInput : modalDpAmount.toString()}
+                    onChange={e => {
+                      setDownPaymentAmountInput(e.target.value);
+                      if (contractErrors.downPayment) setContractErrors(prev => ({ ...prev, downPayment: '' }));
+                    }}
+                    unit={unit}
+                    invalid={!!contractErrors.downPayment}
+                    required
+                  />
+                </ZFField>
 
-                  <ZFField label={isAr ? 'تاريخ استحقاق أول قسط دوري' : 'First Installment Due Date'} required>
+                <div className={zfForm.row3}>
+                  <ZFField label={isAr ? 'عدد الأقساط' : 'Installments'} required>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      className={`${zfForm.control} ${zfForm.mono}`}
+                      value={numInstallments}
+                      onChange={e => setNumInstallments(e.target.value)}
+                      required
+                    />
+                  </ZFField>
+                  <ZFField label={isAr ? 'كل' : 'Every'}>
+                    <select
+                      className={zfForm.control}
+                      value={installmentFrequency}
+                      onChange={e => setInstallmentFrequency(e.target.value as 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL')}
+                    >
+                      <option value="MONTHLY">{isAr ? 'شهر' : 'Month'}</option>
+                      <option value="QUARTERLY">{isAr ? '٣ شهور' : '3 months'}</option>
+                      <option value="SEMI_ANNUAL">{isAr ? '٦ شهور' : '6 months'}</option>
+                    </select>
+                  </ZFField>
+                  <ZFField label={isAr ? 'أول قسط' : 'First installment'} required>
                     <input
                       type="date"
                       className={zfForm.control}
@@ -882,261 +1000,237 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                       required
                     />
                   </ZFField>
+                </div>
+              </div>
+            )}
 
-                  {/* Schedule preview */}
-                  {previewSchedule.length > 0 && (
-                    <div className={zfForm.section}>
-                      <h4 className={zfForm.sectionTitle}>
-                        {isAr 
-                          ? `جدول الدفعات والأقساط المتوقع (مقدم + ${previewSchedule.length} أقساط)` 
-                          : `Projected Schedule (Deposit + ${previewSchedule.length} Installments)`}
-                      </h4>
-                      <div className={zfForm.form}>
-                        <table className={zfForm.journalTable}>
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              <th>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
-                              <th className={zfForm.journalNum}>{isAr ? 'قيمة الدفعة' : 'Amount'}</th>
-                              <th>{isAr ? 'البيان' : 'Description'}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td>#0</td>
-                              <td>{firstPaymentDate}</td>
-                              <td className={zfForm.journalNum}>
-                                {Number(modalDpAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {isAr ? 'ج.م' : 'EGP'}
-                              </td>
-                              <td>{isAr ? 'دفعة الحجز والمقدم' : 'Down Payment'}</td>
-                            </tr>
-                            {previewSchedule.map(t => (
-                              <tr key={t.index}>
-                                <td>#{t.index}</td>
-                                <td>{t.dueDate}</td>
-                                <td className={zfForm.journalNum}>
-                                  {Number(t.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {isAr ? 'ج.م' : 'EGP'}
-                                </td>
-                                <td>{isAr ? 'قسط دوري' : 'Installment'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+            <div className={w.totals}>
+              <div className={w.total}>
+                <span className={w.totalLabel}>{isAr ? 'سعر البيع' : 'Sale price'}</span>
+                <span className={w.totalValue}>{fmt(totalNominalValue)}<span className={w.totalUnit}>{unit}</span></span>
+              </div>
+              <div className={w.total}>
+                <span className={w.totalLabel}>
+                  {paymentPlanType === 'FULL_CASH'
+                    ? (isAr ? 'يُدفع عند التعاقد' : 'Paid at signing')
+                    : (isAr ? `المقدم (${dpPctOfPrice.toFixed(1)}%)` : `Down payment (${dpPctOfPrice.toFixed(1)}%)`)}
+                </span>
+                <span className={w.totalValue}>{fmt(modalDpAmount)}<span className={w.totalUnit}>{unit}</span></span>
+              </div>
+              <div className={w.total}>
+                <span className={w.totalLabel}>{isAr ? 'الباقي على أقساط' : 'Left for installments'}</span>
+                <span className={w.totalValue}>{fmt(remainingAfterDp)}<span className={w.totalUnit}>{unit}</span></span>
+              </div>
+              <div className={`${w.total} ${w.totalAccent}`}>
+                <span className={w.totalLabel}>
+                  {previewSchedule.length > 0
+                    ? (isAr ? `القسط × ${previewSchedule.length}` : `Installment × ${previewSchedule.length}`)
+                    : (isAr ? 'القسط' : 'Installment')}
+                </span>
+                <span className={w.totalValue}>
+                  {previewSchedule.length > 0 ? fmt(previewSchedule[0].amount) : '—'}
+                  {previewSchedule.length > 0 && <span className={w.totalUnit}>{unit}</span>}
+                </span>
+              </div>
             </div>
+
+            {paymentPlanType === 'INSTALLMENTS' && previewSchedule.length > 0 && (
+              <details className={w.schedule}>
+                <summary>
+                  <span>
+                    {isAr
+                      ? `جدول السداد: مقدم + ${previewSchedule.length} قسط`
+                      : `Schedule: down payment + ${previewSchedule.length} installments`}
+                  </span>
+                  <ChevronDown size={15} className={w.scheduleChevron} aria-hidden="true" />
+                </summary>
+                <div className={w.scheduleBody}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>{isAr ? 'الاستحقاق' : 'Due'}</th>
+                        <th>{isAr ? 'البيان' : 'Item'}</th>
+                        <th className={w.num}>{isAr ? 'المبلغ' : 'Amount'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className={w.rowFirst}>
+                        <td>0</td>
+                        <td className={w.date}>{firstPaymentDate}</td>
+                        <td>{isAr ? 'المقدم' : 'Down payment'}</td>
+                        <td className={w.num}>{fmt(modalDpAmount)} {unit}</td>
+                      </tr>
+                      {previewSchedule.map(t => (
+                        <tr key={t.index}>
+                          <td>{t.index}</td>
+                          <td className={w.date}>{t.dueDate}</td>
+                          <td>{isAr ? `قسط ${t.index}` : `Installment ${t.index}`}</td>
+                          <td className={w.num}>{fmt(t.amount)} {unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
           </>
         )}
 
-        {/* STEP 3: PARTNER SPLITS & DESTINATION */}
+        {/* STEP 3: PARTNER SPLITS & CONFIRM */}
         {step === 3 && (
           <>
             <div className={zfForm.section}>
-              <div className={zfForm.labelRow}>
-                <h4 className={zfForm.sectionTitle}>{isAr ? 'توزيع حصص الشركاء' : 'Partner Equity Splits'}</h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`}
-                    onClick={() => setPartnerSplits(autoBalanceShares(partnerSplits))}
-                  >
-                    <Scale size={13} />
-                    {isAr ? 'موازنة النسب تلقائياً' : 'Auto Balance'}
-                  </button>
-                </div>
+              <div className={w.sectionHead}>
+                <h4 className={zfForm.sectionTitle}>{isAr ? 'حصص الشركاء في هذا البيع' : 'Partner shares in this sale'}</h4>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span className={`${w.badge} ${splitsBalanced ? w.badgeOk : w.badgeBad}`}>
+                    {isAr ? `المجموع ${totalSplitsPct.toFixed(1)}%` : `Total ${totalSplitsPct.toFixed(1)}%`}
+                  </span>
+                  {!splitsBalanced && (
+                    <button
+                      type="button"
+                      className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`}
+                      onClick={() => setPartnerSplits(autoBalanceShares(partnerSplits))}
+                    >
+                      <Scale size={13} />
+                      {isAr ? 'وزّع لـ 100%' : 'Balance to 100%'}
+                    </button>
+                  )}
+                </span>
               </div>
 
-              {/* Progress Visual Bar */}
-              <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
+              <div className={w.shareBar} aria-hidden="true">
                 {partnerSplits.map((p, idx) => (
-                  <div
+                  <span
                     key={p.partnerName}
-                    style={{
-                      width: `${Math.max(0, p.sharePct)}%`,
-                      background: idx === 0 ? 'var(--erp-accent, #2563eb)' : idx === 1 ? '#0284c7' : '#15803d',
-                      height: '100%'
-                    }}
-                    title={`${p.partnerName}: ${p.sharePct}%`}
+                    style={{ width: `${Math.max(0, p.sharePct)}%`, background: partnerColors[idx % partnerColors.length] }}
                   />
                 ))}
               </div>
 
-              {/* Partner Rows */}
-              <table className={zfForm.journalTable}>
-                <thead>
-                  <tr>
-                    <th>{isAr ? 'الشريك' : 'Partner'}</th>
-                    <th className={zfForm.journalNum}>{isAr ? 'الحصة %' : 'Share %'}</th>
-                    <th className={zfForm.journalNum}>{isAr ? 'القيمة المقابلة' : 'Share Amount'}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {partnerSplits.map((item, idx) => (
-                    <tr key={item.partnerName}>
-                      <td><strong>{item.partnerName}</strong></td>
-                      <td className={zfForm.journalNum}>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="any"
-                          className={`${zfForm.control} ${zfForm.mono}`}
-                          style={{ width: '80px', display: 'inline-block' }}
-                          value={item.sharePct}
-                          onChange={e => {
-                            const val = parseFloat(e.target.value) || 0;
-                            const updated = partnerSplits.map((p, i) => i === idx ? { ...p, sharePct: val } : p);
-                            setPartnerSplits(updated);
-                          }}
-                        />
-                      </td>
-                      <td className={zfForm.journalNum}>
-                        {Number(totalNominalValue * (item.sharePct / 100)).toLocaleString('en-US', { maximumFractionDigits: 2 })} {isAr ? 'ج.م' : 'EGP'}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {idx > 0 && (
-                          <button
-                            type="button"
-                            className={shellStyles.btnGhost}
-                            onClick={() => setPartnerSplits(smartRemovePartner(partnerSplits, idx))}
-                          >
-                            <Trash2 size={14} color="#dc2626" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Add Partner Form Row */}
-              <div className={zfForm.row}>
-                <ZFField label={isAr ? 'إضافة شريك من المسجلين' : 'Add Registered Partner'}>
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <select
-                      className={zfForm.control}
-                      value={selectedPartnerToAdd}
-                      onChange={e => setSelectedPartnerToAdd(e.target.value)}
-                    >
-                      <option value="">{isAr ? '-- اختر شريكاً --' : '-- Select Partner --'}</option>
-                      {unifiedPartners
-                        .filter(p => !partnerSplits.some(ps => ps.partnerName === p.name))
-                        .map(p => (
-                          <option key={p.name} value={p.name}>
-                            {p.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      type="button"
-                      className={shellStyles.btnSecondary}
-                      onClick={() => {
-                        if (selectedPartnerToAdd) {
-                          setPartnerSplits(smartAddPartner(partnerSplits, selectedPartnerToAdd, 10));
-                          setSelectedPartnerToAdd('');
-                        }
-                      }}
-                      disabled={!selectedPartnerToAdd}
-                    >
-                      {isAr ? 'إضافة' : 'Add'}
-                    </button>
+              <div className={w.partners}>
+                {partnerSplits.map((item, idx) => (
+                  <div key={item.partnerName} className={w.partner}>
+                    <span className={w.partnerName}>
+                      <span className={w.partnerDot} style={{ background: partnerColors[idx % partnerColors.length] }} />
+                      <span>{item.partnerName}</span>
+                      {item.partnerName === PRIMARY_DEVELOPER_NAME && (
+                        <span className={w.partnerTag}>{isAr ? 'المطور' : 'Developer'}</span>
+                      )}
+                    </span>
+                    <span className={w.pctWrap}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="any"
+                        aria-label={isAr ? `حصة ${item.partnerName}` : `${item.partnerName} share`}
+                        className={`${zfForm.control} ${zfForm.mono}`}
+                        value={item.sharePct}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setPartnerSplits(partnerSplits.map((p, i) => i === idx ? { ...p, sharePct: val } : p));
+                          if (contractErrors.splits) setContractErrors(prev => ({ ...prev, splits: '' }));
+                        }}
+                      />
+                      <span className={w.pctUnit}>%</span>
+                    </span>
+                    <span className={w.partnerAmount}>
+                      {fmt(D(totalNominalValue).timesRatio(item.sharePct || 0, 100).toFixed(2))} {unit}
+                    </span>
+                    {idx > 0 ? (
+                      <button
+                        type="button"
+                        className={w.iconBtn}
+                        aria-label={isAr ? `حذف ${item.partnerName}` : `Remove ${item.partnerName}`}
+                        onClick={() => setPartnerSplits(smartRemovePartner(partnerSplits, idx))}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    ) : <span />}
                   </div>
-                </ZFField>
-
-                <ZFField label={isAr ? 'أو إدخال اسم شريك جديد' : 'Or New Partner Name'}>
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <input
-                      type="text"
-                      className={zfForm.control}
-                      placeholder={isAr ? 'اسم الشريك' : 'Partner name'}
-                      value={customPartnerNameInput}
-                      onChange={e => setCustomPartnerNameInput(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className={shellStyles.btnSecondary}
-                      onClick={() => {
-                        if (customPartnerNameInput.trim()) {
-                          setPartnerSplits(smartAddPartner(partnerSplits, customPartnerNameInput.trim(), 10));
-                          setCustomPartnerNameInput('');
-                        }
-                      }}
-                      disabled={!customPartnerNameInput.trim()}
-                    >
-                      {isAr ? 'إضافة' : 'Add'}
-                    </button>
-                  </div>
-                </ZFField>
+                ))}
               </div>
 
+              <ZFField
+                label={isAr ? 'إضافة شريك' : 'Add a partner'}
+                hint={isAr ? 'اختر من الشركاء المسجلين أو اكتب اسماً جديداً.' : 'Pick a registered partner or type a new name.'}
+              >
+                <div className={w.addRow}>
+                  <input
+                    type="text"
+                    list="zf-contract-partner-names"
+                    className={zfForm.control}
+                    placeholder={isAr ? 'اسم الشريك' : 'Partner name'}
+                    value={customPartnerNameInput}
+                    onChange={e => setCustomPartnerNameInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); addPartner(); }
+                    }}
+                  />
+                  <datalist id="zf-contract-partner-names">
+                    {availablePartnerNames.map(name => <option key={name} value={name} />)}
+                  </datalist>
+                  <button
+                    type="button"
+                    className={shellStyles.btnSecondary}
+                    onClick={addPartner}
+                    disabled={!customPartnerNameInput.trim()}
+                  >
+                    <Plus size={14} />
+                    {isAr ? 'إضافة' : 'Add'}
+                  </button>
+                </div>
+              </ZFField>
+            </div>
+
+            {paymentPlanType === 'FULL_CASH' || modalDpAmount > 0 ? (
+              <div className={zfForm.section}>
+                <h4 className={zfForm.sectionTitle}>
+                  {paymentPlanType === 'FULL_CASH'
+                    ? (isAr ? 'يُستلم المبلغ في' : 'Payment goes to')
+                    : (isAr ? 'يُستلم المقدم في' : 'Down payment goes to')}
+                </h4>
+                <ZFChoices<'101000' | '102000'>
+                  value={destinationTreasury}
+                  onChange={setDestinationTreasury}
+                  options={[
+                    { id: '101000', label: isAr ? 'الخزينة (نقدي)' : 'Safe (cash)', sub: '101000', icon: <Wallet size={16} /> },
+                    { id: '102000', label: isAr ? 'إنستاباي' : 'InstaPay', sub: '102000', icon: <Smartphone size={16} /> }
+                  ]}
+                />
+              </div>
+            ) : null}
+
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'مراجعة قبل الاعتماد' : 'Review'}</h4>
               <ZFFacts
                 items={[
                   {
-                    label: isAr ? 'إجمالي الحصص الموزعة' : 'Total Allocated',
-                    value: `${totalSplitsPct.toFixed(1)}%`,
-                    tone: Math.abs(totalSplitsPct - 100) < 0.01 ? 'pos' : 'neg'
-                  },
-                  {
-                    label: isAr ? 'المتبقي للتوزيع' : 'Remaining',
-                    value: `${(100 - totalSplitsPct).toFixed(1)}%`
-                  }
-                ]}
-              />
-            </div>
-
-            {/* Destination Treasury */}
-            <div className={zfForm.section}>
-              <h4 className={zfForm.sectionTitle}>{isAr ? 'الخزينة المستلمة للدفعة المقدمة' : 'Receiving Treasury'}</h4>
-              <ZFChoices<'101000' | '102000'>
-                value={destinationTreasury}
-                onChange={setDestinationTreasury}
-                options={[
-                  {
-                    id: '101000',
-                    label: isAr ? 'الخزينة النقدية' : 'Cash Safe',
-                    sub: isAr ? 'حساب الخزينة (١٠١٠٠٠)' : 'Safe (101000)',
-                    icon: <Wallet size={16} />
-                  },
-                  {
-                    id: '102000',
-                    label: isAr ? 'حساب إنستاباي' : 'InstaPay',
-                    sub: isAr ? 'حساب إنستاباي (١٠٢٠٠٠)' : 'InstaPay (102000)',
-                    icon: <Smartphone size={16} />
-                  }
-                ]}
-              />
-            </div>
-
-            {/* Deal Summary Facts */}
-            <div className={zfForm.section}>
-              <h4 className={zfForm.sectionTitle}>{isAr ? 'ملخص التعاقد النهائي' : 'Contract Summary'}</h4>
-              <ZFFacts
-                items={[
-                  {
-                    label: isAr ? 'الوحدة / المشروع' : 'Unit / Project',
-                    value: selectedBuildingUnit 
-                      ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${selectedBuildingUnit.unit_number}`
-                      : selectedProperty 
+                    label: isAr ? 'الوحدة' : 'Unit',
+                    value: selectedBuildingUnit
+                      ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${isAr ? 'شقة ' : 'Apt '}${cleanUnitNumber(selectedBuildingUnit.unit_number) || selectedBuildingUnit.unit_number}`
+                      : selectedProperty
                         ? (selectedProperty.title_ar || selectedProperty.title_en)
                         : (customUnitName || '—')
                   },
                   { label: isAr ? 'المشتري' : 'Buyer', value: buyerName || '—' },
-                  { label: isAr ? 'القيمة التعاقدية' : 'Gross Value', value: `${Number(totalNominalValue).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
-                  { label: isAr ? 'دفعة الحجز والمقدم' : 'Down Payment', value: `${Number(modalDpAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`, tone: 'pos' },
-                  { label: isAr ? 'تاريخ التوقيع' : 'Contract Date', value: firstPaymentDate }
+                  { label: isAr ? 'سعر البيع' : 'Sale price', value: `${fmt(totalNominalValue)} ${unit}` },
+                  {
+                    label: paymentPlanType === 'FULL_CASH' ? (isAr ? 'كاش بالكامل' : 'Full cash') : (isAr ? 'المقدم' : 'Down payment'),
+                    value: `${fmt(modalDpAmount)} ${unit}`,
+                    tone: 'pos'
+                  },
+                  { label: isAr ? 'تاريخ التعاقد' : 'Contract date', value: firstPaymentDate }
                 ]}
               />
+              <ZFEffect>
+                {isAr
+                  ? 'يُحفظ العقد وجدول الأقساط الآن. لا يُسجل أي قيد في الدفاتر حتى يُحصَّل المقدم فعلياً.'
+                  : 'The contract and its schedule are saved now. Nothing is posted to the ledger until the down payment is actually collected.'}
+              </ZFEffect>
             </div>
-
-            <ZFEffect>
-              {isAr 
-                ? 'لا يتم تسجيل أي قيد دفتري حتى يتم تحصيل الدفعة المقدمة فعلياً وإثباتها.'
-                : 'No ledger entry is posted until the down payment is actually received and recorded.'}
-            </ZFEffect>
           </>
         )}
       </form>

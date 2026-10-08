@@ -61,6 +61,7 @@ import {
   isItemWithinGracePeriod,
   getRemainingGraceHours,
   generatePayableInstallmentSchedule,
+  PROPERTY_LIFECYCLE_PHASES,
   sortPayableItems,
   PayableSortField
 } from '@/lib/erp/propertyCostEngine';
@@ -167,7 +168,6 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
   const [pageSize, setPageSize] = useState(10);
 
   // Modals & Drawers State
-  const [expensePurpose, setExpensePurpose] = useState<'claim' | 'site'>('claim');
   const [isNewExpenseModalOpen, setIsNewExpenseModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [inspectCostItem, setInspectCostItem] = useState<ERPPropertyCostItem | null>(null);
@@ -210,7 +210,16 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     return isAr ? 'أخرى وتراخيص' : 'Permits & Other';
   }, [isAr]);
 
-  const effectivePropertyCosts = propertyCosts;
+  const effectivePropertyCosts = useMemo(() => {
+    const seen = new Set<string>();
+    return propertyCosts.filter(item => {
+      const id = item.item_id || item.id;
+      if (!id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [propertyCosts]);
   const [payablesMode, setPayablesMode] = useState<'contractors' | 'site'>('contractors');
   const telemetry = useMemo(() => getConstructionPayablesTelemetry(
     selectedProjectFilter === 'all' ? effectivePropertyCosts : effectivePropertyCosts.filter(item => item.property_id === selectedProjectFilter), todayStr
@@ -1820,13 +1829,11 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
             isAr={isAr}
           >
             <div className={vStyles.quickActionsList}>
+              {/* One entry point: the form itself switches between contractor bill and site expense. */}
               <button
                 type="button"
                 className={`${vStyles.quickActionRow} ${vStyles.quickActionRowActive}`}
-                onClick={() => {
-                  setExpensePurpose('claim');
-                  setIsNewExpenseModalOpen(true);
-                }}
+                onClick={() => setIsNewExpenseModalOpen(true)}
                 disabled={isMutating}
               >
                 <div className={vStyles.quickActionLeading}>
@@ -1834,30 +1841,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     <Receipt size={16} />
                   </div>
                   <span className={vStyles.quickActionLabelActive}>
-                    {isAr ? 'قيد مستخلص' : 'Record Contractor Claim'}
+                    {isAr ? 'تسجيل تكلفة بناء' : 'Record construction cost'}
                   </span>
                 </div>
                 <ChevronLeft size={16} className={vStyles.quickActionChevronActive} />
-              </button>
-
-              <button
-                type="button"
-                className={vStyles.quickActionRow}
-                onClick={() => {
-                  setExpensePurpose('site');
-                  setIsNewExpenseModalOpen(true);
-                }}
-                disabled={isMutating}
-              >
-                <div className={vStyles.quickActionLeading}>
-                  <div className={vStyles.quickActionIconSquircle}>
-                    <Wallet size={16} />
-                  </div>
-                  <span className={vStyles.quickActionLabel}>
-                    {isAr ? 'مصروف موقع' : 'Site Expense'}
-                  </span>
-                </div>
-                <ChevronLeft size={16} className={vStyles.quickActionChevron} />
               </button>
             </div>
           </ZFWidgetCard>
@@ -2132,8 +2119,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         activePeriod={activePeriod}
         periods={periods}
         onSaveEntry={onSaveExpenseEntry}
-        initialPaymentSource={expensePurpose === 'claim' ? '201000' : '101000'}
-        purpose={expensePurpose}
+        initialPaymentSource="101000"
       />
 
       {/* ─── 8. MODAL: CONTRACTOR AP SETTLEMENT MODAL ─── */}
@@ -2338,15 +2324,14 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     </div>
                     <div className={vStyles.inspectFactItem}>
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'مرحلة التنفيذ' : 'Construction Phase'}</span>
-                      <span className={vStyles.inspectFactVal}>{inspectCostItem.phase || (isAr ? 'مرحلة التنفيذ' : 'Execution')}</span>
+                      <span className={vStyles.inspectFactVal}>{(() => {
+                        const phase = PROPERTY_LIFECYCLE_PHASES.find(p => p.key === inspectCostItem.phase);
+                        return phase ? (isAr ? phase.shortAr : phase.nameEn.replace(/^\d+\.\s*/, '')) : (isAr ? 'مرحلة التنفيذ' : 'Execution');
+                      })()}</span>
                     </div>
                     <div className={vStyles.inspectFactItem}>
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'تاريخ التعاقد / التسجيل' : 'Contract Date'}</span>
                       <span className={vStyles.inspectFactVal}>{inspectCostItem.logged_date || (inspectCostItem.created_at ? inspectCostItem.created_at.slice(0, 10) : '—')}</span>
-                    </div>
-                    <div className={vStyles.inspectFactItem}>
-                      <span className={vStyles.inspectFactLabel}>{isAr ? 'الرقم الضريبي / السجل' : 'Tax ID'}</span>
-                      <span className={vStyles.inspectFactVal}>{(inspectCostItem as any).tax_id || (isAr ? '492-810-332 (مسجل ضريبياً)' : '492-810-332 (Tax Registered)')}</span>
                     </div>
                     <div className={vStyles.inspectFactItemWide}>
                       <span className={vStyles.inspectFactLabel}>{isAr ? 'ملاحظات ومواصفات البند' : 'Notes & Specifications'}</span>

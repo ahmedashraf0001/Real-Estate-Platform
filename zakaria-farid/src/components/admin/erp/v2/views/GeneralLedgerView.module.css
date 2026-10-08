@@ -126,7 +126,7 @@
 /* ─── 3. ANALYTICAL CHARTS SECTION ─── */
 .chartsGrid {
   display: grid;
-  grid-template-columns: 1.65fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.85rem;
   width: 100%;
   margin: 0.85rem 0 1rem 0;
@@ -224,66 +224,7 @@
   display: inline-block;
 }
 
-.donutContainer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem;
-}
 
-.donutChartWrapper {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  min-width: 180px;
-}
-
-.donutLegendList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  flex: 1;
-}
-
-.donutLegendItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.76rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-  transition: background-color 0.12s ease;
-}
-
-.donutLegendItem:hover {
-  background-color: #f8fafc;
-}
-
-.donutLegendLeading {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.donutLegendDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.donutLegendLabel {
-  color: var(--erp-text-body, #334155);
-  font-weight: 600;
-}
-
-.donutLegendPercent {
-  font-weight: 700;
-  color: var(--erp-text-title, #0f172a);
-  font-variant-numeric: tabular-nums;
-}
 
 .tabsUnderlineBar {
   display: flex;

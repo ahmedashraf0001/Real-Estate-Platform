@@ -1,6 +1,123 @@
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
-import { D } from '@/lib/erp/math';
+import { D, Decimal } from '@/lib/erp/math';
+import { calculateCostItemEffectiveTotals } from './propertyCostEngine';
+
+export interface ProjectSalesValueMetrics {
+  salesValue: Decimal;
+  contractedSales: Decimal;
+  netCost: Decimal;
+}
+
+function isContractMatchingUnit(
+  c: ERPContract,
+  property: Property,
+  u: BuildingUnitItem
+): boolean {
+  if (c.building_unit_id && c.building_unit_id === u.unit_id) return true;
+  const isPropMatch = (c.property_id && c.property_id === property.id) ||
+    (c.unit_id && (c.unit_id === property.title_ar || c.unit_id === property.title_en || c.unit_id === property.id));
+  if (isPropMatch) {
+    const uNorm = normalizeUnitNumber(u.unit_number);
+    const cNumNorm = normalizeUnitNumber(c.building_unit_number);
+    if (cNumNorm && uNorm && cNumNorm.toLowerCase() === uNorm.toLowerCase()) return true;
+    if (c.building_unit_number && c.building_unit_number === u.unit_number) return true;
+    const cUnitIdNorm = normalizeUnitNumber(c.unit_id);
+    if (cUnitIdNorm && uNorm && cUnitIdNorm.toLowerCase() === uNorm.toLowerCase()) return true;
+    if (c.unit_id && (c.unit_id.trim() === u.unit_number.trim() || c.unit_id.trim() === u.unit_id.trim())) return true;
+  }
+  return false;
+}
+
+function isContractMatchingProject(
+  c: ERPContract,
+  property: Property
+): boolean {
+  // An explicit property_id decides; title/unit fallbacks are only for legacy rows without one.
+  if (c.property_id) return c.property_id === property.id;
+  if (c.unit_id && (c.unit_id === property.id || c.unit_id === property.title_ar || c.unit_id === property.title_en)) return true;
+  if (c.building_unit_id && (property.building_units || []).some(u => u.unit_id === c.building_unit_id)) return true;
+  if ((property.building_units || []).some(u => isContractMatchingUnit(c, property, u))) return true;
+  return false;
+}
+
+/**
+ * Pure helper for project price basis (user-confirmed 2026-10-07):
+ * - Project sales value = sum of gross_contract_value of live contracts (status <> 'Rescinded') on the project
+ *   + catalog price (price_egp + tax_amount_egp) of every unit with no live contract.
+ *   For a non-building or a building with no units: its contract value if contracted, else property price_egp.
+ * - Contracted sales = sum of gross_contract_value of live contracts. Never catalog prices.
+ * - Cost = net effective cost (calculateCostItemEffectiveTotals(item).netEffectiveCost), same basis as calculatePropertyAuditMetrics.
+ * - Margin = (sales value − cost) / sales value.
+ */
+export function calculateProjectSalesValue(
+  property: Property,
+  contracts: ERPContract[] = [],
+  propertyCosts: ERPPropertyCostItem[] = []
+): ProjectSalesValueMetrics {
+  if (!property) {
+    return {
+      salesValue: D(0),
+      contractedSales: D(0),
+      netCost: D(0)
+    };
+  }
+
+  const bUnits: BuildingUnitItem[] = property.building_units || [];
+  const hasBuildingUnits = bUnits.length > 0;
+
+  // Filter live contracts (status <> 'Rescinded')
+  const activeContracts = (contracts || []).filter(c => c && c.status !== 'Rescinded');
+  const projectContracts = activeContracts.filter(c => isContractMatchingProject(c, property));
+
+  let contractedSales = D(0);
+  for (const c of projectContracts) {
+    contractedSales = contractedSales.plus(D(c.gross_contract_value || 0));
+  }
+
+  let salesValue = D(0);
+
+  if (hasBuildingUnits) {
+    // Legacy master contracts carry no whole-building flag: a live contract that matches no unit covers the building.
+    const isWholeSold = projectContracts.some(c => Boolean(c.is_whole_building_sale) || !bUnits.some(u => isContractMatchingUnit(c, property, u)));
+
+    if (isWholeSold) {
+      salesValue = contractedSales;
+    } else {
+      let uncontractedUnitsCatalogVal = D(0);
+      for (const u of bUnits) {
+        const hasLiveContract = projectContracts.some(c => isContractMatchingUnit(c, property, u));
+        if (!hasLiveContract) {
+          const unitCatalogPrice = D(u.price_egp || 0).plus(D(u.tax_amount_egp || 0));
+          uncontractedUnitsCatalogVal = uncontractedUnitsCatalogVal.plus(unitCatalogPrice);
+        }
+      }
+      salesValue = contractedSales.plus(uncontractedUnitsCatalogVal);
+    }
+  } else {
+    // Non-building or a building with no units:
+    // Its contract value if contracted, else property price_egp
+    if (projectContracts.length > 0) {
+      salesValue = contractedSales;
+    } else {
+      salesValue = D(property.price_egp || 0);
+    }
+  }
+
+  // Cost basis: net effective cost of property cost items for this property
+  let netCost = D(0);
+  for (const costItem of propertyCosts || []) {
+    if (!costItem || costItem.property_id !== property.id) continue;
+    const totals = calculateCostItemEffectiveTotals(costItem);
+    netCost = netCost.plus(D(totals.netEffectiveCost));
+  }
+
+  return {
+    salesValue,
+    contractedSales,
+    netCost
+  };
+}
 
 export interface ProjectStatusMetrics {
   totalUnits: number;
@@ -57,7 +174,12 @@ export function computeProjectStatusMetrics(
           const isPropMatch = (c.property_id && c.property_id === property.id) ||
             (c.unit_id && (c.unit_id === property.title_ar || c.unit_id === property.title_en || c.unit_id === property.id));
           if (isPropMatch) {
+            const uNorm = normalizeUnitNumber(u.unit_number);
+            const cNumNorm = normalizeUnitNumber(c.building_unit_number);
+            if (cNumNorm && uNorm && cNumNorm.toLowerCase() === uNorm.toLowerCase()) return true;
             if (c.building_unit_number && c.building_unit_number === u.unit_number) return true;
+            const cUnitIdNorm = normalizeUnitNumber(c.unit_id);
+            if (cUnitIdNorm && uNorm && cUnitIdNorm.toLowerCase() === uNorm.toLowerCase()) return true;
             if (c.unit_id && (c.unit_id.trim() === u.unit_number.trim() || c.unit_id.trim() === u.unit_id.trim())) return true;
           }
           return false;
@@ -159,5 +281,191 @@ export function computeProjectStatusMetrics(
     constructionProgressPct,
     progressDisplayAr,
     progressDisplayEn,
+  };
+}
+
+/**
+ * Builds canonical floor-major building units with exact prices and two-decimal areas.
+ * Invariant: Last unit absorbs each remainder so totals equal priceEgp and areaSqm exactly.
+ */
+export function buildBuildingUnits(params: {
+  propertyId: string;
+  totalFloors: number;
+  unitsPerFloor: number;
+  areaSqm: number;
+  priceEgp: number;
+}): BuildingUnitItem[] {
+  const { propertyId, totalFloors, unitsPerFloor, areaSqm, priceEgp } = params;
+  const count = totalFloors * unitsPerFloor;
+  if (count <= 0) return [];
+
+  const totalDec = D(priceEgp);
+  const totalCents = totalDec.toCents();
+  const totalEgpBig = totalCents / BigInt(100);
+  const countBig = BigInt(count);
+  const baseUnitEgpBig = countBig > BigInt(0) ? totalEgpBig / countBig : BigInt(0);
+  const baseUnitPrice = Number(baseUnitEgpBig);
+  const lastUnitPrice = count > 1
+    ? totalDec.minus(D(baseUnitPrice).times(count - 1)).toNumber()
+    : totalDec.toNumber();
+  const totalArea = D(areaSqm);
+  const unitArea = totalArea.dividedBy(count);
+  const lastUnitArea = totalArea.minus(unitArea.times(count - 1));
+
+  const units: BuildingUnitItem[] = [];
+  let n = 1;
+  for (let floor = 1; floor <= totalFloors && n <= count; floor++) {
+    for (let u = 0; u < unitsPerFloor && n <= count; u++) {
+      const letter = String.fromCharCode(65 + u);
+      const isLast = n === count;
+      const unitPrice = isLast ? lastUnitPrice : baseUnitPrice;
+      units.push({
+        unit_id: `${propertyId}-apt-${n}`,
+        unit_number: `${floor}${letter}`,
+        floor,
+        area_sqm: (isLast ? lastUnitArea : unitArea).toNumber(),
+        bedrooms: 3,
+        bathrooms: 2,
+        price_egp: unitPrice,
+        status: 'available',
+      });
+      n++;
+    }
+  }
+
+  return units;
+}
+
+/**
+ * Normalizes unit numbers by stripping 'شقة ' / 'Apt ' prefix and ' - الدور N' / ' - Floor N' suffix, then trimming.
+ */
+export function normalizeUnitNumber(raw: string | undefined | null): string {
+  if (!raw) return '';
+  return String(raw)
+    .replace(/^(?:شقة|وحدة|Apt|Unit)\s*/i, '')
+    .replace(/\s*-\s*(?:الدور|Floor).*$/i, '')
+    .trim();
+}
+
+/**
+ * Strips apartment/unit prefixes and floor suffixes from raw unit number strings.
+ * e.g. "شقة 1A - الدور 1" -> "1A", "شقة 1A" -> "1A", "Apt 2B" -> "2B", "1A" -> "1A".
+ */
+export function cleanUnitNumber(raw: string | undefined | null): string {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  const aptMatch = str.match(/^(?:.*?-)?(?:apt|unit)-(\d+)$/i);
+  if (aptMatch) {
+    return aptMatch[1];
+  }
+  return normalizeUnitNumber(str);
+}
+
+/**
+ * Formats a localized unit display label.
+ * Avoids doubled prefixes if passed a legacy string like "شقة 1A - الدور 1".
+ * e.g. "1A" -> "شقة 1A" (Ar) / "Apt 1A" (En)
+ * e.g. "فيلا 3" -> "فيلا 3" (preserved)
+ */
+export function formatUnitDisplayName(raw: string | undefined | null, isAr: boolean = true): string {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  if (/^(?:فيلا|بنتهاوس|دوبلكس|محل|مكتب|villa|penthouse|duplex)/i.test(str)) {
+    return str;
+  }
+  const clean = cleanUnitNumber(str);
+  if (!clean) return str;
+  return isAr ? `شقة ${clean}` : `Apt ${clean}`;
+}
+
+/**
+ * Formats a localized unit label with floor context where appropriate.
+ * If floor is omitted, attempts to parse floor from the string or omits floor suffix.
+ * e.g. "1A", 1 -> "شقة 1A - الدور 1" (Ar) / "Apt 1A - Floor 1" (En)
+ * e.g. "شقة 1A - الدور 1", 1 -> "شقة 1A - الدور 1" (Ar) / "Apt 1A - Floor 1" (En)
+ */
+export function formatUnitWithFloor(
+  raw: string | undefined | null,
+  floor?: number | string | null,
+  isAr: boolean = true
+): string {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  if (/^(?:فيلا|بنتهاوس|دوبلكس|محل|مكتب|villa|penthouse|duplex)/i.test(str)) {
+    return str;
+  }
+  const clean = cleanUnitNumber(str);
+  let resolvedFloor = floor;
+  if (resolvedFloor === undefined || resolvedFloor === null || resolvedFloor === '') {
+    const floorMatch = str.match(/(?:الدور|Floor)\s*(\d+)/i);
+    if (floorMatch) resolvedFloor = floorMatch[1];
+  }
+
+  if (resolvedFloor !== undefined && resolvedFloor !== null && resolvedFloor !== '') {
+    return isAr ? `شقة ${clean} - الدور ${resolvedFloor}` : `Apt ${clean} - Floor ${resolvedFloor}`;
+  }
+  return isAr ? `شقة ${clean}` : `Apt ${clean}`;
+}
+
+/**
+ * Normalizes property records for ERP and Contract Wizards, ensuring
+ * building units and partner splits are properly instantiated.
+ */
+export function normalizeERPProperty(p: Property): Property {
+  const isBuilding = p.type === 'building' || (p.title_ar || '').includes('عمارة') || (p.title_en || '').toLowerCase().includes('building');
+  if (isBuilding) {
+    const unitsCount = p.total_units_count && p.total_units_count > 1 ? p.total_units_count : 6;
+    const saleMode = p.sale_mode || 'both_flexible';
+    let units: BuildingUnitItem[] = (p.building_units as BuildingUnitItem[]) || [];
+    if (!units || units.length === 0) {
+      const partialFloor = unitsCount % 2 !== 0;
+      const unitsPerFloor = partialFloor ? unitsCount : 2;
+      const totalFloors = unitsCount / unitsPerFloor;
+      units = buildBuildingUnits({
+        propertyId: p.id,
+        totalFloors,
+        unitsPerFloor,
+        areaSqm: p.area_sqm || 1200,
+        priceEgp: p.price_egp || 35000000,
+      });
+      // Legacy odd inventories end with one apartment on the final floor.
+      if (partialFloor) units = units.map((unit, index) => ({
+        ...unit,
+        floor: Math.floor(index / 2) + 1,
+        unit_number: `${Math.floor(index / 2) + 1}${index % 2 === 0 ? 'A' : 'B'}`,
+      }));
+    }
+    return {
+      ...p,
+      type: 'building' as const,
+      sale_mode: saleMode,
+      total_units_count: units.length,
+      building_units: units,
+      partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
+        ((p.title_ar || '').includes('الشيخ زايد') || (p.title_ar || '').includes('النرجس') || (p.title_ar || '').includes('الفردوس') || (p.title_ar || '').includes('الأوبسيديان'))
+          ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
+          : (((p.title_ar || '').includes('الساحل') || (p.title_ar || '').includes('هاسبيندا') || (p.title_ar || '').includes('هاسيندا') || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
+            ? [{ partner_name: 'زكريا فريد', share_percentage: 75 }, { partner_name: 'د. هاني المنياوي', share_percentage: 25 }]
+            : (((p.title_ar || '').includes('السخنة') || (p.title_ar || '').includes('البحر الأحمر'))
+              ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
+              : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
+            )
+          )
+      )
+    };
+  }
+  return {
+    ...p,
+    partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
+      ((p.title_ar || '').includes('الشيخ زايد') || (p.title_ar || '').includes('النرجس') || (p.title_ar || '').includes('الفردوس') || (p.title_ar || '').includes('الأوبسيديان'))
+        ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
+        : (((p.title_ar || '').includes('الساحل') || (p.title_ar || '').includes('هاسبيندا') || (p.title_ar || '').includes('هاسيندا') || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
+          ? [{ partner_name: 'زكريا فريد', share_percentage: 75 }, { partner_name: 'د. هاني المنياوي', share_percentage: 25 }]
+          : (((p.title_ar || '').includes('السخنة') || (p.title_ar || '').includes('البحر الأحمر'))
+            ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
+            : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
+          )
+        )
+    )
   };
 }

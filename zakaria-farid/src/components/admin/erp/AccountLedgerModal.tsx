@@ -15,16 +15,19 @@ import {
   Hammer,
   FileSpreadsheet
 } from 'lucide-react';
-import { ERPAccount, ERPJournalEntry, ERPContract } from '@/lib/erp/types';
+import { ERPAccount, ERPJournalEntry, ERPContract, ERPAccountingPeriod } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
+import { formatUnitWithFloor } from '@/lib/erp/projectStatusHelper';
 import { toast } from 'sonner';
 import { localizeJournalDescription, localizeJournalMemo, localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { exportAccountLedgerExcel } from '@/lib/erp/excelExporter';
+import { calculateAccountStatement, paginateStatementLines } from '@/lib/erp/accountStatement';
+import { HIERARCHY_STRUCTURE } from '@/lib/erp/coaHierarchy';
 import { ZFPrintDocumentLayout } from './v2/common/ZFPrintDocumentLayout';
 import { ZFPagination } from './v2/ZFPagination';
 import { ZFModalShell } from './v2/common/ZFModalShell';
-import { ZFFacts, ZFEffect, ZFFormFooter, zfForm } from './v2/common/ZFForm';
+import { ZFEffect, ZFFormFooter, zfForm } from './v2/common/ZFForm';
 import shellStyles from './v2/ZFWorkstationShell.module.css';
 import styles from './AccountLedgerModal.module.css';
 
@@ -35,6 +38,7 @@ interface AccountLedgerModalProps {
   properties?: Property[];
   onClose: () => void;
   isAr: boolean;
+  activePeriod?: ERPAccountingPeriod;
 }
 
 const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whenDebitedAr: string; whenCreditedAr: string }> = {
@@ -223,13 +227,32 @@ const renderBadgeIcon = (icon: string) => {
   }
 };
 
+const getBadgeToneClass = (icon: string) => {
+  switch (icon) {
+    case 'down_payment':
+    case 'installment':
+      return styles.statusPillGreen;
+    case 'instapay':
+    case 'transfer':
+      return styles.statusPillBlue;
+    case 'handover':
+    case 'supplement':
+      return styles.statusPillAmber;
+    case 'expense':
+      return styles.statusPillRed;
+    default:
+      return styles.statusPillNeutral;
+  }
+};
+
 export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   account,
   journalEntries,
   contracts = [],
   properties = [],
   onClose,
-  isAr
+  isAr,
+  activePeriod
 }) => {
   const contractLookup = useMemo(() => {
     const byId = new Map<string, ERPContract>();
@@ -332,12 +355,16 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       unitInfo = ct.unit_id;
     }
 
-    if (unitInfo && isAr) {
-      unitInfo = unitInfo
-        .replace(/^.*?apt-(\d+)/i, 'شقة $1')
-        .replace(/^.*?unit-(\d+)/i, 'وحدة $1');
-      if (/^\d+$/.test(unitInfo.trim())) {
-        unitInfo = `شقة ${unitInfo.trim()}`;
+    if (unitInfo) {
+      const matchedUnit = prop?.building_units?.find(u => u.unit_id === ct.building_unit_id || u.unit_id === ct.unit_id || u.unit_number === unitInfo);
+      if (matchedUnit) {
+        unitInfo = formatUnitWithFloor(matchedUnit.unit_number, matchedUnit.floor, isAr);
+      } else if (ct.building_unit_number && prop?.type === 'building') {
+        unitInfo = formatUnitWithFloor(unitInfo, undefined, isAr);
+      } else if (isAr) {
+        // Retain existing standalone/generic-unit wording.
+        unitInfo = unitInfo.replace(/^.*?apt-(\d+)/i, 'شقة $1').replace(/^.*?unit-(\d+)/i, 'وحدة $1');
+        if (/^\d+$/.test(unitInfo.trim())) unitInfo = `شقة ${unitInfo.trim()}`;
       }
     }
 
@@ -692,7 +719,25 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     };
   }, [resolveContract, resolvePropertyAndUnit, enrichMemo, isAr, account.account_code]);
 
-  const { accountLines, totalDebits, totalCredits, netBalance } = useMemo(() => {
+  const parentGroupName = useMemo(() => {
+    for (const cat of HIERARCHY_STRUCTURE) {
+      for (const sub of cat.subcategories) {
+        if (sub.accountCodes.includes(account.account_code)) {
+          return isAr ? sub.titleAr : sub.titleEn;
+        }
+      }
+      if (cat.code === account.account_code.slice(0, 1)) {
+        return isAr ? cat.titleAr : cat.titleEn;
+      }
+    }
+    return isAr ? 'أصول وحسابات' : 'Accounts';
+  }, [account.account_code, isAr]);
+
+  const natureText = account.normal_balance === 'DEBIT'
+    ? (isAr ? 'طبيعة مدينة' : 'Debit nature')
+    : (isAr ? 'طبيعة دائنة' : 'Credit nature');
+
+  const accountLines = useMemo(() => {
     const lines: {
       entry_id: string;
       entry_number: string;
@@ -704,17 +749,14 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       contract_id?: string;
       unit_id?: string;
       counter_codes?: string[];
+      source_module?: string;
     }[] = [];
-    let debits = D(0);
-    let credits = D(0);
 
     journalEntries.forEach(entry => {
       (entry.lines || []).forEach(line => {
         const isExact = line.account_code === account.account_code;
         const isChild = account.account_code.endsWith('000') && line.account_code.startsWith(account.account_code.slice(0, 3));
         if (!isExact && !isChild) return;
-        debits = debits.plus(D(line.debit_amount));
-        credits = credits.plus(D(line.credit_amount));
         lines.push({
           entry_id: entry.entry_id,
           entry_number: entry.entry_number,
@@ -725,18 +767,37 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           memo: line.memo,
           contract_id: line.contract_id || (entry.source_module === 'SALES' ? entry.source_entity_id : undefined),
           unit_id: line.unit_id,
-          counter_codes: (entry.lines || []).filter(other => other !== line).map(other => other.account_code)
+          counter_codes: (entry.lines || []).filter(other => other !== line).map(other => other.account_code),
+          source_module: entry.source_module
         });
       });
     });
-    const net = account.normal_balance === 'DEBIT'
-      ? debits.minus(credits)
-      : credits.minus(debits);
-    return { accountLines: lines, totalDebits: debits, totalCredits: credits, netBalance: net };
-  }, [journalEntries, account.account_code, account.normal_balance]);
+    return lines;
+  }, [journalEntries, account.account_code]);
 
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    if (activePeriod?.start_date) {
+      set.add(activePeriod.start_date.substring(0, 7));
+    }
+    accountLines.forEach(l => {
+      if (l.entry_date && l.entry_date.length >= 7) {
+        set.add(l.entry_date.substring(0, 7));
+      }
+    });
+    return Array.from(set).sort().reverse();
+  }, [accountLines, activePeriod]);
+
+  const defaultPeriod = useMemo(() => {
+    if (activePeriod?.start_date) {
+      return activePeriod.start_date.substring(0, 7);
+    }
+    return 'all';
+  }, [activePeriod]);
+
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(defaultPeriod);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc'>('date_desc');
+  const [sortBy, setSortBy] = useState<'date_asc' | 'date_desc' | 'amount_desc'>('date_asc');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
@@ -754,10 +815,18 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     });
   }, [accountLines, enrichDescription, enrichMemo, parseTransaction]);
 
-  const filteredLines = useMemo(() => {
-    if (!searchQuery.trim()) return enrichedLines;
-    const q = searchQuery.toLowerCase();
-    return enrichedLines.filter(line => 
+  const statement = useMemo(() => {
+    return calculateAccountStatement(enrichedLines, {
+      normalBalance: account.normal_balance,
+      period: selectedPeriod,
+      sortBy
+    });
+  }, [enrichedLines, account.normal_balance, selectedPeriod, sortBy]);
+
+  const displayLines = useMemo(() => {
+    if (!searchQuery.trim()) return statement.lines;
+    const q = searchQuery.toLowerCase().trim();
+    return statement.lines.filter(line => 
       (line.entry_number || '').toLowerCase().includes(q) ||
       (line.description || '').toLowerCase().includes(q) ||
       (line.enrichedDescription || '').toLowerCase().includes(q) ||
@@ -770,28 +839,12 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       (line.parsed.propertyTitle || '').toLowerCase().includes(q) ||
       (line.parsed.headline || '').toLowerCase().includes(q)
     );
-  }, [enrichedLines, searchQuery]);
+  }, [statement.lines, searchQuery]);
 
-  const sortedLines = useMemo(() => {
-    const list = [...filteredLines];
-    list.sort((a, b) => {
-      if (sortBy === 'date_desc') return (b.entry_date || '').localeCompare(a.entry_date || '');
-      if (sortBy === 'date_asc') return (a.entry_date || '').localeCompare(b.entry_date || '');
-      if (sortBy === 'amount_desc') {
-        const valA = D(a.debit_amount || '0').plus(a.credit_amount || '0');
-        const valB = D(b.debit_amount || '0').plus(b.credit_amount || '0');
-        return valB.minus(valA).toNumber();
-      }
-      return 0;
-    });
-    return list;
-  }, [filteredLines, sortBy]);
-
-  const totalPages = Math.ceil(sortedLines.length / pageSize) || 1;
+  const totalPages = Math.ceil(displayLines.length / pageSize) || 1;
   const paginatedLines = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return sortedLines.slice(start, start + pageSize);
-  }, [sortedLines, currentPage, pageSize]);
+    return paginateStatementLines(displayLines, currentPage, pageSize);
+  }, [displayLines, currentPage, pageSize]);
 
   const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
   const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
@@ -802,7 +855,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       await exportAccountLedgerExcel(
         account,
         journalEntries,
-        netBalance.toNumber(),
+        statement.closingBalance.toNumber(),
         contracts,
         properties,
         isAr
@@ -816,7 +869,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   };
 
   const handleResetFilters = () => {
-    setSortBy('date_desc');
+    setSortBy('date_asc');
+    setSelectedPeriod(defaultPeriod);
     setSearchQuery('');
     setCurrentPage(1);
   };
@@ -852,11 +906,11 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         </div>
         <div>
           <span className={styles.printKpiLabel}>{isAr ? 'إجمالي الحركات' : 'Transactions'}</span>
-          <strong className={styles.printKpiValue}>{enrichedLines.length}</strong>
+          <strong className={styles.printKpiValue}>{statement.lines.length}</strong>
         </div>
         <div>
           <span className={styles.printKpiLabel}>{isAr ? 'الرصيد الصافي الحالي' : 'Net Balance'}</span>
-          <strong className={styles.printKpiValue}>{fmtMoney(netBalance)}</strong>
+          <strong className={styles.printKpiValue}>{fmtMoney(statement.closingBalance)}</strong>
         </div>
       </div>
 
@@ -865,20 +919,21 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           <tr>
             <th className={styles.printThCenter}>#</th>
             <th className={styles.printThCenter}>{isAr ? 'التاريخ' : 'Date'}</th>
-            <th className={styles.printThCenter}>{isAr ? 'رقم القيد' : 'Entry #'}</th>
+            <th className={styles.printThCenter}>{isAr ? 'المرجع' : 'Reference'}</th>
             <th className={styles.printTh}>{isAr ? 'البيان وشرح الحركة' : 'Description'}</th>
             <th className={styles.printThNum}>{isAr ? 'مدين' : 'Debit'}</th>
             <th className={styles.printThNum}>{isAr ? 'دائن' : 'Credit'}</th>
+            <th className={styles.printThNum}>{isAr ? 'الرصيد' : 'Balance'}</th>
           </tr>
         </thead>
         <tbody>
-          {enrichedLines.map((line, idx) => (
+          {statement.lines.map((line, idx) => (
             <tr key={idx} className={styles.printTr}>
               <td className={styles.printTdCenter}>{idx + 1}</td>
               <td className={styles.printTdCenter}>{line.entry_date}</td>
               <td className={styles.printTdCenter}>{line.entry_number}</td>
               <td className={styles.printTd}>
-                <div>{line.parsed.headline}</div>
+                <div>{line.parsed.headline || line.enrichedDescription || line.description}</div>
                 {line.parsed.memo && <div className={styles.memoRow}>{line.parsed.memo}</div>}
               </td>
               <td className={styles.printTdNum}>
@@ -886,6 +941,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               </td>
               <td className={styles.printTdNum}>
                 {D(line.credit_amount).isZero() ? '—' : fmtMoney(line.credit_amount)}
+              </td>
+              <td className={styles.printTdNum}>
+                {fmtMoney(line.runningBalance)}
               </td>
             </tr>
           ))}
@@ -895,18 +953,67 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             <td colSpan={4} className={styles.printTd}>
               {isAr ? 'إجمالي طرفي الحركة:' : 'Debit and credit totals:'}
             </td>
-            <td className={styles.printTdNum}>{fmtMoney(totalDebits)}</td>
-            <td className={styles.printTdNum}>{fmtMoney(totalCredits)}</td>
+            <td className={styles.printTdNum}>{fmtMoney(statement.totalDebits)}</td>
+            <td className={styles.printTdNum}>{fmtMoney(statement.totalCredits)}</td>
+            <td className={styles.printTdNum}>{fmtMoney(statement.closingBalance)}</td>
           </tr>
         </tfoot>
       </table>
     </div>
   );
 
-  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_desc' ? 1 : 0);
+  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_asc' ? 1 : 0) + (selectedPeriod !== defaultPeriod ? 1 : 0);
+
+  const headerExtra = (
+    <div className={styles.headerExtraWrap}>
+      <select
+        value={selectedPeriod}
+        onChange={e => {
+          setSelectedPeriod(e.target.value);
+          setCurrentPage(1);
+        }}
+        className={styles.headerPeriodSelect}
+        aria-label={isAr ? 'تحديد الفترة المحاسبية' : 'Select Accounting Period'}
+      >
+        <option value="all">{isAr ? 'الفترة: الكل' : 'Period: All'}</option>
+        {availableMonths.map(m => (
+          <option key={m} value={m}>
+            {isAr ? `الفترة: ${m.replace('-', ' / ')}` : `Period: ${m}`}
+          </option>
+        ))}
+      </select>
+
+      <div className={styles.headerSearchWrap}>
+        <Search size={12} className={styles.headerSearchIcon} aria-hidden="true" />
+        <input
+          type="text"
+          placeholder={isAr ? 'بحث في البيان أو المرجع…' : 'Search memo or ref…'}
+          value={searchQuery}
+          onChange={e => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          className={styles.headerSearchInput}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setCurrentPage(1);
+            }}
+            className={styles.headerClearSearchBtn}
+            aria-label={isAr ? 'مسح البحث' : 'Clear search'}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   const footer = (
-    <ZFFormFooter aside={<span className={styles.footerCount}>{isAr ? `${accountLines.length} حركة مسجلة` : `${accountLines.length} recorded movements`}</span>}>
+    <ZFFormFooter aside={<span className={styles.footerCount}>{isAr ? `${displayLines.length} حركة مسجلة` : `${displayLines.length} recorded movements`}</span>}>
       <button
         type="button"
         className={shellStyles.btnSecondary}
@@ -914,7 +1021,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         disabled={isExportingExcel}
       >
         <FileSpreadsheet size={14} aria-hidden="true" />
-        <span>{isExportingExcel ? (isAr ? 'جاري التصدير…' : 'Exporting…') : (isAr ? 'تصدير Excel' : 'Export Excel')}</span>
+        <span>{isExportingExcel ? (isAr ? 'جاري التصدير…' : 'Exporting…') : 'Excel'}</span>
       </button>
 
       <button
@@ -923,7 +1030,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         onClick={() => setShowPrintPreview(true)}
       >
         <FileText size={14} aria-hidden="true" />
-        <span>{isAr ? 'معاينة للطباعة' : 'Print preview'}</span>
+        <span>PDF</span>
       </button>
 
       <button
@@ -944,111 +1051,79 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         isAr={isAr}
         maxWidth="min(1100px, 94vw)"
         title={isAr ? account.account_name_ar : account.account_name_en}
-        subtitle={
-          isAr
-            ? `حركات ورصيد الحساب بدفتر الأستاذ العام.`
-            : `Movements and balance for ${account.account_name_en}.`
-        }
+        subtitle={`${account.account_code} · ${parentGroupName} · ${natureText}`}
         icon={<BookOpen size={18} aria-hidden="true" />}
+        headerExtra={headerExtra}
         footer={footer}
       >
         <div className={zfForm.form}>
-          {/* 1. Account Facts */}
-          <ZFFacts
-            items={[
-              { label: isAr ? 'كود الحساب' : 'Account code', value: account.account_code },
-              {
-                label: isAr ? 'طبيعة الحساب' : 'Normal balance',
-                value: isAr ? (account.normal_balance === 'DEBIT' ? 'مدين' : 'دائن') : account.normal_balance
-              },
-              { label: isAr ? 'إجمالي المدين' : 'Total debits', value: fmtMoney(totalDebits) },
-              { label: isAr ? 'إجمالي الدائن' : 'Total credits', value: fmtMoney(totalCredits) },
-              {
-                label: isAr ? 'الرصيد الصافي' : 'Net balance',
-                value: fmtMoney(netBalance),
-                tone: netBalance.lt(0) ? 'neg' : netBalance.gt(0) ? 'pos' : undefined
-              }
-            ]}
-          />
-
-          {/* 2. Transactions Section */}
-          <div className={zfForm.section}>
-            <div className={styles.tableHeaderRow}>
-              <h4 className={zfForm.sectionTitle}>
-                {isAr ? 'حركات وقيود الحساب' : 'Account movements'}
-              </h4>
-
-              <div className={styles.filterControls}>
-                {/* Sort */}
-                <div className={styles.sortWrap}>
-                  <ArrowUpDown size={12} color="#94a3b8" aria-hidden="true" />
-                  <select
-                    value={sortBy}
-                    onChange={e => {
-                      setSortBy(e.target.value as typeof sortBy);
-                      setCurrentPage(1);
-                    }}
-                    className={styles.sortSelect}
-                    aria-label={isAr ? 'ترتيب الحركات' : 'Sort lines'}
-                  >
-                    <option value="date_desc">{isAr ? 'الأحدث تاريخاً' : 'Newest First'}</option>
-                    <option value="date_asc">{isAr ? 'الأقدم تاريخاً' : 'Oldest First'}</option>
-                    <option value="amount_desc">{isAr ? 'أعلى قيمة' : 'Highest Value'}</option>
-                  </select>
-                </div>
-
-                {/* Reset Filters */}
-                {activeFiltersCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className={styles.resetBtn}
-                    title={isAr ? 'إعادة ضبط' : 'Reset'}
-                  >
-                    <RotateCcw size={11} aria-hidden="true" />
-                    <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
-                  </button>
-                )}
-
-                {/* Search Box */}
-                <div className={styles.searchWrap}>
-                  <Search size={12} className={styles.searchIcon} aria-hidden="true" />
-                  <input
-                    type="text"
-                    placeholder={isAr ? 'بحث بالقيد أو البيان…' : 'Search entry or memo…'}
-                    value={searchQuery}
-                    onChange={e => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className={styles.searchInput}
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setCurrentPage(1);
-                      }}
-                      className={styles.clearSearchBtn}
-                      aria-label={isAr ? 'مسح البحث' : 'Clear search'}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                <span className={styles.countPill}>
-                  {isAr ? `${sortedLines.length} حركة` : `${sortedLines.length} entries`}
+          {/* 1. Figures Row (4 equal cells with hairline dividers) */}
+          <div className={styles.figuresRow}>
+            <div className={styles.figureCell}>
+              <span className={styles.figureLabel}>{isAr ? 'رصيد أول المدة' : 'Opening Balance'}</span>
+              <span className={styles.figureValue}>{fmtMoney(statement.openingBalance)}</span>
+            </div>
+            <div className={styles.figureCell}>
+              <span className={styles.figureLabel}>{isAr ? 'إجمالي المدين' : 'Total Debits'}</span>
+              <span className={styles.figureValue}>{fmtMoney(statement.totalDebits)}</span>
+            </div>
+            <div className={styles.figureCell}>
+              <span className={styles.figureLabel}>{isAr ? 'إجمالي الدائن' : 'Total Credits'}</span>
+              <span className={styles.figureValue}>{fmtMoney(statement.totalCredits)}</span>
+            </div>
+            <div className={styles.figureCell}>
+              <span className={styles.figureLabel}>{isAr ? 'رصيد آخر المدة' : 'Closing Balance'}</span>
+              <span className={styles.figureValue}>
+                {fmtMoney(statement.closingBalance)}
+                <span className={styles.figureNature}>
+                  {isAr ? statement.closingBalanceLabelAr : statement.closingBalanceLabelEn}
                 </span>
+              </span>
+            </div>
+          </div>
+
+          {/* 2. Table Section */}
+          <div className={zfForm.section}>
+            <div className={styles.tableControlsBar}>
+              <div className={styles.sortWrap}>
+                <ArrowUpDown size={12} color="#94a3b8" aria-hidden="true" />
+                <select
+                  value={sortBy}
+                  onChange={e => {
+                    setSortBy(e.target.value as typeof sortBy);
+                    setCurrentPage(1);
+                  }}
+                  className={styles.sortSelect}
+                  aria-label={isAr ? 'ترتيب الحركات' : 'Sort lines'}
+                >
+                  <option value="date_asc">{isAr ? 'الأقدم تاريخاً (تصاعدي)' : 'Oldest First (Asc)'}</option>
+                  <option value="date_desc">{isAr ? 'الأحدث تاريخاً (تنازلي)' : 'Newest First (Desc)'}</option>
+                  <option value="amount_desc">{isAr ? 'أعلى قيمة' : 'Highest Value'}</option>
+                </select>
               </div>
+
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className={styles.resetBtn}
+                  title={isAr ? 'إعادة ضبط' : 'Reset'}
+                >
+                  <RotateCcw size={11} aria-hidden="true" />
+                  <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
+                </button>
+              )}
+
+              <span className={styles.countPill}>
+                {isAr ? `${displayLines.length} حركة` : `${displayLines.length} entries`}
+              </span>
             </div>
 
-            {sortedLines.length === 0 ? (
+            {displayLines.length === 0 ? (
               <div className={styles.emptyState}>
                 {accountLines.length === 0 
                   ? (isAr ? 'لا توجد حركات مسجلة على هذا الحساب حتى الآن.' : 'No movements recorded for this account yet.')
-                  : (isAr ? 'لا توجد حركات تطابق نص البحث المحدد.' : 'No movements match the search criteria.')}
+                  : (isAr ? 'لا توجد حركات تطابق نص البحث أو الفترة المحددة.' : 'No movements match the search criteria or period.')}
               </div>
             ) : (
               <>
@@ -1056,101 +1131,88 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <th className={styles.th}>
-                          {isAr ? 'التاريخ ورقم القيد' : 'Date & Entry #'}
-                        </th>
-                        <th className={styles.th}>
-                          {isAr ? 'البيان وشرح الحركة' : 'Description & Memo'}
-                        </th>
-                        <th className={styles.thNum}>
-                          {isAr ? 'مدين' : 'Debit'}
-                        </th>
-                        <th className={styles.thNum}>
-                          {isAr ? 'دائن' : 'Credit'}
-                        </th>
+                        <th className={styles.th}>{isAr ? 'التاريخ' : 'Date'}</th>
+                        <th className={styles.th}>{isAr ? 'المرجع' : 'Reference'}</th>
+                        <th className={styles.th}>{isAr ? 'البيان' : 'Description'}</th>
+                        <th className={styles.th}>{isAr ? 'النوع' : 'Type'}</th>
+                        <th className={styles.thNum}>{isAr ? 'مدين' : 'Debit'}</th>
+                        <th className={styles.thNum}>{isAr ? 'دائن' : 'Credit'}</th>
+                        {sortBy === 'date_asc' && (
+                          <th className={styles.thNum}>{isAr ? 'الرصيد' : 'Balance'}</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
+                      {currentPage === 1 && sortBy === 'date_asc' && !searchQuery.trim() && (
+                        <tr className={styles.trMuted}>
+                          <td className={styles.tdDate}>{selectedPeriod !== 'all' ? `${selectedPeriod}-01` : (statement.lines[0]?.entry_date || '—')}</td>
+                          <td className={styles.tdRef}>—</td>
+                          <td className={styles.tdDesc}>
+                            <span className={styles.descText}>{isAr ? 'رصيد أول المدة' : 'Opening Balance'}</span>
+                          </td>
+                          <td className={styles.tdType}>—</td>
+                          <td className={styles.tdNum}>—</td>
+                          <td className={styles.tdNum}>—</td>
+                          <td className={styles.tdBalance}>{fmtMoney(statement.openingBalance)}</td>
+                        </tr>
+                      )}
                       {paginatedLines.map((line, idx) => {
                         const hasDebit = D(line.debit_amount).isPositive();
                         const hasCredit = D(line.credit_amount).isPositive();
+                        const desc = line.parsed.headline || line.enrichedDescription || line.description;
 
                         return (
                           <tr key={`${line.entry_id}-${idx}`} className={styles.tr}>
                             <td className={styles.tdDate}>
                               <div className={styles.dateText}>{line.entry_date}</div>
-                              <div className={styles.entryNum}>{line.entry_number}</div>
+                            </td>
+                            <td className={styles.tdRef}>
+                              <span className={styles.refCode} title={line.entry_number}>
+                                {line.entry_number}
+                              </span>
                             </td>
                             <td className={styles.tdDesc}>
-                              <div className={styles.descStack}>
-                                {/* Headline and Action Badge */}
-                                <div className={styles.headlineRow}>
-                                  <span className={styles.actionBadge}>
-                                    {renderBadgeIcon(line.parsed.actionBadge.icon)}
-                                    <span>{line.parsed.actionBadge.label}</span>
-                                  </span>
-
-                                  <span className={styles.headline}>
-                                    {line.parsed.headline}
-                                  </span>
-                                </div>
-
-                                {/* Tags */}
-                                {(line.parsed.contractNumber || line.parsed.referenceNumber || line.parsed.clientName || line.parsed.unitInfo || line.parsed.propertyTitle) && (
-                                  <div className={styles.tagsRow}>
-                                    {line.parsed.contractNumber && (
-                                      <span className={styles.tagPill}>
-                                        <FileText size={11} aria-hidden="true" />
-                                        <span>#{line.parsed.contractNumber.replace(/^#/, '')}</span>
-                                      </span>
-                                    )}
-
-                                    {line.parsed.referenceNumber && (
-                                      <span className={styles.tagPill}>
-                                        <Zap size={11} aria-hidden="true" />
-                                        <span>#{line.parsed.referenceNumber.replace(/^#/, '')}</span>
-                                      </span>
-                                    )}
-
-                                    {line.parsed.clientName && (
-                                      <span className={styles.tagPill}>
-                                        <User size={11} aria-hidden="true" />
-                                        <span>{line.parsed.clientName}</span>
-                                      </span>
-                                    )}
-
-                                    {(line.parsed.unitInfo || line.parsed.propertyTitle) && (
-                                      <span className={styles.tagPill}>
-                                        <Building2 size={11} aria-hidden="true" />
-                                        <span>
-                                          {line.parsed.unitInfo ? `${line.parsed.unitInfo}` : ''}
-                                          {line.parsed.unitInfo && line.parsed.propertyTitle ? ' • ' : ''}
-                                          {line.parsed.propertyTitle || ''}
-                                        </span>
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Memo */}
-                                {line.parsed.memo && (
-                                  <div className={styles.memoRow}>
-                                    <span className={styles.memoArrow} aria-hidden="true">↳</span>
-                                    <span>{line.parsed.memo.replace(/^↳\s*/, '')}</span>
-                                  </div>
-                                )}
-                              </div>
+                              <span className={styles.descText} title={desc}>
+                                {desc}
+                              </span>
                             </td>
-                            <td className={styles.tdDebit}>
+                            <td className={styles.tdType}>
+                              <span className={`${styles.statusPill} ${getBadgeToneClass(line.parsed.actionBadge.icon)}`}>
+                                {renderBadgeIcon(line.parsed.actionBadge.icon)}
+                                <span>{line.parsed.actionBadge.label}</span>
+                              </span>
+                            </td>
+                            <td className={styles.tdNum}>
                               {hasDebit ? fmtMoney(line.debit_amount) : <span className={styles.emptyAmount}>—</span>}
                             </td>
-                            <td className={styles.tdCredit}>
+                            <td className={styles.tdNum}>
                               {hasCredit ? fmtMoney(line.credit_amount) : <span className={styles.emptyAmount}>—</span>}
                             </td>
+                            {sortBy === 'date_asc' && (
+                              <td className={styles.tdBalance}>
+                                {fmtMoney(line.runningBalance)}
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
                     </tbody>
+                    <tfoot>
+                      <tr className={styles.tfootRow}>
+                        <td colSpan={4} className={styles.tfootLabel}>
+                          {isAr
+                            ? `الإجمالي · ${displayLines.length} حركة`
+                            : `Total · ${displayLines.length} movements`}
+                        </td>
+                        <td className={styles.tfootDebit}>{fmtMoney(statement.totalDebits)}</td>
+                        <td className={styles.tfootCredit}>{fmtMoney(statement.totalCredits)}</td>
+                        {sortBy === 'date_asc' && (
+                          <td className={styles.tfootBalance}>
+                            {fmtMoney(statement.closingBalance)} {isAr ? statement.closingBalanceLabelAr : statement.closingBalanceLabelEn}
+                          </td>
+                        )}
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
 
@@ -1158,7 +1220,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                   <ZFPagination
                     currentPage={currentPage}
                     totalPages={totalPages}
-                    totalItems={sortedLines.length}
+                    totalItems={displayLines.length}
                     pageSize={pageSize}
                     pageSizeOptions={[5, 10, 25, 50]}
                     onPageChange={setCurrentPage}

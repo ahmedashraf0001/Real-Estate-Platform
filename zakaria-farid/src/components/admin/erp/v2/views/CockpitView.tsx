@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { previousPeriodDelta } from '@/lib/erp/realDisplayValues';
 import { 
   TrendingUp, 
   Wallet, 
@@ -51,9 +52,8 @@ import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
 import { formatCompactEGP } from '@/lib/erp/propertyAnalysisEngine';
-import { computeProjectStatusMetrics } from '@/lib/erp/projectStatusHelper';
+import { computeProjectStatusMetrics, calculateProjectSalesValue } from '@/lib/erp/projectStatusHelper';
 import { ERPApexChart } from '../charts/ERPApexChart';
-import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFSearchBar } from '../common/ZFSearchBar';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
@@ -332,16 +332,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     return parts.year === prevYear;
   }, [parseDateParts, statPeriodFilter, prevMonthYear, prevMonth, prevQuarterYear, prevQuarter, prevYear]);
 
-  const formatDelta = useCallback((current: Decimal, prior: Decimal): string | null => {
-    if (prior.isZero()) {
-      if (current.isZero()) return '0.0%';
-      return '+100.0%';
-    }
-    const diff = current.minus(prior);
-    const pct = diff.times(100).dividedBy(prior.abs());
-    const sign = pct.gte(0) ? '+' : '';
-    return `${sign}${pct.toFixed(1)}%`;
-  }, []);
+  const formatDelta = previousPeriodDelta;
 
   // 1. Available Cash (Canonical metric: real ledger aggregation for accounts 101000 & 102000)
   const { cashNum, cashDelta, safeCashFormatted, bankCashFormatted } = useMemo(() => {
@@ -639,23 +630,31 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   // ─── Chart 2: Project Sales Value vs Capital Cost (Bar Chart) ───
   const comparisonChartData = useMemo(() => {
     const projects = properties.filter(p => isPropertyInProject(p.id));
-    const activeContracts = contracts.filter(c => c.status !== 'Rescinded' && isInCurrentPeriod(c.contract_date) && isPropertyInProject(c.property_id, c.unit_id));
-    const activeCosts = propertyCosts.filter(c => isInCurrentPeriod(c.logged_date) && isPropertyInProject(c.property_id));
+    // Decimal stores piastres; scale only on conversion to chart coordinates.
+    const toChartMillions = (value: Decimal) => Number(`${value.toFixed(2)}e-6`);
     const matchesProject = (contract: ERPContract, project: Property) =>
-      contract.property_id === project.id || Boolean(project.building_units?.some(unit => unit.unit_id === contract.unit_id || (unit as any).unit_number === contract.unit_id));
-    const rows = projects.map(project => ({
-      name: (isAr ? project.title_ar : project.title_en) || project.title_ar || project.title_en || project.id,
-      sales: activeContracts.filter(contract => matchesProject(contract, project)).reduce((total, contract) => total + Number(contract.gross_contract_value || 0), 0) / 1000000,
-      costs: getConstructionWIP(activeCosts.filter(cost => cost.property_id === project.id)).toNumber() / 1000000,
-    }));
+      !calculateProjectSalesValue(project, [contract]).contractedSales.isZero();
+    const rows = projects.map(project => {
+      const { salesValue, netCost } = calculateProjectSalesValue(project, contracts, propertyCosts);
+      return {
+        name: (isAr ? project.title_ar : project.title_en) || project.title_ar || project.title_en || project.id,
+        sales: toChartMillions(salesValue),
+        costs: toChartMillions(netCost),
+      };
+    });
     if (statProjectFilter === 'all') {
-      const unmatchedSales = activeContracts.filter(contract => !projects.some(project => matchesProject(contract, project)));
-      const unmatchedCosts = activeCosts.filter(cost => !projects.some(project => project.id === cost.property_id));
-      if (unmatchedSales.length || unmatchedCosts.length) {
+      const liveContracts = contracts.filter(c => c && c.status !== 'Rescinded');
+      const unmatchedContracts = liveContracts.filter(contract => !projects.some(project => matchesProject(contract, project)));
+      const unmatchedCosts = propertyCosts.filter(cost => !projects.some(project => project.id === cost.property_id));
+      const unmatchedSalesVal = unmatchedContracts.reduce((sum, c) => sum.plus(D(c.gross_contract_value || 0)), D(0));
+      const unmatchedCostsVal = getConstructionWIP(unmatchedCosts);
+      const unmatchedSales = toChartMillions(unmatchedSalesVal);
+      const unmatchedCostsNum = toChartMillions(unmatchedCostsVal);
+      if (unmatchedSales > 0 || unmatchedCostsNum > 0) {
         rows.push({
           name: isAr ? 'غير مرتبط بمشروع' : 'Unassigned project',
-          sales: unmatchedSales.reduce((total, contract) => total + Number(contract.gross_contract_value || 0), 0) / 1000000,
-          costs: getConstructionWIP(unmatchedCosts).toNumber() / 1000000,
+          sales: unmatchedSales,
+          costs: unmatchedCostsNum,
         });
       }
     }
@@ -666,7 +665,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       sales: plottedRows.map(row => row.sales),
       costs: plottedRows.map(row => row.costs),
     };
-  }, [properties, contracts, propertyCosts, isPropertyInProject, isInCurrentPeriod, statProjectFilter, isAr]);
+  }, [properties, contracts, propertyCosts, isPropertyInProject, statProjectFilter, isAr]);
 
   const comparisonChartSeries = useMemo(() => [
     {
@@ -1663,7 +1662,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 1: Available Cash */}
             <ZFKpiCard
               title={isAr ? 'الرصيد النقدي المتاح' : 'Available Liquidity'}
-              value={<AnimatedCounter value={cashNum} duration={800} />}
+              value={cashNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Wallet size={16} />}
               accentColor="accent"
@@ -1691,7 +1690,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 2: Total Sales Contracts */}
             <ZFKpiCard
               title={isAr ? 'إجمالي المبيعات التعاقدية' : 'Gross Contract Value'}
-              value={<AnimatedCounter value={grossContractsNum} duration={800} />}
+              value={grossContractsNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<FileText size={16} />}
               accentColor="accent"
@@ -1721,7 +1720,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 3: Scheduled Receivables */}
             <ZFKpiCard
               title={isAr ? 'تحصيلات مجدولة (خارج الدفاتر)' : 'Scheduled collections (off-ledger)'}
-              value={<AnimatedCounter value={safePdcNum} duration={800} />}
+              value={safePdcNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Receipt size={16} />}
               accentColor="accent"
@@ -1751,7 +1750,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 4: Upcoming Payables & Expenses */}
             <ZFKpiCard
               title={isAr ? 'التزامات ومصروفات قادمة' : 'Upcoming Payables'}
-              value={<AnimatedCounter value={pendingContractorsNum} duration={800} />}
+              value={pendingContractorsNum.toLocaleString('en-US')}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<HardHat size={16} />}
               accentColor="accent"

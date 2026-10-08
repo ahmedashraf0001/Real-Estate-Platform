@@ -147,7 +147,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       ]
     } as any;
 
-    it('computes required capital as share of recorded costs without float drift', () => {
+    it('computes required capital by matching the highest contributor without float drift', () => {
       const transactions: ERPPartnerTransaction[] = [
         {
           id: 'tx-1',
@@ -227,7 +227,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(ahmed.hasArrears, false);
     });
 
-    it('handles overpayment gracefully without generating negative arrears', () => {
+    it('a partner who pays more than his share leads the requirement (matching the highest contributor)', () => {
       const transactions: ERPPartnerTransaction[] = [
         {
           id: 'tx-1',
@@ -260,13 +260,19 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       const capitalInfo = computeDynamicBuildingCapital(testBuilding, transactions, recordedCosts('bldg-dynamic-1', '20000000.00'));
       const hany = capitalInfo.partnerStatuses.find(p => p.partnerName === 'د. هاني المنياوي');
       assert.ok(hany);
-      assert.strictEqual(hany.requiredContributionEgp, '4000000.00');
+      // Hany (20%) paid 5M -> implies 25M, above the founder's 10M / 50% = 20M, so Hany leads:
+      // total 25M; Hany owes exactly what he paid, the founder (50%) owes 12.5M.
+      assert.strictEqual(capitalInfo.impliedTotalCapitalEgp, '25000000.00');
+      assert.strictEqual(hany.requiredContributionEgp, '5000000.00');
       assert.strictEqual(hany.paidContributionEgp, '5000000.00');
       assert.strictEqual(hany.arrearsEgp, '0.00');
       assert.strictEqual(hany.hasArrears, false);
+      const founder = capitalInfo.partnerStatuses.find(p => p.isFounder)!;
+      assert.strictEqual(founder.requiredContributionEgp, '12500000.00');
+      assert.strictEqual(founder.arrearsEgp, '2500000.00');
     });
 
-    it('safely handles a building with no recorded costs without division-by-zero errors', () => {
+    it('safely handles a building with no capital paid yet without division-by-zero errors', () => {
       const capitalInfo = computeDynamicBuildingCapital(testBuilding, []);
       assert.strictEqual(capitalInfo.founderInjectedEgp, '0.00');
       assert.strictEqual(capitalInfo.impliedTotalCapitalEgp, '0.00');

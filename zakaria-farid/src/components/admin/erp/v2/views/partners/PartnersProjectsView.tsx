@@ -22,6 +22,7 @@ import { ERPContract, ERPPartnerTransaction, ERPPartnerCommitment } from '@/lib/
 import { 
   computeDynamicBuildingCapital, 
   checkBuildingEquityBalance,
+  countDistinctProjectPartners,
   PartnerFinancialSummary
 } from '@/lib/erp/partnersEngine';
 import { D } from '@/lib/erp/math';
@@ -42,7 +43,6 @@ export interface PartnersProjectsViewProps {
   onOpenPayout: (partnerName?: string) => void;
   onOpenReallocation: (property: Property, sellerName?: string) => void;
   onOpenDossier: (partnerName: string) => void;
-  onOpenCommitmentModal?: (propertyId?: string, partnerName?: string) => void;
   onSaveProperty?: (property: Property) => Promise<void> | void;
 }
 
@@ -60,7 +60,6 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   onOpenPayout,
   onOpenReallocation,
   onOpenDossier,
-  onOpenCommitmentModal,
   onSaveProperty,
 }) => {
   const propertyCosts = usePropertyCosts();
@@ -169,7 +168,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   }, [buildingRowsData]);
 
   const totalsPartnersCount = useMemo(() => {
-    return buildingRowsData.reduce((sum, r) => sum + r.partnersCount, 0);
+    return countDistinctProjectPartners(buildingRowsData.map(r => r.building));
   }, [buildingRowsData]);
 
   // Recent activity feed across projects (combining transactions and property reallocations)
@@ -195,7 +194,8 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         projectTitle: t.property_title || (isAr ? 'مشروع استثماري' : 'Project'),
         partnerName: t.partner_name,
         amount: t.amount,
-        method: t.payment_method === 'CASH_101000' ? (isAr ? 'كاش (خزينة 101000)' : 'Cash (Safe 101000)') :
+        method: t.payment_method === 'DEBT_OFFSET' ? (isAr ? 'خصم من الأرباح' : 'Offset from profit') :
+                t.payment_method === 'CASH_101000' ? (isAr ? 'كاش (خزينة 101000)' : 'Cash (Safe 101000)') :
                 t.payment_method === 'INSTAPAY_102000' ? (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)') : (isAr ? 'بنكي 102000' : 'Bank 102000')
       });
     });

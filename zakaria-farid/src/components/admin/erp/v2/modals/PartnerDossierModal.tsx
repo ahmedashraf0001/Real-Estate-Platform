@@ -13,8 +13,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportPartnerDossierExcel } from '@/lib/erp/excelExporter';
-import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
-import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
+import { PartnerFinancialSummary, isSamePartner } from '@/lib/erp/partnersEngine';
+import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
+import { buildPartnerStatement } from '@/lib/erp/statements/builders';
+import { statementHtml } from '@/lib/erp/statements/statementHtml';
+import { printStatement } from '@/lib/erp/statements/printStatement';
 import { ERPPartnerTransaction } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { ZFModalShell } from '../common/ZFModalShell';
@@ -43,6 +46,9 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
 }) => {
   const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
   const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [isPrinting, setIsPrinting] = useState(false);
+  const erpContext = useERPWorkstationContext();
 
   if (!isOpen || !partner) return null;
 
@@ -60,104 +66,14 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
     }
   };
 
-  const voucherCode = `PTR-${partner.partnerName.replace(/\s+/g, '').slice(0, 6)}-${new Date().getFullYear()}`;
-  const reportDate = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US');
-
-  const printablePartnerBody = (
-    <div className={styles.printableBody} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. Partner Profile Card */}
-      <div className={styles.printProfileGrid}>
-        <div>
-          <span className={styles.printLabel}>{isAr ? 'اسم الشريك / الممول' : 'Partner Name'}</span>
-          <strong className={styles.printVal}>{partner.partnerName}</strong>
-        </div>
-        <div>
-          <span className={styles.printLabel}>{isAr ? 'نوع الشراكة' : 'Partnership Role'}</span>
-          <strong className={styles.printValAccent}>{partner.roleTitleAr}</strong>
-        </div>
-        <div>
-          <span className={styles.printLabel}>{isAr ? 'رأس المال المودع' : 'Contributed Capital'}</span>
-          <strong className={styles.printVal}>{D(partner.totalContributedCapital).formatEGP(isAr)}</strong>
-        </div>
-        <div>
-          <span className={styles.printLabel}>{isAr ? 'صافي الرصيد المستحق' : 'Net Current Balance'}</span>
-          <strong className={D(partner.netCurrentBalance).isNegative() ? styles.printValRed : styles.printValGreen}>
-            {D(partner.netCurrentBalance).formatEGP(isAr)}
-          </strong>
-        </div>
-      </div>
-
-      {/* 2. Holdings Table */}
-      <div>
-        <h4 className={zfForm.sectionTitle}>{isAr ? 'حصص الشراكة في مشاريع الشركة' : 'Project Equity Shares & Holdings'}</h4>
-        <div className={styles.tableWrap}>
-          <table className={styles.printTable}>
-            <thead>
-              <tr>
-                <th className={styles.cellCenter}>#</th>
-                <th>{isAr ? 'المشروع العقاري' : 'Project'}</th>
-                <th className={styles.cellCenter}>{isAr ? 'نسبة الحصة (%)' : 'Share %'}</th>
-                <th className={styles.cellNum}>{isAr ? 'نصيب المبيعات (ج.م)' : 'Sales Share'}</th>
-                <th className={styles.cellNum}>{isAr ? 'نصيب التكاليف (ج.م)' : 'WIP Cost Share'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {partner.holdings.map((h, i) => (
-                <tr key={i}>
-                  <td className={styles.cellCenter}>{i + 1}</td>
-                  <td><strong>{h.propertyTitle}</strong></td>
-                  <td className={styles.cellCenter}>{h.sharePct}%</td>
-                  <td className={styles.cellNum}>{D(h.contractSalesShare).formatEGP(isAr)}</td>
-                  <td className={styles.cellNum}>{D(h.wipCostShare).formatEGP(isAr)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 3. Transaction History Table */}
-      <div>
-        <h4 className={zfForm.sectionTitle}>{isAr ? 'سجل العمليات والتحويلات المالية المسجلة' : 'Recorded Financial Transactions'}</h4>
-        <div className={styles.tableWrap}>
-          <table className={styles.printTable}>
-            <thead>
-              <tr>
-                <th className={styles.cellCenter}>#</th>
-                <th className={styles.cellCenter}>{isAr ? 'رقم الإشعار' : 'Ref #'}</th>
-                <th className={styles.cellCenter}>{isAr ? 'التاريخ' : 'Date'}</th>
-                <th className={styles.cellCenter}>{isAr ? 'نوع العملية' : 'Type'}</th>
-                <th className={styles.cellNum}>{isAr ? 'المبلغ (ج.م)' : 'Amount'}</th>
-                <th>{isAr ? 'البيان وملاحظات القيد' : 'Memo'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {partnerTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className={styles.emptyState}>
-                    {isAr ? 'لا توجد حركات مالية مسجلة بعد لهذا الشريك' : 'No recorded transactions yet.'}
-                  </td>
-                </tr>
-              ) : (
-                partnerTransactions.map((t, idx) => (
-                  <tr key={idx}>
-                    <td className={styles.cellCenter}>{idx + 1}</td>
-                    <td className={styles.cellCenter}><code>{t.transaction_number}</code></td>
-                    <td className={styles.cellCenter}>{t.date}</td>
-                    <td className={styles.cellCenter}>
-                      {t.type === 'CAPITAL_INJECTION' ? (isAr ? 'ضخ رأس مال' : 'Injection') : (isAr ? 'صرف أرباح' : 'Payout')}
-                    </td>
-                    <td className={styles.cellNum}>{D(t.amount).formatEGP(isAr)}</td>
-                    <td>{t.memo || '—'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+  const buildStatement = () => {
+    if (!erpContext) throw new Error('بيانات كشف الحساب غير متاحة');
+    const profile = erpContext.partnerProfiles.find(p => isSamePartner(p.name, partner.partnerName));
+    return buildPartnerStatement({ id: profile?.id, name: partner.partnerName,
+      national_id: profile?.national_id, phone: profile?.phone }, {
+      ...erpContext.data, partnerTransactions: erpContext.partnerTransactions,
+    }, new Date());
+  };
 
   const footer = (
     <ZFFormFooter
@@ -175,15 +91,27 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
           <button
             type="button"
             className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
-            onClick={() => window.print()}
+            disabled={isPrinting || !erpContext || erpContext.isLoading}
+            onClick={async () => {
+              setIsPrinting(true);
+              try { await printStatement(buildStatement()); }
+              catch (error) { toast.error(error instanceof Error ? error.message : 'تعذر تصدير كشف الحساب'); }
+              finally { setIsPrinting(false); }
+            }}
           >
             <Printer size={13} />
-            <span>{isAr ? 'طباعة' : 'Print'}</span>
+            <span>{isPrinting ? 'جارٍ التصدير…' : 'تصدير PDF'}</span>
           </button>
           <button
             type="button"
             className={`${shellStyles.btnSecondary} ${shellStyles.btnSm}`}
-            onClick={() => setShowPrintPreview(true)}
+            disabled={!erpContext || erpContext.isLoading}
+            onClick={() => {
+              try {
+                setPreviewHtml(statementHtml(buildStatement(), window.location.origin));
+                setShowPrintPreview(true);
+              } catch (error) { toast.error(error instanceof Error ? error.message : 'تعذر عرض كشف الحساب'); }
+            }}
           >
             <FileText size={13} />
             <span>{isAr ? 'معاينة' : 'Preview'}</span>
@@ -347,7 +275,9 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                           <strong>{D(t.amount).formatEGP(isAr)}</strong>
                         </td>
                         <td>
-                          {t.payment_method === 'CASH_101000'
+                          {t.payment_method === 'DEBT_OFFSET'
+                            ? (isAr ? 'خصم من الأرباح' : 'Offset from profit')
+                            : t.payment_method === 'CASH_101000'
                             ? (isAr ? 'خزينة نقداً' : 'Cash')
                             : (isAr ? 'إنستاباي' : 'InstaPay')}
                         </td>
@@ -367,36 +297,19 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
         </div>
       </ZFModalShell>
 
-      {/* Screen Preview Modal */}
       {showPrintPreview && (
-        <div className={styles.printOverlay} onClick={() => setShowPrintPreview(false)}>
-          <div className={styles.printCard} onClick={e => e.stopPropagation()}>
-            <ZFPrintDocumentLayout
-              documentTitle={isAr ? 'كشف حساب وحصص الشريك الاستثماري' : 'Partner Statement & Investment Dossier'}
-              documentSubtitle={isAr ? `الشريك: ${partner.partnerName} (${partner.roleTitleAr})` : `Partner: ${partner.partnerName} (${partner.roleTitleAr})`}
-              voucherCode={voucherCode}
-              date={reportDate}
-              onClose={() => setShowPrintPreview(false)}
-              isAr={isAr}
-            >
-              {printablePartnerBody}
-            </ZFPrintDocumentLayout>
-          </div>
-        </div>
+        <ZFModalShell isOpen={showPrintPreview} onClose={() => setShowPrintPreview(false)} isAr
+          title="كشف حساب شريك" maxWidth="900px" maxHeight="92vh"
+          footer={<button type="button" className={shellStyles.btnSecondary} disabled={isPrinting}
+            onClick={async () => {
+              setIsPrinting(true);
+              try { await printStatement(buildStatement()); }
+              catch (error) { toast.error(error instanceof Error ? error.message : 'تعذر تصدير كشف الحساب'); }
+              finally { setIsPrinting(false); }
+            }}><Printer size={14} />{isPrinting ? 'جارٍ التصدير…' : 'تصدير PDF'}</button>}>
+          <iframe title="معاينة كشف حساب شريك" srcDoc={previewHtml} style={{ width: '100%', height: '65vh', border: 0 }} />
+        </ZFModalShell>
       )}
-
-      {/* Hidden print container for window.print() */}
-      <div className="zf-print-only">
-        <ZFPrintDocumentLayout
-          documentTitle={isAr ? 'كشف حساب وحصص الشريك الاستثماري' : 'Partner Statement & Investment Dossier'}
-          documentSubtitle={isAr ? `الشريك: ${partner.partnerName} (${partner.roleTitleAr})` : `Partner: ${partner.partnerName} (${partner.roleTitleAr})`}
-          voucherCode={voucherCode}
-          date={reportDate}
-          isAr={isAr}
-        >
-          {printablePartnerBody}
-        </ZFPrintDocumentLayout>
-      </div>
     </>
   );
 };

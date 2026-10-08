@@ -17,12 +17,13 @@ import {
   X,
   Maximize2,
   Minimize2,
-  Compass,
   Info
 } from 'lucide-react';
 import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
 import { computeMetricLayout, metricInputFromSpatial, MetricRoomRect } from '@/lib/layering/floorplanLayout';
 import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
+import { ATTRIBUTE_TEMPLATES, getTradeTemplateLabels } from '@/lib/layering';
+import type { TradeInstance } from '@/lib/layering';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
 
@@ -41,42 +42,6 @@ interface ArchitecturalBlueprintInspectorProps {
   propertyImages?: string[];
 }
 
-const CURATED_ROOM_IMAGES: Record<string, string> = {
-  grounds: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85',
-  garden: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85',
-  pool: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85',
-  foyer: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85',
-  entrance: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85',
-  reception: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
-  living: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85',
-  salon: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
-  dining: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=85',
-  kitchen: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=85',
-  master: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=85',
-  bedroom: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1200&q=85',
-  suite: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=85',
-  bath: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
-  spa: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
-  powder: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
-  terrace: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85',
-  balcony: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85',
-  roof: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=85',
-  garage: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1200&q=85',
-  family: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85',
-  game: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85'
-};
-
-function resolveSpaceImage(key: string, customImage?: string): string {
-  if (customImage && typeof customImage === 'string' && customImage.startsWith('http')) {
-    return customImage;
-  }
-  const cleanKey = key.toLowerCase();
-  for (const [pattern, url] of Object.entries(CURATED_ROOM_IMAGES)) {
-    if (cleanKey.includes(pattern)) return url;
-  }
-  return 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85';
-}
-
 interface TradeSpecItem {
   id: string;
   name: string;
@@ -88,135 +53,57 @@ interface TradeSpecItem {
   badgeAr: string;
 }
 
-const DEFAULT_TRADE_SPECS: Record<string, TradeSpecItem[]> = {
-  reception: [
-    {
-      id: 'rec_marble',
-      name: 'Imported Marble & Parquet Finish',
-      nameAr: 'أرضيات رخام مستورد وباركيه HDF ألماني',
-      spec: 'Premium Calacatta gold marble borders with acoustic sound-dampening subfloor',
-      specAr: 'رخام كالاكاتا فاخر مع عزل صوتي متطور أسفل الأرضيات',
-      icon: 'layers',
-      badge: 'Ultra-Luxury',
-      badgeAr: 'تشطيب فاخر'
-    },
-    {
-      id: 'rec_hvac',
-      name: 'Concealed Slot Diffuser AC',
-      nameAr: 'تكييف كونسيلد مخفي بمخارج خطية',
-      spec: 'Inverter VRF system with whisper-quiet operation (NC 25)',
-      specAr: 'نظام VRF إنفرتر هادئ للغاية مع مخارج هواء ديكورية',
-      icon: 'wind',
-      badge: 'Smart VRF',
-      badgeAr: 'إنفرتر ذكي'
-    },
-    {
-      id: 'rec_elec',
-      name: 'Architectural Lighting & Smart Circuits',
-      nameAr: 'إنارة معمارية ومسارات مغناطيسية ذكية',
-      spec: 'Magnetic track spotlights (CRI 95+) with automated lighting scenes',
-      specAr: 'كشافات مغناطيسية عالية الدقة مع لوحات تحكم ذكية',
-      icon: 'zap',
-      badge: 'Smart Ready',
-      badgeAr: 'تحكم ذكي'
-    }
-  ],
-  master_bed: [
-    {
-      id: 'bed_floor',
-      name: 'Natural Hardwood Oak Parquet',
-      nameAr: 'أرضيات باركيه خشب طبيعي أرو',
-      spec: 'Multi-layer engineered oak with thermal insulation underlayment',
-      specAr: 'خشب أرو طبيعي متعدد الطبقات مع عزل حراري وصوتي',
-      icon: 'layers',
-      badge: 'Engineered Wood',
-      badgeAr: 'خشب طبيعي'
-    },
-    {
-      id: 'bed_windows',
-      name: 'Acoustic Double-Glazed Facade',
-      nameAr: 'قطاعات ألومنيوم عازلة للصوت والحرارة',
-      spec: 'Thermal-break Schuco double glazing ensuring 38dB acoustic reduction',
-      specAr: 'زجاج مزدوج عازل للضوضاء والحرارة مع قطاع ألومنيوم ثيرمال بريك',
-      icon: 'layers',
-      badge: 'Acoustic 38dB',
-      badgeAr: 'عازل للصوت'
-    }
-  ],
-  kitchen: [
-    {
-      id: 'kitch_tiles',
-      name: 'Porcelain Nano-Sealed Floor & Wall Tiles',
-      nameAr: 'سيراميك وبورسلين معالج نانو مقاوم للبقع',
-      spec: '60×120cm rectified anti-slip porcelain with epoxy grouting',
-      specAr: 'بورسلين مقاس ٦٠×١٢٠سم مع فواصل إيبوكسية مضادة للبكتيريا',
-      icon: 'layers',
-      badge: 'Nano-Shield',
-      badgeAr: 'معالج نانو'
-    },
-    {
-      id: 'kitch_plumb',
-      name: 'Concealed Drainage & Water Filter Ready',
-      nameAr: 'تغذية وصرف مخفي مجهز لوحدات الفلترة',
-      spec: 'Multi-layer PPR German plumbing lines with soundproof drainage pipes',
-      specAr: 'شبكة تغذية PPR ألمانية وصرف سمارت معزول للصوت',
-      icon: 'droplet',
-      badge: 'DIN Certified',
-      badgeAr: 'معتمد ألمانياً'
-    }
-  ],
-  bath: [
-    {
-      id: 'bath_sanitary',
-      name: 'Concealed Cistern & Wall-Hung Fixtures',
-      nameAr: 'أطقم صحية معلقة وخزانات دفن',
-      spec: 'Grohe/Duravit soft-close wall-hung toilet with pneumatic flush plate',
-      specAr: 'قاعدة معلقة درافيت مع صندوق طرد دفن جروهي',
-      icon: 'droplet',
-      badge: 'European Fixtures',
-      badgeAr: 'أطقم أوروبية'
-    },
-    {
-      id: 'bath_waterproofing',
-      name: 'Dual-Layer Polymer Waterproofing',
-      nameAr: 'عزل مائي كيميائي مزدوج للحمامات',
-      spec: 'Certified 72-hr water-tested elastomeric waterproofing membrane',
-      specAr: 'عزل مائي بوليمري مرن مختبر ضد التسريب لمدة ٧٢ ساعة',
-      icon: 'droplet',
-      badge: '100% Tested',
-      badgeAr: 'مختبر ٧٢ ساعة'
-    }
-  ],
-  balcony: [
-    {
-      id: 'balc_deck',
-      name: 'Weatherproof Wood Composite Decking',
-      nameAr: 'أرضيات خشب بلاستيكي WPC مقاوم للعوامل الجوية',
-      spec: 'UV-stabilized anti-slip outdoor decking with concealed drainage channel',
-      specAr: 'خشب WPC معالج ضد الشمس والأمطار مع مسار صرف مخفي',
-      icon: 'layers',
-      badge: 'Weatherproof',
-      badgeAr: 'مقاوم للشمس'
-    },
-    {
-      id: 'balc_rail',
-      name: 'Architectural Safety Balustrade Railing',
-      nameAr: 'درابزين أمان مع حديد مشغول وزجاج سيكوريت',
-      spec: '1.1m height tempered laminated safety glass with stainless steel posts',
-      specAr: 'درابزين أمان بارتفاع ١.١م مع زجاج سيكوريت وقوائم صلب',
-      icon: 'layers',
-      badge: 'Safety Rated',
-      badgeAr: 'معايير الأمان'
-    }
-  ]
+const TRADE_STATUS_LABELS: Record<string, { en: string; ar: string }> = {
+  NotStarted:   { en: 'Not started',   ar: 'لم يبدأ' },
+  RoughIn:      { en: 'Rough-in',      ar: 'تمديدات خام' },
+  Finished:     { en: 'Finished',      ar: 'مكتمل' },
+  ConduitsOnly: { en: 'Conduits only', ar: 'مواسير فقط' },
+  Wired:        { en: 'Wired',         ar: 'أسلاك' },
+  RedBrick:     { en: 'Red brick',     ar: 'طوب أحمر' },
+  Plastered:    { en: 'Plastered',     ar: 'محارة' },
+  Tiled:        { en: 'Tiled',         ar: 'سيراميك' },
+  FinalPaint:   { en: 'Final paint',   ar: 'دهان نهائي' },
+  Putty:        { en: 'Putty',         ar: 'معجون' },
+  SandBed:      { en: 'Sand bed',      ar: 'رملة' },
+  None:         { en: 'None',          ar: 'لا يوجد' },
+  Installed:    { en: 'Installed',     ar: 'مركب' },
 };
 
-function resolveRoomTradeSpecs(tid: string): TradeSpecItem[] {
-  const clean = tid.toLowerCase();
-  for (const [k, specs] of Object.entries(DEFAULT_TRADE_SPECS)) {
-    if (clean.includes(k)) return specs;
-  }
-  return DEFAULT_TRADE_SPECS.reception;
+const prettifyId = (id: string) =>
+  (id.split('.').pop() || id).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^\w/, c => c.toUpperCase());
+
+/** "Ceramic (سيراميك)" -> the part for the requested language. */
+function pickLang(value: string, isAr: boolean): string {
+  const m = value.match(/^(.*?)\s*\((.*?)\)\s*$/);
+  if (!m) return value;
+  return isAr ? m[2] : m[1];
+}
+
+/** Specs shown for a space come only from the trades the admin recorded on that zone. */
+function buildTradeSpecs(trades: TradeInstance[] = []): TradeSpecItem[] {
+  return trades.map(t => {
+    const labels = getTradeTemplateLabels(t.trade_template_id);
+    const status = TRADE_STATUS_LABELS[t.status] || { en: t.status, ar: t.status };
+    const attrs = (t.attributes || []).filter(a => a.value !== null && a.value !== '' && a.value !== false);
+    const attrText = (isAr: boolean) => attrs.map(a => {
+      const tpl = ATTRIBUTE_TEMPLATES.find(x => x.id === a.attribute_template_id);
+      const label = a.custom_label || (tpl ? (isAr ? tpl.label_ar : tpl.label_en) : prettifyId(a.attribute_template_id));
+      const value = a.value === true ? (isAr ? 'نعم' : 'Yes') : pickLang(String(a.value), isAr);
+      return `${label}: ${value}`;
+    }).join(' · ');
+    const id = t.trade_template_id;
+    const icon: TradeSpecItem['icon'] = id.includes('elec') ? 'zap' : id.includes('hvac') ? 'wind' : id.includes('plumb') ? 'droplet' : 'layers';
+    return {
+      id: t.id || id,
+      name: labels ? pickLang(labels.en, false) : prettifyId(id),
+      nameAr: labels ? labels.ar : prettifyId(id),
+      spec: attrText(false),
+      specAr: attrText(true),
+      icon,
+      badge: status.en,
+      badgeAr: status.ar,
+    };
+  });
 }
 
 const KNOWN_TEMPLATE_AR_LABELS: Record<string, string> = {
@@ -344,8 +231,12 @@ interface ProcessedZone {
   image: string;
   imagesList: string[];
   trades: TradeSpecItem[];
-  doorCount: number;
-  windowCount: number;
+  doorCount: number | null;
+  windowCount: number | null;
+  /** True only when the admin entered real dimensions for this space. */
+  measured: boolean;
+  /** Area used to draw a schematic box when the space has no real dimensions. */
+  layoutSqm: number;
   spatial?: ZoneSpatialLayout;
 }
 
@@ -425,7 +316,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   propertyTitle,
   locale = 'en',
   propertyType = 'apartment',
-  propertyImages = []
+  propertyImages: _propertyImages = []
 }) => {
   const isAr = locale === 'ar';
   const [mounted, setMounted] = useState(false);
@@ -583,25 +474,25 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       const metric = FALLBACK_ZONE_METRICS[tid] || GENERIC_ZONE_METRIC;
       const titleFallback = FALLBACK_ZONE_TITLES[tid] || { en: z.instance_label || 'Space', ar: z.instance_label || 'مساحة' };
       const titleEn = z.instance_label || titleFallback.en;
-      const titleAr = KNOWN_TEMPLATE_AR_LABELS[tid] || (isArabicText(z.instance_label) ? z.instance_label : titleFallback.ar) || titleEn;
+      // A flat is named by its code ("Flat 3A"), not the generic template label.
+      const titleAr = (tid === 'bld.unit' && z.instance_label) ? z.instance_label : (KNOWN_TEMPLATE_AR_LABELS[tid] || (isArabicText(z.instance_label) ? z.instance_label : titleFallback.ar) || titleEn);
 
       const sp = z.spatial;
-      const length_m = sp?.length_m ?? metric.length_m;
-      const width_m = sp?.width_m ?? metric.width_m;
-      const sqm = sp?.sqm ?? metric.sqm;
-      const ceiling = metric.ceiling || '3.0m';
-      const dims = `${length_m.toFixed(1)}m × ${width_m.toFixed(1)}m`;
+      const measured = !!(sp && sp.length_m > 0 && sp.width_m > 0);
+      const length_m = measured ? sp!.length_m : metric.length_m;
+      const width_m = measured ? sp!.width_m : metric.width_m;
+      const sqm = measured ? (sp!.sqm ?? Number((sp!.length_m * sp!.width_m).toFixed(1))) : 0;
+      const ceiling = sp?.ceiling_height || '';
+      const dims = measured ? `${length_m.toFixed(1)}m × ${width_m.toFixed(1)}m` : '';
 
       const floorKey = parentFloorKey || z.level_label || 'Floor 1';
       const floorLabel = floorKey === 'bld_ground' ? 'Ground Floor' : floorKey === 'bld_roof' ? 'Roof' : floorKey === 'bld_basement' ? 'Basement' : floorKey;
       const floorLabelAr = formatFloorLabel(floorKey, true);
 
-      const doorCount = sp?.openings?.filter(o => o.kind === 'door').length ?? 1;
-      const windowCount = sp?.openings?.filter(o => o.kind === 'window').length ?? 1;
+      const doorCount = sp?.openings ? sp.openings.filter(o => o.kind === 'door').length : null;
+      const windowCount = sp?.openings ? sp.openings.filter(o => o.kind === 'window').length : null;
 
-      const baseImg = resolveSpaceImage(tid);
-      const imagesList = propertyImages.length > 0 ? propertyImages : [baseImg];
-      const trades = resolveRoomTradeSpecs(tid);
+      const imagesList = (z.images || []).filter(Boolean);
 
       list.push({
         id: z.id,
@@ -618,11 +509,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         length_m,
         width_m,
         badge: getZoneBadge(z),
-        image: baseImg,
+        image: imagesList[0] || '',
         imagesList,
-        trades,
+        trades: buildTradeSpecs(z.trades),
         doorCount,
         windowCount,
+        measured,
+        layoutSqm: metric.sqm,
         spatial: z.spatial,
       });
 
@@ -637,37 +530,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       processSingle(z);
     }
 
-    // If no zones provided, generate rich default apartment zones
-    if (list.length === 0) {
-      const defaultTids = ['apt.reception', 'apt.master_bed', 'apt.std_bed', 'apt.kitchen', 'apt.main_bath', 'apt.balcony'];
-      for (const tid of defaultTids) {
-        const m = FALLBACK_ZONE_METRICS[tid] || GENERIC_ZONE_METRIC;
-        const t = FALLBACK_ZONE_TITLES[tid] || { en: 'Room', ar: 'غرفة' };
-        list.push({
-          id: `def-${tid}`,
-          templateId: tid,
-          zoneTitle: t.en,
-          zoneTitleAr: t.ar,
-          floorKey: 'Floor 1',
-          floorLabel: 'Floor 1',
-          floorLabelAr: 'الدور الأول',
-          sqm: m.sqm,
-          ceiling: m.ceiling,
-          dims: `${m.length_m}m × ${m.width_m}m`,
-          length_m: m.length_m,
-          width_m: m.width_m,
-          badge: 'fully_finished',
-          image: resolveSpaceImage(tid),
-          imagesList: propertyImages.length > 0 ? propertyImages : [resolveSpaceImage(tid)],
-          trades: resolveRoomTradeSpecs(tid),
-          doorCount: 1,
-          windowCount: 1,
-        });
-      }
-    }
-
     return list;
-  }, [zones, propertyImages]);
+  }, [zones]);
 
   // 1.5 Extract Available Distinct Floors / Levels
   const availableFloors = useMemo(() => {
@@ -689,9 +553,11 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   const currentViewZones = useMemo(() => {
     if (propertyType === 'building') {
       if (bldView.mode === 'unit') {
-        return processedZones.filter(z => z.unitLabel && z.floorKey === bldView.floorKey);
+        return processedZones.filter(z => z.templateId !== 'bld.unit' && (bldView.unitId
+          ? z.unitLabel === bldView.unitId && z.floorKey === bldView.floorKey
+          : z.unitLabel && z.floorKey === bldView.floorKey));
       }
-      return processedZones.filter(z => z.floorKey === bldView.floorKey);
+      return processedZones.filter(z => z.floorKey === bldView.floorKey && (!z.unitLabel || z.templateId === 'bld.unit'));
     }
     // If property has multiple floors (e.g. Ground Floor, First Floor, Roof), filter by active floor tab!
     if (availableFloors.length > 1) {
@@ -702,7 +568,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   // 3. Metric Layout
   const metricLayout = useMemo(() => {
-    const inputs = currentViewZones.map(z => metricInputFromSpatial(z.id, z.spatial, z.sqm));
+    const inputs = currentViewZones.map(z => metricInputFromSpatial(z.id, z.spatial, z.measured ? z.sqm : z.layoutSqm));
     return computeMetricLayout(inputs, 680, 440);
   }, [currentViewZones]);
 
@@ -753,7 +619,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   const stampX = useMemo(() => Math.max(layoutBounds.minX, layoutBounds.maxX - stampWidth), [layoutBounds.minX, layoutBounds.maxX, stampWidth]);
   const stampY = useMemo(() => layoutBounds.maxY + 10, [layoutBounds.maxY]);
   const compassX = useMemo(() => layoutBounds.maxX - 22, [layoutBounds.maxX]);
-  const compassY = useMemo(() => layoutBounds.minY - 26, [layoutBounds.minY]);
 
   // Dynamic tight viewBox that incorporates drawing, stamps, and north arrow
   const dynamicViewBox = useMemo(() => {
@@ -846,8 +711,46 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   // When room is clicked -> open popup modal with specs
   const handleRoomClick = (zone: ProcessedZone | undefined) => {
     if (!zone) return;
+    // A flat on a building floor opens its own plan.
+    if (propertyType === 'building' && zone.templateId === 'bld.unit') {
+      setBldView({ mode: 'unit', floorKey: zone.floorKey, unitId: zone.unitLabel });
+      setSelectedZoneId(null);
+      return;
+    }
     setActiveModalZone(zone);
   };
+
+  // Every level of the building, top to bottom, from the zones the admin recorded.
+  const buildingLevels = useMemo(() => {
+    if (propertyType !== 'building') return [];
+    const rank = (k: string) => {
+      if (k === 'bld_roof') return 1e6;
+      if (k === 'bld_ground') return 0;
+      if (k === 'bld_basement') return -1;
+      const n = parseInt(k.match(/\d+/)?.[0] || '', 10);
+      return Number.isFinite(n) ? n : 0.5;
+    };
+    const keys = Array.from(new Set(processedZones.map(z => z.floorKey)));
+    return keys.map(key => {
+      const onFloor = processedZones.filter(z => z.floorKey === key);
+      const flats = onFloor.filter(z => z.templateId === 'bld.unit');
+      const shared = onFloor.filter(z => !z.unitLabel);
+      const leaves = onFloor.filter(z => z.templateId !== 'bld.unit');
+      const allMeasured = leaves.length > 0 && leaves.every(z => z.measured);
+      return {
+        key,
+        rank: rank(key),
+        labelEn: key === 'bld_ground' ? 'Ground Floor' : key === 'bld_roof' ? 'Roof' : key === 'bld_basement' ? 'Basement' : key,
+        labelAr: formatFloorLabel(key, true),
+        flats: flats.map(f => f.unitLabel || f.zoneTitle),
+        sharedCount: shared.length,
+        templates: onFloor.map(z => z.templateId),
+        sqm: allMeasured ? leaves.reduce((sum, z) => sum + z.sqm, 0) : null,
+      };
+    }).sort((a, b) => b.rank - a.rank);
+  }, [processedZones, propertyType]);
+
+  const viewMeasured = currentViewZones.length > 0 && currentViewZones.every(z => z.measured);
 
   const isGround = bldView.floorKey === 'bld_ground' || bldView.floorKey === 'Ground Floor';
   const isRoof = bldView.floorKey === 'bld_roof' || bldView.floorKey === 'Roof';
@@ -855,27 +758,77 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   // Vector SVG Content Renderer
   const renderVectorSvgContent = () => {
-    /* ─── 1. BUILDING FACADE & ELEVATION VIEW ─── */
+    /* ─── 1. BUILDING ELEVATION: drawn from the recorded levels and flats ─── */
     if (propertyType === 'building' && bldView.mode === 'elevation') {
       const bldX = 140;
       const bldW = 460;
       const bldRight = bldX + bldW;
-      const groundBaseY = 380;
+      const floorH = 60;
+      const groundH = 60;
       const basementH = 50;
-      const groundY = 320;
-      const typFloorH = 60;
-      const actualTypicalTotalH = 3 * typFloorH;
-      const roofY = groundY - actualTypicalTotalH;
+      const crownH = 40;
+      const coreW = 56;
 
-      const buildingFloors = [
-        { key: 'Floor 3', labelEn: 'Floor 3', labelAr: 'الدور الثالث', sqm: 412, unitsCount: 2 },
-        { key: 'Floor 2', labelEn: 'Floor 2', labelAr: 'الدور الثاني', sqm: 412, unitsCount: 2 },
-        { key: 'Floor 1', labelEn: 'Floor 1', labelAr: 'الدور الأول', sqm: 412, unitsCount: 2 },
-      ];
+      const roofLevel = buildingLevels.find(l => l.key === 'bld_roof');
+      const groundLevel = buildingLevels.find(l => l.key === 'bld_ground');
+      const basementLevel = buildingLevels.find(l => l.key === 'bld_basement');
+      const typical = buildingLevels.filter(l => l !== roofLevel && l !== groundLevel && l !== basementLevel);
+
+      const roofY = crownH + 10;
+      const groundY = roofY + typical.length * floorH;
+      const gradeY = groundY + (groundLevel ? groundH : 0);
+      const height = gradeY + (basementLevel ? basementH : 0) + 30;
+
+      const summaryOf = (level: typeof buildingLevels[number]) => [
+        level.flats.length > 0
+          ? (isAr ? `${level.flats.length} ${level.flats.length === 1 ? 'شقة' : 'شقق'}` : `${level.flats.length} ${level.flats.length === 1 ? 'flat' : 'flats'}`)
+          : '',
+        level.sharedCount > 0 ? (isAr ? `${level.sharedCount} مساحات` : `${level.sharedCount} spaces`) : '',
+        level.sqm ? `${level.sqm.toFixed(0)} m²` : '',
+      ].filter(Boolean).join(' • ');
+
+      const infoCard = (level: typeof buildingLevels[number], y: number, strong = false) => (
+        <g transform={`translate(${bldRight + 16}, ${y})`}>
+          <rect width="150" height="34" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity={strong ? 0.6 : 0.3} strokeWidth={strong ? 1.2 : 1} />
+          <text x={isAr ? 142 : 8} y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
+            {isAr ? level.labelAr : level.labelEn}
+          </text>
+          <text x={isAr ? 142 : 8} y="26" fontSize="7.5" fill="var(--gold-primary)" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
+            {summaryOf(level)}
+          </text>
+          <text x={isAr ? 8 : 142} y="20" fontSize="8" fill="var(--gold-primary)" textAnchor={isAr ? 'start' : 'end'}>
+            {isAr ? '‹' : '›'}
+          </text>
+        </g>
+      );
+
+      // One facade bay per flat: big balcony window + smaller window, mirrored on the far side of the core.
+      const renderBay = (flat: string, x: number, w: number, mirrored: boolean, y: number) => {
+        const bigW = Math.max(24, w * 0.46);
+        const smallW = Math.max(16, w * 0.3);
+        const bigX = mirrored ? w - bigW - 8 : 8;
+        const smallX = mirrored ? 10 : w - smallW - 10;
+        const balX = mirrored ? w - bigW - 14 : 2;
+        const balW = bigW + 12;
+        return (
+          <g key={flat} transform={`translate(${x}, ${y + 4})`}>
+            <rect x={bigX} y="4" width={bigW} height={floorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            <line x1={bigX + bigW / 2} y1="4" x2={bigX + bigW / 2} y2={floorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
+            <rect x={balX} y={floorH - 22} width={balW} height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            {[0.25, 0.5, 0.75].map(f => (
+              <line key={f} x1={balX + balW * f} y1={floorH - 22} x2={balX + balW * f} y2={floorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+            ))}
+            <rect x={balX} y={floorH - 10} width={balW} height="4" fill="var(--gold-primary)" />
+            <rect x={smallX} y="8" width={smallW} height={floorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            <line x1={smallX + smallW / 2} y1="8" x2={smallX + smallW / 2} y2={floorH - 12} stroke="#7FB4D8" strokeWidth="1" />
+            <text x={w / 2} y="2" fontSize="6.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800" fontFamily="monospace">{flat}</text>
+          </g>
+        );
+      };
 
       return (
         <svg
-          viewBox="0 0 760 480"
+          viewBox={`0 0 760 ${height}`}
           className="cad-vector-svg fp-building-elevation"
           style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`, willChange: 'transform', transformOrigin: 'center center', direction: 'ltr' }}
           xmlns="http://www.w3.org/2000/svg"
@@ -906,509 +859,119 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             </linearGradient>
           </defs>
 
-          {/* Background Grid */}
-          <rect width="760" height="480" fill="var(--cad-stage-bg)" />
-          <rect width="760" height="480" fill="url(#pubElevGrid)" />
-          <rect width="760" height="480" fill="url(#pubElevMajorGrid)" opacity="0.4" />
+          <rect width="760" height={height} fill="var(--cad-stage-bg)" />
+          <rect width="760" height={height} fill="url(#pubElevGrid)" />
+          <rect width="760" height={height} fill="url(#pubElevMajorGrid)" opacity="0.4" />
 
-          {/* Left Datum / Elevation Level Lines */}
-          {buildingFloors.map((f, idx) => {
-            const floorY = roofY + idx * typFloorH;
-            const datumM = ((buildingFloors.length - idx) * 3.3).toFixed(2);
-            return (
-              <g key={`datum-${f.key}`} className="fp-datum-group">
-                <line x1="20" y1={floorY} x2={bldX - 8} y2={floorY} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
-                <circle cx="34" cy={floorY} r="4" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
-                <line x1="30" y1={floorY} x2="38" y2={floorY} stroke="var(--gold-primary)" strokeWidth="1" />
-                <line x1="34" y1={floorY - 4} x2="34" y2={floorY + 4} stroke="var(--gold-primary)" strokeWidth="1" />
-                <text x="44" y={floorY + 3} fontSize="8.5" fill="var(--gold-primary)" fontFamily="monospace">
-                  +{datumM}m
-                </text>
-              </g>
-            );
-          })}
-          {/* Ground Datum Line */}
-          <g className="fp-datum-group">
-            <line x1="20" y1={groundBaseY} x2={bldX - 8} y2={groundBaseY} stroke="var(--gold-primary)" strokeWidth="1.2" />
-            <text x="44" y={groundBaseY + 3} fontSize="9" fill="var(--gold-primary)" fontWeight="800" fontFamily="monospace">
-              ±0.00m
-            </text>
-          </g>
-          {/* Basement Datum Line */}
-          <g className="fp-datum-group">
-            <line x1="20" y1={groundBaseY + basementH} x2={bldX - 8} y2={groundBaseY + basementH} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
-            <text x="44" y={groundBaseY + basementH + 3} fontSize="8.5" fill="var(--gold-primary)" fontFamily="monospace">
-              -3.00m
-            </text>
-          </g>
-
-          {/* ─── ROOFTOP ARCHITECTURAL CROWN ─── */}
-          <g
-            role="button"
-            tabIndex={0}
-            className="pub-elev-floor-row"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setBldView({ mode: 'floor', floorKey: 'bld_roof' })}
-          >
-            {/* Left Rooftop Modern Pergola */}
-            <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
-              <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
-              {[20, 40, 60, 80, 100, 120].map(px => (
-                <line key={`perg-${px}`} x1={px} y1="0" x2={px} y2="24" stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeWidth="1" />
-              ))}
-              <line x1="0" y1="0" x2="140" y2="0" stroke="var(--gold-primary)" strokeWidth="2" />
+          {/* Level lines on the left */}
+          {[roofY, ...typical.map((_, i) => roofY + (i + 1) * floorH)].map((y, i) => (
+            <g key={`datum-${i}`} className="fp-datum-group">
+              <line x1="20" y1={y} x2={bldX - 8} y2={y} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
+              <circle cx="34" cy={y} r="4" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
+              <line x1="30" y1={y} x2="38" y2={y} stroke="var(--gold-primary)" strokeWidth="1" />
+              <line x1="34" y1={y - 4} x2="34" y2={y + 4} stroke="var(--gold-primary)" strokeWidth="1" />
             </g>
-
-            {/* Center Elevator Penthouse Machine Room */}
-            <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
-              <rect width="80" height="32" rx="2" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-              <line x1="20" y1="10" x2="60" y2="10" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
-              <line x1="20" y1="16" x2="60" y2="16" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
-              <line x1="20" y1="22" x2="60" y2="22" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
-              <text x="40" y="7" fontSize="7" fill="var(--gold-primary)" textAnchor="middle" fontWeight="700" fontFamily="monospace">ELEVATOR PENTHOUSE</text>
-            </g>
-
-            {/* Right Rooftop Water Storage Tanks */}
-            <g transform={`translate(${bldRight - 110}, ${roofY - 22})`}>
-              <rect x="0" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
-              <rect x="42" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
-              <line x1="34" y1="13" x2="42" y2="13" stroke="#7FB4D8" strokeWidth="1.5" />
-              <text x="38" y="-1" fontSize="6.5" fill="#7FB4D8" textAnchor="middle" fontFamily="monospace">WATER TANKS</text>
-            </g>
-
-            {/* Roof Parapet & Glass Balustrade */}
-            <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="var(--gold-primary)" />
-            <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
-
-            {/* Roof Info Card on the Right */}
-            <g transform={`translate(${bldRight + 16}, ${roofY - 20})`}>
-              <rect width="138" height="32" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" />
-              <text x="8" y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700">
-                {isAr ? 'السطح والتراس' : 'Roof Terrace'}
-              </text>
-              <text x="8" y="25" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace" fontWeight="700">
-                280 m²
-              </text>
-              <text x="130" y="25" fontSize="7.5" fill="var(--cad-text-muted)" textAnchor="end">
-                {isAr ? 'عرض ‹' : 'Inspect ›'}
-              </text>
-            </g>
-          </g>
-
-          {/* ─── TYPICAL RESIDENTIAL FLOORS (FACADE & BALCONIES) ─── */}
-          {buildingFloors.map((floor, idx) => {
-            const floorY = roofY + idx * typFloorH;
-
-            return (
-              <g
-                key={floor.key}
-                role="button"
-                tabIndex={0}
-                className="pub-elev-floor-row"
-                style={{ cursor: 'pointer' }}
-                onClick={() => setBldView({ mode: 'floor', floorKey: floor.key })}
-              >
-                {/* Floor Backdrop */}
-                <rect
-                  x={bldX}
-                  y={floorY}
-                  width={bldW}
-                  height={typFloorH}
-                  fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(221, 167, 82, 0.02)'}
-                  stroke="none"
-                />
-
-                {/* Concrete Floor Slab Band */}
-                <rect x={bldX - 4} y={floorY + typFloorH - 3} width={bldW + 8} height="4" fill="var(--gold-primary)" opacity="0.9" />
-
-                {/* Left Residential Bay (Flat A Balcony & Windows) */}
-                <g transform={`translate(${bldX + 16}, ${floorY + 4})`}>
-                  <rect x="10" y="4" width="70" height={typFloorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="45" y1="4" x2="45" y2={typFloorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
-                  <rect x="4" y={typFloorH - 10} width="82" height="4" fill="var(--gold-primary)" />
-                  <rect x="4" y={typFloorH - 22} width="82" height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="24" y1={typFloorH - 22} x2="24" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="44" y1={typFloorH - 22} x2="44" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="64" y1={typFloorH - 22} x2="64" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-
-                  <rect x="100" y="8" width="56" height={typFloorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="128" y1="8" x2="128" y2={typFloorH - 12} stroke="#7FB4D8" strokeWidth="1" />
-                </g>
-
-                {/* Center Architectural Spine (Core Glazing) */}
-                <g transform={`translate(${bldX + bldW / 2 - 28}, ${floorY + 4})`}>
-                  <rect width="56" height={typFloorH - 8} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.2" />
-                  <line x1="14" y1="0" x2="14" y2={typFloorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
-                  <line x1="28" y1="0" x2="28" y2={typFloorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
-                  <line x1="42" y1="0" x2="42" y2={typFloorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
-                </g>
-
-                {/* Right Residential Bay (Flat B Windows & Balcony) */}
-                <g transform={`translate(${bldRight - 186}, ${floorY + 4})`}>
-                  <rect x="14" y="8" width="56" height={typFloorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="42" y1="8" x2="42" y2={typFloorH - 12} stroke="#7FB4D8" strokeWidth="1" />
-
-                  <rect x="90" y="4" width="70" height={typFloorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="125" y1="4" x2="125" y2={typFloorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
-                  <rect x="84" y={typFloorH - 10} width="82" height="4" fill="var(--gold-primary)" />
-                  <rect x="84" y={typFloorH - 22} width="82" height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="104" y1={typFloorH - 22} x2="104" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="124" y1={typFloorH - 22} x2="124" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                  <line x1="144" y1={typFloorH - 22} x2="144" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                </g>
-
-                {/* Right Info Card */}
-                <g transform={`translate(${bldRight + 16}, ${floorY + 12})`}>
-                  <rect width="138" height="36" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
-                  <text x="8" y="15" fontSize="10" fill="var(--cad-text-primary)" fontWeight="700">
-                    {isAr ? floor.labelAr : floor.labelEn}
-                  </text>
-                  <text x="8" y="27" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace">
-                    {`${floor.sqm} m² • 2 ${isAr ? 'شقق' : 'units'}`}
-                  </text>
-                  <text x="130" y="22" fontSize="8" fill="var(--gold-primary)" textAnchor="end">
-                    {isAr ? 'عرض ‹' : 'Inspect ›'}
-                  </text>
-                </g>
-              </g>
-            );
-          })}
-
-          {/* ─── GROUND FLOOR LOBBY ─── */}
-          <g
-            role="button"
-            tabIndex={0}
-            className="pub-elev-floor-row"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setBldView({ mode: 'floor', floorKey: 'bld_ground' })}
-          >
-            <rect x={bldX} y={groundY} width={bldW} height="60" fill="url(#pubElevLobbyGrad)" stroke="none" />
-            <rect x={bldX - 6} y={groundBaseY - 4} width={bldW + 12} height="5" fill="var(--gold-primary)" />
-            {/* Grand Portico Entrance Canopy */}
-            <g transform={`translate(${bldX + bldW / 2 - 40}, ${groundY + 12})`}>
-              <rect x="0" y="0" width="80" height="48" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-              <rect x="18" y="10" width="44" height="38" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-              <line x1="40" y1="10" x2="40" y2="48" stroke="var(--gold-primary)" strokeWidth="1.2" />
-              <text x="40" y="6" fontSize="6.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800" letterSpacing="0.1em">GRAND LOBBY</text>
-            </g>
-            {/* Retail Storefront Glazing */}
-            <g transform={`translate(${bldX + 20}, ${groundY + 16})`}>
-              <rect width="130" height="44" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-              <line x1="65" y1="0" x2="65" y2="44" stroke="#7FB4D8" strokeWidth="1" />
-              <text x="65" y="26" fontSize="7.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">COMMERCIAL SUITE</text>
-            </g>
-            {/* Security Guard / Gate */}
-            <g transform={`translate(${bldRight - 150}, ${groundY + 16})`}>
-              <rect width="130" height="44" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-              <line x1="65" y1="0" x2="65" y2="44" stroke="#7FB4D8" strokeWidth="1" />
-              <text x="65" y="26" fontSize="7.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">RECEPTION & GATE</text>
-            </g>
-
-            {/* Ground Info Card */}
-            <g transform={`translate(${bldRight + 16}, ${groundY + 14})`}>
-              <rect width="138" height="36" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
-              <text x="8" y="15" fontSize="10" fill="var(--cad-text-primary)" fontWeight="800">
-                {isAr ? 'الدور الأرضي' : 'Ground Floor'}
-              </text>
-              <text x="8" y="27" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace">
-                412 m² • Lobby & Retail
-              </text>
-              <text x="130" y="22" fontSize="8" fill="var(--gold-primary)" textAnchor="end">
-                {isAr ? 'عرض ‹' : 'Inspect ›'}
-              </text>
-            </g>
-          </g>
-
-          {/* ─── BASEMENT FLOOR ─── */}
-          <g
-            role="button"
-            tabIndex={0}
-            className="pub-elev-floor-row"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setBldView({ mode: 'floor', floorKey: 'bld_basement' })}
-          >
-            {/* Earth & Concrete Retaining Soil Background */}
-            <rect x={bldX - 10} y={groundBaseY + 1} width={bldW + 20} height={basementH} fill="url(#pubElevGroundHatch)" opacity="0.3" />
-            <rect x={bldX} y={groundBaseY + 1} width={bldW} height={basementH} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="6 3" />
-            {/* Basement Ramp / Garage Pillars */}
-            <g transform={`translate(${bldX + 24}, ${groundBaseY + 10})`}>
-              <rect width="140" height="32" fill="rgba(221, 167, 82, 0.04)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="4 2" />
-              <text x="70" y="20" fontSize="8" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">PARKING (P-01..P-08)</text>
-            </g>
-            <g transform={`translate(${bldRight - 164}, ${groundBaseY + 10})`}>
-              <rect width="140" height="32" fill="rgba(221, 167, 82, 0.04)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="4 2" />
-              <text x="70" y="20" fontSize="8" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">PUMPS & GENERATOR</text>
-            </g>
-
-            {/* Basement Info Card */}
-            <g transform={`translate(${bldRight + 16}, ${groundBaseY + 8})`}>
-              <rect width="138" height="34" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" />
-              <text x="8" y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700">
-                {isAr ? 'البدروم والمواقف' : 'Basement Parking'}
-              </text>
-              <text x="8" y="26" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace">
-                412 m² • Secure Garage
-              </text>
-              <text x="130" y="20" fontSize="8" fill="var(--gold-primary)" textAnchor="end">
-                {isAr ? 'عرض ‹' : 'Inspect ›'}
-              </text>
-            </g>
-          </g>
-        </svg>
-      );
-    }
-
-    /* ─── 2. BUILDING FLOOR PLATE VIEW ─── */
-    if (propertyType === 'building' && bldView.mode === 'floor') {
-      return (
-        <svg
-          viewBox="0 0 740 480"
-          className="cad-vector-svg"
-          style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`, willChange: 'transform', transformOrigin: 'center center', direction: 'ltr' }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <pattern id="pubFloorCadGrid" width="12" height="12" patternUnits="userSpaceOnUse">
-              <path d="M 12 0 L 0 0 0 12" fill="none" stroke="var(--cad-grid-color)" strokeWidth="0.5" />
-            </pattern>
-            <pattern id="pubParquetPattern" width="16" height="16" patternUnits="userSpaceOnUse">
-              <path d="M 0 0 L 8 8 M 8 0 L 16 8 M 0 8 L 8 16 M 8 8 L 16 16" fill="none" stroke="var(--cad-parquet-stroke)" strokeWidth="0.8" />
-              <rect width="16" height="16" fill="var(--cad-parquet-fill)" />
-            </pattern>
-            <pattern id="pubTilePattern" width="14" height="14" patternUnits="userSpaceOnUse">
-              <rect width="14" height="14" fill="var(--cad-tile-fill)" stroke="var(--cad-tile-stroke)" strokeWidth="0.6" />
-            </pattern>
-            <pattern id="pubDeckPattern" width="8" height="16" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="0" x2="8" y2="0" stroke="var(--cad-deck-stroke)" strokeWidth="0.8" />
-              <rect width="8" height="16" fill="var(--cad-deck-fill)" />
-            </pattern>
-            <pattern id="pubBedPattern" width="10" height="10" patternUnits="userSpaceOnUse">
-              <circle cx="5" cy="5" r="0.8" fill="var(--cad-bed-dot)" />
-              <rect width="10" height="10" fill="var(--cad-bed-fill)" />
-            </pattern>
-            <pattern id="pubColumnHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--gold-primary)" strokeWidth="1.2" />
-            </pattern>
-          </defs>
-
-          <rect width="740" height="480" fill="var(--cad-stage-bg)" />
-          <rect width="740" height="480" fill="url(#pubFloorCadGrid)" />
-
-          {/* Dimension Leader Lines */}
-          <g className="fp-dimension-leaders" opacity="0.95">
-            <line x1="64" y1="36" x2="676" y2="36" stroke="var(--gold-primary)" strokeWidth="1" />
-            <line x1="64" y1="30" x2="64" y2="46" stroke="var(--gold-primary)" strokeWidth="1.5" />
-            <line x1="676" y1="30" x2="676" y2="46" stroke="var(--gold-primary)" strokeWidth="1.5" />
-            <rect x="320" y="26" width="100" height="18" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
-            <text x="370" y="38" fontSize="8.5" fill="var(--cad-dims-color)" textAnchor="middle" fontFamily="monospace" fontWeight="800">24.00 m</text>
-
-            <line x1="36" y1="56" x2="36" y2="424" stroke="var(--gold-primary)" strokeWidth="1" />
-            <line x1="30" y1="56" x2="46" y2="56" stroke="var(--gold-primary)" strokeWidth="1.5" />
-            <line x1="30" y1="424" x2="46" y2="424" stroke="var(--gold-primary)" strokeWidth="1.5" />
-            <rect x="18" y="230" width="36" height="18" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
-            <text x="36" y="242" fontSize="8" fill="var(--cad-dims-color)" textAnchor="middle" fontFamily="monospace" fontWeight="800">16.00m</text>
-          </g>
-
-          {/* Exterior Double Insulated Walls */}
-          <rect x="64" y="56" width="612" height="368" fill="none" stroke="var(--gold-primary)" strokeWidth="4" />
-          <rect x="68" y="60" width="604" height="360" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" />
-
-          {/* Corner Concrete Columns */}
-          {[
-            [64, 56], [320, 56], [420, 56], [676, 56],
-            [64, 240], [676, 240],
-            [64, 424], [320, 424], [420, 424], [676, 424]
-          ].map(([cx, cy], i) => (
-            <rect key={`col-${i}`} x={cx - 6} y={cy - 6} width="12" height="12" fill="url(#pubColumnHatch)" stroke="var(--gold-primary)" strokeWidth="1.2" />
           ))}
 
-          {/* GROUND FLOOR PLATE */}
-          {isGround && (
-            <g className="pub-ground-plate">
-              <rect x="70" y="62" width="600" height="356" fill="url(#pubTilePattern)" />
-              <circle cx="370" cy="424" r="20" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-              <text x="370" y="446" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ENTRANCE GATE</text>
-              <g transform="translate(330, 80)">
-                <rect width="80" height="74" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
-                <text x="40" y="42" fontSize="9" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ELEVATOR</text>
-              </g>
-              <g transform="translate(330, 160)">
-                <rect width="80" height="100" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
-                <text x="40" y="55" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">STAIRCASE ↗</text>
-              </g>
-              <g transform="translate(80, 80)">
-                <rect width="220" height="160" fill="rgba(221,167,82,0.04)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.5" />
-                <text x="110" y="90" fontSize="9.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">GROUND GARAGE BAYS</text>
-              </g>
-              <g transform="translate(80, 260)">
-                <rect width="100" height="150" fill="var(--cad-tile-fill)" stroke="#3B82F6" strokeWidth="1.5" strokeDasharray="4 2" />
-                <text x="50" y="80" fontSize="7.5" fill="#3B82F6" textAnchor="middle" fontWeight="800">WATER PUMPS</text>
-              </g>
-              <g transform="translate(190, 260)">
-                <rect width="110" height="150" fill="var(--cad-parquet-fill)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="4 2" />
-                <text x="55" y="80" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">⚡ ELECTRIC BOX</text>
-              </g>
-              <g transform="translate(440, 80)">
-                <rect width="220" height="200" fill="var(--cad-parquet-fill)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.5" />
-                <text x="110" y="110" fontSize="10" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">COMMERCIAL RETAIL SHOP</text>
-              </g>
-            </g>
-          )}
+          {/* Building shell */}
+          <rect x={bldX} y={roofY} width={bldW} height={gradeY - roofY} fill="rgba(255, 255, 255, 0.015)" stroke="var(--gold-primary)" strokeOpacity="0.55" strokeWidth="1.5" />
 
-          {/* BASEMENT FLOOR PLATE */}
-          {isBasement && (
-            <g className="pub-basement-plate">
-              <rect x="70" y="62" width="600" height="356" fill="rgba(10, 14, 24, 0.4)" stroke="var(--gold-primary)" strokeDasharray="4 2" />
-              <g transform="translate(80, 70)">
-                <rect width="580" height="220" fill="rgba(221,167,82,0.03)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.5" />
-                <text x="290" y="110" fontSize="14" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">BASEMENT PARKING ENCLAVE (P-01 to P-12)</text>
-                <text x="290" y="130" fontSize="9" fill="var(--cad-text-muted)" textAnchor="middle">Secure access via automatic hydraulic gate</text>
-              </g>
-              <g transform="translate(80, 300)">
-                <rect width="280" height="110" fill="var(--cad-tile-fill)" stroke="#3B82F6" strokeWidth="1.5" strokeDasharray="4 2" />
-                <text x="140" y="60" fontSize="9" fill="#3B82F6" textAnchor="middle" fontWeight="800">CENTRAL WATER TANK & MOTOR PUMPS</text>
-              </g>
-              <g transform="translate(380, 300)">
-                <rect width="280" height="110" fill="var(--cad-parquet-fill)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="4 2" />
-                <text x="140" y="60" fontSize="9" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">BACKUP POWER GENERATOR & MAIN PANEL</text>
-              </g>
-            </g>
-          )}
-
-          {/* ROOFTOP SKY TERRACE PLATE */}
-          {isRoof && (
-            <g className="pub-roof-plate">
-              <rect x="70" y="62" width="600" height="356" fill="url(#pubDeckPattern)" />
-              <g transform="translate(330, 80)">
-                <rect width="80" height="74" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
-                <text x="40" y="42" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ELEVATOR</text>
-              </g>
-              <g transform="translate(330, 160)">
-                <rect width="80" height="100" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
-                <text x="40" y="55" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">STAIRS ↗</text>
-              </g>
-              <g transform="translate(100, 90)">
-                <rect width="200" height="280" fill="rgba(221,167,82,0.06)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <text x="100" y="140" fontSize="12" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">SKY LOUNGE & PERGOLA</text>
-                <text x="100" y="160" fontSize="8.5" fill="var(--cad-text-muted)" textAnchor="middle">Outdoor BBQ & Seating Area</text>
-              </g>
-              <g transform="translate(440, 90)">
-                <rect width="200" height="280" fill="rgba(127,180,216,0.08)" stroke="#7FB4D8" strokeWidth="1.5" />
-                <text x="100" y="140" fontSize="12" fill="#7FB4D8" textAnchor="middle" fontWeight="800">SOLAR ARRAY & TANKS</text>
-                <text x="100" y="160" fontSize="8.5" fill="var(--cad-text-muted)" textAnchor="middle">Clean energy & water reserves</text>
-              </g>
-            </g>
-          )}
-
-          {/* TYPICAL RESIDENTIAL FLOOR PLATE */}
-          {!isGround && !isRoof && !isBasement && (
-            <g className="pub-typical-plate">
-              <rect x="320" y="56" width="100" height="368" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2.5" />
-              <g transform="translate(330, 68)">
-                <rect width="80" height="74" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
-                <text x="40" y="38" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ELEVATOR</text>
-                <text x="40" y="50" fontSize="7" fill="var(--cad-text-muted)" textAnchor="middle">8 Persons</text>
-              </g>
-              <g transform="translate(330, 154)">
-                <rect width="80" height="110" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
-                <text x="40" y="60" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">STAIRS ↗</text>
-              </g>
-              <g transform="translate(320, 320)">
-                <rect width="100" height="104" fill="var(--cad-core-bg)" />
-                <text x="50" y="58" fontSize="7.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">CORRIDOR</text>
-              </g>
-
-              {/* Flat A (Left Wing) */}
-              <g 
-                className="pub-elev-floor-group"
-                onClick={() => setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: 'flatA' })}
-                style={{ cursor: 'pointer' }}
-              >
-                <rect x="68" y="60" width="252" height="360" fill="transparent" />
-                <rect x="170" y="210" width="150" height="210" fill="url(#pubParquetPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                {/* Sofa Lounge outline */}
-                <rect x="190" y="340" width="70" height="24" rx="3" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <circle cx="225" cy="315" r="10" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <text x="245" y="250" fontSize="9" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Grand Reception</text>
-                <text x="245" y="264" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace">68.0 m²</text>
-
-                <rect x="68" y="60" width="112" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <rect x="90" y="74" width="46" height="50" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <text x="124" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Master Suite</text>
-
-                <rect x="180" y="60" width="140" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <rect x="230" y="74" width="40" height="46" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <text x="250" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Guest Bedroom</text>
-
-                <rect x="68" y="210" width="102" height="100" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <text x="119" y="260" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Kitchen</text>
-
-                <rect x="68" y="310" width="102" height="110" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <text x="119" y="365" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Main Bath</text>
-
-                {/* Exterior Projecting Balcony */}
-                <rect x="36" y="140" width="28" height="140" fill="url(#pubDeckPattern)" stroke="#3B82F6" strokeWidth="1.5" />
-                <text x="50" y="215" fontSize="7.5" fill="#3B82F6" textAnchor="middle" fontWeight="800" transform="rotate(-90 50 215)">BALCONY</text>
-
-                {/* Flat A Action Card */}
-                <g transform="translate(80, 72)">
-                  <rect width="136" height="28" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
-                  <text x="8" y="14" fontSize="9" fill="var(--cad-text-primary)" fontWeight="800">Flat 1A</text>
-                  <text x="128" y="14" fontSize="8.5" fill="var(--gold-primary)" textAnchor="end" fontWeight="800">206 m²</text>
-                  <text x="8" y="23" fontSize="7" fill="var(--cad-dims-color)">{isAr ? 'انقر لعرض مخطط الشقة ‹' : 'Click to inspect unit plan ›'}</text>
+          {/* Roof crown */}
+          {roofLevel && (
+            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: roofLevel.key })}>
+              {roofLevel.templates.includes('bld.roof_terrace') && (
+                <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
+                  <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+                  {[20, 40, 60, 80, 100, 120].map(px => (
+                    <line key={`perg-${px}`} x1={px} y1="0" x2={px} y2="24" stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeWidth="1" />
+                  ))}
+                  <line x1="0" y1="0" x2="140" y2="0" stroke="var(--gold-primary)" strokeWidth="2" />
                 </g>
-              </g>
-
-              {/* Flat B (Right Wing) */}
-              <g 
-                className="pub-elev-floor-group"
-                onClick={() => setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: 'flatB' })}
-                style={{ cursor: 'pointer' }}
-              >
-                <rect x="420" y="60" width="252" height="360" fill="transparent" />
-                <rect x="420" y="210" width="150" height="210" fill="url(#pubParquetPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <rect x="480" y="340" width="70" height="24" rx="3" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <circle cx="515" cy="315" r="10" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <text x="495" y="250" fontSize="9" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Grand Reception</text>
-                <text x="495" y="264" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace">68.0 m²</text>
-
-                <rect x="560" y="60" width="112" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <rect x="604" y="74" width="46" height="50" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <text x="616" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Master Suite</text>
-
-                <rect x="420" y="60" width="140" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <rect x="470" y="74" width="40" height="46" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
-                <text x="490" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Guest Bedroom</text>
-
-                <rect x="570" y="210" width="102" height="100" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <text x="621" y="260" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Kitchen</text>
-
-                <rect x="570" y="310" width="102" height="110" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
-                <text x="621" y="365" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Main Bath</text>
-
-                {/* Exterior Projecting Balcony */}
-                <rect x="676" y="140" width="28" height="140" fill="url(#pubDeckPattern)" stroke="#3B82F6" strokeWidth="1.5" />
-                <text x="690" y="215" fontSize="7.5" fill="#3B82F6" textAnchor="middle" fontWeight="800" transform="rotate(90 690 215)">BALCONY</text>
-
-                {/* Flat B Action Card */}
-                <g transform="translate(524, 72)">
-                  <rect width="136" height="28" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
-                  <text x="8" y="14" fontSize="9" fill="var(--cad-text-primary)" fontWeight="800">Flat 1B</text>
-                  <text x="128" y="14" fontSize="8.5" fill="var(--gold-primary)" textAnchor="end" fontWeight="800">206 m²</text>
-                  <text x="8" y="23" fontSize="7" fill="var(--cad-dims-color)">{isAr ? 'انقر لعرض مخطط الشقة ‹' : 'Click to inspect unit plan ›'}</text>
+              )}
+              {(roofLevel.templates.includes('bld.roof_service') || roofLevel.templates.includes('bld.staircase')) && (
+                <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
+                  <rect width="80" height="32" rx="2" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                  <line x1="20" y1="10" x2="60" y2="10" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+                  <line x1="20" y1="16" x2="60" y2="16" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+                  <line x1="20" y1="22" x2="60" y2="22" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
                 </g>
-              </g>
+              )}
+              {roofLevel.templates.includes('bld.roof_service') && (
+                <g transform={`translate(${bldRight - 110}, ${roofY - 22})`}>
+                  <rect x="0" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
+                  <rect x="42" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
+                  <line x1="34" y1="13" x2="42" y2="13" stroke="#7FB4D8" strokeWidth="1.5" />
+                </g>
+              )}
+              <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="var(--gold-primary)" />
+              <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
+              {infoCard(roofLevel, roofY - 40)}
             </g>
           )}
 
-          {/* Title Badge Bottom Left */}
-          <g transform="translate(64, 436)">
-            <rect width="140" height="24" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
-            <text x="8" y="16" fontSize="8.5" fill="var(--cad-text-primary)" fontWeight="800">
-              {isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح والتراس' : 'Roof Terrace') : isBasement ? (isAr ? 'البدروم' : 'Basement') : bldView.floorKey}
-            </text>
-            <text x="132" y="16" fontSize="8" fill="var(--gold-primary)" textAnchor="end" fontFamily="monospace">412 m²</text>
-          </g>
+          {/* Typical floors: one bay per recorded flat, stair core in the middle */}
+          {typical.map((level, idx) => {
+            const y = roofY + idx * floorH;
+            const n = level.flats.length;
+            const leftCount = Math.ceil(n / 2);
+            const rightCount = n - leftCount;
+            const sideW = (bldW - coreW) / 2 - 12;
+            const leftW = leftCount > 0 ? sideW / leftCount : 0;
+            const rightW = rightCount > 0 ? sideW / rightCount : 0;
+            return (
+              <g key={level.key} role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: level.key })}>
+                <rect x={bldX} y={y} width={bldW} height={floorH} fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(221, 167, 82, 0.02)'} stroke="none" />
+                <rect x={bldX - 4} y={y + floorH - 3} width={bldW + 8} height="4" fill="var(--gold-primary)" opacity="0.9" />
+
+                {level.flats.slice(0, leftCount).map((flat, b) => renderBay(flat, bldX + 8 + b * leftW, leftW, false, y))}
+
+                <g transform={`translate(${bldX + bldW / 2 - coreW / 2}, ${y + 4})`}>
+                  <rect width={coreW} height={floorH - 8} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.2" />
+                  {[14, 28, 42].map(px => (
+                    <line key={px} x1={px} y1="0" x2={px} y2={floorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
+                  ))}
+                </g>
+
+                {level.flats.slice(leftCount).map((flat, b) => renderBay(flat, bldX + bldW / 2 + coreW / 2 + 4 + b * rightW, rightW, true, y))}
+
+                {infoCard(level, y + floorH / 2 - 17)}
+              </g>
+            );
+          })}
+
+          {/* Ground floor: lobby and entrance */}
+          {groundLevel && (
+            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: groundLevel.key })}>
+              <rect x={bldX} y={groundY} width={bldW} height={groundH} fill="url(#pubElevLobbyGrad)" stroke="none" />
+              <g transform={`translate(${bldX + bldW / 2 - 40}, ${groundY + 12})`}>
+                <rect x="0" y="0" width="80" height={groundH - 12} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="18" y="10" width="44" height={groundH - 22} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                <line x1="40" y1="10" x2="40" y2={groundH - 12} stroke="var(--gold-primary)" strokeWidth="1.2" />
+              </g>
+              <g transform={`translate(${bldX + 20}, ${groundY + 16})`}>
+                <rect width="130" height={groundH - 16} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                <line x1="65" y1="0" x2="65" y2={groundH - 16} stroke="#7FB4D8" strokeWidth="1" />
+              </g>
+              <g transform={`translate(${bldRight - 150}, ${groundY + 16})`}>
+                <rect width="130" height={groundH - 16} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                <line x1="65" y1="0" x2="65" y2={groundH - 16} stroke="#7FB4D8" strokeWidth="1" />
+              </g>
+              {infoCard(groundLevel, groundY + groundH / 2 - 17, true)}
+            </g>
+          )}
+
+          {/* Grade */}
+          <rect x={bldX - 6} y={gradeY - 4} width={bldW + 12} height="5" fill="var(--gold-primary)" />
+          <line x1="20" y1={gradeY} x2={bldX - 8} y2={gradeY} stroke="var(--gold-primary)" strokeWidth="1.2" />
+
+          {/* Basement, only when recorded */}
+          {basementLevel && (
+            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: basementLevel.key })}>
+              <rect x={bldX - 10} y={gradeY + 1} width={bldW + 20} height={basementH} fill="url(#pubElevGroundHatch)" opacity="0.3" />
+              <rect x={bldX} y={gradeY + 1} width={bldW} height={basementH} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="6 3" />
+              {infoCard(basementLevel, gradeY + 8)}
+            </g>
+          )}
         </svg>
       );
     }
@@ -1457,8 +1020,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           for (const s of indoorSlots) {
             const lbl = (s.zone?.zoneTitle || s.zone?.zoneTitleAr || s.id || '');
             let k = 'all';
-            if (lbl.includes('وحدة أ') || lbl.includes('Unit A')) k = isAr ? 'وحدة أ — 150 م²' : 'Unit A — 150 m²';
-            else if (lbl.includes('وحدة ب') || lbl.includes('Unit B')) k = isAr ? 'وحدة ب — 150 م²' : 'Unit B — 150 m²';
+            if (lbl.includes('وحدة أ') || lbl.includes('Unit A')) k = isAr ? 'وحدة أ' : 'Unit A';
+            else if (lbl.includes('وحدة ب') || lbl.includes('Unit B')) k = isAr ? 'وحدة ب' : 'Unit B';
             if (!unitMap.has(k)) unitMap.set(k, []);
             unitMap.get(k)!.push(s);
           }
@@ -1663,7 +1226,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                       fontWeight="800"
                       style={{ userSelect: 'none' }}
                     >
-                      {s.sqm} m²
+                      {s.sqm > 0 ? `${s.sqm} m²` : ''}
                     </text>
                   </g>
                 );
@@ -1689,19 +1252,15 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         <g transform={`translate(${stampX}, ${stampY})`} opacity="0.95" style={{ direction: 'ltr' }}>
           <rect width={stampWidth} height="24" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
           <text x="10" y="11" fontSize="7.5" fill="var(--cad-text-primary)" fontWeight="800" textAnchor="start" dominantBaseline="middle" style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}>
-            {isAr ? 'مخطط معماري تفصيلي للمساحات' : 'ARCHITECTURAL CAD FLOOR PLAN'}
+            {isAr ? 'توزيع المساحات' : 'SPACE LAYOUT'}
           </text>
           <text x="10" y="18.5" fontSize="6.5" fill="var(--gold-primary)" fontFamily="monospace" fontWeight="700" textAnchor="start" dominantBaseline="middle" style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}>
-            {`BOUNDS: ${totalWidthM}m × ${totalDepthM}m • SCALE 1:50`}
+            {viewMeasured
+              ? `${totalWidthM}m × ${totalDepthM}m`
+              : (isAr ? 'مخطط توضيحي • المقاسات غير مسجلة' : 'Schematic • dimensions not recorded')}
           </text>
         </g>
 
-        {/* North Compass Arrow (Dynamic positioning relative to layoutBounds) */}
-        <g transform={`translate(${compassX}, ${compassY})`} opacity="0.95">
-         <circle cx="14" cy="14" r="12" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1" />
-          <polygon points="14,4 18,20 14,16 10,20" fill="var(--gold-primary)" />
-          <text x="14" y="2" fontSize="7" fill="var(--gold-primary)" textAnchor="middle" fontWeight="900">N</text>
-        </g>
       </svg>
     );
   };
@@ -1741,15 +1300,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
       {/* Right Cluster: Metrology Tags & Fullscreen Toggle */}
       <div className="stage-controls-right-group">
-        <div className="metrology-tag">
-          <Compass size={13} className="compass-icon" />
-          <span>N 32° W</span>
-        </div>
-
-        <div className="metrology-tag">
-          <span>SCALE 1:50</span>
-        </div>
-
         <button
           type="button"
           className="metrology-tag gold-tag clickable"
@@ -1819,7 +1369,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   className={`studio-crumb-btn ${bldView.mode === 'floor' ? 'active' : ''}`}
                   onClick={() => setBldView({ mode: 'floor', floorKey: bldView.floorKey })}
                 >
-                  <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : bldView.floorKey}</span>
+                  <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : (isAr ? formatFloorLabel(bldView.floorKey, true) : bldView.floorKey)}</span>
                 </button>
               </>
             )}
@@ -1827,7 +1377,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               <>
                 <span className="studio-crumb-sep">›</span>
                 <span className="studio-crumb-btn active">
-                  <span>{bldView.unitId ? 'Flat' : (isAr ? 'الشقة' : 'Flat Plan')}</span>
+                  <span>{bldView.unitId || (isAr ? 'الشقة' : 'Flat Plan')}</span>
                 </span>
               </>
             )}
@@ -1897,7 +1447,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                       className={`studio-crumb-btn ${bldView.mode === 'floor' ? 'active' : ''}`}
                       onClick={() => setBldView({ mode: 'floor', floorKey: bldView.floorKey })}
                     >
-                      <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : bldView.floorKey}</span>
+                      <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : (isAr ? formatFloorLabel(bldView.floorKey, true) : bldView.floorKey)}</span>
                     </button>
                   </>
                 )}
@@ -1905,7 +1455,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   <>
                     <span className="studio-crumb-sep">›</span>
                     <span className="studio-crumb-btn active">
-                      <span>{bldView.unitId ? 'Flat' : (isAr ? 'الشقة' : 'Flat Plan')}</span>
+                      <span>{bldView.unitId || (isAr ? 'الشقة' : 'Flat Plan')}</span>
                     </span>
                   </>
                 )}
@@ -2009,86 +1559,92 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   </button>
                 </div>
 
-                {/* Modal Hero Visual Image */}
-                <div className="pub-modal-hero">
-                  <img 
-                    src={activeModalZone.image} 
-                    alt={isAr ? activeModalZone.zoneTitleAr : activeModalZone.zoneTitle} 
-                    className="pub-modal-img" 
-                  />
-                  <div className="pub-modal-scrim" />
-                </div>
+                {/* Photos the admin uploaded for this space (portrait or landscape, never cropped) */}
+                {activeModalZone.imagesList.length > 0 && (
+                  <div className="pub-modal-gallery">
+                    {activeModalZone.imagesList.map((src, idx) => (
+                      <div key={`${src}-${idx}`} className="pub-modal-photo">
+                        <div className="pub-modal-photo-bg" style={{ backgroundImage: `url(${src})` }} aria-hidden="true" />
+                        <img src={src} alt={isAr ? activeModalZone.zoneTitleAr : activeModalZone.zoneTitle} className="pub-modal-photo-img" />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                {/* 4 Architectural Key Metrics */}
-                <div className="pub-metrics-grid">
-                  <div className="pub-metric-cell">
-                    <span className="pub-metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
-                    <span className="pub-metric-val" dir="ltr">{activeModalZone.sqm} m²</span>
-                  </div>
-                  <div className="pub-metric-cell">
-                    <span className="pub-metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING HEIGHT'}</span>
-                    <span className="pub-metric-val">{activeModalZone.ceiling}</span>
-                  </div>
-                  <div className="pub-metric-cell">
-                    <span className="pub-metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
-                    <span className="pub-metric-val" dir="ltr">{activeModalZone.dims}</span>
-                  </div>
-                  <div className="pub-metric-cell">
-                    <span className="pub-metric-lbl">{isAr ? 'الفتحات والنوافذ' : 'OPENINGS'}</span>
-                    <span className="pub-metric-val" dir="ltr">
-                      {activeModalZone.doorCount + activeModalZone.windowCount > 0
-                        ? [
-                            activeModalZone.doorCount > 0 
-                              ? `${activeModalZone.doorCount} ${isAr ? (activeModalZone.doorCount === 1 ? 'باب' : 'أبواب') : (activeModalZone.doorCount === 1 ? 'Door' : 'Doors')}` 
-                              : null,
-                            activeModalZone.windowCount > 0 
-                              ? `${activeModalZone.windowCount} ${isAr ? (activeModalZone.windowCount === 1 ? 'نافذة' : 'نوافذ') : (activeModalZone.windowCount === 1 ? 'Window' : 'Windows')}` 
-                              : null,
-                          ].filter(Boolean).join(' · ')
-                        : '—'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Engineered Trades & Materials Matrix */}
-                <div className="pub-trades-section">
-                  <h4 className="pub-trades-heading">
-                    {isAr ? 'المواصفات والأنظمة الهندسية المعتمدة' : 'ENGINEERED SYSTEMS & MATERIAL SPECIFICATIONS'}
-                  </h4>
-
-                  <div className="pub-trades-grid">
-                    {activeModalZone.trades.map((trade) => {
-                      const Icon = trade.icon === 'zap' ? Zap : trade.icon === 'wind' ? Wind : trade.icon === 'droplet' ? Droplet : Layers;
-                      return (
-                        <div key={trade.id} className="pub-trade-card">
-                          <div className="pub-trade-icon-box">
-                            <Icon size={16} />
-                          </div>
-                          <div className="pub-trade-info">
-                            <div className="pub-trade-title-row">
-                              <span className="pub-trade-name">{isAr ? trade.nameAr : trade.name}</span>
-                              <span className="pub-trade-badge">{isAr ? trade.badgeAr : trade.badge}</span>
-                            </div>
-                            <p className="pub-trade-spec">{isAr ? trade.specAr : trade.spec}</p>
-                          </div>
+                {/* Measurements: only the ones recorded for this space */}
+                {(() => {
+                  const z = activeModalZone;
+                  const openings = [
+                    z.doorCount ? `${z.doorCount} ${isAr ? (z.doorCount === 1 ? 'باب' : 'أبواب') : (z.doorCount === 1 ? 'Door' : 'Doors')}` : null,
+                    z.windowCount ? `${z.windowCount} ${isAr ? (z.windowCount === 1 ? 'نافذة' : 'نوافذ') : (z.windowCount === 1 ? 'Window' : 'Windows')}` : null,
+                  ].filter(Boolean).join(' · ');
+                  const cells = [
+                    z.sqm > 0 ? { lbl: isAr ? 'المساحة' : 'AREA', val: `${z.sqm} m²`, ltr: true } : null,
+                    z.dims ? { lbl: isAr ? 'الأبعاد' : 'DIMENSIONS', val: z.dims, ltr: true } : null,
+                    z.ceiling ? { lbl: isAr ? 'ارتفاع السقف' : 'CEILING HEIGHT', val: z.ceiling, ltr: false } : null,
+                    openings ? { lbl: isAr ? 'الفتحات' : 'OPENINGS', val: openings, ltr: false } : null,
+                  ].filter((c): c is { lbl: string; val: string; ltr: boolean } => !!c);
+                  if (cells.length === 0) return null;
+                  return (
+                    <div className="pub-metrics-grid">
+                      {cells.map(c => (
+                        <div key={c.lbl} className="pub-metric-cell">
+                          <span className="pub-metric-lbl">{c.lbl}</span>
+                          <span className="pub-metric-val" dir={c.ltr ? 'ltr' : undefined}>{c.val}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
-                {/* Modal Footer Actions */}
-                <div className="pub-modal-footer">
-                  <a
-                    href={`https://wa.me/201000000000?text=Hello,%20I%20am%20inquiring%20about%20${encodeURIComponent(activeModalZone.zoneTitle)}%20in%20${encodeURIComponent(propertyTitle)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pub-inquire-cta-btn"
-                  >
-                    <MessageSquare size={16} />
-                    <span>{isAr ? 'استفسار فوري عن هذا الجناح' : 'Inquire About This Space'}</span>
-                  </a>
-                </div>
+                {/* Trades recorded for this space */}
+                {activeModalZone.trades.length > 0 ? (
+                  <div className="pub-trades-section">
+                    <h4 className="pub-trades-heading">
+                      {isAr ? 'أعمال التشطيب في هذه المساحة' : 'FINISHING WORK IN THIS SPACE'}
+                    </h4>
+
+                    <div className="pub-trades-grid">
+                      {activeModalZone.trades.map((trade) => {
+                        const Icon = trade.icon === 'zap' ? Zap : trade.icon === 'wind' ? Wind : trade.icon === 'droplet' ? Droplet : Layers;
+                        const spec = isAr ? trade.specAr : trade.spec;
+                        return (
+                          <div key={trade.id} className="pub-trade-card">
+                            <div className="pub-trade-icon-box">
+                              <Icon size={16} />
+                            </div>
+                            <div className="pub-trade-info">
+                              <div className="pub-trade-title-row">
+                                <span className="pub-trade-name">{isAr ? trade.nameAr : trade.name}</span>
+                                <span className="pub-trade-badge">{isAr ? trade.badgeAr : trade.badge}</span>
+                              </div>
+                              {spec && <p className="pub-trade-spec">{spec}</p>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="pub-trades-empty">
+                    {isAr ? 'لم تُسجل مواصفات لهذه المساحة بعد.' : 'No specifications recorded for this space yet.'}
+                  </p>
+                )}
+
+                {/* Inquiry goes to the business WhatsApp number from the environment */}
+                {process.env.NEXT_PUBLIC_WHATSAPP_NUMBER && (
+                  <div className="pub-modal-footer">
+                    <a
+                      href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(`${isAr ? 'استفسار عن' : 'Inquiry about'} ${isAr ? activeModalZone.zoneTitleAr : activeModalZone.zoneTitle} — ${propertyTitle}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pub-inquire-cta-btn"
+                    >
+                      <MessageSquare size={16} />
+                      <span>{isAr ? 'استفسار عن هذه المساحة' : 'Ask about this space'}</span>
+                    </a>
+                  </div>
+                )}
 
               </motion.div>
             </div>
@@ -2098,6 +1654,43 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       )}
 
       <style>{`
+        .pub-modal-gallery {
+          display: flex;
+          gap: 0.6rem;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          margin-bottom: 1.1rem;
+        }
+        .pub-modal-photo {
+          position: relative;
+          flex: 0 0 100%;
+          height: 260px;
+          border-radius: 14px;
+          overflow: hidden;
+          background: #0A0C10;
+          scroll-snap-align: center;
+        }
+        .pub-modal-gallery:has(.pub-modal-photo + .pub-modal-photo) .pub-modal-photo { flex-basis: 88%; }
+        .pub-modal-photo-bg {
+          position: absolute;
+          inset: -30px;
+          background-size: cover;
+          background-position: center;
+          filter: blur(24px) brightness(0.5);
+        }
+        .pub-modal-photo-img {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          display: block;
+        }
+        .pub-trades-empty {
+          margin: 0.5rem 0 0;
+          font-size: 0.82rem;
+          color: var(--cad-text-muted, #94a3b8);
+        }
+
         /* ── THEMING VARIABLES ── */
         .blueprint-studio-root,
         .cad-fullscreen-portal-overlay {

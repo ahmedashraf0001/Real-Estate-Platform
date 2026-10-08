@@ -1003,14 +1003,18 @@
 
 /* Modal Footer */
 .modalFooter {
+  width: 100%;
+  min-width: 0;
   padding: 1rem 1.75rem;
   border-top: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #f8fafc;
-  flex-shrink: 0;
+  flex-shrink: 1;
   box-sizing: border-box;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 :global([data-theme="dark"]) .modalFooter {
@@ -1590,9 +1594,11 @@
 }
 
 .footerActions {
+  max-width: 100%;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .flexColGap {

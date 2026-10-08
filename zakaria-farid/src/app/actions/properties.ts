@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient as createBrowserServer } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { sendNewPropertyAlerts } from '@/lib/services/emailService';
+import { buildBuildingUnits } from '@/lib/erp/projectStatusHelper';
+import type { BuildingUnitItem } from '@/lib/supabase/types';
 
 // Creates an admin client using the service role key — bypasses RLS entirely.
 // Falls back to null if the key is not set (e.g. Cloudflare Workers secrets not configured yet),
@@ -82,6 +84,8 @@ const VALID_PROPERTY_COLUMNS = new Set([
   'video_url',
   'calcom_event_link',
   'partner_splits',
+  'building_units',
+  'total_units_count',
   'created_at',
 ]);
 
@@ -105,6 +109,9 @@ export async function saveProperty(
 ) {
   try {
     const cleanPayload = sanitizePropertyPayload(payload);
+    // Never accept client-supplied building_units or total_units_count
+    delete cleanPayload.building_units;
+    delete cleanPayload.total_units_count;
 
     // First verify the user is actually authenticated via their session cookie
     const sessionClient = await createBrowserServer();
@@ -116,6 +123,114 @@ export async function saveProperty(
     // Now use the admin client or session client
     const adminSupabase = await getAdminClient();
     let supabase = adminSupabase ?? sessionClient;
+
+    // Building units configuration handling (R3)
+    const totalFloors = (payload.total_floors !== undefined && payload.total_floors !== '' && payload.total_floors !== null) ? Number(payload.total_floors) : undefined;
+    const residentialFloors = typeof totalFloors === 'number' && !isNaN(totalFloors)
+      ? Math.min(14, Math.max(1, totalFloors - 1))
+      : undefined;
+    const unitsPerFloor = (payload.units_per_floor !== undefined && payload.units_per_floor !== '' && payload.units_per_floor !== null) ? Number(payload.units_per_floor) : undefined;
+    const isCreateBuilding = !isEditing && (cleanPayload.type === 'building' || payload.type === 'building');
+
+    if (isEditing && propertyId) {
+      const { data: existingProp, error: fetchErr } = await supabase
+        .from('properties')
+        .select('id, type, building_units, total_units_count, price_egp, area_sqm')
+        .eq('id', propertyId)
+        .single();
+
+      if (fetchErr) {
+        return { success: false, error: fetchErr.message || 'Failed to inspect existing property' };
+      }
+
+      const storedType = existingProp?.type;
+      const storedIsBuilding = storedType === 'building';
+      const storedUnits = (existingProp?.building_units as BuildingUnitItem[]) || [];
+      const hasStoredUnits = storedUnits.length > 0;
+
+      const typeProvided = cleanPayload.type !== undefined || payload.type !== undefined;
+      const targetType = cleanPayload.type ?? payload.type;
+      const isChangingTypeAwayFromBuilding = (storedIsBuilding || hasStoredUnits) && typeProvided && targetType !== 'building';
+
+      // Any live contract blocks: legacy and whole-building contracts carry no building_unit_id.
+      if (isChangingTypeAwayFromBuilding) {
+        const { data: activeContracts, error: contractsErr } = await supabase
+          .from('erp_contracts')
+          .select('contract_id, building_unit_id, status')
+          .eq('property_id', propertyId)
+          .neq('status', 'Rescinded');
+
+        if (contractsErr) {
+          return { success: false, error: contractsErr.message || 'Failed to verify active contracts' };
+        }
+
+        if (activeContracts && activeContracts.length > 0) {
+          return {
+            success: false,
+            error: 'لا يمكن تغيير نوع العقار لوجود عقود جارية على وحدات منه / Cannot change property type while unit contracts exist.'
+          };
+        }
+      }
+
+      const isBuilding = targetType === 'building' || (!typeProvided && (storedIsBuilding || hasStoredUnits));
+
+      if (isBuilding) {
+        let prevFloors = 0;
+        const prevFloorCounts: Record<number, number> = {};
+        for (const u of storedUnits) {
+          const f = typeof u.floor === 'number' && !isNaN(u.floor) ? u.floor : 1;
+          if (f > prevFloors) prevFloors = f;
+          prevFloorCounts[f] = (prevFloorCounts[f] || 0) + 1;
+        }
+        const prevUnitsPerFloor = prevFloors > 0 ? Math.max(...Object.values(prevFloorCounts), 0) : 0;
+        const prevConfig = prevFloors * prevUnitsPerFloor;
+
+        const hasNewConfig = typeof residentialFloors === 'number' && !isNaN(residentialFloors) && residentialFloors > 0 &&
+                             typeof unitsPerFloor === 'number' && !isNaN(unitsPerFloor) && unitsPerFloor > 0;
+        const newConfig = hasNewConfig ? residentialFloors * unitsPerFloor : 0;
+        const configChanged = hasNewConfig && newConfig !== prevConfig;
+
+        if (configChanged) {
+          const { data: activeContracts, error: contractsErr } = await supabase
+            .from('erp_contracts')
+            .select('contract_id, building_unit_id, status')
+            .eq('property_id', propertyId)
+            .neq('status', 'Rescinded');
+
+          if (contractsErr) {
+            return { success: false, error: contractsErr.message || 'Failed to verify active contracts' };
+          }
+
+          if (activeContracts && activeContracts.length > 0) {
+            return {
+              success: false,
+              error: 'لا يمكن إعادة بناء وحدات العمارة لوجود عقود جارية على وحدات منها / Cannot rebuild building units while units are under contract.'
+            };
+          }
+
+          const count = residentialFloors * unitsPerFloor;
+          const regeneratedUnits = buildBuildingUnits({
+            propertyId,
+            totalFloors: residentialFloors,
+            unitsPerFloor,
+            areaSqm: Number(cleanPayload.area_sqm || payload.area_sqm || existingProp?.area_sqm || 0),
+            priceEgp: Number(cleanPayload.price_egp || payload.price_egp || existingProp?.price_egp || 0),
+          });
+
+          cleanPayload.building_units = regeneratedUnits;
+          cleanPayload.total_units_count = count;
+        } else {
+          cleanPayload.building_units = existingProp?.building_units || [];
+          cleanPayload.total_units_count = existingProp?.total_units_count || storedUnits.length || 1;
+        }
+      }
+    } else if (isCreateBuilding) {
+      if (typeof residentialFloors === 'number' && !isNaN(residentialFloors) && residentialFloors > 0 &&
+          typeof unitsPerFloor === 'number' && !isNaN(unitsPerFloor) && unitsPerFloor > 0) {
+        cleanPayload.total_units_count = residentialFloors * unitsPerFloor;
+      }
+      delete cleanPayload.building_units;
+    }
 
     const executeWrite = async (client: any, payloadToWrite: any) => {
       let curPayload = { ...payloadToWrite };
@@ -151,6 +266,36 @@ export async function saveProperty(
       throw writeRes.error;
     }
 
+    if (!isEditing && writeRes.data) {
+      const newProp = writeRes.data;
+      if (isCreateBuilding && typeof residentialFloors === 'number' && !isNaN(residentialFloors) && residentialFloors > 0 &&
+          typeof unitsPerFloor === 'number' && !isNaN(unitsPerFloor) && unitsPerFloor > 0) {
+        const count = residentialFloors * unitsPerFloor;
+        const units = buildBuildingUnits({
+          propertyId: newProp.id,
+          totalFloors: residentialFloors,
+          unitsPerFloor,
+          areaSqm: Number(cleanPayload.area_sqm || payload.area_sqm || 0),
+          priceEgp: Number(cleanPayload.price_egp || payload.price_egp || 0),
+        });
+
+        const { error: unitsUpdateErr } = await supabase
+          .from('properties')
+          .update({
+            building_units: units,
+            total_units_count: count,
+          })
+          .eq('id', newProp.id);
+
+        if (unitsUpdateErr) {
+          return {
+            success: false,
+            error: unitsUpdateErr.message || 'Failed to initialize building units on create.',
+          };
+        }
+      }
+    }
+
     if (isEditing && propertyId) {
       // Update amenities
       await supabase.from('property_amenities').delete().eq('property_id', propertyId);
@@ -160,8 +305,22 @@ export async function saveProperty(
         if (amErr) console.error('Amenity insert error:', amErr);
       }
 
+      // Replace images with the form's current list (added, removed or reordered).
+      const { error: imgDelErr } = await supabase.from('property_images').delete().eq('property_id', propertyId);
+      if (imgDelErr) throw imgDelErr;
+      if (previewUrls.length > 0) {
+        const imgRows = previewUrls.map((url: string, i: number) => ({
+          property_id: propertyId,
+          url,
+          sort_order: i,
+        }));
+        const { error: imgErr } = await supabase.from('property_images').insert(imgRows);
+        if (imgErr) throw imgErr;
+      }
+
       revalidatePath('/admin');
       revalidatePath('/');
+      revalidatePath('/[locale]/properties/[slug]', 'page');
       return { success: true, propertyId, slug: payload.slug };
     } else {
       const newProp = writeRes.data;

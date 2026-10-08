@@ -1,6 +1,7 @@
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
+import { normalizeUnitNumber } from './projectStatusHelper';
 
 export const PROJECTS_PER_ROW = 3;
 
@@ -736,7 +737,12 @@ export function isUnitSold(
     const isPropMatch = (c.property_id && c.property_id === property.id) ||
       (c.unit_id && (c.unit_id === property.title_ar || c.unit_id === property.title_en));
     if (isPropMatch) {
+      const uNorm = normalizeUnitNumber(unit.unit_number);
+      const cNumNorm = normalizeUnitNumber(c.building_unit_number);
+      if (cNumNorm && uNorm && cNumNorm.toLowerCase() === uNorm.toLowerCase()) return true;
       if (c.building_unit_number && c.building_unit_number === unit.unit_number) return true;
+      const cUnitIdNorm = normalizeUnitNumber(c.unit_id);
+      if (cUnitIdNorm && uNorm && cUnitIdNorm.toLowerCase() === uNorm.toLowerCase()) return true;
       if (c.unit_id && (c.unit_id.trim() === unit.unit_number.trim() || c.unit_id.trim() === unit.unit_id.trim())) return true;
     }
     return false;

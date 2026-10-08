@@ -12,6 +12,7 @@ import {
   PartnerRole,
   ERPPartnerTransaction, 
   ERPPartnerCall, 
+  ERPPartnerCommitment,
   ERPContract, 
   ERPJournalEntry,
   ERPAccountingPeriod,
@@ -24,6 +25,13 @@ import { Property } from '@/lib/supabase/types';
 import { PRIMARY_DEVELOPER_NAME } from './partnersDirectory';
 import { GeneralLedgerEngine, buildCalendarMonthPeriod } from './ledger';
 import { calculatePropertyAuditMetrics } from './propertyCostEngine';
+
+export function countDistinctProjectPartners(properties: Pick<Property, 'partner_splits'>[]): number {
+  return new Set(properties.flatMap(property => (property.partner_splits || [])
+    .filter(partner => !partner.is_archived)
+    .map(partner => partner.partner_name.trim())
+    .filter(Boolean))).size;
+}
 
 /** Costs actually recorded for a property (user-confirmed basis for partner capital and cost shares). */
 export function recordedPropertyCost(property: Property, propertyCosts: ERPPropertyCostItem[] = []): Decimal {
@@ -270,68 +278,71 @@ export function normalizePropertySplits(property: Property): Array<{
 
 /**
  * Computes partner capital owed and arrears for a building (user-confirmed 2026-10-05).
- * Formula:
- * - recordedCost = costs actually recorded for this building so far
- * - For each partner:
- *     required = recordedCost * (sharePct / 100)
- *     paid = sum(transactions for this partner on this property with type === 'CAPITAL_INJECTION')
- *     arrears = required > paid ? required - paid : 0
- * `impliedTotalCapitalEgp` carries recordedCost.
+ * Rule: everyone matches the highest contributor, in proportion to their share.
+ * - paid_i = sum(CAPITAL_INJECTION transactions of partner i on this property)
+ * - totalCapital = max over active partners with share > 0 of (paid_i / (share_i / 100))
+ * - required_i = totalCapital * (share_i / 100); arrears_i = max(0, required_i - paid_i)
+ * Example: Zakaria 50% pays 1,000,000 -> total 2,000,000 -> a 50% partner owes 1,000,000.
+ * `impliedTotalCapitalEgp` carries totalCapital. `_propertyCosts` is kept for call-site compatibility.
  */
 export function computeDynamicBuildingCapital(
   property: Property,
   transactions: ERPPartnerTransaction[] = [],
-  propertyCosts: ERPPropertyCostItem[] = []
+  _propertyCosts: ERPPropertyCostItem[] = []
 ): DynamicBuildingCapitalInfo {
   const propTitle = property.title_ar || property.title_en || 'مشروع عقاري';
   const normalizedSplits = normalizePropertySplits(property);
   const activeSplits = normalizedSplits.filter(s => !s.is_archived);
+  const isFounderName = (name: string) => name === PRIMARY_DEVELOPER_NAME || name.includes(PRIMARY_DEVELOPER_NAME);
 
   // 1. Identify founder split
-  const founderSplit = activeSplits.find(s =>
-    s.partner_name === PRIMARY_DEVELOPER_NAME || s.partner_name.includes('زكريا فريد')
-  );
+  const founderSplit = activeSplits.find(s => isFounderName(s.partner_name));
   const founderSharePct = founderSplit ? founderSplit.share_percentage : 0;
 
-  // 2. Founder's total capital injected into this specific building
-  const founderInjected = transactions
+  // 2. Capital paid by each active partner into this building
+  const paidBy = (partnerName: string, isFounder: boolean) => transactions
     .filter(t =>
-      (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) &&
+      (isFounder ? isFounderName(t.partner_name) : t.partner_name === partnerName) &&
       t.property_id === property.id &&
       t.type === 'CAPITAL_INJECTION'
     )
     .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-  // 3. Total building capital = costs actually recorded so far
-  const impliedTotalCapital = recordedPropertyCost(property, propertyCosts);
+  const rows = activeSplits.map(split => {
+    const isFounder = isFounderName(split.partner_name);
+    return { split, isFounder, paid: paidBy(split.partner_name, isFounder) };
+  });
+  const founderInjected = rows.find(r => r.isFounder)?.paid ?? D(0);
+
+  // 3. Total building capital implied by the highest contributor (paid / share)
+  let impliedTotalCapital = D(0);
+  let leaderIndex = -1;
+  rows.forEach((r, idx) => {
+    if (r.split.share_percentage <= 0 || !r.paid.isPositive()) return;
+    const implied = r.paid.timesRatio(100, r.split.share_percentage);
+    if (implied.gt(impliedTotalCapital)) {
+      impliedTotalCapital = implied;
+      leaderIndex = idx;
+    }
+  });
 
   // 4. Per-partner calculation
   const partnerStatuses: DynamicBuildingCapitalInfo['partnerStatuses'] = [];
 
-  activeSplits.forEach(split => {
-    const isFounder = split.partner_name === PRIMARY_DEVELOPER_NAME || split.partner_name.includes('زكريا فريد');
-    const sharePct = split.share_percentage;
-    const required = impliedTotalCapital.timesRatio(sharePct, 100);
-
-    // Calculate actual paid by this partner
-    const paid = transactions
-      .filter(t => 
-        (isFounder ? (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) : t.partner_name === split.partner_name) &&
-        t.property_id === property.id &&
-        t.type === 'CAPITAL_INJECTION'
-      )
-      .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
-
-    const arrears = required.gt(paid) ? required.minus(paid) : D(0);
+  rows.forEach((r, idx) => {
+    const sharePct = r.split.share_percentage;
+    // The leader's requirement is exactly what they paid (no piastre drift from rounding the total).
+    const required = idx === leaderIndex ? r.paid : impliedTotalCapital.timesRatio(sharePct, 100);
+    const arrears = required.gt(r.paid) ? required.minus(r.paid) : D(0);
 
     partnerStatuses.push({
-      partnerName: split.partner_name,
+      partnerName: r.split.partner_name,
       sharePct,
       requiredContributionEgp: required.toFixed(2),
-      paidContributionEgp: paid.toFixed(2),
+      paidContributionEgp: r.paid.toFixed(2),
       arrearsEgp: arrears.toFixed(2),
       hasArrears: arrears.gt(0),
-      isFounder
+      isFounder: r.isFounder
     });
   });
 
@@ -649,6 +660,14 @@ export class PartnersEngine {
     partners.forEach(p => partnerNameSet.add(p.name));
     transactions.forEach(t => partnerNameSet.add(t.partner_name));
     partnerCalls.forEach(c => partnerNameSet.add(c.partner_name));
+    // Partners named only in a building's equity splits (no profile or transaction yet) are still partners.
+    properties.forEach(p => {
+      ((p.partner_splits as any[]) || []).forEach(s => {
+        const name = (s?.partner_name || s?.partnerName || '').trim();
+        // Founder name variants collapse into PRIMARY_DEVELOPER_NAME (added below).
+        if (name && !s?.is_archived && !name.includes(PRIMARY_DEVELOPER_NAME)) partnerNameSet.add(name);
+      });
+    });
     partnerNameSet.add(PRIMARY_DEVELOPER_NAME);
 
     // Build summaries
@@ -722,11 +741,10 @@ export class PartnersEngine {
               );
               if (cSplit) {
                 let sAmt = D(cSplit.share_amount || 0);
-                let cAmt = D(cSplit.cash_share || 0);
+                const cAmt = contractSplitCollectedShare(c, cSplit);
                 if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
                   const pct = cSplit.share_percentage.replace('%', '').trim();
                   sAmt = D(c.gross_contract_value || 0).timesRatio(pct, 100);
-                  cAmt = D(c.total_cash_collected || 0).timesRatio(pct, 100);
                 }
                 contractSalesShare = contractSalesShare.plus(sAmt);
                 collectionsShare = collectionsShare.plus(cAmt);
@@ -887,11 +905,10 @@ export class PartnersEngine {
             );
             if (cSplit) {
               let sAmt = D(cSplit.share_amount || 0);
-              let cAmt = D(cSplit.cash_share || 0);
+              const cAmt = contractSplitCollectedShare(c, cSplit);
               if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
                 const pct = cSplit.share_percentage.replace('%', '').trim();
                 sAmt = D(c.gross_contract_value || 0).timesRatio(pct, 100);
-                cAmt = D(c.total_cash_collected || 0).timesRatio(pct, 100);
               }
               salesShare = salesShare.plus(sAmt);
               colShare = colShare.plus(cAmt);
@@ -906,7 +923,7 @@ export class PartnersEngine {
 
       // Primary developer
       const primPayouts = transactions
-        .filter(t => (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
+        .filter(t => (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) && t.property_id === prop.id && t.type === 'PROFIT_DISTRIBUTION')
         .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
       const { salesShare: primSales, colShare: primCollections } = computePartnerShares(PRIMARY_DEVELOPER_NAME, primaryShare);
@@ -929,7 +946,7 @@ export class PartnersEngine {
         if (name && name !== PRIMARY_DEVELOPER_NAME && !name.includes('زكريا فريد')) {
           const pct = Number(s.sharePct ?? s.share_percentage ?? 0) || 0;
           const payouts = transactions
-            .filter(t => t.partner_name === name && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
+            .filter(t => t.partner_name === name && t.property_id === prop.id && t.type === 'PROFIT_DISTRIBUTION')
             .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
           const { salesShare: partnerSales, colShare } = computePartnerShares(name, pct);
@@ -981,12 +998,17 @@ export class PartnersEngine {
 
   /**
    * Creates a balanced double-entry journal entry for a partner profit payout / dividend (INV-4.1).
-   * Debit: 303000 (Partner Profit Distributions & Withdrawals)
-   * Credit: 101000 (Cash Vault) or 102000 (Operating Bank / InstaPay)
+   * Debit: 303000 (Partner Profit Distributions & Withdrawals) = cash amount + debt offset
+   * Credit: 301000 (Partner Capital) = debt offset, when the payout first settles unpaid capital commitments
+   * Credit: 101000 (Cash Vault) or 102000 (InstaPay) = cash amount, when any cash is paid
    */
   static createPayoutJournalEntry(params: {
     partnerName: string;
+    partnerId?: string;
+    /** Cash paid out. */
     amount: string | number;
+    /** Unpaid capital settled from the partner's share (non-cash). */
+    debtOffsetAmount?: string | number;
     paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000' | 'CASH' | 'INSTAPAY' | 'INSTAPAY_101000';
     propertyTitle?: string;
     receiptRef?: string;
@@ -996,6 +1018,7 @@ export class PartnersEngine {
     routingAccount?: '101000' | '102000';
   }): ERPJournalEntry {
     const amt = D(params.amount).toFixed(2);
+    const offset = D(params.debtOffsetAmount || 0);
     const creditAccount = params.routingAccount
       ? params.routingAccount
       : ((params.paymentMethod === 'CASH_101000' || params.paymentMethod === 'CASH') ? '101000' : '102000');
@@ -1015,22 +1038,30 @@ export class PartnersEngine {
       entry_number: `JE-${year}-DIST-${Math.floor(1000 + Math.random() * 9000)}`,
       entry_date: entryDate,
       period: periodObj,
-      description: `صرف دفعة أرباح للشريك: ${params.partnerName}${params.propertyTitle ? ' من مشروع ' + params.propertyTitle : ''} [سند رقم: ${ref}]`,
+      description: `صرف دفعة أرباح للشريك: ${params.partnerName}${params.propertyTitle ? ' من مشروع ' + params.propertyTitle : ''}${offset.gt(0) ? ' مع خصم مديونية ضخ رأس المال' : ''} [سند رقم: ${ref}]`,
       source_module: 'CAPITAL_CALL',
       created_by: params.loggedBy || 'SYSTEM_CHIEF_ACCOUNTANT',
       lines: [
         {
           account_code: '303000',
-          debit_amount: amt,
+          debit_amount: D(amt).plus(offset).toFixed(2),
           credit_amount: '0.00',
+          partner_id: params.partnerId,
           memo: `توزيعات أرباح ومسحوبات الشريك: ${params.partnerName}`
         },
-        {
+        ...(offset.gt(0) ? [{
+          account_code: '301000',
+          debit_amount: '0.00',
+          credit_amount: offset.toFixed(2),
+          partner_id: params.partnerId,
+          memo: `سداد مديونية ضخ رأس مال الشريك ${params.partnerName} خصماً من أرباحه`
+        }] : []),
+        ...(D(amt).gt(0) ? [{
           account_code: creditAccount,
           debit_amount: '0.00',
           credit_amount: amt,
           memo: `سداد أرباح من ${paymentLabel} - إشعار رقم #${ref}`
-        }
+        }] : [])
       ]
     });
   }
@@ -1042,6 +1073,7 @@ export class PartnersEngine {
    */
   static createCapitalInjectionJournalEntry(params: {
     partnerName: string;
+    partnerId?: string;
     amount: string | number;
     paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000' | 'CASH' | 'INSTAPAY' | 'INSTAPAY_101000';
     propertyTitle?: string;
@@ -1085,11 +1117,208 @@ export class PartnersEngine {
           account_code: '301000',
           debit_amount: '0.00',
           credit_amount: amt,
+          partner_id: params.partnerId,
           memo: `إثبات زيادة رأس مال وحصة الشريك: ${params.partnerName}`
         }
       ]
     });
   }
+}
+
+/** True when a recorded name belongs to the given partner (founder name variants collapse into PRIMARY_DEVELOPER_NAME). */
+export function isSamePartner(recordedName: string | undefined, partnerName: string): boolean {
+  const name = (recordedName || '').trim();
+  if (partnerName === PRIMARY_DEVELOPER_NAME) return name.includes(PRIMARY_DEVELOPER_NAME);
+  return name === partnerName.trim();
+}
+
+/** A partner's equity share % on one property. The founder gets whatever the other active partners leave from 100%. */
+export function resolvePartnerSharePct(property: Property, partnerName: string): number {
+  const splits = ((property.partner_splits as any[]) || []).filter(s => !s?.is_archived);
+  const found = splits.find(s => isSamePartner(s.partnerName || s.partner_name, partnerName));
+  if (found) return Number(found.sharePct ?? found.share_percentage ?? 0) || 0;
+  if (partnerName !== PRIMARY_DEVELOPER_NAME) return 0;
+  const othersPct = splits.reduce((sum, s) => {
+    const name = s.partnerName || s.partner_name;
+    return isSamePartner(name, PRIMARY_DEVELOPER_NAME) ? sum : sum + (Number(s.sharePct ?? s.share_percentage ?? 0) || 0);
+  }, 0);
+  return Math.max(0, 100 - othersPct);
+}
+
+/** The partner's share of cash collected on a property's live contracts, honouring contract-level splits. */
+/**
+ * A partner's share of the cash actually collected on one contract.
+ * `cash_share` is written as 0 at contract creation and never maintained, so the share is derived from
+ * collected cash × the split percentage (or share_amount / gross when no percentage is stored).
+ */
+export function contractSplitCollectedShare(
+  contract: Pick<ERPContract, 'total_cash_collected' | 'gross_contract_value'>,
+  split: { share_percentage?: string; share_amount?: string; cash_share?: string }
+): Decimal {
+  const collected = D(contract.total_cash_collected || 0);
+  const pct = String(split.share_percentage || '').replace('%', '').trim();
+  if (pct && !D(pct).isZero()) return collected.timesRatio(pct, 100);
+  const gross = D(contract.gross_contract_value || 0);
+  if (!D(split.share_amount || 0).isZero() && !gross.isZero()) return collected.timesRatio(split.share_amount || 0, gross);
+  return D(split.cash_share || 0);
+}
+
+export function partnerCollectionsShareOnProperty(
+  property: Property,
+  partnerName: string,
+  contracts: ERPContract[]
+): Decimal {
+  const sharePct = resolvePartnerSharePct(property, partnerName);
+  return contracts
+    .filter(c => (c.property_id === property.id || c.unit_id === property.id) && c.status !== 'Rescinded')
+    .reduce((sum, c) => {
+      if (c.partner_splits && c.partner_splits.length > 0) {
+        const cSplit = c.partner_splits.find(s => isSamePartner(s.partner_name || (s as any).partnerName, partnerName));
+        if (!cSplit) return sum;
+        return sum.plus(contractSplitCollectedShare(c, cSplit));
+      }
+      return sum.plus(D(c.total_cash_collected || 0).timesRatio(sharePct, 100));
+    }, D(0));
+}
+
+export interface ProjectPayoutPosition {
+  /** Partner's share of cash collected on the project. */
+  collectionsShare: string;
+  /** Profit already paid out to the partner from this project (cash and debt offsets). */
+  paidOut: string;
+  /** Unpaid registered capital commitments on this project. */
+  commitmentDebt: string;
+  /** collectionsShare − paidOut (may be negative after an overpayment). */
+  grossAvailable: string;
+  /** Debt that the next payout settles first, from the partner's share. */
+  offsetNow: string;
+  /** What can still be paid in cash after the offset. */
+  cashAvailable: string;
+  /** Debt left on the partner after the offset. */
+  debtAfter: string;
+  /** How offsetNow is spread over the commitments, oldest due date first. */
+  offsetAllocations: Array<{ commitmentId: string; milestoneName: string; amount: string }>;
+}
+
+/**
+ * Payout position of one partner on one project (user-confirmed 2026-10-06).
+ * Available = collections share − payouts on this project − unpaid registered commitments on this project.
+ * The debt is settled first from the share; if the share does not cover it, the rest stays as debt.
+ */
+export function computeProjectPayoutPosition(params: {
+  partnerName: string;
+  property: Property;
+  contracts?: ERPContract[];
+  transactions?: ERPPartnerTransaction[];
+  commitments?: ERPPartnerCommitment[];
+}): ProjectPayoutPosition {
+  const { partnerName, property, contracts = [], transactions = [], commitments = [] } = params;
+
+  const collectionsShare = partnerCollectionsShareOnProperty(property, partnerName, contracts);
+  const paidOut = transactions
+    .filter(t => isSamePartner(t.partner_name, partnerName) && t.property_id === property.id &&
+      (t.type === 'PROFIT_DISTRIBUTION' || t.type === 'CAPITAL_RETURN'))
+    .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
+
+  const openCommitments = commitments
+    .filter(c => isSamePartner(c.partner_name, partnerName) && c.property_id === property.id &&
+      c.status !== 'CANCELLED' && c.status !== 'PAID')
+    .map(c => ({ c, unpaid: D(c.committed_amount || 0).minus(c.paid_amount || 0) }))
+    .filter(x => x.unpaid.gt(0))
+    .sort((a, b) => String(a.c.due_date || '').localeCompare(String(b.c.due_date || '')));
+  const commitmentDebt = openCommitments.reduce((sum, x) => sum.plus(x.unpaid), D(0));
+
+  const grossAvailable = collectionsShare.minus(paidOut);
+  const positiveGross = grossAvailable.gt(0) ? grossAvailable : D(0);
+  const offsetNow = positiveGross.lt(commitmentDebt) ? positiveGross : commitmentDebt;
+
+  const offsetAllocations: ProjectPayoutPosition['offsetAllocations'] = [];
+  let left = offsetNow;
+  for (const { c, unpaid } of openCommitments) {
+    if (!left.gt(0)) break;
+    const take = left.lt(unpaid) ? left : unpaid;
+    offsetAllocations.push({ commitmentId: c.commitment_id, milestoneName: c.milestone_name, amount: take.toFixed(2) });
+    left = left.minus(take);
+  }
+
+  return {
+    collectionsShare: collectionsShare.toFixed(2),
+    paidOut: paidOut.toFixed(2),
+    commitmentDebt: commitmentDebt.toFixed(2),
+    grossAvailable: grossAvailable.toFixed(2),
+    offsetNow: offsetNow.toFixed(2),
+    cashAvailable: positiveGross.minus(offsetNow).toFixed(2),
+    debtAfter: commitmentDebt.minus(offsetNow).toFixed(2),
+    offsetAllocations
+  };
+}
+
+export interface DistributionReadyProject {
+  propertyId: string;
+  propertyTitle: string;
+  totalContractValue: string;
+  totalCollected: string;
+  partners: Array<{ partnerName: string; sharePct: number } & ProjectPayoutPosition>;
+  /** Cash still to pay across the project's partners, after debt offsets. */
+  totalCashToPay: string;
+  /** Unpaid capital that the distribution settles. */
+  totalOffset: string;
+}
+
+/**
+ * Projects whose money can be distributed (user-confirmed 2026-10-06): the property is sold
+ * (listing marked sold, or every building unit contracted) and the live contracts on it are fully collected.
+ * Only partners with an undistributed share are listed; projects with nothing left to distribute are skipped.
+ */
+export function getDistributionReadyProjects(params: {
+  properties: Property[];
+  contracts: ERPContract[];
+  transactions?: ERPPartnerTransaction[];
+  commitments?: ERPPartnerCommitment[];
+}): DistributionReadyProject[] {
+  const { properties, contracts, transactions = [], commitments = [] } = params;
+  const ready: DistributionReadyProject[] = [];
+
+  properties.forEach(property => {
+    const live = contracts.filter(c => (c.property_id === property.id || c.unit_id === property.id) && c.status !== 'Rescinded');
+    if (live.length === 0) return;
+    const gross = live.reduce((sum, c) => sum.plus(c.gross_contract_value || 0), D(0));
+    const collected = live.reduce((sum, c) => sum.plus(c.total_cash_collected || 0), D(0));
+    if (!gross.gt(0) || collected.lt(gross)) return;
+
+    const units = property.building_units || [];
+    const isSold = property.listing_status === 'sold' ||
+      (units.length > 0 && units.every(u => u.status === 'contracted'));
+    if (!isSold) return;
+
+    const names = new Set<string>([PRIMARY_DEVELOPER_NAME]);
+    ((property.partner_splits as any[]) || []).forEach(s => {
+      const name = (s?.partner_name || s?.partnerName || '').trim();
+      if (name && !s?.is_archived && !isSamePartner(name, PRIMARY_DEVELOPER_NAME)) names.add(name);
+    });
+
+    const partners: DistributionReadyProject['partners'] = [];
+    names.forEach(partnerName => {
+      const sharePct = resolvePartnerSharePct(property, partnerName);
+      if (sharePct <= 0) return;
+      const position = computeProjectPayoutPosition({ partnerName, property, contracts, transactions, commitments });
+      if (!D(position.grossAvailable).gt(0)) return;
+      partners.push({ partnerName, sharePct, ...position });
+    });
+    if (partners.length === 0) return;
+
+    ready.push({
+      propertyId: property.id,
+      propertyTitle: property.title_ar || property.title_en || 'مشروع عقاري',
+      totalContractValue: gross.toFixed(2),
+      totalCollected: collected.toFixed(2),
+      partners,
+      totalCashToPay: partners.reduce((sum, p) => sum.plus(p.cashAvailable), D(0)).toFixed(2),
+      totalOffset: partners.reduce((sum, p) => sum.plus(p.offsetNow), D(0)).toFixed(2)
+    });
+  });
+
+  return ready;
 }
 
 export const calculateProjectPartnershipCards = PartnersEngine.getProjectPartnershipCards;

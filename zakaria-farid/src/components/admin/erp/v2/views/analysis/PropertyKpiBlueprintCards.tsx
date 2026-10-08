@@ -93,9 +93,6 @@ export const PropertyKpiBlueprintCards: React.FC<PropertyKpiBlueprintCardsProps>
             <span className={styles.cardSubLabel}>
               {isAr ? 'رأس مال منفق' : 'Incurred Capital'}
             </span>
-            <span className={styles.deltaPillGreen}>
-              <span>▲ +8.4%</span>
-            </span>
           </div>
         </div>
 

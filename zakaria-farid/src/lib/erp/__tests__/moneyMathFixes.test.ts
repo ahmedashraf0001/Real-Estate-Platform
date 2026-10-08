@@ -149,28 +149,57 @@ describe('Handover COGS matching', () => {
   });
 });
 
-describe('Partner capital owed = share x recorded costs', () => {
-  it('derives requirement and arrears from recorded costs, not founder payments', () => {
-    const building = {
-      id: 'b1',
-      type: 'building',
-      area_sqm: 500,
-      title_ar: 'عمارة',
-      partner_splits: [
-        { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: 60 },
-        { partner_name: 'Partner B', share_percentage: 40 },
-      ],
-    } as unknown as Property;
-    const txs = [{
-      id: 't1', partner_name: 'Partner B', property_id: 'b1', type: 'CAPITAL_INJECTION', amount: '300000.00',
-    }] as unknown as ERPPartnerTransaction[];
-    const info = computeDynamicBuildingCapital(building, txs, [cost('b1', '600000.00'), cost('b1', '400000.00')]);
+describe('Partner capital owed = match the highest contributor by share', () => {
+  const building = {
+    id: 'b1',
+    type: 'building',
+    area_sqm: 500,
+    title_ar: 'عمارة',
+    partner_splits: [
+      { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: 50 },
+      { partner_name: 'Partner B', share_percentage: 50 },
+    ],
+  } as unknown as Property;
+  const tx = (name: string, amount: string) => ({
+    id: `t-${name}-${amount}`, partner_name: name, property_id: 'b1', type: 'CAPITAL_INJECTION', amount,
+  }) as unknown as ERPPartnerTransaction;
+
+  it('Zakaria (50%) pays 1,000,000 -> the other 50% partner owes 1,000,000', () => {
+    const info = computeDynamicBuildingCapital(building, [tx(PRIMARY_DEVELOPER_NAME, '1000000.00')]);
     const b = info.partnerStatuses.find(p => p.partnerName === 'Partner B')!;
     const f = info.partnerStatuses.find(p => p.isFounder)!;
-    assert.deepStrictEqual([b.requiredContributionEgp, b.paidContributionEgp, b.arrearsEgp], ['400000.00', '300000.00', '100000.00']);
-    assert.deepStrictEqual([f.requiredContributionEgp, f.paidContributionEgp, f.arrearsEgp], ['600000.00', '0.00', '600000.00']);
-    assert.strictEqual(info.impliedTotalCapitalEgp, '1000000.00');
-    assert.strictEqual(info.fundingRatioPct, 30);
+    assert.strictEqual(info.impliedTotalCapitalEgp, '2000000.00');
+    assert.deepStrictEqual([f.requiredContributionEgp, f.arrearsEgp], ['1000000.00', '0.00']);
+    assert.deepStrictEqual([b.requiredContributionEgp, b.paidContributionEgp, b.arrearsEgp], ['1000000.00', '0.00', '1000000.00']);
+    assert.strictEqual(info.fundingRatioPct, 50);
+  });
+
+  it('works whoever pays first: Partner B (50%) pays 300,000 -> Zakaria owes 300,000', () => {
+    const info = computeDynamicBuildingCapital(building, [tx('Partner B', '300000.00')]);
+    const f = info.partnerStatuses.find(p => p.isFounder)!;
+    assert.deepStrictEqual([f.requiredContributionEgp, f.arrearsEgp], ['300000.00', '300000.00']);
+  });
+
+  it('uneven shares: 60/40, founder pays 600,000 -> partner owes 400,000; no capital -> nothing owed', () => {
+    const b6040 = { ...building, partner_splits: [
+      { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: 60 },
+      { partner_name: 'Partner B', share_percentage: 40 },
+    ] } as unknown as Property;
+    const info = computeDynamicBuildingCapital(b6040, [tx(PRIMARY_DEVELOPER_NAME, '600000.00')]);
+    assert.strictEqual(info.partnerStatuses.find(p => p.partnerName === 'Partner B')!.arrearsEgp, '400000.00');
+    const none = computeDynamicBuildingCapital(b6040, []);
+    assert.ok(none.partnerStatuses.every(p => p.requiredContributionEgp === '0.00' && !p.hasArrears));
+  });
+
+  it('a one-third share does not leave a piastre of drift on the leader', () => {
+    const thirds = { ...building, partner_splits: [
+      { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: 33.33 },
+      { partner_name: 'Partner B', share_percentage: 66.67 },
+    ] } as unknown as Property;
+    const info = computeDynamicBuildingCapital(thirds, [tx(PRIMARY_DEVELOPER_NAME, '1000000.00')]);
+    const f = info.partnerStatuses.find(p => p.isFounder)!;
+    assert.deepStrictEqual([f.requiredContributionEgp, f.arrearsEgp], ['1000000.00', '0.00']);
+    assert.strictEqual(info.partnerStatuses.find(p => p.partnerName === 'Partner B')!.requiredContributionEgp, '2000300.03');
   });
 });
 
@@ -225,5 +254,23 @@ describe('Balance figures read from the GL', () => {
       realizedRevenue: '1000000.00',
       accountsReceivable: '900000.00',
     });
+  });
+});
+
+describe('Partner list includes partners named only in building splits', () => {
+  it('lists a split partner with no profile or transaction yet', async () => {
+    const { PartnersEngine } = await import('../partnersEngine');
+    const building = {
+      id: 'b-split', type: 'building', area_sqm: 100, title_ar: 'عمارة',
+      partner_splits: [
+        { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: 50 },
+        { partner_name: 'اشرف متولي', share_percentage: 50 },
+      ],
+    } as unknown as Property;
+    const names = PartnersEngine.calculatePartnerSummaries([], [building], [], [], []).map(s => s.partnerName);
+    assert.ok(names.includes('اشرف متولي'));
+    assert.strictEqual(names.filter(n => n === PRIMARY_DEVELOPER_NAME).length, 1);
+    const ashraf = PartnersEngine.calculatePartnerSummaries([], [building], [], [], []).find(s => s.partnerName === 'اشرف متولي')!;
+    assert.strictEqual(ashraf.holdings[0].sharePct, 50);
   });
 });

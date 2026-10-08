@@ -1,0 +1,21 @@
+TASK sim-area-field-bug (SURFACE_UI + data path, diagnose then fix)
+
+SYMPTOM
+In the ERP, the SIM building with id prefix 13c805ff was created with area 400. Opening its edit form shows the area field EMPTY. Other fields load fine (not verified for every field; check).
+
+LIKELY PLACES (verify, do not assume)
+zakaria-farid/src/components/admin/AdminPropertyForm.tsx, src/components/admin/PropertiesAdminClient.tsx, src/components/admin/erp/v2/views/PropertiesPortfolioView.tsx, the property load/save mappers in src/lib/erp/supabaseService.ts (and any properties mapper). Use `graphify query` first, rg second.
+
+REQUIRED
+R1. Diagnose root cause with evidence: trace the area value from create form -> save payload -> DB column -> load mapper -> edit form field. Query the dev DB read-only for the 13c805ff row to see what was actually stored (area column(s) of the property and its building_units). State file:line of the break.
+R2. Fix at the root (one mapping), not by special-casing the edit form. If the value was never saved, fix the save path; do NOT backfill existing rows (report how many rows are affected instead).
+R3. If the building form has both building area and unit area, make sure each field round-trips to its own column. No layout change; keep FIN-OS layout and existing components.
+R4. Smallest diff. No migration unless the column is genuinely missing (then stop and report BLOCKED with the reason).
+
+TESTS (RED first)
+T1. Round-trip test: build a property via the create mapper with area 400, map it back through the load mapper used by the edit form, and assert the form field value is 400. Cover every area-like field the form has.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+- final.md lists: root cause file:line, DB evidence, affected-row count, files changed.

@@ -8,6 +8,7 @@ import {
 } from './types';
 import { Property } from '@/lib/supabase/types';
 import { D, Decimal, generateUUID } from './math';
+import { toLocalDateStr } from './installmentsVaultProjection';
 
 export interface CategoryMeta {
   key: PropertyCostCategory;
@@ -105,6 +106,57 @@ export interface ConstructionExpenseJournalLine {
 
 export function getPropertyCostAccountCode(category: PropertyCostCategory): string {
   return PROPERTY_COST_CATEGORIES.find(meta => meta.key === category)?.accountCode || '151000';
+}
+
+/**
+ * Builds balanced double-entry correction lines for cost-item edits, adjustments, and deletions.
+ * Keeping the general ledger in exact alignment with the cost sub-ledger.
+ */
+export function buildCostCorrectionJournalLines(params: {
+  category: PropertyCostCategory;
+  delta: string | number;
+  memo: string;
+}): ConstructionExpenseJournalLine[] {
+  const d = D(params.delta);
+  if (d.isZero()) {
+    return [];
+  }
+
+  const categoryAccount = getPropertyCostAccountCode(params.category);
+
+  if (d.gt(0)) {
+    const amt = d.toFixed(2);
+    return [
+      {
+        account_code: categoryAccount,
+        debit_amount: amt,
+        credit_amount: '0.00',
+        memo: params.memo
+      },
+      {
+        account_code: '201000',
+        debit_amount: '0.00',
+        credit_amount: amt,
+        memo: params.memo
+      }
+    ];
+  }
+
+  const absAmt = d.abs().toFixed(2);
+  return [
+    {
+      account_code: '201000',
+      debit_amount: absAmt,
+      credit_amount: '0.00',
+      memo: params.memo
+    },
+    {
+      account_code: categoryAccount,
+      debit_amount: '0.00',
+      credit_amount: absAmt,
+      memo: params.memo
+    }
+  ];
 }
 
 /**
@@ -898,7 +950,8 @@ export function calculatePropertyAuditMetrics(
   const byPhase: { [key in PropertyLifecyclePhase]?: { total: string; count: number } } = {};
 
   propertyCosts.forEach(item => {
-    const cost = D(item.total_cost_egp || 0);
+    // Net of refunds/supplements (user-confirmed 2026-10-07): same basis as construction WIP.
+    const cost = D(calculateCostItemEffectiveTotals(item).netEffectiveCost);
     totalLogged = totalLogged.plus(cost);
 
     if (!byCategory[item.category]) {
@@ -1172,11 +1225,11 @@ export function generatePayableInstallmentSchedule(params: {
       installment_number: 0,
       title_ar: 'الدفعة المقدمة الإنشائية',
       title_en: 'Construction Advance Payment',
-      due_date: new Date().toISOString().split('T')[0],
+      due_date: toLocalDateStr(new Date()),
       amount_egp: dp.toFixed(2),
       paid_amount_egp: dp.toFixed(2), // Down payment is considered paid at contract
       status: 'PAID',
-      payment_date: new Date().toISOString().split('T')[0]
+      payment_date: toLocalDateStr(new Date())
     });
   }
 
@@ -1193,7 +1246,7 @@ export function generatePayableInstallmentSchedule(params: {
 
       const targetMonth = (startMonth - 1) + (i * frequencyMonths);
       const dueDateObj = new Date(startYear, targetMonth, startDay || 1);
-      const dueDateStr = dueDateObj.toISOString().split('T')[0];
+      const dueDateStr = toLocalDateStr(dueDateObj);
 
       installments.push({
         installment_id: generateUUID(),
@@ -1547,3 +1600,93 @@ export function updateCostItemDirectly(
   return updated;
 }
 
+
+
+/**
+ * Re-splits the unpaid remainder of a cost item's payable schedule across its unpaid tranches.
+ * Follows user-confirmed rule (2026-10-07):
+ * - Fully paid tranches remain untouched.
+ * - Partly paid tranches keep their paid amounts as floor; each partly paid tranche keeps amount_egp = paid_amount_egp + its share.
+ * - Remaining to split = newNetTotal - sum(paid_amount_egp of all tranches).
+ * - Split evenly in piastres over tranches that are not fully paid; the last such tranche absorbs rounding.
+ */
+export function resplitUnpaidInstallments(
+  installments: undefined,
+  newNetTotal: string | number | Decimal
+): undefined;
+export function resplitUnpaidInstallments(
+  installments: ERPPayableInstallment[],
+  newNetTotal: string | number | Decimal
+): ERPPayableInstallment[];
+export function resplitUnpaidInstallments(
+  installments: ERPPayableInstallment[] | undefined,
+  newNetTotal: string | number | Decimal
+): ERPPayableInstallment[] | undefined;
+export function resplitUnpaidInstallments(
+  installments: ERPPayableInstallment[] | undefined,
+  newNetTotal: string | number | Decimal
+): ERPPayableInstallment[] | undefined {
+  if (!installments || installments.length === 0) {
+    return installments;
+  }
+
+  const netTotalDec = D(newNetTotal);
+  let totalPaidDec = D(0);
+  for (const inst of installments) {
+    totalPaidDec = totalPaidDec.plus(inst.paid_amount_egp || 0);
+  }
+
+  const remainingToSplit = netTotalDec.minus(totalPaidDec);
+  if (remainingToSplit.lt(0)) {
+    throw new Error(`New total (${netTotalDec.toFixed(2)}) cannot be less than total paid amount (${totalPaidDec.toFixed(2)}).`);
+  }
+
+  const isTrancheFullyPaid = (inst: ERPPayableInstallment): boolean => {
+    const paid = D(inst.paid_amount_egp || 0);
+    const amount = D(inst.amount_egp || 0);
+    return inst.status === 'PAID' || (amount.gt(0) && paid.gte(amount));
+  };
+
+  const unpaidCount = installments.filter(inst => !isTrancheFullyPaid(inst)).length;
+
+  if (unpaidCount === 0) {
+    if (remainingToSplit.isZero()) {
+      return installments.map(inst => ({ ...inst }));
+    }
+    throw new Error('No unpaid tranches available to absorb the remaining cost.');
+  }
+
+  const baseCents = remainingToSplit.toCents() / BigInt(unpaidCount);
+  const baseShare = Decimal.fromCents(baseCents);
+  let allocatedShare = D(0);
+  let unpaidSeen = 0;
+
+  return installments.map(inst => {
+    if (isTrancheFullyPaid(inst)) {
+      return { ...inst, status: 'PAID' };
+    }
+
+    unpaidSeen += 1;
+    const isLastUnpaid = unpaidSeen === unpaidCount;
+    const trancheShare = isLastUnpaid ? remainingToSplit.minus(allocatedShare) : baseShare;
+    allocatedShare = allocatedShare.plus(trancheShare);
+
+    const paid = D(inst.paid_amount_egp || 0);
+    // Rule: each partly paid tranche keeps amount_egp = paid_amount_egp + its allocated share.
+    const newAmount = paid.plus(trancheShare);
+
+    let status: ERPPayableInstallment['status'] = 'PENDING';
+    if (newAmount.gt(0) && paid.gte(newAmount)) {
+      status = 'PAID';
+    } else if (paid.gt(0)) {
+      status = 'PARTIALLY_PAID';
+    }
+
+    return {
+      ...inst,
+      amount_egp: newAmount.toFixed(2),
+      paid_amount_egp: paid.toFixed(2),
+      status
+    };
+  });
+}

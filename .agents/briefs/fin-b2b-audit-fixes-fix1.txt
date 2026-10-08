@@ -1,0 +1,34 @@
+ROLE: LEAF. You implement or review directly. Do not call invoke_subagent. Delegation rules in AGENTS.md apply to the orchestrator only.
+
+TASK fin-b2b-audit-fixes FIX1. Two blocking findings. Fix only F1/F2 and regressions caused by these fixes. No new task, no widening, no git add/commit/push. Repo C:/Users/lyr1csan/workspace/Real-Estate-Platform; app zakaria-farid/. npm/npx run from app. git requires -c "safe.directory=C:/Users/lyr1csan/workspace/Real-Estate-Platform".
+
+Read .agents/briefs/fin-b2b-audit-fixes-body.txt and .agents/briefs/fin-b2-units-persist-body.txt. Existing uncommitted fin-b2 and earlier work must remain. Read AGENTS.md, zakaria-farid/AGENTS.md, PROJECT_SPEC.md and C:/Users/lyr1csan/.claude/skills/agy-lessons/SKILL.md. Review evidence: .agents/runs/fin-b2b-audit-fixes/final.md.
+
+F1 [BUG] zakaria-farid/src/lib/erp/projectStatusHelper.ts:222 new isWholeBuildingSold treats listing_status='sold' as live-contract evidence when called by computeProjectStatusMetrics at :39. Reproduction: four stored available units, listing_status='sold', contracts=[]. Previous production compute: contractedUnits=0, isContracted=false, statusTextEn='Sold'. Current: contractedUnits=4, isContracted=true, statusTextEn='Contracted'. Exact change: restore pre-audit inline whole-building/per-unit live-contract predicates inside computeProjectStatusMetrics; normalize both matched labels with normalizeUnitNumber for A2. HEAD's compute function is unchanged by original fin-b2; consult that function only, never replace whole file from HEAD. Preserve original listing-status fallback and all unrelated metrics. Test: add production-import regression in buildingUnitsAuditFixes.test.ts asserting 0/false/'Sold' for sold listing with no contracts; prove RED on current code before fix, GREEN after. Also assert actual whole-building live contract still gives four contracted units, and existing A2 Arabic legacy + Rescinded fixture still gives three available and one contracted. Use real typed contract statuses/current fixtures; no copied compute or test helper business logic.
+F2 [Q:dead-code] zakaria-farid/src/lib/erp/projectStatusHelper.ts:266 new exported getAvailableUnitsForProperty has zero callers. Audit-added isWholeBuildingSold at :221 and isUnitSold at :237 duplicate existing portfolio helpers. Exact change: after F1 restores compute predicates, remove these three audit-added duplicate functions and their comments; retain normalizeUnitNumber, cleanUnitNumber and every pre-audit export. Production wizard/portfolio must keep existing propertiesPortfolioCalculations.ts helpers; do not add re-exports or wrappers. Test: rg -n 'export function (isWholeBuildingSold|isUnitSold|getAvailableUnitsForProperty)' zakaria-farid/src/lib/erp/projectStatusHelper.ts yields zero hits (rg exit 1 expected), existing propertiesPortfolioCalculations.ts exports remain, A2 and integer/availability test files stay green.
+
+ALLOW-LIST
+- zakaria-farid/src/lib/erp/projectStatusHelper.ts
+- zakaria-farid/src/lib/erp/__tests__/buildingUnitsAuditFixes.test.ts
+
+Reviewer already fixed F3 mechanically; retain it verbatim: properties.ts unconditionally selects stored property row, and buildingUnitsReview.test.ts cache-error mock supplies stored apartment row. No typeof select fallback, public client override, fabricated production user or swallowed cache error. Do not edit those files for F1/F2.
+
+INVARIANTS / EXECUTION
+- Execute directly in current agent. Commands foreground; no background tasks, terminals or agents.
+- Minimal hunks. No whole-file rewrite. Remove only the three new audit duplicates explicitly identified in F2; keep all pre-existing exports and earlier uncommitted work.
+- Money via D() only. Keep fractional last-unit remainder and existing integer split unchanged.
+- Keep server action guard, client-field stripping, production auth and stored-row read unchanged.
+- Keep Arabic UTF-8. No UI changes, layout changes, dependencies, DB access, migrations or .env edits.
+- Tests import production functions and assert returned domain values. No copied helpers, assertion-free tests, static production data, unused exports, fallback branches or TODO stubs.
+- No per-step red/green/gate output files. Report decisive failure lines and observed counts in final message. Reviewer stores evidence in final.md.
+
+VERIFY
+1. Add F1 regression first; run from app: npx tsx --test src/lib/erp/__tests__/buildingUnitsAuditFixes.test.ts. Capture decisive RED assertion in final message.
+2. Fix F1/F2. Run single files: npx tsx --test src/lib/erp/__tests__/buildingUnitsAuditFixes.test.ts; npx tsx --test src/lib/erp/__tests__/buildingUnits.test.ts; npx tsx --test src/lib/erp/__tests__/buildingUnitsReview.test.ts. All exit 0; report actual totals.
+3. npx tsc --noEmit once at end. Exit 0 required. Do not run full npm test; reviewer runs final full gates once.
+4. Run F2 rg commands; report zero projectStatusHelper duplicate exports and retained portfolio exports. git diff --check must be clean for edited hunks; deleted duplicate block removes :223 trailing whitespace.
+
+REPORT
+- Files changed, F1/F2 fixed/not fixed, exact lines and why; dependencies none.
+- New regression test names, decisive RED assertion, GREEN command exits/counts, typecheck exit.
+- Regressions/unverified items. No screenshot or full-gate claim. No commit.
