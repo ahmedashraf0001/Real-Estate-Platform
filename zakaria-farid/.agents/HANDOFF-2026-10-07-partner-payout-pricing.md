@@ -10,6 +10,7 @@ Branch `feat/erp-partner-logic` (repo root `Real-Estate-Platform`, app in `zakar
 ## Commits on this branch
 | Commit | What |
 |---|---|
+| `TBD` | pdf-reports: three Arabic RTL A4 vector statements, shared pure builders/escaped renderer/native iframe print; all three modal entry points; Claude's 5 screenshot corrections fixed; Codex direct implementation, 0 agy rounds, 15/15 task tests, build/tsc exit 0, npm test exit 1 (881 total / 874 pass / 7 exact baseline fail), 14 fresh viewed 1280/390 fixture screenshots and 6 viewed PDF pages; BLOCKED only real-dev-data acceptance versus _agy-header.txt:30,32 no-DB/no-real-data rule; no dependency/migration/commit |
 | `TBD` | unit-area-split: shared generation uses two-decimal unit areas with last-unit remainder; card shows stored building total plus unit range with RTL isolation; Codex direct implementation, 0 agy rounds, 9/9 targeted tests, build/tsc exit 0, npm test exit 1 (866 total / 859 pass / 7 exact baseline fail), 6 fresh viewed fixture screenshots at 1280/390; R3 affected-building read-only count BLOCKED awaiting approved data source; no migration/backfill/commit |
 | `TBD` | ui-c3-real-display-values: real monthly KPI series and previous-month deltas; neutral rates; hide unavailable contractor tax ID; RED-first helper/source tests |
 | `9df51cd` | Rules + skill + AGENTS.md pointer |

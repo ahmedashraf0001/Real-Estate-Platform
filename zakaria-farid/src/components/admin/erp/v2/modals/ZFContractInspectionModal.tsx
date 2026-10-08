@@ -15,6 +15,9 @@ import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { ZFFacts, ZFEffect, zfForm } from '../common/ZFForm';
 import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
+import { buildClientStatement } from '@/lib/erp/statements/builders';
+import { printStatement } from '@/lib/erp/statements/printStatement';
+import { toast } from 'sonner';
 import shellStyles from '../ZFWorkstationShell.module.css';
 import css from './ZFContractInspectionModal.module.css';
 
@@ -36,6 +39,7 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
   initialTab = 'details', onOpenCollectionModal, onOpenHandoverModal, leads
 }) => {
   const erpContext = useERPWorkstationContext();
+  const [isPrinting, setIsPrinting] = useState(false);
   const effectiveLeads = useMemo(() => {
     return leads || erpContext?.data?.leads || [];
   }, [leads, erpContext?.data?.leads]);
@@ -310,10 +314,19 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
               <button
                 type="button"
                 className={shellStyles.btnSecondary}
-                onClick={() => window.print()}
+                disabled={isPrinting || !erpContext || erpContext.isLoading}
+                onClick={async () => {
+                  if (!erpContext) return;
+                  setIsPrinting(true);
+                  try {
+                    await printStatement(buildClientStatement(contract, { ...erpContext.data, schedules, properties }, new Date()));
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'تعذر تصدير كشف الحساب');
+                  } finally { setIsPrinting(false); }
+                }}
               >
                 <Printer size={14} />
-                {isAr ? 'طباعة كشف الأقساط' : 'Print schedule'}
+                {isPrinting ? 'جارٍ التصدير…' : 'تصدير PDF'}
               </button>
               {onOpenCollectionModal && pending && contract.status !== 'Rescinded' && (
                 <button

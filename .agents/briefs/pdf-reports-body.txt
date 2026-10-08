@@ -1,0 +1,38 @@
+TASK pdf-reports (FINANCIAL_CORE read-side + SURFACE_UI). Effort high: these are evidence documents handed to clients and partners.
+
+APPROVED MOCKUP (user-approved 2026-10-08, binding for layout, sections, wording, typography):
+.agents/mockups/pdf-statements.html — three A4 statements: property (كشف حساب عقار), client (كشف حساب عميل), partner (كشف حساب شريك). Copy its CSS and structure faithfully; the mockup DATA is fake — every number must come from real ERP data.
+
+DECISIONS (user-confirmed 2026-10-08)
+- Arabic only, RTL. Readers: admin, clients, partners (as evidence).
+- Summary tables + journal-entry reference numbers per row (not full journal lines).
+- National id and phone masked as in mockup (first 4 + last 3 digits for id; first 4 + last 3 for phone).
+
+OUTPUT METHOD
+HTML-based: build a standalone, self-contained A4 HTML document (inline CSS, ThmanyahSans via the app's /fonts/*.woff2 absolute URLs, @page size A4 margin 0) and print it from a hidden iframe (or a new window) so the browser's "Save as PDF" produces vector text with correct Arabic shaping. document.title = statement number + name so the saved file is named sensibly. No rasterizing libraries (no html2canvas/jsPDF/html2pdf). No new dependencies. Long tables must paginate cleanly: thead repeats per page, rows never split, footer shows "صفحة X من Y" via CSS counters where the browser supports it (otherwise statement number only — say which).
+
+ARCHITECTURE
+- One module, e.g. zakaria-farid/src/lib/erp/statements/: pure data builders (buildPropertyStatement, buildClientStatement, buildPartnerStatement) returning typed view models, plus one renderer (statementHtml.ts) producing the HTML string with proper escaping of every user-supplied string. A small print helper opens/prints it.
+- Builders MUST reuse existing engines, never re-derive money rules: net cost = base + supplements − refunds (existing cost/audit helpers, e.g. calculatePropertyAuditMetrics), partner available-to-pay = collections share − payouts − unpaid commitments (partnersEngine / erp-partner-payout-pricing skill rules, read zakaria-farid/.claude/skills/erp-partner-payout-pricing/SKILL.md first), installment status/overdue days from the existing installments logic. Use the Decimal helper D for sums. Read PROJECT_SPEC.md "Partner payouts and final pricing" — [user-confirmed] lines bind.
+- Ledger match section (property statement): show only rows the system can truly compute (GL vs sub-ledger for that property). If a per-property GL figure is not derivable, omit that row; never show a fake "مطابق". If it does not match, show "غير مطابق" with the difference in red.
+- Statement number: deterministic, no migration: ST-P / ST-C / ST-R + issue timestamp (YYYYMMDD-HHmm) + first 8 chars of the entity id.
+- Missing data: hide the field/row (e.g. no national id -> omit). Empty sections show one muted line, not a blank table.
+
+ENTRY POINTS
+- Property: the property lifecycle surface (PropertyLifecycleAuditModal and/or the "دورة الحياة" button on ProjectShowcaseCard) gets "تصدير PDF".
+- Client: wherever a client/contract is inspected (ZFContractInspectionModal or the client profile) — one statement per contract.
+- Partner: PartnerDossierModal / PartnerDossierDrawer.
+- Where an existing weak PDF/print export for these exact three already exists, point that button at the new statement instead (keep the button in place, same style). Do NOT remove ZFPrintDocumentLayout or vouchers/receipts printing. No other UI changes; FIN-OS layout untouched. Graphify query first to find these, rg second; report file:line of each button.
+
+TESTS (RED first)
+T1. Builders against fixture data equal to the mockup scenario (property 2,300,000 net cost / 1,860,000 paid / 440,000 owed; client 1,080,000 price / 300,000 paid / 132,000 overdue with 129 and 37 days on 2026-10-08; partner 744,000 share − 300,000 paid − 100,000 debt = 344,000) produce those exact totals; totals equal the sum of rows.
+T2. Renderer escapes HTML in names (e.g. "<b>x</b>" stays literal), contains dir="rtl", the statement number, masked id, and no "undefined"/"NaN".
+T3. Ledger match: mismatched figures render "غير مطابق" and the difference.
+
+ACCEPTANCE
+- cd zakaria-farid && npx tsc --noEmit clean.
+- npm test: only the 7 baseline failures (constructionModernization:85, constructionPayablesRedesign:18 and :117, generalLedgerView:231, handInstallmentsVaultTableContracts:175, sideWidgetsDesignContract:191 and :786).
+- Save a rendered HTML of each statement from real dev data under the run dir shots/ (and PNG screenshots if capture works) and list them in final.md.
+- final.md: files changed with file:line, which engines each figure comes from, entry-point buttons file:line, anything omitted and why.
+
+SHARED TREE: another session edits public-site files (site-*, scripts/site-*). Never touch, stage or revert files you did not create for this task.

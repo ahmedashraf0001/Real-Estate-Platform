@@ -8,7 +8,7 @@ REPO="$(git -c safe.directory='*' rev-parse --show-toplevel)"
 B="$REPO/.agents/briefs"; RUN="$REPO/.agents/runs/$ID"
 CODEX="$HOME/.claude/skills/codex-delegate/scripts/relay.mjs"
 mkdir -p "$RUN"
-DIRTY=$(git -c safe.directory='*' -C "$REPO" status --porcelain -- . ":(exclude).agents")
+DIRTY=$(git -c safe.directory='*' -C "$REPO" status --porcelain --untracked-files=no -- . ":(exclude).agents")
 [ -n "$DIRTY" ] && { echo "PREFLIGHT FAILED: dirty tree"; echo "$DIRTY" | head; exit 2; }
 rm -f "$RUN/verdict.txt" "$RUN/final.md"; touch "$RUN/.start"
 { sed -e "s#<TASK_ID>#$ID#g" -e "s#<RUN_DIR>#$RUN#g" "$B/_review-header.txt"
