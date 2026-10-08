@@ -6,6 +6,7 @@ if (typeof window !== 'undefined') {
   L = require('leaflet');
 }
 import { Property } from '@/types';
+import { fetchRoute, estimateRoute, formatDuration } from '@/lib/geo/routing';
 import { buildPropertySpecs, getSpecGridColumns } from '@/lib/utils/propertySpecs';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
@@ -461,7 +462,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   
   // Live User Geolocation & Distance State
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'fallback'>('idle');
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'denied' | 'unavailable'>('idle');
 
   const [isHidePrices, setIsHidePrices] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -487,95 +488,77 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
   const similarProperties = propSimilar || [];
 
-  // Geolocation Detection
+  const locationAttempt = useRef(0);
+  useEffect(() => () => { locationAttempt.current++; }, []);
+
+  // Geolocation is opt-in; stale callbacks cannot update an unmounted view.
   const requestLocation = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      setGeoStatus('fallback');
+    const attempt = ++locationAttempt.current;
+    if (!navigator.geolocation) {
+      setUserCoords(null);
+      setGeoStatus('unavailable');
       return;
     }
     setGeoStatus('locating');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserCoords({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        });
+        if (attempt !== locationAttempt.current) return;
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setGeoStatus('located');
       },
-      () => {
-        // Fallback default: Downtown Cairo (30.0444, 31.2357)
-        setUserCoords({ lat: 30.0444, lng: 31.2357 });
-        setGeoStatus('fallback');
+      (error) => {
+        if (attempt !== locationAttempt.current) return;
+        setUserCoords(null);
+        setGeoStatus(error.code === 1 ? 'denied' : 'unavailable');
       },
       { timeout: 8000, enableHighAccuracy: true }
     );
   };
 
-  useEffect(() => {
-    requestLocation();
-  }, []);
-
-  // Only used when hasCoordinates; the location section is hidden otherwise.
   const mapCoords = property.mapCoordinates ?? { x: 0, y: 0, lat: 0, lng: 0 };
-
-  // Haversine Distance Calculation
-  const activeOrigin = userCoords || { lat: 30.0444, lng: 31.2357 };
-  const directDistanceKm = useMemo(() => {
-    const R = 6371; // Earth radius in km
-    const dLat = ((mapCoords.lat - activeOrigin.lat) * Math.PI) / 180;
-    const dLon = ((mapCoords.lng - activeOrigin.lng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((activeOrigin.lat * Math.PI) / 180) *
-      Math.cos((mapCoords.lat * Math.PI) / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }, [mapCoords, activeOrigin]);
-
-  const roadDistanceKm = directDistanceKm * 1.28;
-
-  const formatDuration = (mins: number) => {
-    if (mins < 1) return isAr ? 'أقل من دقيقة' : '< 1 min';
-    if (mins < 60) return isAr ? `${Math.round(mins)} دقيقة` : `${Math.round(mins)} mins`;
-    const hrs = Math.floor(mins / 60);
-    const remainingMins = Math.round(mins % 60);
-    if (isAr) {
-      return remainingMins > 0 ? `${hrs} ساعة و ${remainingMins} دقيقة` : `${hrs} ساعات`;
-    }
-    return remainingMins > 0 ? `${hrs} hr ${remainingMins} mins` : `${hrs} hrs`;
-  };
+  const originLat = userCoords?.lat ?? 30.0444;
+  const originLng = userCoords?.lng ?? 31.2357;
+  const [routes, setRoutes] = useState<{
+    car: Awaited<ReturnType<typeof fetchRoute>>;
+    foot: Awaited<ReturnType<typeof fetchRoute>>;
+  } | null>(null);
+  useEffect(() => {
+    setRoutes(null);
+    if (!hasCoordinates || geoStatus === 'locating') return;
+    const controller = new AbortController();
+    const from = { lat: originLat, lng: originLng };
+    const to = { lat: mapCoords.lat, lng: mapCoords.lng };
+    // Skip requests from a discarded effect, including Strict Mode's mount probe.
+    Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      const [car, foot] = await Promise.all([
+        fetchRoute('car', from, to, controller.signal), fetchRoute('foot', from, to, controller.signal)
+      ]);
+      if (!controller.signal.aborted) setRoutes({ car, foot });
+    });
+    return () => controller.abort();
+  }, [originLat, originLng, mapCoords.lat, mapCoords.lng, hasCoordinates, geoStatus === 'locating']);
 
   const travelEstimates = useMemo(() => {
-    const isNearby = roadDistanceKm <= 3.5;
+    const dLat = (mapCoords.lat - originLat) * Math.PI / 180;
+    const dLng = (mapCoords.lng - originLng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(originLat * Math.PI / 180) *
+      Math.cos(mapCoords.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    const directKm = 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
+    const car = routes?.car ?? estimateRoute('car', directKm);
+    const foot = routes?.foot ?? estimateRoute('foot', directKm);
+    const label = (routed: boolean) => routed ? (isAr ? 'عبر الطرق' : 'Routed') : (isAr ? 'تقديري' : 'Estimated');
+    const distance = (km: number) => `${km.toFixed(1)} ${isAr ? 'كم' : 'km'}`;
     return [
-      {
-        mode: isAr ? 'بالسيارة' : 'Driving',
-        sub: isAr 
-          ? `${roadDistanceKm.toFixed(1)} كم عبر الطرق السريعة` 
-          : `${roadDistanceKm.toFixed(1)} km via main highway`,
-        time: formatDuration((roadDistanceKm / 65) * 60),
-        icon: Car
-      },
-      {
-        mode: isAr ? 'مواصلات / تاكسي' : 'Transit & Cab',
-        sub: isAr 
-          ? 'عبر المحاور الرئيسية والطريق الدائري' 
-          : 'Via ring road & main arterials',
-        time: formatDuration((roadDistanceKm / 45) * 60 + 8),
-        icon: Train
-      },
-      // Walking only when it is actually close; no invented "nearby services" times.
-      ...(isNearby ? [{
-        mode: isAr ? 'سيراً على الأقدام' : 'Walking',
-        sub: isAr 
-          ? `${roadDistanceKm.toFixed(1)} كم مسار مشي مباشر` 
-          : `${roadDistanceKm.toFixed(1)} km direct walking route`,
-        time: formatDuration((roadDistanceKm / 4.8) * 60),
-        icon: Footprints
-      }] : [])
+      { mode: isAr ? 'بالسيارة' : 'Driving', sub: `${distance(car.distanceKm)} · ${label(!!routes?.car)}`,
+        time: formatDuration(car.durationMin, isAr ? 'ar' : 'en'), icon: Car },
+      { mode: isAr ? 'سيراً على الأقدام' : 'Walking', sub: `${distance(foot.distanceKm)} · ${label(!!routes?.foot)}`,
+        time: foot.durationMin > 180 ? (isAr ? 'أكثر من 3 ساعات سيراً' : 'Over 3 hours walking') : formatDuration(foot.durationMin, isAr ? 'ar' : 'en'), icon: Footprints },
+      { mode: isAr ? 'مواصلات / تاكسي' : 'Transit & Cab', sub: `${distance(car.distanceKm)} · ${label(false)}`,
+        time: formatDuration(car.durationMin * 1.35 + 10, isAr ? 'ar' : 'en'), icon: Train }
     ];
-  }, [roadDistanceKm, isAr]);
+  }, [routes, originLat, originLng, mapCoords.lat, mapCoords.lng, isAr]);
+  const travelLoading = !routes || geoStatus === 'locating';
 
   // Real Estate JSON-LD Schema
   useEffect(() => {
@@ -1416,6 +1399,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             <button 
               className={`gps-locate-btn ${geoStatus === 'locating' ? 'locating' : ''}`}
               onClick={requestLocation}
+              disabled={geoStatus === 'locating'}
               type="button"
               title={isAr ? 'حساب المسافة الدقيقة من موقعك الحالي' : 'Calculate travel distance from your current coordinates'}
             >
@@ -1423,9 +1407,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               <span>
                 {geoStatus === 'locating' 
                   ? (isAr ? 'جاري تحديد موقعك...' : 'Detecting Location...') 
-                  : geoStatus === 'located' 
-                    ? (isAr ? 'تم تحديد موقعك' : 'Live Location Set') 
-                    : (isAr ? 'احسب المسافة من موقعك' : 'Calculate Distance')}
+                  : (isAr ? 'استخدم موقعي' : 'Use my location')}
               </span>
             </button>
           </div>
@@ -1453,19 +1435,25 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <div className="radar-stack-header">
                   <div className="radar-stack-header-text">
                     <span className="radar-stack-eyebrow">{isAr ? 'المسافات وسهولة الوصول' : 'PROXIMITY & CONNECTIVITY'}</span>
-                    <h4 className="radar-stack-title">{isAr ? 'أوقات الوصول والتنقل' : 'Estimated Travel Times'}</h4>
+                    <h4 className="radar-stack-title">{isAr ? 'أوقات الوصول والتنقل' : 'Travel Times'}</h4>
                   </div>
                   <span className="radar-stack-status">
                     <span className="live-radar-dot" />
                     <span>
                       {geoStatus === 'located' 
-                        ? (isAr ? 'موقعك المباشر' : 'Live GPS') 
-                        : (isAr ? 'من وسط القاهرة' : 'From Downtown Cairo')}
+                        ? (isAr ? 'من موقعك الحالي' : 'From your current location')
+                        : (isAr ? 'مرجع: وسط القاهرة (ميدان التحرير)' : 'Reference: Downtown Cairo (Tahrir Square)')}
                     </span>
                   </span>
                 </div>
 
-                <div className="radar-cards-list">
+                {(geoStatus === 'denied' || geoStatus === 'unavailable') && (
+                  <p role="status" className="poi-sub-detail">{geoStatus === 'denied'
+                    ? (isAr ? 'لم تسمح بالوصول إلى موقعك. نستخدم الموقع المرجعي.' : 'Location permission denied. Using the reference origin.')
+                    : (isAr ? 'تعذر تحديد موقعك. نستخدم الموقع المرجعي.' : 'Location unavailable. Using the reference origin.')}</p>
+                )}
+                <div className="radar-cards-list" aria-busy={travelLoading} aria-live="polite">
+                  {travelLoading && <span className="travel-loading-label">{isAr ? 'جاري حساب المسارات...' : 'Calculating routes...'}</span>}
                   {travelEstimates.map((item, i) => {
                     const Icon = item.icon;
                     return (
@@ -1476,9 +1464,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                         <div className="poi-info">
                           <div className="poi-mode-row">
                             <span className="poi-mode-title">{item.mode}</span>
-                            <span className="poi-time-val">{item.time}</span>
+                            <span className="poi-time-val">{travelLoading ? <span className="travel-skeleton" aria-hidden="true" /> : item.time}</span>
                           </div>
-                          <span className="poi-sub-detail">{item.sub}</span>
+                          <span className="poi-sub-detail">{travelLoading ? <span className="travel-skeleton" aria-hidden="true" /> : item.sub}</span>
                         </div>
                       </div>
                     );
@@ -1487,7 +1475,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
                 <div className="radar-stack-footer">
                   <Compass size={13} className="compass-icon" />
-                  <span>{isAr ? `وصول مباشر وسريع عبر المحاور الرئيسية في ${property.district}` : `Direct access via ${property.district} main arterials`}</span>
+                  <span>{isAr ? 'المسارات عبر OpenStreetMap؛ المواصلات تقديرية.' : 'Routes via OpenStreetMap; transit times are estimated.'}</span>
                 </div>
               </div>
 
@@ -4047,6 +4035,17 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             inset 0 2px 2.5px #FFFFFF;
         }
 
+        .travel-skeleton {
+          display: inline-block;
+          width: 6rem;
+          height: 0.8rem;
+          border-radius: 4px;
+          background: var(--border-medium);
+        }
+        .travel-loading-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+        .gps-locate-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+        .location-suite-side .radar-stack-header { flex-wrap: wrap; }
+        .location-suite-side .radar-stack-status { white-space: normal; max-width: 100%; }
         .radar-stack-header {
           display: flex;
           align-items: center;

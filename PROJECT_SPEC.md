@@ -182,3 +182,7 @@ Implementation guide: `zakaria-farid/.claude/skills/erp-partner-payout-pricing/S
 - [user-confirmed 2026-10-08] When a building's area is split evenly over its generated units, unit areas use 2 decimals and the last unit absorbs the rounding remainder, so unit areas sum exactly to the building area.
 - [user-confirmed 2026-10-08] The project card "المساحات" line shows the building total area plus the unit area (a range when units differ), e.g. "400 م² · الوحدات 66.67 م²".
 - [user-confirmed 2026-10-06] The ERP's current page layout and visual design stay as they are. A page-merge and de-bloat pass was tried and rejected; change UI only where a feature needs it, inside the existing components and style.
+
+## Public property travel times (2026-10-08) [user-confirmed]
+
+- [user-confirmed 2026-10-08] Use FOSSGIS OSRM car/foot routing without an API key. Default origin is explicitly labelled Tahrir Square, Cairo (30.0444, 31.2357); geolocation is opt-in. Always show walking; cap its duration label above 3 hours. Transit/cab is estimated from car duration x 1.35 + 10 minutes. Routing failures use haversine x 1.3, car 50 km/h, walking 4.8 km/h, with every fallback row labelled estimated.
