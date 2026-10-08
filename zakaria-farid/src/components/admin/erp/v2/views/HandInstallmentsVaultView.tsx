@@ -1279,7 +1279,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
                           {/* 4. Project / Unit */}
                           <td style={{ padding: '0.75rem 1rem', minWidth: '180px', maxWidth: '260px' }}>
-                            <div title={row.projectLabel} style={{ fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {row.projectLabel}
                             </div>
                             {row.unitLabel && (
