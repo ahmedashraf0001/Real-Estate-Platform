@@ -5,7 +5,7 @@ export type UIProperty = Property;
 
 const PROPERTY_TYPE_MAP: Record<string, string> = {
   apartment: 'Apartment',
-  building:  'Building (عمارة)',
+  building:  'Building',
   garage:    'Garage',
 };
 
@@ -153,7 +153,12 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     sqm: property.area_sqm || 0,
     propertyType: (PROPERTY_TYPE_MAP[derivedType] || derivedType || 'Apartment') as any,
     type: derivedType as any,
-    builtYear: undefined,
+    builtYear: property.construction_completed_at ? new Date(property.construction_completed_at).getFullYear() : undefined,
+    floors: property.building_units?.length
+      ? Math.max(...property.building_units.map(unit => unit.floor).filter(Number.isFinite)) + 1
+      : undefined,
+    building_units: property.building_units,
+    calcom_event_link: property.calcom_event_link,
     featured: property.is_featured,
     is_featured: property.is_featured,
     is_archived: property.is_archived,
@@ -161,7 +166,7 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     listing_status: property.listing_status,
     floor_number: property.floor_number ?? null,
     view: property.view ?? null,
-    finishing: property.finishing ?? (property.completion_status === 'off_plan' ? 'red_brick' : 'fully_finished'),
+    finishing: property.finishing ?? undefined,
     furnishing: property.furnishing ?? 'unfurnished',
     // Neutral "no photos yet" graphic, never a stock photo of another building.
     images: images.length > 0 ? images : ['/images/no-photo.svg'],
@@ -185,7 +190,7 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
       name: isAr ? 'زكريا فريد' : 'Zakaria Farid',
       role: isAr ? 'المالك المباشر' : 'Direct Owner & Principal',
       phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
-        ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`
+        ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER.replace(/\D/g, '')}`
         : '',
       email: '',
       avatar: '',

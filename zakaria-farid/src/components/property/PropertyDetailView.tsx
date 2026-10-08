@@ -6,6 +6,7 @@ if (typeof window !== 'undefined') {
   L = require('leaflet');
 }
 import { Property } from '@/types';
+import { buildPropertySpecs, getSpecGridColumns } from '@/lib/utils/propertySpecs';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import { cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
@@ -18,7 +19,9 @@ import { toast } from 'sonner';
 import { createCachedTileLayer } from '@/lib/mapCache';
 import { getStoredPlatformSettings } from '@/lib/services/marketIntelligence';
 import { 
-  Bed, 
+  Bed,
+  Phone,
+  MessageCircle,
   Bath, 
   Maximize2, 
   Calendar, 
@@ -222,7 +225,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     broker: rawProperty.broker || {
       name: isAr ? 'زكريا فريد' : 'Zakaria Farid',
       role: isAr ? 'المالك المباشر والمستشار الأول' : 'Senior Acquisition Lead',
-      phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}` : '+201009970776',
+      phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER.replace(/\D/g, '')}` : '',
       email: '',
       avatar: ''
     },
@@ -256,6 +259,24 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       (window as any).__masrLenis.scrollTo(0, { immediate: true });
     }
   }, [propertyId]);
+
+  const specCards = buildPropertySpecs({
+    ...rawProperty,
+    beds: property.beds,
+    baths: property.baths,
+    sqm: property.sqm,
+    builtYear: property.builtYear,
+  }, locale);
+  const specIcons = { floors: Building2, units: Building2, bedrooms: Bed, bathrooms: Bath, area: Maximize2, year: Calendar, finishing: CheckCircle, type: Building2 };
+  const [pageUrl, setPageUrl] = useState('');
+  useEffect(() => { setPageUrl(window.location.href); }, [locale, property.slug]);
+  const contactPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+    ? property.broker.phone.replace(/[^0-9+]/g, '')
+    : '';
+  const contactMessage = isAr
+    ? `أرغب في الاستفسار عن العقار: ${property.title}\n${pageUrl}`
+    : `I would like to inquire about: ${property.title}\n${pageUrl}`;
+  const whatsappHref = contactPhone ? `https://wa.me/${contactPhone.replace(/\D/g, '')}?text=${encodeURIComponent(contactMessage)}` : '';
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -1243,63 +1264,20 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <h3 className="section-subtitle">{isAr ? 'مواصفات وتفاصيل الصرح' : 'Property Specifications'}</h3>
               </div>
 
-              {/* Luxury Key Specification Cards Matrix */}
-              <div className="property-spec-matrix-grid">
-                {property.beds > 0 && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Bed size={18} className="spec-stat-icon" />
+              {/* Data-backed, type-aware specifications */}
+              <div className={`property-spec-matrix-grid spec-columns-${getSpecGridColumns(specCards.length)} spec-count-${specCards.length}`}>
+                {specCards.map(card => {
+                  const Icon = specIcons[card.id];
+                  return (
+                    <div className="spec-stat-card" key={card.id}>
+                      <div className="spec-stat-icon-wrap"><Icon size={18} className="spec-stat-icon" aria-hidden="true" /></div>
+                      <div className="spec-stat-info">
+                        <span className="spec-stat-label">{card.label}</span>
+                        <span className="spec-stat-value">{card.value}</span>
+                      </div>
                     </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'غرف النوم' : 'BEDROOMS'}</span>
-                      <span className="spec-stat-value">{property.beds} {isAr ? 'أجنحة خاصة' : 'Suites'}</span>
-                    </div>
-                  </div>
-                )}
-                {property.baths > 0 && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Bath size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'الحمامات' : 'BATHROOMS'}</span>
-                      <span className="spec-stat-value">{property.baths} {isAr ? 'حمامات فاخرة' : 'Bathrooms'}</span>
-                    </div>
-                  </div>
-                )}
-                {property.sqm > 0 && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Maximize2 size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'مساحة المباني' : 'BUILT-UP AREA'}</span>
-                      <span className="spec-stat-value">{property.sqm} {isAr ? 'م²' : 'SQM'}</span>
-                    </div>
-                  </div>
-                )}
-                {property.builtYear && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Calendar size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'سنة الإنجاز' : 'COMPLETION'}</span>
-                      <span className="spec-stat-value">{isAr ? `تسليم ${property.builtYear}` : `Built in ${property.builtYear}`}</span>
-                    </div>
-                  </div>
-                )}
-                {property.propertyType && (
-                  <div className="spec-stat-card">
-                    <div className="spec-stat-icon-wrap">
-                      <Building2 size={18} className="spec-stat-icon" />
-                    </div>
-                    <div className="spec-stat-info">
-                      <span className="spec-stat-label">{isAr ? 'نوع العقار' : 'TYPOLOGY'}</span>
-                      <span className="spec-stat-value">{isAr ? (rawProperty.type === 'villa' ? 'فيلا مستقلة' : rawProperty.type === 'apartment' ? 'شقة سكنية' : rawProperty.type === 'duplex' ? 'دوبلكس' : rawProperty.type === 'townhouse' ? 'تاون هاوس' : rawProperty.type === 'chalet' ? 'شاليه' : property.propertyType) : property.propertyType}</span>
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
 
               {property.narrative && (
@@ -1341,7 +1319,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               </div>
 
-              {/* All communication funnels through the Private Acquisition lead form */}
+              {contactPhone && (
+                <div className="broker-contact-row">
+                  <a className="broker-contact-btn" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={isAr ? 'التواصل عبر واتساب' : 'Contact on WhatsApp'}>
+                    <MessageCircle size={16} aria-hidden="true" /><span>{isAr ? 'واتساب' : 'WhatsApp'}</span>
+                  </a>
+                  <a className="broker-contact-btn" href={`tel:${contactPhone}`} aria-label={isAr ? 'الاتصال بالمستشار' : 'Call advisor'}>
+                    <Phone size={16} aria-hidden="true" /><span>{isAr ? 'اتصال' : 'Call'}</span>
+                  </a>
+                </div>
+              )}
               <div className="broker-action-stack">
                 {isSold ? (
                   <div style={{
@@ -1390,27 +1377,27 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 )}
               </div>
 
-              {/* Optional Cal.com VIP Viewing Scheduler (Only shown if calendar is active) */}
-              {rawProperty.calcom_event_link && (
+              {/* Viewing scheduler remains mounted even without a calendar link. */}
                 <div className="broker-calendar-section">
                   <div className="calendar-section-header">
                     <span className="calendar-eyebrow">
                       {isAr ? 'معاينة ميدانية خاصة' : 'VIP PRIVATE VIEWING'}
                     </span>
                     <p className="calendar-subtext">
-                      {isAr ? 'اختر موعد الجولة التفقدية مباشرة من التقويم.' : 'Schedule an on-site walkthrough directly.'}
+                      {rawProperty.calcom_event_link
+                        ? (isAr ? 'اختر موعد الجولة التفقدية مباشرة من التقويم.' : 'Schedule an on-site walkthrough directly.')
+                        : (isAr ? 'اطلب معاينة عبر زر الاستشارة لتنسيق موعد الزيارة.' : 'Request a viewing using the inquiry button to arrange your visit.')}
                     </p>
                   </div>
                   <ViewingScheduler
-                    calLink={rawProperty.calcom_event_link}
+                    calLink={rawProperty.calcom_event_link ?? null}
                     propertyId={rawProperty.id}
                     propertySlug={rawProperty.slug}
                     propertyTitle={property.title}
                     isAr={isAr}
-                    whatsappHref={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}`}
+                    whatsappHref={whatsappHref}
                   />
                 </div>
-              )}
             </div>
 
           </aside>
@@ -3052,12 +3039,17 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         /* Key Specification Cards Matrix (Reference Layout) */
         .property-spec-matrix-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 0.85rem;
           margin-bottom: 2rem;
           padding-bottom: 1.75rem;
           border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
         }
+
+        .spec-columns-1 .spec-stat-card { grid-column: span 6; }
+        .spec-columns-2 .spec-stat-card { grid-column: span 3; }
+        .spec-columns-3 .spec-stat-card { grid-column: span 2; }
+        .spec-count-5 .spec-stat-card:nth-child(4) { grid-column: 2 / span 2; }
 
         .spec-stat-card {
           display: flex;
@@ -3244,11 +3236,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         @media (max-width: 768px) {
           .property-spec-matrix-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.65rem;
             margin-bottom: 1.5rem;
             padding-bottom: 1.25rem;
           }
+          .property-spec-matrix-grid .spec-stat-card:nth-child(n) { grid-column: auto; }
+          .property-spec-matrix-grid .spec-stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
           .spec-stat-card {
             padding: 0.95rem 0.85rem 0.85rem;
             min-height: 96px;
@@ -4345,6 +4339,32 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: var(--text-secondary);
           display: block;
           margin-top: 2px;
+        }
+
+        .broker-contact-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.75rem;
+          margin-bottom: 0.75rem;
+        }
+        .broker-contact-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 44px;
+          padding: 0.65rem;
+          border: 1px solid var(--border-subtle);
+          border-radius: 12px;
+          color: var(--text-primary);
+          background: transparent;
+          text-decoration: none;
+          font-weight: 700;
+        }
+        .broker-contact-btn:hover { border-color: var(--gold-primary); }
+        .broker-contact-btn:focus-visible {
+          outline: 2px solid var(--gold-primary);
+          outline-offset: 3px;
         }
 
         .broker-action-stack {
