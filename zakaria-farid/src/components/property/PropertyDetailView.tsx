@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import { cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
+import { unitCode } from '@/lib/layering/labels';
 import ArchitecturalBlueprintInspector from './ArchitecturalBlueprintInspector';
 import ViewingScheduler from './ViewingScheduler';
 import { InquiryModal } from '@/components/InquiryModal';
@@ -188,6 +189,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     router.push('/' + locale + '/properties/' + id);
   });
   const onOpenInquiry = propOnOpenInquiry || ((type: string, propertyName?: string) => {
+    setInquiryUnitCode(undefined);
     setIsInquiryModalOpen(true);
   });
 
@@ -455,6 +457,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     }
   };
   const [isAmbientGlow, setIsAmbientGlow] = useState(true);
+  const [inquiryUnitCode, setInquiryUnitCode] = useState<string | undefined>();
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [mediaMode, setMediaMode] = useState<'photos' | 'videos'>('photos');
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
@@ -1358,7 +1361,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     )}
                     <button
                       type="button"
-                      onClick={() => setIsInquiryModalOpen(true)}
+                      onClick={() => { setInquiryUnitCode(undefined); setIsInquiryModalOpen(true); }}
                       className="btn-gold broker-primary-btn"
                       title={isAr ? 'تقديم طلب شراء رسمي وسري' : 'Submit Private Acquisition Inquiry'}
                     >
@@ -1508,6 +1511,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             propertyTitle={property.title} 
             locale={locale} 
             propertyType={rawProperty.type} 
+            inventory={rawProperty.building_units || []}
+            onRequestUnit={unit => {
+              setInquiryUnitCode(unitCode(unit.unit?.unit_code ?? unit.instance_label ?? ''));
+              setIsInquiryModalOpen(true);
+            }}
             propertyImages={property.images} 
           />
         </div>
@@ -1633,6 +1641,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         onClose={() => setIsInquiryModalOpen(false)}
         title={isAr ? `طلب استحواذ — ${property.title}` : `Private Acquisition — ${property.title}`}
         propertyName={property.title}
+        unitCode={inquiryUnitCode}
         propertyId={rawProperty.id || property.id}
         locale={locale}
       />

@@ -10,6 +10,7 @@ interface InquiryModalProps {
   title?: string;
   propertyName?: string;
   propertyId?: string;
+  unitCode?: string;
   locale?: string;
 }
 
@@ -19,6 +20,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   title = 'Private Acquisition',
   propertyName,
   propertyId,
+  unitCode,
   locale = 'en'
 }) => {
   const isAr = locale === 'ar';
@@ -63,6 +65,15 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
+
+  const wasOpen = React.useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpen.current) {
+      setNotes(unitCode ? `${isAr ? 'استفسار عن شقة' : 'Inquiry about unit'} ${unitCode}` : '');
+      setIsSubmitted(false);
+    }
+    wasOpen.current = isOpen;
+  }, [isOpen, unitCode, isAr]);
 
   if (!isOpen || !mounted) return null;
 
@@ -140,7 +151,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   const modalNode = (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="inquiry-modal-card" onClick={(e) => e.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}>
-        <button className="inquiry-close-btn" onClick={onClose} aria-label="Close">
+        <button className="inquiry-close-btn" onClick={onClose} aria-label={isAr ? 'إغلاق' : 'Close'}>
           <X size={18} />
         </button>
 

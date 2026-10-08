@@ -24,6 +24,11 @@ import { computeMetricLayout, metricInputFromSpatial, MetricRoomRect } from '@/l
 import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
 import { ATTRIBUTE_TEMPLATES } from '@/lib/layering';
 import { blueprintLabel } from '@/lib/layering/labels';
+import BuildingBlueprintPreview from '@/components/blueprint/BuildingBlueprintPreview';
+import { buildingFloorKey, floorLabel, selectBuildingFloor, type BlueprintView } from '@/lib/layering/buildingBlueprint';
+import { parseBlueprintView, serializeBlueprintView } from '@/lib/layering/publicBlueprint';
+import { zoneLabel } from '@/lib/layering/labels';
+import type { BuildingUnitItem } from '@/lib/supabase/types';
 import type { TradeInstance } from '@/lib/layering';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
@@ -41,6 +46,8 @@ interface ArchitecturalBlueprintInspectorProps {
   locale?: string;
   propertyType?: string;
   propertyImages?: string[];
+  inventory?: BuildingUnitItem[];
+  onRequestUnit?: (unit: ZoneInstance) => void;
 }
 
 interface TradeSpecItem {
@@ -297,16 +304,36 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   propertyTitle,
   locale = 'en',
   propertyType = 'apartment',
+  inventory = [],
+  onRequestUnit,
   propertyImages: _propertyImages = []
 }) => {
   const isAr = locale === 'ar';
   const [mounted, setMounted] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [bldView, setBldView] = useState<{ mode: 'elevation' | 'floor' | 'unit'; floorKey: string; unitId?: string }>({
-    mode: propertyType === 'building' ? 'elevation' : 'unit',
-    floorKey: 'Floor 1',
-  });
+  const [bldView, updateBldView] = useState<BlueprintView>({ mode: 'elevation' });
+  const setBldView = (view: BlueprintView) => {
+    updateBldView(view);
+    setIsFullscreen(false);
+    setSelectedZoneId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.set('bp', serializeBlueprintView(view));
+    window.history.pushState(null, '', url);
+  };
+  useEffect(() => {
+    if (propertyType !== 'building') return;
+    const hydrate = () => {
+      const view = parseBlueprintView(new URL(window.location.href).searchParams.get('bp'));
+      const floor = view.mode !== 'elevation' ? selectBuildingFloor(zones, view.floorKey) : null;
+      const valid = !floor || (floor.units.length + floor.core.length > 0 && (view.mode !== 'unit' || floor.units.some(u => u.id === view.unitId)));
+      updateBldView(valid ? view : { mode: 'elevation' });
+      setSelectedZoneId(null);
+    };
+    hydrate();
+    window.addEventListener('popstate', hydrate);
+    return () => window.removeEventListener('popstate', hydrate);
+  }, [propertyType, zones]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [activeModalZone, setActiveModalZone] = useState<ProcessedZone | null>(null);
   const [zoom, setZoom] = useState<number>(1);
@@ -454,9 +481,9 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       const tid = z.zone_template_id;
       const metric = FALLBACK_ZONE_METRICS[tid] || GENERIC_ZONE_METRIC;
       const titleFallback = FALLBACK_ZONE_TITLES[tid] || { en: z.instance_label || 'Space', ar: z.instance_label || 'مساحة' };
-      const titleEn = z.instance_label || titleFallback.en;
+      const titleEn = propertyType === 'building' ? zoneLabel(z, false) : z.instance_label || titleFallback.en;
       // A flat is named by its code ("Flat 3A"), not the generic template label.
-      const titleAr = (tid === 'bld.unit' && z.instance_label) ? z.instance_label : (KNOWN_TEMPLATE_AR_LABELS[tid] || (isArabicText(z.instance_label) ? z.instance_label : titleFallback.ar) || titleEn);
+      const titleAr = propertyType === 'building' ? zoneLabel(z, true) : (tid === 'bld.unit' && z.instance_label) ? z.instance_label : (KNOWN_TEMPLATE_AR_LABELS[tid] || (isArabicText(z.instance_label) ? z.instance_label : titleFallback.ar) || titleEn);
 
       const sp = z.spatial;
       const measured = !!(sp && sp.length_m > 0 && sp.width_m > 0);
@@ -466,7 +493,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       const ceiling = sp?.ceiling_height || '';
       const dims = measured ? `${length_m.toFixed(1)}m × ${width_m.toFixed(1)}m` : '';
 
-      const floorKey = parentFloorKey || z.level_label || 'Floor 1';
+      const floorKey = parentFloorKey || (propertyType === 'building' ? buildingFloorKey(z) : z.level_label || 'Floor 1');
       const floorLabel = floorKey === 'bld_ground' ? 'Ground Floor' : floorKey === 'bld_roof' ? 'Roof' : floorKey === 'bld_basement' ? 'Basement' : floorKey;
       const floorLabelAr = formatFloorLabel(floorKey, true);
 
@@ -512,11 +539,11 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     }
 
     return list;
-  }, [zones]);
+  }, [zones, propertyType]);
 
   // 1.5 Extract Available Distinct Floors / Levels
   const availableFloors = useMemo(() => {
-    const keys = Array.from(new Set(processedZones.map(z => z.floorKey))).filter(Boolean);
+    const keys = Array.from(new Set(processedZones.filter(z => z.floorKey !== 'building').map(z => z.floorKey))).filter(Boolean);
     if (keys.length === 0) return ['Floor 1'];
     return keys;
   }, [processedZones]);
@@ -532,20 +559,12 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   // 2. Active Zones for Current View
   const currentViewZones = useMemo(() => {
-    if (propertyType === 'building') {
-      if (bldView.mode === 'unit') {
-        return processedZones.filter(z => z.templateId !== 'bld.unit' && (bldView.unitId
-          ? z.unitLabel === bldView.unitId && z.floorKey === bldView.floorKey
-          : z.unitLabel && z.floorKey === bldView.floorKey));
-      }
-      return processedZones.filter(z => z.floorKey === bldView.floorKey && (!z.unitLabel || z.templateId === 'bld.unit'));
-    }
     // If property has multiple floors (e.g. Ground Floor, First Floor, Roof), filter by active floor tab!
     if (availableFloors.length > 1) {
       return processedZones.filter(z => z.floorKey === activeFloorKey);
     }
     return processedZones;
-  }, [propertyType, bldView, processedZones, availableFloors, activeFloorKey]);
+  }, [processedZones, availableFloors, activeFloorKey]);
 
   // 3. Metric Layout
   const metricLayout = useMemo(() => {
@@ -692,12 +711,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   // When room is clicked -> open popup modal with specs
   const handleRoomClick = (zone: ProcessedZone | undefined) => {
     if (!zone) return;
-    // A flat on a building floor opens its own plan.
-    if (propertyType === 'building' && zone.templateId === 'bld.unit') {
-      setBldView({ mode: 'unit', floorKey: zone.floorKey, unitId: zone.unitLabel });
-      setSelectedZoneId(null);
-      return;
-    }
     setActiveModalZone(zone);
   };
 
@@ -711,7 +724,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       const n = parseInt(k.match(/\d+/)?.[0] || '', 10);
       return Number.isFinite(n) ? n : 0.5;
     };
-    const keys = Array.from(new Set(processedZones.map(z => z.floorKey)));
+    const keys = Array.from(new Set(processedZones.filter(z => z.floorKey !== 'building').map(z => z.floorKey)));
     return keys.map(key => {
       const onFloor = processedZones.filter(z => z.floorKey === key);
       const flats = onFloor.filter(z => z.templateId === 'bld.unit');
@@ -722,20 +735,16 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         key,
         rank: rank(key),
         labelEn: key === 'bld_ground' ? 'Ground Floor' : key === 'bld_roof' ? 'Roof' : key === 'bld_basement' ? 'Basement' : key,
-        labelAr: formatFloorLabel(key, true),
-        flats: flats.map(f => f.unitLabel || f.zoneTitle),
+        labelAr: floorLabel(key, true),
+        flats: flats.map(f => isAr ? f.zoneTitleAr : f.zoneTitle),
         sharedCount: shared.length,
         templates: onFloor.map(z => z.templateId),
         sqm: allMeasured ? leaves.reduce((sum, z) => sum + z.sqm, 0) : null,
       };
     }).sort((a, b) => b.rank - a.rank);
-  }, [processedZones, propertyType]);
+  }, [processedZones, propertyType, isAr]);
 
   const viewMeasured = currentViewZones.length > 0 && currentViewZones.every(z => z.measured);
-
-  const isGround = bldView.floorKey === 'bld_ground' || bldView.floorKey === 'Ground Floor';
-  const isRoof = bldView.floorKey === 'bld_roof' || bldView.floorKey === 'Roof';
-  const isBasement = bldView.floorKey === 'bld_basement' || bldView.floorKey === 'Basement';
 
   // Vector SVG Content Renderer
   const renderVectorSvgContent = () => {
@@ -859,7 +868,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
           {/* Roof crown */}
           {roofLevel && (
-            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: roofLevel.key })}>
+            <g>
               {roofLevel.templates.includes('bld.roof_terrace') && (
                 <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
                   <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
@@ -900,7 +909,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             const leftW = leftCount > 0 ? sideW / leftCount : 0;
             const rightW = rightCount > 0 ? sideW / rightCount : 0;
             return (
-              <g key={level.key} role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: level.key })}>
+              <g key={level.key}>
                 <rect x={bldX} y={y} width={bldW} height={floorH} fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(221, 167, 82, 0.02)'} stroke="none" />
                 <rect x={bldX - 4} y={y + floorH - 3} width={bldW + 8} height="4" fill="var(--gold-primary)" opacity="0.9" />
 
@@ -922,7 +931,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
           {/* Ground floor: lobby and entrance */}
           {groundLevel && (
-            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: groundLevel.key })}>
+            <g>
               <rect x={bldX} y={groundY} width={bldW} height={groundH} fill="url(#pubElevLobbyGrad)" stroke="none" />
               <g transform={`translate(${bldX + bldW / 2 - 40}, ${groundY + 12})`}>
                 <rect x="0" y="0" width="80" height={groundH - 12} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
@@ -947,7 +956,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
           {/* Basement, only when recorded */}
           {basementLevel && (
-            <g role="button" tabIndex={0} className="pub-elev-floor-row" style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: basementLevel.key })}>
+            <g>
               <rect x={bldX - 10} y={gradeY + 1} width={bldW + 20} height={basementH} fill="url(#pubElevGroundHatch)" opacity="0.3" />
               <rect x={bldX} y={gradeY + 1} width={bldW} height={basementH} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="6 3" />
               {infoCard(basementLevel, gradeY + 8)}
@@ -1256,7 +1265,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           onClick={handleZoomOut} 
           disabled={zoom <= 0.75}
           type="button" 
-          title="Zoom Out (-)"
+          title={isAr ? 'تصغير (-)' : 'Zoom out (-)'}
         >
           <Minus size={13} />
         </button>
@@ -1264,7 +1273,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           className="cad-zoom-val-btn" 
           onClick={handleResetZoom} 
           type="button" 
-          title="Reset View (100%)"
+          title={isAr ? 'إعادة العرض (100%)' : 'Reset view (100%)'}
         >
           <span>{Math.round(zoom * 100)}%</span>
         </button>
@@ -1273,7 +1282,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           onClick={handleZoomIn} 
           disabled={zoom >= 2.5}
           type="button" 
-          title="Zoom In (+)"
+          title={isAr ? 'تكبير (+)' : 'Zoom in (+)'}
         >
           <Plus size={13} />
         </button>
@@ -1281,7 +1290,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
       {/* Right Cluster: Metrology Tags & Fullscreen Toggle */}
       <div className="stage-controls-right-group">
-        <button
+        {propertyType !== 'building' && <button
           type="button"
           className="metrology-tag gold-tag clickable"
           onClick={() => {
@@ -1294,7 +1303,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         >
           <Info size={12} />
           <span>{isAr ? 'انقر على أي غرفة لعرض المواصفات' : 'Click any space for full specs'}</span>
-        </button>
+        </button>}
 
         {/* Fullscreen Button (Only shown in inline mode) */}
         {!inFullscreen && (
@@ -1302,12 +1311,22 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             type="button"
             className="cad-fullscreen-toggle-btn"
             onClick={() => setIsFullscreen(true)}
-            title="View Fullscreen Studio"
+            title={isAr ? 'ملء الشاشة' : 'View fullscreen studio'}
           >
             <Maximize2 size={14} />
             <span>{isAr ? 'ملء الشاشة' : 'Fullscreen'}</span>
           </button>
         )}
+      </div>
+    </div>
+  );
+
+  const renderInlineStage = () => (
+    <div className="studio-panoramic-stage">
+      {renderControlsBar(false)}
+      <div className="stage-svg-wrapper" onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
+        {renderVectorSvgContent()}
       </div>
     </div>
   );
@@ -1332,38 +1351,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         </div>
 
         {/* View Switcher / Breadcrumbs for Building or Multi-Floor Villas */}
-        {propertyType === 'building' ? (
-          <div className="studio-crumbs-row">
-            <button
-              type="button"
-              className={`studio-crumb-btn ${bldView.mode === 'elevation' ? 'active' : ''}`}
-              onClick={() => setBldView({ mode: 'elevation', floorKey: bldView.floorKey })}
-            >
-              <Building size={13} />
-              <span>{isAr ? 'واجهة المبنى' : 'Building Facade'}</span>
-            </button>
-            {bldView.mode !== 'elevation' && (
-              <>
-                <span className="studio-crumb-sep">›</span>
-                <button
-                  type="button"
-                  className={`studio-crumb-btn ${bldView.mode === 'floor' ? 'active' : ''}`}
-                  onClick={() => setBldView({ mode: 'floor', floorKey: bldView.floorKey })}
-                >
-                  <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : (isAr ? formatFloorLabel(bldView.floorKey, true) : bldView.floorKey)}</span>
-                </button>
-              </>
-            )}
-            {bldView.mode === 'unit' && (
-              <>
-                <span className="studio-crumb-sep">›</span>
-                <span className="studio-crumb-btn active">
-                  <span>{bldView.unitId || (isAr ? 'الشقة' : 'Flat Plan')}</span>
-                </span>
-              </>
-            )}
-          </div>
-        ) : availableFloors.length > 1 ? (
+        {propertyType !== 'building' && availableFloors.length > 1 ? (
           <div className="studio-crumbs-row">
             {availableFloors.map((fKey) => {
               const isActive = activeFloorKey === fKey;
@@ -1385,18 +1373,12 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         ) : null}
       </div>
 
-      {/* 2. Panoramic Inline CAD Stage */}
-      <div className="studio-panoramic-stage">
-        {renderControlsBar(false)}
-        <div 
-          className="stage-svg-wrapper" 
-          onMouseDown={handleMouseDown} 
-          onMouseMove={handleMouseMove} 
-          onMouseUp={handleMouseUp}
-        >
-          {renderVectorSvgContent()}
-        </div>
-      </div>
+      {propertyType === 'building' ? (
+        <BuildingBlueprintPreview zones={zones} inventory={inventory} view={bldView}
+          onViewChange={setBldView} selectedId={selectedZoneId} onSelect={setSelectedZoneId}
+          isAr={isAr} onRequestUnit={onRequestUnit}
+          elevation={bldView.mode === 'elevation' ? renderInlineStage() : undefined} />
+      ) : renderInlineStage()}
 
       {/* 3. DEDICATED FULLSCREEN STUDIO OVERLAY (PORTALED TO DOCUMENT.BODY) */}
       {mounted && isFullscreen && createPortal(
@@ -1410,38 +1392,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               <h3 className="cad-fullscreen-title">{propertyTitle}</h3>
             </div>
 
-            {propertyType === 'building' ? (
-              <div className="studio-crumbs-row">
-                <button
-                  type="button"
-                  className={`studio-crumb-btn ${bldView.mode === 'elevation' ? 'active' : ''}`}
-                  onClick={() => setBldView({ mode: 'elevation', floorKey: bldView.floorKey })}
-                >
-                  <Building size={13} />
-                  <span>{isAr ? 'واجهة المبنى' : 'Building Facade'}</span>
-                </button>
-                {bldView.mode !== 'elevation' && (
-                  <>
-                    <span className="studio-crumb-sep">›</span>
-                    <button
-                      type="button"
-                      className={`studio-crumb-btn ${bldView.mode === 'floor' ? 'active' : ''}`}
-                      onClick={() => setBldView({ mode: 'floor', floorKey: bldView.floorKey })}
-                    >
-                      <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : (isAr ? formatFloorLabel(bldView.floorKey, true) : bldView.floorKey)}</span>
-                    </button>
-                  </>
-                )}
-                {bldView.mode === 'unit' && (
-                  <>
-                    <span className="studio-crumb-sep">›</span>
-                    <span className="studio-crumb-btn active">
-                      <span>{bldView.unitId || (isAr ? 'الشقة' : 'Flat Plan')}</span>
-                    </span>
-                  </>
-                )}
-              </div>
-            ) : availableFloors.length > 1 ? (
+            {propertyType !== 'building' && availableFloors.length > 1 ? (
               <div className="studio-crumbs-row">
                 {availableFloors.map((fKey) => {
                   const isActive = activeFloorKey === fKey;
@@ -1829,11 +1780,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           color: var(--gold-primary, #DDA752);
         }
 
-        .studio-crumb-sep {
-          color: var(--gold-primary, rgba(221, 167, 82, 0.5));
-          font-size: 0.85rem;
-        }
-
         /* Stage Container */
         .studio-panoramic-stage {
           position: relative;
@@ -1951,11 +1897,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           max-height: 520px;
           transition: transform 0.15s ease-out;
           direction: ltr !important;
-        }
-
-        .pub-elev-floor-row:hover rect {
-          fill: rgba(221, 167, 82, 0.18);
-          stroke-width: 2.2;
         }
 
         .pub-interactive-room-slot:hover rect {
