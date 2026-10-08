@@ -4,6 +4,8 @@ import { adaptProperty, adaptProperties } from '@/lib/utils/propertyAdapter';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
@@ -17,10 +19,20 @@ export async function generateStaticParams() {
   ]);
 }
 
+/** Route params can arrive percent-encoded for non-ASCII slugs (Arabic titles); the DB stores them decoded. */
+function decodeSlug(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, slug } = await params;
+  const { locale, slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) return { title: 'Property Not Found' };
 
@@ -49,7 +61,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PropertyDetailPage({ params }: Props) {
-  const { locale, slug } = await params;
+  const { locale, slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
 
   const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) notFound();
