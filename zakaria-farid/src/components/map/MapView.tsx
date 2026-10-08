@@ -27,7 +27,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Property } from '@/types';
-import { createCachedTileLayer } from '@/lib/mapCache';
+import { createCachedTileLayer, getBaseLayerSpecs } from '@/lib/mapCache';
 
 interface MapViewProps {
   properties?: Property[];
@@ -68,8 +68,8 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const attributionContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
 
   const selectedProperty = useMemo(() => {
@@ -106,25 +106,15 @@ export const MapView: React.FC<MapViewProps> = ({
       center: [30.025, 31.25],
       zoom: 11,
       zoomControl: false,
-      attributionControl: false
+      attributionControl: true
     });
 
-    const initialSatelliteTiles = createCachedTileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: 19 }
-    ).addTo(map);
-
-    createCachedTileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: 19, opacity: 0.95 }
-    ).addTo(map);
-
-    createCachedTileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: 19, opacity: 0.95 }
-    ).addTo(map);
-
-    tileLayerRef.current = initialSatelliteTiles;
+    map.createPane('neon-basemap');
+    map.getPane('neon-basemap')!.style.zIndex = '200';
+    const attribution = map.attributionControl.getContainer();
+    if (attribution) attributionContainerRef.current?.appendChild(attribution);
+    const resizeObserver = new ResizeObserver(() => map.invalidateSize({ pan: false }));
+    resizeObserver.observe(mapContainerRef.current);
     mapInstanceRef.current = map;
 
     // Render Markers for all properties
@@ -161,6 +151,7 @@ export const MapView: React.FC<MapViewProps> = ({
     });
 
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -184,23 +175,10 @@ export const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
-    if (tileLayerRef.current) {
-      mapInstanceRef.current.removeLayer(tileLayerRef.current);
-    }
-
-    if (isSatelliteMode) {
-      const satelliteLayer = createCachedTileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { maxZoom: 19 }
-      ).addTo(mapInstanceRef.current);
-      tileLayerRef.current = satelliteLayer;
-    } else {
-      const darkLayer = createCachedTileLayer(
-        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        { maxZoom: 19, subdomains: 'abcd' }
-      ).addTo(mapInstanceRef.current);
-      tileLayerRef.current = darkLayer;
-    }
+    const map = mapInstanceRef.current;
+    const layers = getBaseLayerSpecs(isSatelliteMode ? 'satellite' : 'neon')
+      .map(spec => createCachedTileLayer(spec.url, spec.options).addTo(map));
+    return () => { layers.forEach(layer => map.removeLayer(layer)); };
   }, [isSatelliteMode]);
 
   // Handle Card Click -> Pan & Zoom Map Close to Property
@@ -234,6 +212,8 @@ export const MapView: React.FC<MapViewProps> = ({
         className="real-leaflet-viewport" 
         data-lenis-prevent="true" 
       />
+
+      <div ref={attributionContainerRef} className="map-provider-attribution" dir="ltr" />
 
       {/* 4. Horizontal Map Control Strip (Docked Beside the Sidebar) */}
       <div className={`map-floating-controls-row ${isSidebarOpen ? 'sidebar-is-open' : 'sidebar-is-closed'}`}>
@@ -597,7 +577,7 @@ export const MapView: React.FC<MapViewProps> = ({
         .map-view-page {
           position: relative;
           width: 100vw;
-          height: 100vh;
+          height: 100dvh;
           overflow: hidden;
           background: var(--bg-primary);
         }
@@ -608,6 +588,33 @@ export const MapView: React.FC<MapViewProps> = ({
           width: 100%;
           height: 100%;
           z-index: 1;
+        }
+
+        .map-view-page .leaflet-neon-basemap-pane {
+          filter: grayscale(1) contrast(2.2) brightness(0.95) sepia(1) saturate(2.6) hue-rotate(-12deg);
+        }
+
+        .map-view-page .leaflet-control-attribution {
+          background: var(--bg-surface);
+          color: var(--text-secondary);
+          font-size: 10px;
+          max-width: calc(100vw - 2rem);
+        }
+
+        .map-view-page .leaflet-control-attribution a {
+          color: var(--gold-primary);
+        }
+
+        .map-provider-attribution {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          z-index: 1100;
+        }
+
+        .map-view-page[dir="rtl"] .map-provider-attribution {
+          left: auto;
+          right: 0;
         }
 
         /* =========================================================
@@ -1172,7 +1179,7 @@ export const MapView: React.FC<MapViewProps> = ({
         /* 3. Floating Sidebar Open Trigger */
         .floating-sidebar-trigger {
           position: absolute;
-          top: 1.5rem;
+          top: calc(var(--map-navbar-bottom, 0px) + 1.5rem);
           right: 1.5rem;
           z-index: 1000;
           display: inline-flex;
@@ -1215,7 +1222,7 @@ export const MapView: React.FC<MapViewProps> = ({
         /* 4. Floating Frosted Crystal Glass Directory Dock */
         .floating-glass-directory {
           position: absolute;
-          top: 1.5rem;
+          top: calc(var(--map-navbar-bottom, 0px) + 1.5rem);
           bottom: 1.5rem;
           right: 1.5rem;
           left: auto;
@@ -1788,23 +1795,6 @@ export const MapView: React.FC<MapViewProps> = ({
           z-index: 999999;
         }
 
-        @media (max-width: 1024px) {
-          .map-floating-controls-row.sidebar-is-open {
-            right: 1.5rem;
-            left: auto;
-            bottom: auto;
-            top: 5.5rem;
-          }
-
-          .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-open,
-          [dir="rtl"] .map-floating-controls-row.sidebar-is-open {
-            right: auto;
-            left: 1.5rem;
-            bottom: auto;
-            top: 5.5rem;
-          }
-        }
-
         @media (max-width: 768px) {
           .floating-glass-directory {
             top: auto !important;
@@ -1812,7 +1802,7 @@ export const MapView: React.FC<MapViewProps> = ({
             left: 0 !important;
             right: 0 !important;
             width: 100% !important;
-            max-height: 74dvh !important;
+            max-height: min(74dvh, calc(100dvh - var(--map-navbar-bottom, 0px) - 5rem)) !important;
             border-radius: 24px 24px 0 0 !important;
             border-bottom: none !important;
             animation: sidebarSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
@@ -1896,8 +1886,12 @@ export const MapView: React.FC<MapViewProps> = ({
           .map-floating-controls-row.sidebar-is-open,
           .map-floating-controls-row.sidebar-is-closed,
           .map-view-page[dir="rtl"] .map-floating-controls-row,
+          .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-open,
+          .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-closed,
+          [dir="rtl"] .map-floating-controls-row.sidebar-is-open,
+          [dir="rtl"] .map-floating-controls-row.sidebar-is-closed,
           [dir="rtl"] .map-floating-controls-row {
-            top: 5rem;
+            top: calc(var(--map-navbar-bottom, 0px) + 1rem);
             bottom: auto;
             left: 0.85rem;
             right: 0.85rem;

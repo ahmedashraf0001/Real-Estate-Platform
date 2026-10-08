@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Moon, Sun, Menu, X, Bookmark } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
@@ -101,6 +101,26 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
+  const capsuleRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const capsule = capsuleRef.current;
+    if (!capsule) return;
+    const measure = () => document.documentElement.style.setProperty(
+      '--map-navbar-bottom', `${capsule.getBoundingClientRect().bottom}px`
+    );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(capsule);
+    window.addEventListener('resize', measure);
+    capsule.parentElement?.parentElement?.addEventListener('transitionend', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+      capsule.parentElement?.parentElement?.removeEventListener('transitionend', measure);
+      document.documentElement.style.removeProperty('--map-navbar-bottom');
+    };
+  }, []);
+
   const navLinks: { id: 'home' | 'properties' | 'map' | 'about' | 'contact'; label: string }[] = [
     { id: 'home', label: locale === 'ar' ? 'الرئيسية' : 'Home' },
     { id: 'properties', label: locale === 'ar' ? 'العقارات' : 'Properties' },
@@ -116,10 +136,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="navbar-wrapper">
       <div className="nav-capsule-container">
         <motion.div 
+          ref={capsuleRef}
           className={`nav-glass-capsule ${isBlendedMode ? 'hero-blended' : 'separated-glass'} ${isMapMode ? 'map-glass-capsule' : ''}`}
           initial={false}
           animate={{
-            x: isMapMode && isDesktop ? (locale === 'ar' ? 200 : -200) : 0,
+            x: 0,
             maxWidth: isMapMode && isDesktop ? 1040 : 1280,
           }}
           transition={{
