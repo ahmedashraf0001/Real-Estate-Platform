@@ -336,10 +336,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
         .quick-search-bar {
           display: flex;
           align-items: center;
-          background: var(--bg-glass);
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
-          border: 1px solid var(--border-glass);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           border-radius: 18px;
           padding: 0.75rem 1.15rem;
           gap: 1.25rem;
@@ -349,41 +349,25 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
           position: relative;
           z-index: 40;
           transition: background var(--transition-smooth), border-color var(--transition-smooth);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .quick-search-bar {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.25) 0%,
-            rgba(255, 255, 255, 0.08) 30%,
-            rgba(18, 24, 38, 0.42) 65%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.38),
-            0 4px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .quick-search-bar {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.32) 40%,
-            rgba(255, 255, 255, 0.52) 100%
-          );
-          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          border: 1.5px solid rgba(255, 255, 255, 0.75);
-          box-shadow: 
-            0 24px 56px rgba(15, 23, 42, 0.14), 
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
-            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .custom-filter-dropdown {
@@ -562,19 +546,20 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
           left: 0;
           right: 0;
           min-width: 250px;
-          background: var(--bg-surface-elevated, #161A22);
-          backdrop-filter: blur(28px) saturate(200%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%);
-          border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.15));
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           border-radius: 14px;
           padding: 0.4rem;
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+          box-shadow: var(--shadow-glass);
           z-index: 1000;
           max-height: 270px;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
           gap: 2px;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .filter-custom-menu.placement-down {
@@ -586,15 +571,15 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
         }
 
         [data-theme="dark"] .filter-custom-menu {
-          background: rgba(18, 22, 32, 0.95);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .filter-custom-menu {
-          background: rgba(255, 255, 255, 0.96);
-          border: 1.5px solid rgba(255, 255, 255, 0.9);
-          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .filter-menu-option {
@@ -645,28 +630,18 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
             padding: 0.85rem 1rem 0.8rem;
             border-radius: 18px;
             width: 100%;
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.14) 0%,
-              rgba(255, 255, 255, 0.04) 30%,
-              rgba(18, 24, 38, 0.5) 65%,
-              rgba(10, 14, 24, 0.78) 100%
-            );
-            backdrop-filter: blur(28px) saturate(200%);
-            -webkit-backdrop-filter: blur(28px) saturate(200%);
-            border: 1.5px solid rgba(255, 255, 255, 0.22);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), inset 0 1.5px 2px rgba(255, 255, 255, 0.45);
+            background: var(--glass-strong);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="light"] .quick-search-bar {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.88) 0%,
-              rgba(255, 255, 255, 0.65) 50%,
-              rgba(247, 244, 238, 0.82) 100%
-            );
-            border: 1.5px solid rgba(255, 255, 255, 0.95);
-            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12), inset 0 1.5px 2px #FFFFFF;
+            background: var(--glass-strong);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
           }
 
           .search-field,

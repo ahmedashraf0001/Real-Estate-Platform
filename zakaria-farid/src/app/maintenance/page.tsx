@@ -80,10 +80,11 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
             gap: 24px;
             padding: 3rem 2.5rem;
             border-radius: 32px;
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(28px);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+            background: var(--bg-glass-card);
+            backdrop-filter: var(--glass-blur);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           .wordmark {

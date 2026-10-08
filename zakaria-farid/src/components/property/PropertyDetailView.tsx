@@ -710,7 +710,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
                 {isHidePrices ? (
                   <>
-                    <div className="price-value" style={{ fontSize: '1.25rem', color: '#946F23', fontWeight: 800 }}>
+                    <div className="price-value" style={{ fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 800 }}>
                       {isAr ? 'السعر عند الطلب' : 'Price on Application'}
                     </div>
                     <span className="price-tax-note">
@@ -722,7 +722,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 ) : (
                   <>
                     <div className="price-value tabular-nums">
-                      {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                      {formattedPrice} <span className="price-currency" style={{ color: 'var(--text-primary)' }}>{isAr ? 'ج.م' : property.currency}</span>
                     </div>
                     <span className="price-tax-note">
                       {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m²` : ''}
@@ -1542,7 +1542,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
           {isHidePrices ? (
             <>
-              <div className="price-value" style={{ fontSize: '1.1rem', color: '#946F23', fontWeight: 800 }}>
+              <div className="price-value" style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 800 }}>
                 {isAr ? 'السعر عند الطلب' : 'Price on Application'}
               </div>
               <span className="price-tax-note">
@@ -1552,7 +1552,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           ) : (
             <>
               <div className="price-value tabular-nums">
-                {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                {formattedPrice} <span className="price-currency" style={{ color: 'var(--text-primary)' }}>{isAr ? 'ج.م' : property.currency}</span>
               </div>
               <span className="price-tax-note">
                 {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m²` : ''}
@@ -1802,7 +1802,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 1.15rem;
           font-weight: 700;
           color: var(--gold-primary);
-          opacity: 0.9;
+          opacity: 1;
           margin-left: 4px;
         }
 
@@ -1836,24 +1836,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 42px;
           height: 42px;
           border-radius: 50%;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all var(--transition-fast);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .header-icon-btn {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: #C7D2DF;
         }
 
         [data-theme="light"] .header-icon-btn {
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: var(--text-secondary);
         }
 
@@ -1864,7 +1868,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .header-icon-btn.active {
           color: #0A0C10;
-          background: linear-gradient(135deg, #FFF4D4 0%, var(--gold-primary) 50%, var(--gold-dark) 100%);
+          background: var(--bg-glass-card);
           border-color: transparent;
         }
 
@@ -1892,10 +1896,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-          border: 1px solid rgba(221, 167, 82, 0.22);
-          background: rgba(13, 18, 30, 0.65);
+          border: var(--glass-border);
+          background: var(--glass-strong);
           color: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(12px);
+          backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-mode-tab:hover {
@@ -1906,19 +1912,19 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .gallery-mode-tab.active {
           color: #FFFDF5;
-          background: rgba(221, 167, 82, 0.2);
+          background: var(--glass-strong);
           border-color: #DDA752;
-          box-shadow: 0 0 16px rgba(221, 167, 82, 0.28);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .gallery-mode-tab {
-          background: #FFFFFF;
+          background: var(--glass-strong);
           border-color: rgba(0, 0, 0, 0.1);
           color: #475569;
         }
 
         [data-theme="light"] .gallery-mode-tab.active {
-          background: #FFFDF7;
+          background: var(--glass-strong);
           border-color: #A87A28;
           color: #8C6826;
         }
@@ -2139,10 +2145,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .gallery-counter-pill {
-          background: rgba(10, 14, 22, 0.8);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.45rem 1.15rem;
           font-family: var(--font-heading);
@@ -2150,6 +2156,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-weight: 700;
           letter-spacing: 0.1em;
           color: #DDA752;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-actions-right {
@@ -2163,8 +2171,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          backdrop-filter: blur(24px) saturate(210%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           border-radius: 9999px;
           padding: 0.55rem 1.25rem;
           font-family: var(--font-heading);
@@ -2173,20 +2181,23 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           letter-spacing: 0.04em;
           cursor: pointer;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 14px rgba(221, 167, 82, 0.2), inset 0 1px 1.5px rgba(255, 255, 255, 0.3);
+          box-shadow: var(--shadow-glass);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .gallery-ambient-btn {
-          background: rgba(8, 12, 20, 0.92);
-          border: 1.5px solid rgba(221, 167, 82, 0.55);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #FFFFFF;
         }
 
         [data-theme="light"] .gallery-ambient-btn {
-          background: rgba(255, 255, 255, 0.96);
-          border: 1.5px solid rgba(184, 134, 11, 0.55);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #0D1117;
-          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14), inset 0 1.5px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .gallery-ambient-btn:hover {
@@ -2197,16 +2208,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .gallery-ambient-btn.active {
           border-color: var(--gold-primary, #DDA752);
-          background: linear-gradient(135deg, rgba(221, 167, 82, 0.32) 0%, rgba(10, 14, 24, 0.96) 100%);
+          background: var(--glass-strong);
           color: #FFF0C2;
-          box-shadow: 0 0 22px rgba(221, 167, 82, 0.45), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .gallery-ambient-btn.active {
-          background: linear-gradient(135deg, #FFF5DB 0%, #FFFFFF 100%);
+          background: var(--glass-strong);
           border-color: #B8860B;
           color: #7A5200;
-          box-shadow: 0 4px 20px rgba(184, 134, 11, 0.28), inset 0 1.5px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .ambient-sparkle-icon {
@@ -2242,10 +2253,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: rgba(10, 14, 22, 0.8);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.45rem 1.15rem;
           font-family: var(--font-heading);
@@ -2254,6 +2265,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: #ffffff;
           cursor: pointer;
           transition: all var(--transition-fast);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-fullscreen-btn:hover {
@@ -2285,9 +2298,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         [data-theme="light"] .gallery-ambient-btn,
         [data-theme="dark"] .gallery-ambient-btn.active,
         [data-theme="light"] .gallery-ambient-btn.active {
-          background: rgba(10, 14, 22, 0.8);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: none;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
           color: #ffffff;
         }
 
@@ -2318,10 +2331,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          background: rgba(10, 14, 22, 0.75);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           color: #ffffff;
           display: flex;
           align-items: center;
@@ -2329,6 +2342,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           cursor: pointer;
           transition: all var(--transition-fast);
           z-index: 3;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-nav-arrow:hover {
@@ -2418,7 +2433,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.7rem;
           font-weight: 700;
           color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .gallery-video-play-btn {
@@ -2465,22 +2480,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           position: fixed;
           inset: 0;
           z-index: 9999;
-          backdrop-filter: blur(28px);
-          -webkit-backdrop-filter: blur(28px);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 1.5rem;
           overflow: hidden;
           transition: background var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-overlay {
-          background: rgba(5, 7, 12, 0.94);
+          background: var(--glass-strong);
         }
 
         [data-theme="light"] .lightbox-overlay {
-          background: rgba(245, 247, 250, 0.94);
+          background: var(--glass-strong);
         }
 
         .lightbox-ambient-fade-slot {
@@ -2581,22 +2600,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           justify-content: space-between;
           padding: 0.75rem 1.25rem;
           border-radius: 9999px;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           z-index: 20;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-top-bar {
-          background: rgba(18, 24, 38, 0.45);
-          border: 1px solid rgba(255, 255, 255, 0.20);
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .lightbox-top-bar {
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .lightbox-top-left {
@@ -2746,28 +2769,32 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 52px;
           height: 52px;
           border-radius: 50%;
-          backdrop-filter: blur(24px) saturate(200%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all var(--transition-fast);
           z-index: 30;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-nav-arrow {
-          background: rgba(18, 24, 38, 0.48);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #FFFFFF;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .lightbox-nav-arrow {
-          background: rgba(255, 255, 255, 0.85);
-          border: 1px solid rgba(0, 0, 0, 0.10);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           color: #0F172A;
-          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+          box-shadow: var(--shadow-glass);
         }
 
         .lightbox-nav-arrow:hover {
@@ -2795,22 +2822,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 100%;
           border-radius: 24px;
           padding: 0.9rem 1.5rem;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           z-index: 20;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .lightbox-bottom-dock {
-          background: rgba(18, 24, 38, 0.45);
-          border: 1px solid rgba(255, 255, 255, 0.20);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .lightbox-bottom-dock {
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.07), inset 0 1.5px 2px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .dock-meta-row {
@@ -3061,9 +3092,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           border-radius: 18px;
           min-height: 110px;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          backdrop-filter: blur(24px) saturate(200%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(108%) brightness(108%);
           position: relative;
+          contain: paint;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [dir="rtl"] .spec-stat-card {
@@ -3072,28 +3106,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .spec-stat-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.16) 0%,
-            rgba(255, 255, 255, 0.04) 25%,
-            rgba(18, 24, 38, 0.42) 60%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 16px 40px rgba(0, 0, 0, 0.35),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="dark"] .spec-stat-card:hover {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.07) 25%,
-            rgba(18, 24, 38, 0.5) 60%,
-            rgba(10, 14, 24, 0.75) 100%
-          );
+          background: var(--bg-glass-hover);
           border-color: rgba(221, 167, 82, 0.6);
           transform: translateY(-3px);
           box-shadow: 
@@ -3103,19 +3122,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-stat-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.4) 35%,
-            rgba(255, 255, 255, 0.6) 100%
-          );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1.5px solid rgba(255, 255, 255, 0.9);
-          box-shadow: 
-            0 14px 36px rgba(15, 23, 42, 0.07),
-            0 0 20px rgba(184, 134, 11, 0.06),
-            inset 0 1.5px 2px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .spec-stat-card:hover {
@@ -3176,11 +3186,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           letter-spacing: 0.06em;
           text-transform: uppercase;
           color: var(--gold-primary, #DDA752);
-          opacity: 0.9;
+          opacity: 1;
         }
 
         [data-theme="light"] .spec-stat-label {
-          color: #8C6826;
+          color: var(--gold-dark);
         }
 
         .spec-stat-value {
@@ -3197,37 +3207,20 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         /* Gold highlighted card (e.g. Freehold Title Verification) */
         [data-theme="dark"] .spec-stat-card.card-highlight-gold {
-          background: linear-gradient(
-            135deg,
-            rgba(229, 184, 105, 0.18) 0%,
-            rgba(255, 255, 255, 0.08) 25%,
-            rgba(18, 24, 38, 0.45) 60%,
-            rgba(10, 14, 24, 0.7) 100%
-          );
-          border: 1.5px solid rgba(229, 184, 105, 0.65);
-          box-shadow: 
-            0 16px 40px rgba(0, 0, 0, 0.35),
-            0 0 25px rgba(229, 184, 105, 0.22),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.7);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="dark"] .spec-stat-card.card-highlight-gold .gold-val {
           color: #FCD34D;
-          text-shadow: 0 0 10px rgba(252, 211, 77, 0.4);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold {
-          background: linear-gradient(
-            135deg,
-            rgba(254, 243, 199, 0.8) 0%,
-            rgba(255, 255, 255, 0.5) 40%,
-            rgba(254, 243, 199, 0.7) 100%
-          );
-          border: 1.5px solid rgba(184, 134, 11, 0.55);
-          box-shadow: 
-            0 14px 36px rgba(184, 134, 11, 0.12),
-            0 0 20px rgba(184, 134, 11, 0.1),
-            inset 0 2px 2px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold .gold-val {
@@ -3741,24 +3734,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: flex;
           flex-direction: column;
           gap: 3px;
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 12px;
           padding: 0.55rem 0.95rem;
           pointer-events: none;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .sanctum-overlay-badge {
-          background: rgba(10, 14, 22, 0.85);
-          border: 1px solid rgba(221, 167, 82, 0.4);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .sanctum-overlay-badge {
-          background: rgba(255, 255, 255, 0.94);
-          border: 1px solid rgba(184, 133, 48, 0.25);
-          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.08), inset 0 1px 1px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .sanctum-badge-mode {
@@ -3819,8 +3816,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .sanctum-pin-tag {
-          background: rgba(10, 14, 22, 0.92);
-          border: 1px solid var(--gold-primary, #DDA752);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           border-radius: 8px;
           padding: 4px 10px;
           font-size: 0.72rem;
@@ -3830,9 +3827,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           max-width: 260px;
           overflow: hidden;
           text-overflow: ellipsis;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          box-shadow: var(--shadow-glass);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .sanctum-map-frame .leaflet-control-zoom {
@@ -3845,11 +3843,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .sanctum-map-frame .leaflet-control-zoom a {
-          background: rgba(10, 14, 22, 0.85) !important;
+          background: var(--glass-strong) !important;
           color: var(--gold-primary, #DDA752) !important;
-          border: 1px solid rgba(221, 167, 82, 0.3) !important;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          border: var(--glass-border) !important;
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           transition: all 0.2s ease;
         }
 
@@ -3859,9 +3857,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a {
-          background: rgba(255, 255, 255, 0.92) !important;
-          color: #B8860B !important;
-          border: 1px solid rgba(184, 133, 48, 0.3) !important;
+          background: var(--glass-strong) !important;
+          color: var(--gold-primary) !important;
+          border: var(--glass-border) !important;
         }
 
         [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a:hover {
@@ -4005,8 +4003,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         /* Sidebar Radar Card */
         .sidebar-radar-card {
-          backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 22px;
           padding: 1.75rem 1.85rem 1.65rem;
           display: flex;
@@ -4016,36 +4014,23 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           box-sizing: border-box;
           justify-content: space-between;
           transition: all var(--transition-smooth);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
+          contain: paint;
         }
 
         [data-theme="dark"] .sidebar-radar-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(255, 255, 255, 0.05) 25%,
-            rgba(18, 24, 38, 0.45) 60%,
-            rgba(10, 14, 24, 0.7) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.32);
-          box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.45),
-            0 0 25px rgba(221, 167, 82, 0.12),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .sidebar-radar-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.4) 35%,
-            rgba(255, 255, 255, 0.6) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 20px 50px rgba(15, 23, 42, 0.08),
-            0 0 25px rgba(184, 134, 11, 0.08),
-            inset 0 2px 2.5px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .travel-skeleton {
@@ -4252,8 +4237,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .broker-card {
-          backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 22px;
           padding: 1.75rem 1.85rem 1.65rem;
           transition: all var(--transition-smooth);
@@ -4263,6 +4248,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           margin-top: 78px;
           min-height: 278px;
           box-sizing: border-box;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
+          contain: paint;
         }
 
         @media (max-width: 1024px) {
@@ -4275,33 +4265,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .broker-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(255, 255, 255, 0.05) 25%,
-            rgba(18, 24, 38, 0.45) 60%,
-            rgba(10, 14, 24, 0.7) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.32);
-          box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.45),
-            0 0 25px rgba(221, 167, 82, 0.12),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .broker-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.4) 35%,
-            rgba(255, 255, 255, 0.6) 100%
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 20px 50px rgba(15, 23, 42, 0.08),
-            0 0 25px rgba(184, 134, 11, 0.08),
-            inset 0 2px 2.5px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .broker-profile {
@@ -4773,13 +4745,17 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           right: 0.75rem;
           z-index: 99;
           border-radius: 18px;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           padding: 0.875rem 1.15rem 1rem;
           flex-direction: column;
           align-items: stretch;
           gap: 0.65rem;
           transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .mobile-bottom-lead-bar.lead-bar-hidden {
@@ -4800,36 +4776,18 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .mobile-bottom-lead-bar {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.25) 0%,
-            rgba(255, 255, 255, 0.08) 30%,
-            rgba(18, 24, 38, 0.42) 65%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow:
-            0 20px 48px rgba(0, 0, 0, 0.38),
-            0 4px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .mobile-bottom-lead-bar {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.32) 40%,
-            rgba(255, 255, 255, 0.52) 100%
-          );
-          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          border: 1.5px solid rgba(255, 255, 255, 0.75);
-          box-shadow:
-            0 24px 56px rgba(15, 23, 42, 0.14),
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
-            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
 
@@ -5026,6 +4984,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             margin-bottom: 1.1rem;
             padding-bottom: 1.1rem;
           }
+        }
+        .lightbox-overlay > *, .mobile-bottom-lead-bar > * {
+          --glass-blur: none;
+          --glass-blur-nav: none;
+        }
+        [data-theme="light"] .mobile-bottom-lead-bar .price-value {
+          color: var(--gold-dark);
         }
       `}</style>
     </div>

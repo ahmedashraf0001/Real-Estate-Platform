@@ -144,7 +144,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="nav-capsule-container">
         <motion.div 
           ref={capsuleRef}
-          className={`nav-glass-capsule ${isBlendedMode ? 'hero-blended' : 'separated-glass'} ${isMapMode ? 'map-glass-capsule' : ''}`}
+          className={`nav-glass-capsule ${isBlendedMode ? 'hero-blended' : 'separated-glass'} ${isMapMode ? 'map-glass-capsule' : ''} ${currentView === 'detail' ? 'detail-glass-capsule' : ''}`}
           initial={false}
           animate={{
             x: 0,
@@ -322,64 +322,75 @@ export const Navbar: React.FC<NavbarProps> = ({
           transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
         }
 
-        /* 2. Hero Blended State (Fully transparent over hero in both light and dark modes) */
+        /* 2. Strong tint over hero imagery; retain the existing no-blur state. */
         .nav-glass-capsule.hero-blended {
-          background: transparent !important;
+          background: var(--glass-strong) !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
-          border: 1px solid transparent !important;
-          box-shadow: none !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
         }
 
         [data-theme="dark"] .nav-glass-capsule.hero-blended,
         [data-theme="light"] .nav-glass-capsule.hero-blended {
-          background: transparent !important;
-          border-color: transparent !important;
+          background: var(--glass-strong) !important;
+          border: var(--glass-border) !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
-          box-shadow: none !important;
+          box-shadow: var(--shadow-glass) !important;
         }
 
         /* 3. Scrolled / Separated State */
         .nav-glass-capsule.separated-glass {
           background: var(--bg-glass);
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid var(--border-glass);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           box-shadow: var(--shadow-glass);
           transform: translateY(0);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .nav-glass-capsule.separated-glass {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 30%, rgba(18, 24, 38, 0.42) 65%, rgba(10, 14, 24, 0.65) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38), inset 0 1.5px 2px rgba(255, 255, 255, 0.65), inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--bg-glass);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .nav-glass-capsule.separated-glass {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.38) 40%, rgba(255, 255, 255, 0.58) 100%);
-          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          border: 1.5px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.10), inset 0 1.5px 2px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(0, 0, 0, 0.03);
+          background: var(--bg-glass);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         /* 4. Map Mode State */
         [data-theme="dark"] .nav-glass-capsule.map-glass-capsule {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 25%, rgba(18, 24, 38, 0.46) 60%, rgba(10, 14, 24, 0.62) 100%) !important;
-          backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
-          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.24) !important;
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38), inset 0 1.5px 2px rgba(255, 255, 255, 0.55), inset 0 -1px 1px rgba(255, 255, 255, 0.08) !important;
+          background: var(--glass-strong) !important;
+          backdrop-filter: var(--glass-blur-nav) !important;
+          -webkit-backdrop-filter: var(--glass-blur-nav) !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .nav-glass-capsule.map-glass-capsule {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.32) 40%, rgba(248, 246, 240, 0.48) 100%) !important;
-          backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
-          -webkit-backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.70) !important;
-          box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08), inset 0 1.5px 2px #FFFFFF, inset 0 -1px 1px rgba(255, 255, 255, 0.35) !important;
+          background: var(--glass-strong) !important;
+          backdrop-filter: var(--glass-blur-nav) !important;
+          -webkit-backdrop-filter: var(--glass-blur-nav) !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
+          text-shadow: var(--glass-text-shadow);
         }
+
+        .nav-glass-capsule.hero-blended .blended-pill {
+          background: transparent !important;
+          color: var(--text-primary) !important;
+        }
+
+        .nav-glass-capsule.separated-glass.detail-glass-capsule { background: var(--glass-strong); }
 
         .desktop-nav {
           display: flex;
@@ -401,8 +412,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .hero-blended .nav-link {
-          color: rgba(255, 255, 255, 0.85);
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+          color: var(--text-secondary);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .nav-link:hover,
@@ -412,7 +423,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         .hero-blended .nav-link:hover,
         .hero-blended .nav-link.active {
-          color: #E5B869;
+          color: var(--gold-primary);
         }
 
         .nav-indicator {
@@ -546,50 +557,34 @@ export const Navbar: React.FC<NavbarProps> = ({
           right: 0.75rem;
           width: auto;
           max-height: calc(100vh - 96px);
-          background: var(--bg-glass);
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
-          border: 1px solid var(--border-glass);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           border-radius: 20px;
           padding: 1.25rem 1.25rem 1.5rem;
           box-shadow: var(--shadow-glass);
           z-index: 2002;
           pointer-events: auto;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .mobile-drawer-glass {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.25) 0%,
-            rgba(255, 255, 255, 0.08) 30%,
-            rgba(18, 24, 38, 0.42) 65%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow:
-            0 20px 48px rgba(0, 0, 0, 0.38),
-            0 4px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .mobile-drawer-glass {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.32) 40%,
-            rgba(255, 255, 255, 0.52) 100%
-          );
-          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
-          border: 1.5px solid rgba(255, 255, 255, 0.75);
-          box-shadow:
-            0 24px 56px rgba(15, 23, 42, 0.14),
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
-            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .mobile-links {
@@ -697,6 +692,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             height: 30px;
             padding: 0;
           }
+        }
+        [data-theme="light"] .nav-glass-capsule .nav-link.active,
+        [data-theme="light"] .nav-glass-capsule .active-lang {
+          color: var(--gold-dark);
         }
       `}</style>
     </header>

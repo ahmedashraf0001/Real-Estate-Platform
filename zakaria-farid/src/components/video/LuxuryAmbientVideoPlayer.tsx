@@ -905,8 +905,8 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: rgba(15, 20, 32, 0.82);
-          border: 1px solid rgba(221, 167, 82, 0.3);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           border-radius: 999px;
           padding: 6px 12px;
           color: rgba(255, 255, 255, 0.75);
@@ -914,14 +914,16 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
-          backdrop-filter: blur(12px);
+          backdrop-filter: var(--glass-blur-nav);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .player-ambient-pill.active {
-          background: rgba(221, 167, 82, 0.18);
+          background: var(--glass-strong);
           border-color: #DDA752;
           color: #FFFDF5;
-          box-shadow: 0 0 14px rgba(221, 167, 82, 0.35);
+          box-shadow: var(--shadow-glass);
         }
 
         .sparkle-svg {
@@ -954,15 +956,16 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           width: 72px;
           height: 72px;
           border-radius: 50%;
-          background: rgba(13, 17, 26, 0.85);
-          border: 2px solid rgba(221, 167, 82, 0.8);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           display: flex;
           align-items: center;
           justify-content: center;
           color: #DDA752;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(221, 167, 82, 0.35);
-          backdrop-filter: blur(10px);
+          box-shadow: var(--shadow-glass);
+          backdrop-filter: var(--glass-blur);
           transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .player-center-gold-orb:hover {
@@ -1235,17 +1238,18 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           position: absolute;
           bottom: 38px;
           right: 0;
-          background: rgba(13, 17, 26, 0.95);
-          border: 1px solid rgba(221, 167, 82, 0.3);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           border-radius: 12px;
           padding: 6px;
           display: flex;
           flex-direction: column;
           gap: 2px;
-          backdrop-filter: blur(16px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+          backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
           min-width: 120px;
           z-index: 20;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .speed-option {

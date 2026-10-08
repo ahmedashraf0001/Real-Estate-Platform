@@ -563,8 +563,8 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          backdrop-filter: blur(28px) saturate(200%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 9999px;
           padding: 0.45rem 1.25rem;
           font-size: 0.6875rem;
@@ -572,20 +572,25 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           letter-spacing: 0.14em;
           color: var(--gold-primary);
           margin-bottom: 1.25rem;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .hero-concierge-badge {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .hero-concierge-badge {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(20px) saturate(190%);
-          -webkit-backdrop-filter: blur(20px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.06), inset 0 1.5px 1.5px #FFFFFF;
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .badge-icon {
@@ -629,24 +634,29 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
         /* Left Form Card */
         .acquisition-form-card {
-          backdrop-filter: blur(32px) saturate(210%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 28px;
           padding: 3rem 2.75rem;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .acquisition-form-card {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.5);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .acquisition-form-card {
-          background: rgba(255, 255, 255, 0.60);
-          backdrop-filter: blur(24px) saturate(190%);
-          -webkit-backdrop-filter: blur(24px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 16px 45px rgba(30, 24, 16, 0.07), 0 2px 8px rgba(0, 0, 0, 0.02), inset 0 1.5px 1.5px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .form-card-header {
@@ -1004,27 +1014,32 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         .direct-agent-card {
-          backdrop-filter: blur(32px) saturate(210%);
-          -webkit-backdrop-filter: blur(32px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 24px;
           padding: 2.25rem 2rem;
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .direct-agent-card {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(221, 167, 82, 0.4);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.55);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .direct-agent-card {
-          background: rgba(255, 255, 255, 0.62);
-          backdrop-filter: blur(24px) saturate(190%);
-          -webkit-backdrop-filter: blur(24px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 16px 45px rgba(30, 24, 16, 0.07), 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1.5px 1.5px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .agent-badge {
@@ -1039,18 +1054,19 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         [data-theme="dark"] .agent-badge {
-          background: rgba(221, 167, 82, 0.15);
-          border: 1px solid rgba(221, 167, 82, 0.45);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: #E8C87A;
         }
 
         [data-theme="light"] .agent-badge {
-          background: rgba(255, 255, 255, 0.70);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(212, 160, 52, 0.40);
-          box-shadow: 0 2px 8px rgba(212, 160, 52, 0.10), inset 0 1px 1px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
           color: #B8860B;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .agent-card-title {
@@ -1115,16 +1131,17 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         [data-theme="dark"] .direct-hotline-card {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
         }
 
         [data-theme="light"] .direct-hotline-card {
-          background: rgba(255, 255, 255, 0.62);
-          backdrop-filter: blur(20px) saturate(190%);
-          -webkit-backdrop-filter: blur(20px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 12px 32px rgba(30, 24, 16, 0.05), inset 0 1.5px 1.5px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .hotline-title {
@@ -1243,8 +1260,8 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         .grand-hq-floating-card {
           position: relative;
           z-index: 3;
-          backdrop-filter: blur(28px) saturate(200%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 24px;
           padding: 2.5rem 2.25rem;
           display: flex;
@@ -1252,24 +1269,25 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           gap: 0.75rem;
           max-width: 440px;
           transition: all var(--transition-smooth);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .grand-hq-floating-card {
-          background: rgba(10, 14, 22, 0.72);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 25px rgba(221, 167, 82, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.45);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .grand-hq-floating-card {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(24px) saturate(190%);
-          -webkit-backdrop-filter: blur(24px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.16), 
-            0 4px 16px rgba(30, 24, 16, 0.08), 
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(0, 0, 0, 0.03);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .hq-eyebrow-pill {
@@ -1284,18 +1302,19 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         [data-theme="dark"] .hq-eyebrow-pill {
-          background: rgba(221, 167, 82, 0.15);
-          border: 1px solid rgba(221, 167, 82, 0.4);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: #DDA752;
         }
 
         [data-theme="light"] .hq-eyebrow-pill {
-          background: rgba(255, 255, 255, 0.70);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(197, 154, 69, 0.40);
-          box-shadow: 0 2px 8px rgba(197, 154, 69, 0.10), inset 0 1px 1px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
           color: var(--gold-primary);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .floating-hq-title {
@@ -1462,12 +1481,12 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
             padding: 1.5rem 1.25rem 1.65rem;
             border-radius: 22px;
             border-top: 1.5px solid rgba(229, 184, 105, 0.4);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+            box-shadow: var(--shadow-glass);
           }
 
           [data-theme="light"] .acquisition-form-card {
             border-top: 1.5px solid rgba(212, 160, 52, 0.45);
-            box-shadow: 0 12px 32px rgba(30, 24, 16, 0.08);
+            box-shadow: var(--shadow-glass);
           }
 
           .form-card-header {

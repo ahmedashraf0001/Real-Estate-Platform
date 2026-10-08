@@ -347,7 +347,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             ) : (
               <>
                 <div className="list-price-val">
-                  <span className="tabular-nums">{formattedPrice}</span> <span className="currency-unit" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                  <span className="tabular-nums">{formattedPrice}</span> <span className="currency-unit" style={{ color: 'var(--text-secondary)' }}>{isAr ? 'ج.م' : property.currency}</span>
                 </div>
                 <span className="list-sqm-rate tabular-nums">{pricePerSqm} {isAr ? 'ج.م / م²' : 'EGP / sqm'}</span>
               </>
@@ -368,44 +368,30 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             max-width: 100%;
             min-width: 0;
             box-sizing: border-box;
-            backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
             border-radius: 22px;
             overflow: hidden;
             cursor: pointer;
             padding: 1.25rem 1.45rem;
             gap: 1.45rem;
             transition: all var(--transition-smooth);
+            background: var(--bg-glass-card);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="dark"] .property-card-list {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.22) 0%,
-              rgba(255, 255, 255, 0.06) 25%,
-              rgba(18, 24, 38, 0.42) 60%,
-              rgba(10, 14, 24, 0.65) 100%
-            );
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            box-shadow: 
-              0 20px 48px rgba(0, 0, 0, 0.38),
-              0 4px 14px rgba(0, 0, 0, 0.18),
-              inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-              inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+            background: var(--bg-glass-card);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
           }
 
           [data-theme="light"] .property-card-list {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.65) 0%,
-              rgba(255, 255, 255, 0.30) 35%,
-              rgba(255, 255, 255, 0.48) 100%
-            );
-            border: 1px solid rgba(255, 255, 255, 0.75);
-            box-shadow: 
-              0 18px 44px rgba(15, 23, 42, 0.08), 
-              inset 0 1.5px 2px #FFFFFF,
-              inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+            background: var(--bg-glass-card);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
           }
 
           .property-card-list:hover {
@@ -457,21 +443,23 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           [data-theme="dark"] .list-badge {
-            background: rgba(10, 14, 22, 0.70);
-            backdrop-filter: blur(28px) saturate(210%);
-            -webkit-backdrop-filter: blur(28px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.24);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            background: var(--bg-glass-card);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
             color: #ffffff;
+            text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="light"] .list-badge {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(20px) saturate(190%);
-            -webkit-backdrop-filter: blur(20px) saturate(190%);
-            border: 1px solid rgba(255, 255, 255, 0.90);
+            background: var(--bg-glass-card);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: var(--glass-border);
             color: #0D1117;
-            box-shadow: 0 4px 16px rgba(30, 24, 16, 0.08), inset 0 1.5px 1.5px #FFFFFF;
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           .list-top-actions {
@@ -496,21 +484,23 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           [data-theme="dark"] .action-pill-btn {
-            background: rgba(10, 14, 22, 0.70);
-            backdrop-filter: blur(28px) saturate(210%);
-            -webkit-backdrop-filter: blur(28px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.24);
+            background: var(--bg-glass-card);
+            backdrop-filter: var(--glass-blur-nav);
+            -webkit-backdrop-filter: var(--glass-blur-nav);
+            border: var(--glass-border);
             color: #ffffff;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="light"] .action-pill-btn {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(20px) saturate(190%);
-            -webkit-backdrop-filter: blur(20px) saturate(190%);
-            border: 1px solid rgba(255, 255, 255, 0.90);
+            background: var(--bg-glass-card);
+            backdrop-filter: var(--glass-blur-nav);
+            -webkit-backdrop-filter: var(--glass-blur-nav);
+            border: var(--glass-border);
             color: #0D1117;
-            box-shadow: 0 4px 16px rgba(30, 24, 16, 0.08), inset 0 1.5px 1.5px #FFFFFF;
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           .action-pill-btn:hover {
@@ -521,9 +511,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           .action-pill-btn.saved, .action-pill-btn.compared {
             color: #0A0C10;
-            background: linear-gradient(135deg, #FFF4D4 0%, var(--gold-primary) 50%, var(--gold-dark) 100%);
+            background: var(--bg-glass-card);
             border-color: var(--gold-primary);
-            box-shadow: 0 0 12px var(--gold-glow);
+            box-shadow: var(--shadow-glass);
           }
 
           .list-content-body {
@@ -729,12 +719,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             line-height: 1.15;
             letter-spacing: -0.01em;
             color: #E5B869;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+            text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="light"] .list-price-val {
             color: #8C6826;
-            text-shadow: none;
+            text-shadow: var(--glass-text-shadow);
           }
 
           .list-sqm-rate {
@@ -892,7 +882,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             ) : (
               <div className="card-price" dir="ltr">
                 <span className="price-amount tabular-nums">{formattedPrice}</span>
-                <span className="currency-unit" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                <span className="currency-unit" style={{ color: 'var(--text-secondary)' }}>{isAr ? 'ج.م' : property.currency}</span>
               </div>
             )}
 
@@ -990,22 +980,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           padding: 0.35rem 0.85rem;
           font-size: 0.8125rem;
           font-weight: 700;
-          background: rgba(10, 14, 22, 0.72);
-          backdrop-filter: blur(20px) saturate(200%);
-          -webkit-backdrop-filter: blur(20px) saturate(200%);
-          border: 1px solid rgba(255, 255, 255, 0.24);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           color: #ffffff;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          box-shadow: var(--shadow-glass);
           transition: all var(--transition-fast);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .location-badge {
-          background: rgba(255, 255, 255, 0.75);
-          backdrop-filter: blur(20px) saturate(190%);
-          -webkit-backdrop-filter: blur(20px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.90);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           color: #0D1117;
-          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.08), inset 0 1.5px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .badge-pin {
@@ -1029,23 +1021,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(10, 14, 22, 0.72);
-          backdrop-filter: blur(20px) saturate(200%);
-          -webkit-backdrop-filter: blur(20px) saturate(200%);
-          border: 1px solid rgba(255, 255, 255, 0.24);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           color: #ffffff;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          box-shadow: var(--shadow-glass);
           transition: all var(--transition-fast);
           cursor: pointer;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .action-pill-btn {
-          background: rgba(255, 255, 255, 0.75);
-          backdrop-filter: blur(20px) saturate(190%);
-          -webkit-backdrop-filter: blur(20px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.90);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           color: #0D1117;
-          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.08), inset 0 1.5px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .action-pill-btn:hover {
@@ -1056,9 +1050,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         .action-pill-btn.saved, .action-pill-btn.compared {
           color: #0A0C10;
-          background: linear-gradient(135deg, #FFF4D4 0%, var(--gold-primary) 50%, var(--gold-dark) 100%);
+          background: var(--bg-glass-card);
           border-color: var(--gold-primary);
-          box-shadow: 0 0 12px var(--gold-glow);
+          box-shadow: var(--shadow-glass);
         }
 
         /* Floating Frosted Liquid Glass Panel (Dark Mode) */
@@ -1067,40 +1061,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           z-index: 3;
           margin: 0 0.85rem;
           padding: 1.35rem 1.35rem 1.15rem;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(18, 24, 38, 0.55) 45%,
-            rgba(10, 14, 24, 0.78) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           border-radius: 18px;
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.45),
-            0 4px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+          box-shadow: var(--shadow-glass);
           transition: all var(--transition-smooth);
+          text-shadow: var(--glass-text-shadow);
         }
 
         /* Frosted Crystal Glass (Light Mode) */
         [data-theme="light"] .card-content-overlay {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.88) 0%,
-            rgba(255, 255, 255, 0.55) 45%,
-            rgba(255, 255, 255, 0.75) 100%
-          );
-          backdrop-filter: blur(24px) saturate(200%) contrast(105%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(105%);
-          border: 1px solid rgba(255, 255, 255, 0.90);
-          box-shadow: 
-            0 20px 48px rgba(15, 23, 42, 0.12),
-            0 4px 14px rgba(15, 23, 42, 0.06),
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.45);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .card-title {
@@ -1116,13 +1094,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           -webkit-box-orient: vertical;
           overflow: hidden;
           text-overflow: ellipsis;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+          text-shadow: var(--glass-text-shadow);
           letter-spacing: -0.015em;
         }
 
         [data-theme="light"] .card-title {
           color: #0F172A !important;
-          text-shadow: none !important;
+          text-shadow: var(--glass-text-shadow) !important;
         }
 
         .card-price-row {
@@ -1147,12 +1125,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         .price-amount {
           color: #E5B869;
           font-weight: 800;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .price-amount {
-          color: #B8860B !important;
-          text-shadow: none !important;
+          color: var(--gold-dark) !important;
+          text-shadow: var(--glass-text-shadow) !important;
         }
 
         .currency-unit {
@@ -1160,13 +1138,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           font-weight: 700;
           letter-spacing: 0.04em;
           color: #E5B869;
-          opacity: 0.9;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+          opacity: 1;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .currency-unit {
-          color: #B8860B !important;
-          text-shadow: none !important;
+          color: var(--text-secondary) !important;
+          text-shadow: var(--glass-text-shadow) !important;
         }
 
         .card-cta-btn {
@@ -1176,14 +1154,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           font-size: 0.78rem;
           font-weight: 700;
           color: #ffffff;
-          background: rgba(229, 184, 105, 0.15);
-          border: 1px solid rgba(229, 184, 105, 0.35);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           border-radius: 9999px;
           padding: 0.35rem 0.75rem;
           transition: all var(--transition-fast);
           white-space: nowrap;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .cta-arrow {
@@ -1199,8 +1179,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .card-cta-btn {
-          color: #8C6826;
-          background: rgba(184, 147, 74, 0.12);
+          color: var(--gold-dark);
+          background: var(--bg-glass-card);
           border-color: rgba(184, 147, 74, 0.3);
         }
 
@@ -1268,12 +1248,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           letter-spacing: -0.01em;
           line-height: 1;
           color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .spec-label {
           color: #334155 !important;
-          text-shadow: none !important;
+          text-shadow: var(--glass-text-shadow) !important;
         }
 
         /* Compact High-Density Card Mode */

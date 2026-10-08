@@ -42,6 +42,7 @@ const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: `http://localhost:${apiP
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'offline-capture-key', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'offline-capture-key',
   SUPABASE_SERVICE_ROLE_KEY: 'offline-capture-key', NEXT_PUBLIC_ENABLE_AGENTATION: 'false' };
 let server, browser;
+let captureTiles = false;
 async function command(args) {
   const child = spawn(process.execPath, ['node_modules/next/dist/bin/next', ...args], { env, stdio: 'inherit' });
   const code = await new Promise(resolve => child.on('exit', resolve));
@@ -99,20 +100,25 @@ async function trace(page, name) {
 (async () => {
   fs.mkdirSync(output, { recursive: true });
   await new Promise(resolve => api.listen(apiPort, '127.0.0.1', resolve));
-  await command(['build']);
+  if (!process.argv.includes('--skip-build')) await command(['build']);
   server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], { env, stdio: 'inherit' });
   for (let i=0;i<100;i++) { try { await fetch(base+'/en'); break; } catch { await wait(200); } }
   browser = await chromium.launch({ channel: 'msedge', headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  await context.route('**/*', route => new URL(route.request().url()).hostname === 'localhost' ? route.continue() : route.abort());
+  await context.route('**/*', route => (new URL(route.request().url()).hostname === 'localhost' || (captureTiles && new URL(route.request().url()).hostname === 'server.arcgisonline.com')) ? route.continue() : route.abort());
   await context.tracing.start({ screenshots: true, snapshots: true });
   const page = await context.newPage();
   page.on('pageerror', e => console.log('PAGEERROR', e.message));
-  for (const name of ['properties', 'detail']) {
+  if (!process.argv.includes('--capture-only')) for (const name of ['properties', 'detail']) {
     await page.goto(base+'/en/properties'+(name==='detail'?'/scroll-fixture-1':''), { waitUntil: 'networkidle' });
     await page.getByText('Scroll fixture 1', { exact: true }).first().waitFor();
     await wait(2000);
     await trace(page, name);
+  }
+  if (process.argv.includes('--glass')) {
+    captureTiles = true;
+    await require('./site-glass-capture.cjs')(page, base, path.resolve(option('--shots')));
+    return;
   }
   for (const width of [1280,390]) for (const locale of ['en','ar']) for (const name of ['home','detail']) {
     await page.setViewportSize({ width, height: width===390?844:900 });

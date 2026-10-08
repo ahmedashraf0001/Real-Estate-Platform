@@ -320,9 +320,9 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
           width: 100vw !important;
           height: 100vh !important;
           z-index: 99999999 !important;
-          background: rgba(0, 0, 0, 0.82) !important;
-          backdrop-filter: blur(20px) !important;
-          -webkit-backdrop-filter: blur(20px) !important;
+          background: var(--glass-strong) !important;
+          backdrop-filter: var(--glass-blur) !important;
+          -webkit-backdrop-filter: var(--glass-blur) !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
@@ -330,9 +330,14 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
           overflow-y: auto !important;
           box-sizing: border-box !important;
           animation: fadeIn 200ms ease-out;
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .inquiry-modal-card {
+          --glass-blur: none;
+          --glass-blur-nav: none;
           position: relative !important;
           margin: auto !important;
           max-height: min(90vh, 720px) !important;
@@ -343,34 +348,25 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
           border-radius: 28px !important;
           padding: 2rem 2.25rem !important;
           box-sizing: border-box !important;
-          backdrop-filter: blur(28px) saturate(210%) contrast(106%) !important;
-          -webkit-backdrop-filter: blur(28px) saturate(210%) contrast(106%) !important;
+          backdrop-filter: var(--glass-blur) !important;
+          -webkit-backdrop-filter: var(--glass-blur) !important;
           transition: background var(--transition-smooth) !important;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .inquiry-modal-card {
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.16) 0%,
-            rgba(22, 28, 42, 0.90) 35%,
-            rgba(10, 14, 24, 0.96) 100%
-          ) !important;
-          border: 1px solid rgba(255, 255, 255, 0.22) !important;
-          box-shadow: 
-            0 32px 80px rgba(0, 0, 0, 0.85), 
-            0 0 30px rgba(229, 184, 105, 0.15),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.6) !important;
+          background: var(--bg-glass-card) !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
         }
 
         [data-theme="light"] .inquiry-modal-card {
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.94) 0%,
-            rgba(255, 255, 255, 0.86) 40%,
-            rgba(248, 246, 242, 0.94) 100%
-          ) !important;
-          border: 1px solid rgba(255, 255, 255, 0.95) !important;
-          box-shadow: 0 32px 80px rgba(15, 23, 42, 0.18), inset 0 2px 2.5px #FFFFFF !important;
+          background: var(--bg-glass-card) !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
         }
 
         .inquiry-close-btn {

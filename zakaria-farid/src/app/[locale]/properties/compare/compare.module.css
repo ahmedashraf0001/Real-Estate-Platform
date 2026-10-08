@@ -150,8 +150,8 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(15, 45, 36, 0.88);
-  backdrop-filter: blur(8px);
+  background: var(--bg-glass-card);
+  backdrop-filter: var(--glass-blur);
   color: #DDA752;
   font-size: 10px;
   font-weight: 800;
@@ -159,8 +159,10 @@
   letter-spacing: 0.08em;
   padding: 4px 12px;
   border-radius: 20px;
-  border: 1px solid rgba(201, 169, 106, 0.4);
+  border: var(--glass-border);
   z-index: 2;
+  box-shadow: var(--shadow-glass);
+  text-shadow: var(--glass-text-shadow);
 }
 
 [dir="rtl"] .propTypeTag {
@@ -172,8 +174,8 @@
   position: absolute;
   bottom: 12px;
   right: 12px;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(8px);
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur);
   color: #FFFFFF;
   font-size: 11px;
   font-weight: 700;
@@ -183,8 +185,10 @@
   align-items: center;
   gap: 4px;
   z-index: 2;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: var(--glass-border);
   transition: background 0.2s ease;
+  box-shadow: var(--shadow-glass);
+  text-shadow: var(--glass-text-shadow);
 }
 
 [dir="rtl"] .galleryBadge {
@@ -503,13 +507,15 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(15, 30, 24, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-glass-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid rgba(201, 169, 106, 0.35);
   padding: 14px 0;
   z-index: 999;
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-glass);
+  border: var(--glass-border);
+  text-shadow: var(--glass-text-shadow);
 }
 
 .dockInner {
@@ -580,15 +586,18 @@
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(12, 28, 22, 0.78);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-glass-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   animation: fadeIn 0.25s ease-out;
+  border: var(--glass-border);
+  box-shadow: var(--shadow-glass);
+  text-shadow: var(--glass-text-shadow);
 }
 
 @keyframes fadeIn {
@@ -731,30 +740,35 @@
   position: absolute;
   bottom: 16px;
   left: 16px;
-  background: rgba(15, 45, 36, 0.9);
-  backdrop-filter: blur(10px);
+  background: var(--bg-glass-card);
+  backdrop-filter: var(--glass-blur);
   color: #FFFFFF;
   font-size: 13px;
   font-weight: 700;
   padding: 6px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(201, 169, 106, 0.4);
+  border: var(--glass-border);
   display: flex;
   align-items: center;
   gap: 6px;
+  box-shadow: var(--shadow-glass);
+  text-shadow: var(--glass-text-shadow);
 }
 
 .photoCounterBadge {
   position: absolute;
   top: 16px;
   right: 16px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
+  background: var(--bg-glass-card);
+  backdrop-filter: var(--glass-blur);
   color: #FFFFFF;
   font-size: 12px;
   font-weight: 700;
   padding: 4px 12px;
   border-radius: 14px;
+  border: var(--glass-border);
+  box-shadow: var(--shadow-glass);
+  text-shadow: var(--glass-text-shadow);
 }
 
 .navArrow {

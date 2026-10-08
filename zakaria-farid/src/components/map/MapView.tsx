@@ -625,21 +625,12 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="dark"] .map-selected-preview-card,
         [data-theme="dark"] .floating-sidebar-trigger,
         [data-theme="dark"] .floating-glass-directory {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.16) 0%,
-            rgba(255, 255, 255, 0.05) 25%,
-            rgba(18, 24, 38, 0.46) 60%,
-            rgba(10, 14, 24, 0.62) 100%
-          ) !important;
-          backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
-          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.24) !important;
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.38), 
-            0 4px 14px rgba(0, 0, 0, 0.22),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.08) !important;
+          background: var(--glass-strong) !important;
+          backdrop-filter: var(--glass-blur) !important;
+          -webkit-backdrop-filter: var(--glass-blur) !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .map-glass-ctrl-pill,
@@ -647,20 +638,12 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="light"] .map-selected-preview-card,
         [data-theme="light"] .floating-sidebar-trigger,
         [data-theme="light"] .floating-glass-directory {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.58) 0%,
-            rgba(255, 255, 255, 0.32) 40%,
-            rgba(248, 246, 240, 0.48) 100%
-          ) !important;
-          backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
-          -webkit-backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.70) !important;
-          box-shadow: 
-            0 16px 40px rgba(15, 23, 42, 0.08), 
-            0 2px 8px rgba(15, 23, 42, 0.03),
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.35) !important;
+          background: var(--glass-strong) !important;
+          backdrop-filter: var(--glass-blur) !important;
+          -webkit-backdrop-filter: var(--glass-blur) !important;
+          border: var(--glass-border) !important;
+          box-shadow: var(--shadow-glass) !important;
+          text-shadow: var(--glass-text-shadow);
         }
 
         /* Keyframe entrance animations */
@@ -774,7 +757,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .map-glass-ctrl-btn {
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .map-glass-ctrl-btn {
@@ -815,7 +798,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .map-mode-pill-btn {
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .map-mode-pill-btn {
@@ -886,7 +869,7 @@ export const MapView: React.FC<MapViewProps> = ({
           color: #F5C672;
           background: rgba(221, 167, 82, 0.22);
           border: 1px solid rgba(221, 167, 82, 0.55);
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .preview-district-badge {
@@ -909,7 +892,7 @@ export const MapView: React.FC<MapViewProps> = ({
           color: #FFFFFF;
           background: rgba(255, 255, 255, 0.16);
           border: 1px solid rgba(255, 255, 255, 0.35);
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .preview-id-badge {
@@ -938,7 +921,7 @@ export const MapView: React.FC<MapViewProps> = ({
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.25);
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .preview-close-btn:hover {
@@ -986,17 +969,18 @@ export const MapView: React.FC<MapViewProps> = ({
           position: absolute;
           bottom: 8px;
           left: 8px;
-          background: rgba(10, 14, 22, 0.85);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.15rem 0.55rem;
           font-family: var(--font-heading);
           font-size: 0.625rem;
           font-weight: 800;
           color: #F5C672;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
+          box-shadow: var(--shadow-glass);
         }
 
         .preview-nav-arrow {
@@ -1006,10 +990,10 @@ export const MapView: React.FC<MapViewProps> = ({
           width: 26px;
           height: 26px;
           border-radius: 50%;
-          background: rgba(10, 14, 22, 0.75);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           color: #ffffff;
           display: flex;
           align-items: center;
@@ -1017,6 +1001,8 @@ export const MapView: React.FC<MapViewProps> = ({
           cursor: pointer;
           transition: all var(--transition-fast);
           z-index: 2;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .preview-nav-arrow:hover {
@@ -1032,16 +1018,17 @@ export const MapView: React.FC<MapViewProps> = ({
           position: absolute;
           top: 8px;
           right: 8px;
-          background: rgba(10, 14, 22, 0.85);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(221, 167, 82, 0.5);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 6px;
           padding: 0.15rem 0.5rem;
           font-size: 0.625rem;
           font-weight: 800;
           color: #F5C672;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
+          box-shadow: var(--shadow-glass);
         }
 
         .preview-info-body {
@@ -1069,7 +1056,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .preview-title {
           color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .preview-title {
@@ -1087,7 +1074,7 @@ export const MapView: React.FC<MapViewProps> = ({
           font-size: 0.75rem;
           font-weight: 700;
           color: var(--gold-primary);
-          opacity: 0.9;
+          opacity: 1;
         }
 
         .preview-location-line {
@@ -1103,7 +1090,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .preview-location-line {
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .preview-location-line {
@@ -1133,7 +1120,7 @@ export const MapView: React.FC<MapViewProps> = ({
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.25);
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .spec-item {
@@ -1202,7 +1189,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .floating-sidebar-trigger {
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .floating-sidebar-trigger {
@@ -1293,7 +1280,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .dir-title {
           color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .dir-title {
@@ -1338,7 +1325,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .dir-sub {
           color: #CBD5E1;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .dir-sub {
@@ -1382,8 +1369,8 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="dark"] .dir-search-input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           color: #FFFFFF;
         }
 
@@ -1392,12 +1379,13 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="light"] .dir-search-input {
-          background: rgba(255, 255, 255, 0.75);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.85);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           color: #0D1117;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 1px #FFFFFF;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .dir-search-input::placeholder {
@@ -1406,7 +1394,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         .dir-search-input:focus {
           border-color: var(--gold-primary);
-          box-shadow: 0 0 14px var(--gold-glow);
+          box-shadow: var(--shadow-glass);
         }
 
         .dir-search-clear {
@@ -1445,26 +1433,31 @@ export const MapView: React.FC<MapViewProps> = ({
         .floating-estate-card {
           flex-shrink: 0;
           width: 100%;
-          backdrop-filter: blur(24px) saturate(200%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 20px;
           overflow: hidden;
           cursor: pointer;
           transition: all var(--transition-smooth);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .floating-estate-card {
-          background: rgba(18, 24, 36, 0.40);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .floating-estate-card {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04), inset 0 1px 1px #FFFFFF;
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .floating-estate-card:hover {
@@ -1473,7 +1466,7 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="dark"] .floating-estate-card:hover {
-          background: rgba(26, 34, 48, 0.55);
+          background: var(--glass-strong);
           box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
         }
 
@@ -1483,15 +1476,15 @@ export const MapView: React.FC<MapViewProps> = ({
 
         .floating-estate-card.active-pin {
           border-color: var(--gold-primary);
-          box-shadow: 0 0 24px var(--gold-glow);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="dark"] .floating-estate-card.active-pin {
-          background: rgba(221, 167, 82, 0.18);
+          background: var(--glass-strong);
         }
 
         [data-theme="light"] .floating-estate-card.active-pin {
-          background: rgba(197, 142, 54, 0.08);
+          background: var(--glass-strong);
         }
 
         .estate-thumb-wrap {
@@ -1522,6 +1515,8 @@ export const MapView: React.FC<MapViewProps> = ({
           );
         }
 
+        [data-theme="light"] .estate-district-pill { color: var(--text-primary); }
+
         .estate-district-pill {
           position: absolute;
           top: 10px;
@@ -1529,16 +1524,17 @@ export const MapView: React.FC<MapViewProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          background: rgba(10, 14, 22, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.25rem 0.65rem;
           font-size: 0.6875rem;
           font-weight: 700;
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
+          box-shadow: var(--shadow-glass);
         }
 
         .map-view-page[dir="rtl"] .estate-district-pill,
@@ -1577,7 +1573,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .estate-card-title {
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .estate-card-title {
@@ -1606,7 +1602,7 @@ export const MapView: React.FC<MapViewProps> = ({
           font-size: 0.75rem;
           font-weight: 700;
           color: var(--gold-primary);
-          opacity: 0.9;
+          opacity: 1;
         }
 
         .estate-specs-row {
@@ -1619,7 +1615,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         [data-theme="dark"] .estate-specs-row {
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .estate-specs-row {
@@ -1757,22 +1753,23 @@ export const MapView: React.FC<MapViewProps> = ({
           transform: translateX(-50%) translateY(-4px) scale(0.92);
           opacity: 0;
           pointer-events: none;
-          background: rgba(10, 14, 24, 0.92);
-          backdrop-filter: blur(20px) saturate(200%);
-          -webkit-backdrop-filter: blur(20px) saturate(200%);
-          border: 1px solid rgba(229, 184, 105, 0.45);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
+          border: var(--glass-border);
           border-radius: var(--radius-full);
           padding: 0.28rem 0.68rem;
           white-space: nowrap;
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), 0 0 12px rgba(229, 184, 105, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+          box-shadow: var(--shadow-glass);
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           z-index: 1000;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .pin-title-pill {
-          background: rgba(255, 255, 255, 0.95);
-          border: 1px solid rgba(144, 107, 39, 0.4);
-          box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12), inset 0 1.5px 1.5px #FFFFFF;
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .pin-title-pill span {
@@ -1814,15 +1811,12 @@ export const MapView: React.FC<MapViewProps> = ({
 
           /* Lighter, clearer glass on mobile */
           [data-theme="dark"] .floating-glass-directory {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.14) 0%,
-              rgba(255, 255, 255, 0.05) 25%,
-              rgba(18, 24, 38, 0.68) 60%,
-              rgba(10, 14, 24, 0.82) 100%
-            ) !important;
-            backdrop-filter: blur(14px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+            background: var(--glass-strong) !important;
+            backdrop-filter: var(--glass-blur) !important;
+            -webkit-backdrop-filter: var(--glass-blur) !important;
+            border: var(--glass-border);
+            box-shadow: var(--shadow-glass);
+            text-shadow: var(--glass-text-shadow);
           }
 
           .glass-directory-header {
@@ -1915,6 +1909,24 @@ export const MapView: React.FC<MapViewProps> = ({
             padding: 0.35rem 0.75rem;
             font-size: 0.75rem;
           }
+        }
+        [data-theme="light"] .floating-glass-directory .dir-eyebrow {
+          color: var(--gold-dark);
+        }
+        [data-theme="light"] .floating-glass-directory .dir-sub {
+          color: var(--text-secondary);
+        }
+        [data-theme="light"] .floating-glass-directory .estate-type-tag,
+        [data-theme="light"] .floating-glass-directory .estate-currency,
+        [data-theme="light"] .floating-glass-directory .estate-price-val,
+        [data-theme="light"] .floating-glass-directory .estate-open-btn {
+          color: var(--gold-dark);
+        }
+        [data-theme="dark"] .floating-glass-directory .dir-eyebrow {
+          color: var(--gold-light);
+        }
+        .map-glass-ctrl-pill, .map-mode-pill-btn, .floating-sidebar-trigger {
+          --glass-blur: var(--glass-blur-nav);
         }
       `}</style>
     </div>

@@ -218,46 +218,33 @@ export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
       <style>{`
         .market-chart-widget {
           position: relative;
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 22px;
           padding: 1.6rem 1.45rem;
           display: flex;
           flex-direction: column;
           gap: 1.15rem;
           transition: all var(--transition-smooth);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .market-chart-widget {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(255, 255, 255, 0.04) 20%,
-            rgba(18, 24, 38, 0.60) 50%,
-            rgba(10, 14, 24, 0.88) 100%
-          );
-          border: 1px solid rgba(229, 184, 105, 0.25);
-          box-shadow: 
-            0 24px 54px rgba(0, 0, 0, 0.55),
-            0 4px 18px rgba(0, 0, 0, 0.28),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.10),
-            inset 0 0 24px rgba(229, 184, 105, 0.04);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .market-chart-widget {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.92) 0%,
-            rgba(250, 248, 243, 0.82) 100%
-          );
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border: 1px solid rgba(184, 147, 74, 0.32);
-          box-shadow: 
-            0 18px 44px rgba(30, 24, 16, 0.08), 
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(184, 147, 74, 0.15);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .chart-header {
@@ -401,21 +388,22 @@ export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
         .compact-chart-row {
           padding: 0.65rem 0.85rem;
           border-radius: 14px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
           cursor: pointer;
           transition: all var(--transition-fast);
           display: flex;
           flex-direction: column;
           gap: 7px;
-          backdrop-filter: blur(12px);
-          box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.15);
+          backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .compact-chart-row {
-          background: rgba(255, 255, 255, 0.7);
+          background: var(--bg-glass-card);
           border-color: rgba(184, 147, 74, 0.16);
-          box-shadow: 0 2px 8px rgba(30, 24, 16, 0.03), inset 0 1px 1px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .compact-chart-row:hover {
@@ -430,15 +418,15 @@ export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
         }
 
         .compact-chart-row.selected {
-          background: linear-gradient(135deg, rgba(229, 184, 105, 0.18) 0%, rgba(229, 184, 105, 0.06) 100%);
+          background: var(--bg-glass-card);
           border-color: #E5B869;
-          box-shadow: 0 4px 20px rgba(229, 184, 105, 0.22), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .compact-chart-row.selected {
-          background: linear-gradient(135deg, rgba(184, 147, 74, 0.15) 0%, rgba(184, 147, 74, 0.05) 100%);
+          background: var(--bg-glass-card);
           border-color: #8C6826;
-          box-shadow: 0 4px 18px rgba(140, 104, 38, 0.15), inset 0 1px 1.5px #FFFFFF;
+          box-shadow: var(--shadow-glass);
         }
 
         .row-main {
@@ -518,27 +506,21 @@ export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
         .executive-snapshot-card {
           border-radius: 16px;
           padding: 1.15rem;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.10) 0%,
-            rgba(18, 24, 38, 0.55) 50%,
-            rgba(10, 14, 24, 0.78) 100%
-          );
-          border: 1px solid rgba(229, 184, 105, 0.28);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          box-shadow: 
-            0 10px 28px rgba(0, 0, 0, 0.4),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.35);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
           display: flex;
           flex-direction: column;
           gap: 0.85rem;
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .executive-snapshot-card {
-          background: #FFFFFF;
-          border: 1px solid rgba(184, 147, 74, 0.28);
-          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.06), inset 0 1.5px 2px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .snapshot-top-row {

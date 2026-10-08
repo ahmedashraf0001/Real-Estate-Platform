@@ -756,21 +756,22 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
           gap: 10px;
           padding: 7px 18px;
           border-radius: 999px;
-          background: rgba(20, 22, 30, 0.85);
-          border: 1px solid rgba(184, 147, 74, 0.35);
+          background: var(--glass-strong);
+          border: var(--glass-border);
           font-family: monospace;
           font-size: 0.75rem;
           letter-spacing: 0.08em;
           color: #E5B869;
           margin-bottom: 2rem;
-          backdrop-filter: blur(10px);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+          backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .atelier-coordinates-bar {
-          background: rgba(255, 255, 255, 0.92);
-          border: 1px solid rgba(140, 104, 38, 0.35);
-          box-shadow: 0 4px 18px rgba(30, 24, 16, 0.06);
+          background: var(--glass-strong);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
           color: #8C6826;
         }
 
@@ -887,19 +888,21 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
           border-radius: 10px;
           font-weight: 700;
           font-size: 0.9375rem;
-          background: rgba(255, 255, 255, 0.06);
+          background: var(--bg-glass-card);
           color: #FFFFFF;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: var(--glass-border);
           cursor: pointer;
-          backdrop-filter: blur(12px);
+          backdrop-filter: var(--glass-blur-nav);
           transition: all var(--transition-fast);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .atelier-btn-ghost {
-          background: #FFFFFF;
+          background: var(--bg-glass-card);
           color: #141210;
-          border: 1px solid rgba(30, 24, 16, 0.15);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .atelier-btn-ghost:hover {
@@ -2123,12 +2126,14 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
           border-radius: 10px;
           font-weight: 700;
           font-size: 0.9375rem;
-          background: rgba(255, 255, 255, 0.06);
+          background: var(--bg-glass-card);
           color: #FFFFFF;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: var(--glass-border);
           cursor: pointer;
-          backdrop-filter: blur(10px);
+          backdrop-filter: var(--glass-blur-nav);
           transition: all var(--transition-fast);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .portal-btn-outline:hover {

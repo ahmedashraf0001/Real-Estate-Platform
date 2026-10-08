@@ -592,55 +592,30 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           width: 100%;
           box-sizing: border-box;
           transition: all var(--transition-smooth);
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(18, 24, 38, 0.62) 45%,
-            rgba(10, 14, 24, 0.84) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.55),
-            0 4px 16px rgba(0, 0, 0, 0.25),
-            0 0 25px rgba(221, 167, 82, 0.14),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .compare-dock-inner {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(18, 24, 38, 0.62) 45%,
-            rgba(10, 14, 24, 0.84) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.55),
-            0 4px 16px rgba(0, 0, 0, 0.25),
-            0 0 25px rgba(221, 167, 82, 0.14),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .compare-dock-inner {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.94) 0%,
-            rgba(255, 255, 255, 0.84) 45%,
-            rgba(248, 246, 240, 0.94) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          border: 1px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 20px 50px rgba(15, 23, 42, 0.12),
-            0 0 30px rgba(184, 133, 48, 0.14),
-            inset 0 1.5px 2px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .compare-dock-info {
@@ -672,27 +647,27 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           font-size: 0.86rem;
           font-weight: 800;
           color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+          text-shadow: var(--glass-text-shadow);
           display: block;
           line-height: 1.2;
         }
 
         [data-theme="light"] .dock-title {
           color: #0D1117;
-          text-shadow: none;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .dock-subtitle {
           font-size: 0.7rem;
           color: #CBD5E1;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+          text-shadow: var(--glass-text-shadow);
           display: block;
           white-space: nowrap;
         }
 
         [data-theme="light"] .dock-subtitle {
           color: #64748B;
-          text-shadow: none;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .dock-slots-row {
@@ -721,17 +696,18 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         }
 
         [data-theme="dark"] .dock-slot.filled {
-          background: rgba(10, 14, 22, 0.65);
-          backdrop-filter: blur(16px) saturate(190%);
-          -webkit-backdrop-filter: blur(16px) saturate(190%);
-          border: 1px solid rgba(221, 167, 82, 0.35);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .dock-slot.filled {
-          background: rgba(255, 255, 255, 0.92);
-          border: 1px solid rgba(184, 133, 48, 0.35);
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         .dock-slot.empty {
@@ -741,15 +717,17 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         }
 
         [data-theme="dark"] .dock-slot.empty {
-          border: 1px dashed rgba(221, 167, 82, 0.35);
-          background: rgba(255, 255, 255, 0.04);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          border: var(--glass-border);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="light"] .dock-slot.empty {
-          border: 1.5px dashed rgba(197, 154, 69, 0.45);
-          background: rgba(197, 154, 69, 0.06);
+          border: var(--glass-border);
+          background: var(--bg-glass-card);
         }
 
         .empty-text {
@@ -789,7 +767,7 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           font-size: 0.74rem;
           font-weight: 700;
           color: #FFFFFF;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+          text-shadow: var(--glass-text-shadow);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -797,20 +775,20 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
 
         [data-theme="light"] .slot-title {
           color: #0D1117;
-          text-shadow: none;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .slot-price {
           font-size: 0.68rem;
           color: var(--gold-primary);
           font-weight: 700;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+          text-shadow: var(--glass-text-shadow);
           white-space: nowrap;
         }
 
         [data-theme="light"] .slot-price {
           color: #926918;
-          text-shadow: none;
+          text-shadow: var(--glass-text-shadow);
         }
 
         .dock-remove-btn {
@@ -872,12 +850,13 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         }
 
         [data-theme="dark"] .dock-clear-btn {
-          background: rgba(10, 14, 22, 0.6);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur-nav);
+          -webkit-backdrop-filter: var(--glass-blur-nav);
           color: #CBD5E1;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .dock-clear-btn:hover {
@@ -887,9 +866,9 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         }
 
         [data-theme="light"] .dock-clear-btn {
-          background: rgba(0, 0, 0, 0.04);
+          background: var(--bg-glass-card);
           color: #1E293B;
-          border: 1px solid rgba(0, 0, 0, 0.10);
+          border: var(--glass-border);
         }
 
         [data-theme="light"] .dock-clear-btn:hover {
@@ -911,20 +890,25 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         .compare-modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(4, 6, 12, 0.45);
-          backdrop-filter: blur(5px);
-          -webkit-backdrop-filter: blur(5px);
+          background: var(--glass-strong);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           z-index: 100000;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 2rem 1.5rem;
           overflow: hidden;
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .compare-modal-window {
-          backdrop-filter: blur(28px) saturate(210%) brightness(1.04);
-          -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(1.04);
+          --glass-blur: none;
+          --glass-blur-nav: none;
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
           border-radius: 28px;
           width: 100%;
           max-width: 1200px;
@@ -933,36 +917,25 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .compare-modal-window {
-          background: linear-gradient(
-            140deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(18, 24, 38, 0.85) 45%,
-            rgba(10, 14, 24, 0.94) 100%
-          );
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 32px 80px rgba(0, 0, 0, 0.6),
-            0 0 35px rgba(252, 211, 77, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65);
+          background: var(--bg-glass-card);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .compare-modal-window {
-          background: linear-gradient(
-            140deg,
-            rgba(255, 255, 255, 0.94) 0%,
-            rgba(255, 255, 255, 0.84) 45%,
-            rgba(255, 255, 255, 0.92) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 32px 80px rgba(15, 23, 42, 0.12),
-            0 0 35px rgba(184, 133, 48, 0.12),
-            inset 0 2px 2.5px #FFFFFF;
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .modal-header {
@@ -1144,14 +1117,16 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          background: rgba(10, 14, 22, 0.7);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--bg-glass-card);
+          backdrop-filter: var(--glass-blur);
+          border: var(--glass-border);
           border-radius: 9999px;
           padding: 0.25rem 0.65rem;
           font-size: 0.75rem;
           font-weight: 600;
           color: #ffffff;
+          box-shadow: var(--shadow-glass);
+          text-shadow: var(--glass-text-shadow);
         }
 
         .cell-title {
