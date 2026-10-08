@@ -25,6 +25,7 @@ import {
   pricePerSqmForMarkup,
   estimateFeasibility,
   repriceBuilding,
+  defaultPricePerSqm,
 } from '@/lib/erp/pricingCalculator';
 import { D } from '@/lib/erp/math';
 import { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
@@ -123,19 +124,16 @@ export function CostPricingCalculator({
   }, [property, area, propertyCosts]);
 
   const [marketPerSqm, setMarketPerSqm] = useState<string>(() => {
-    const initList = property?.price_egp || 0;
-    const initArea = property?.area_sqm || 0;
-    const m = initArea > 0 && initList > 0 ? Math.round(initList / initArea) : 0;
-    return String(m);
+    return defaultPricePerSqm(property?.price_egp || 0, property?.area_sqm || 0);
   });
 
   const [chosenPerSqm, setChosenPerSqm] = useState<string>(() => {
     const initList = property?.price_egp || 0;
     const initArea = property?.area_sqm || 0;
-    const m = initArea > 0 && initList > 0 ? Math.round(initList / initArea) : 0;
+    const m = n(defaultPricePerSqm(initList, initArea));
     const initAudit = property ? calculatePropertyAuditMetrics(property.id, initArea, propertyCosts ?? []) : null;
     const c = initAudit ? n(initAudit.costPerSqm) : 0;
-    return String(m > 0 ? m : Math.round(c * 1.3));
+    return m > 0 ? defaultPricePerSqm(initList, initArea) : String(Math.round(c * 1.3));
   });
 
   const lastPropertyIdRef = useRef<string>(propertyId);
@@ -146,11 +144,11 @@ export function CostPricingCalculator({
       if (property) {
         const propList = property.price_egp || 0;
         const propArea = property.area_sqm || 0;
-        const m = propArea > 0 && propList > 0 ? Math.round(propList / propArea) : 0;
+        const m = defaultPricePerSqm(propList, propArea);
         const c = n(audit.costPerSqm);
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setMarketPerSqm(String(m));
-        setChosenPerSqm(String(m > 0 ? m : Math.round(c * 1.3)));
+        setMarketPerSqm(m);
+        setChosenPerSqm(n(m) > 0 ? m : String(Math.round(c * 1.3)));
       } else {
         setMarketPerSqm('0');
         setChosenPerSqm('0');
@@ -203,16 +201,18 @@ export function CostPricingCalculator({
     return raw.map(u => (u.status === 'available' && contractedIds.has(u.unit_id) ? { ...u, status: 'contracted' as const } : u));
   }, [property?.building_units, property?.id, contracts]);
 
+  // Untouched default rate: the units must add up to the current price exactly (user-confirmed 2026-10-08).
+  const isDefaultRate = list > 0 && chosenPerSqm === defaultPricePerSqm(list, area);
   const repriceResult = useMemo(
-    () => repriceBuilding(units, chosenPerSqm, contracts),
-    [units, chosenPerSqm, contracts]
+    () => repriceBuilding(units, chosenPerSqm, contracts, isDefaultRate ? list : undefined),
+    [units, chosenPerSqm, contracts, isDefaultRate, list]
   );
 
   const availableUnitPrices = useMemo(() => {
     const map: Record<string, number> = {};
     repriceResult.units.forEach(u => {
       if (!u.locked && n(u.newPrice) > 0) {
-        map[u.unit_id] = Math.round(n(u.newPrice));
+        map[u.unit_id] = n(u.newPrice);
       }
     });
     return map;
@@ -229,9 +229,9 @@ export function CostPricingCalculator({
         marketPricePerSqm: marketPerSqm,
         chosenPricePerSqm: chosenPerSqm,
         currentListPrice: list,
-        overrideTotalPrice: units.length > 0 ? repriceResult.totalPrice : undefined,
+        overrideTotalPrice: units.length > 0 ? repriceResult.totalPrice : (isDefaultRate ? list : undefined),
       }),
-    [audit.totalLoggedCost, area, marketPerSqm, chosenPerSqm, list, units.length, repriceResult.totalPrice]
+    [audit.totalLoggedCost, area, marketPerSqm, chosenPerSqm, list, units.length, repriceResult.totalPrice, isDefaultRate]
   );
 
   const sumCurrent = useMemo(
@@ -457,7 +457,7 @@ export function CostPricingCalculator({
                   <div
                     className={`${s.chip} ${Math.round(n(chosenPerSqm)) === marketVal && marketVal > 0 ? s.chipActive : ''}`}
                     onClick={() => {
-                      if (!isEditingMarket && marketVal > 0) setChosenPerSqm(String(marketVal));
+                      if (!isEditingMarket && marketVal > 0) setChosenPerSqm(marketPerSqm);
                     }}
                   >
                     <span>{isAr ? 'سعر السوق' : 'Market'}</span>

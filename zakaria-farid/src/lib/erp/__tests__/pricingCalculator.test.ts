@@ -7,6 +7,7 @@ import {
   priceSliderBounds,
   estimateFeasibility,
   repriceBuilding,
+  defaultPricePerSqm,
 } from '../pricingCalculator';
 import { ERPSupabaseService } from '../supabaseService';
 import { D } from '../math';
@@ -218,5 +219,44 @@ describe('repriceBuilding & save handler (T1-T4)', () => {
     assert.equal(tableCalls, 0);
     assert.equal(res.units_repriced, 1);
     assert.equal(res.price_egp, 2850000);
+  });
+});
+
+describe('rounding remainder (user-confirmed 2026-10-08)', () => {
+  // 400 m² split 66.67 × 5 + 66.65 (unit area split rule), price 4,000,100.
+  const areas = [66.67, 66.67, 66.67, 66.67, 66.67, 66.65];
+  const allAvailable = areas.map((a, i) => ({ unit_id: `u${i + 1}`, area_sqm: a, price_egp: 0, status: 'available' }));
+  const sum = (units: { newPrice: string }[]) => units.reduce((acc, u) => acc.plus(u.newPrice), D(0)).toFixed(2);
+
+  it('default rate keeps 2 decimals', () => {
+    assert.equal(defaultPricePerSqm(4000100, 400), '10000.25');
+    assert.equal(defaultPricePerSqm(0, 400), '0');
+    assert.equal(defaultPricePerSqm(4000100, 0), '0');
+  });
+
+  it('untouched default rate with no locked unit: units sum to the current price exactly', () => {
+    const res = repriceBuilding(allAvailable, defaultPricePerSqm(4000100, 400), undefined, 4000100);
+    assert.equal(res.totalPrice, '4000100.00');
+    assert.equal(sum(res.units), '4000100.00');
+    // only the last available unit moves, by a few EGP at most
+    const plain = repriceBuilding(allAvailable, '10000.25');
+    for (let i = 0; i < 5; i++) assert.equal(res.units[i].newPrice, plain.units[i].newPrice);
+    assert.ok(Math.abs(Number(res.units[5].newPrice) - Number(plain.units[5].newPrice)) <= 5);
+  });
+
+  it('exactTotal is ignored when unit areas do not add up to the building area', () => {
+    const units = Array.from({ length: 6 }, (_, i) => ({ unit_id: `v${i}`, area_sqm: 67, price_egp: 0, status: 'available' }));
+    const res = repriceBuilding(units, defaultPricePerSqm(4000000, 400), undefined, 4000000);
+    assert.equal(res.totalPrice, '4020000.00'); // 10,000 × 402, not 4,000,000 forced onto one unit
+    assert.ok(res.units.every(u => u.newPrice === '670000.00'));
+  });
+
+  it('any rate: repriced units sum to round(rate × available area); locked units ignore exactTotal', () => {
+    const units = [{ unit_id: 'x', area_sqm: 100, price_egp: 800000, status: 'contracted' }, ...allAvailable];
+    const res = repriceBuilding(units, '10000.25', undefined, 4000100);
+    assert.equal(res.repricedTotal, '4000100.00'); // 10000.25 × 400
+    assert.equal(res.totalPrice, '4800100.00');
+    assert.equal(res.units[0].newPrice, '800000.00');
+    assert.equal(sum(res.units), res.totalPrice);
   });
 });
