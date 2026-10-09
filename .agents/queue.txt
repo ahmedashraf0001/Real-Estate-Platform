@@ -37,3 +37,4 @@ modal-escape done ecb1d52 (from f094e82; fix/erp-open-items branch now redundant
 journal-source-module done def9933 (CONSTRUCTION_SETTLEMENT; 4 retagged on prod)
 partner-capital-lines done def9933 (6 equity lines backfilled on prod)
 calc-money-guards running (codex-impl high; brief .agents/briefs/calc-money-guards-body.txt)
+codebase-cleanup paused (survey done, all 4 groups approved; plan .agents/plans/codebase-cleanup-2026-10-09.md)
