@@ -55,9 +55,14 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      // Escape while typing leaves the field (and closes its suggestions) instead of discarding the form.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+        target.blur();
+        return;
       }
+      onClose();
     };
 
     const prevOverflow = document.body.style.overflow;
