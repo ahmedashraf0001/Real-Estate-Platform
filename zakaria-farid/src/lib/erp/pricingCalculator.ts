@@ -98,6 +98,7 @@ export interface RepriceUnitRowResult extends UnitPriceResult {
 }
 
 export interface RepriceBuildingResult {
+  blocked?: 'RATE_TOO_LOW';
   units: RepriceUnitRowResult[];
   totalPrice: string;
   lockedTotal: string;
@@ -142,7 +143,8 @@ export function repriceBuilding(
   units: UnitPriceRow[],
   pricePerSqm: Num,
   contractsOrContractedIds?: Iterable<string> | Array<{ building_unit_id?: string | null; status?: string }>,
-  exactTotal?: Num
+  exactTotal?: Num,
+  targetAreaSqm?: Num
 ): RepriceBuildingResult {
   const rate = D(pricePerSqm || 0);
 
@@ -151,9 +153,12 @@ export function repriceBuilding(
     if (typeof item === 'string') contractedIds.add(item);
     else if (item.status !== 'Rescinded' && item.building_unit_id) contractedIds.add(item.building_unit_id);
   }
-  const roundWholeEgp = (value: ReturnType<typeof D>) => {
-    const whole = (value.abs().toCents() + BigInt(50)) / BigInt(100);
-    return D(value.lt(0) ? -whole : whole);
+  const roundWholeProduct = (area: ReturnType<typeof D>) => {
+    // Both operands have two decimals. Round their exact product directly to EGP,
+    // without first rounding it to piastres (99.50 × 1.01 = 100.495 -> 100).
+    const product = rate.toCents() * area.toCents();
+    const whole = ((product < BigInt(0) ? -product : product) + BigInt(5000)) / BigInt(10000);
+    return D(product < BigInt(0) ? -whole : whole);
   };
 
   let lockedTotal = D(0);
@@ -183,7 +188,7 @@ export function repriceBuilding(
     }
 
     const area = D(u.area_sqm > 0 ? u.area_sqm : 0);
-    const next = roundWholeEgp(rate.times(area));
+    const next = roundWholeProduct(area);
     repricedTotal = repricedTotal.plus(next);
     repricedCount++;
     repricedArea = repricedArea.plus(area);
@@ -200,16 +205,20 @@ export function repriceBuilding(
 
   // Last available unit absorbs the rounding remainder (whole EGP).
   if (lastRepricedIdx >= 0) {
-    const atRate = roundWholeEgp(rate.times(repricedArea));
+    const atRate = roundWholeProduct(repricedArea);
     // exactTotal only covers the 2-decimal rate rounding; unit areas that do not add up to the
     // building area must not be pushed onto one unit.
-    const useExact = exactTotal != null && lockedCount === 0 &&
-      D(exactTotal).minus(atRate).abs().lessThanOrEqual(repricedArea.times(0.005).plus(1));
+    const useExact = exactTotal != null && lockedCount === 0 && targetAreaSqm != null &&
+      repricedArea.eq(targetAreaSqm) && D(exactTotal).toCents() % BigInt(100) === BigInt(0);
     const target = useExact ? D(exactTotal as Num) : atRate;
     const diff = target.minus(repricedTotal);
     const last = unitResults[lastRepricedIdx];
     const absorbed = D(last.newPrice).plus(diff);
-    if (!diff.isZero() && absorbed.gte(0)) {
+    if (absorbed.lt(0)) {
+      return { blocked: 'RATE_TOO_LOW', units: [], totalPrice: '0.00', lockedTotal: lockedTotal.toFixed(2),
+        repricedTotal: '0.00', lockedCount, repricedCount };
+    }
+    if (!diff.isZero()) {
       last.newPrice = absorbed.toFixed(2);
       last.change = absorbed.minus(last.currentPrice).toFixed(2);
       repricedTotal = target;

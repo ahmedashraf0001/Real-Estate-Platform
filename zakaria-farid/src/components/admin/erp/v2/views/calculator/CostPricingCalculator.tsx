@@ -28,6 +28,7 @@ import {
   defaultPricePerSqm,
 } from '@/lib/erp/pricingCalculator';
 import { D } from '@/lib/erp/math';
+import { statementAmount } from '@/lib/erp/statements/builders';
 import { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
 import { ZFKpiCard, ZFKpiGrid } from '../../ZFKpiCard';
 import { useERPWorkstationContext } from '../../../context/ERPWorkstationContext';
@@ -190,6 +191,10 @@ export function CostPricingCalculator({
   const [salePerSqm, setSalePerSqm] = useState('15000');
 
   const contracts = erpCtx?.data.contracts;
+  const isSoldWhole = Boolean(property && (contracts ?? []).some(c =>
+    c.status !== 'Rescinded' && c.property_id === property.id &&
+    (!c.building_unit_id || c.building_unit_id === property.id)
+  ));
   // A unit with a live contract is contracted even when the stored unit still says available.
   const units = useMemo(() => {
     const raw = property?.building_units ?? [];
@@ -204,8 +209,8 @@ export function CostPricingCalculator({
   // Untouched default rate: the units must add up to the current price exactly (user-confirmed 2026-10-08).
   const isDefaultRate = list > 0 && chosenPerSqm === defaultPricePerSqm(list, area);
   const repriceResult = useMemo(
-    () => repriceBuilding(units, chosenPerSqm, contracts, isDefaultRate ? list : undefined),
-    [units, chosenPerSqm, contracts, isDefaultRate, list]
+    () => repriceBuilding(units, chosenPerSqm, contracts, isDefaultRate ? list : undefined, area),
+    [units, chosenPerSqm, contracts, isDefaultRate, list, area]
   );
 
   const availableUnitPrices = useMemo(() => {
@@ -255,6 +260,8 @@ export function CostPricingCalculator({
 
   const isSaveDisabled =
     isSaving ||
+    isSoldWhole ||
+    Boolean(repriceResult.blocked) ||
     !onUpdateSellingPrice ||
     D(chosenPerSqm).lt(0) ||
     n(result.totalPrice) <= 0 ||
@@ -648,6 +655,16 @@ export function CostPricingCalculator({
             </div>
           )}
 
+          {isSoldWhole && (
+            <div className={`${s.notice} ${s.noticeWarn}`} role="status">
+              {isAr ? 'العقار مباع بالكامل بعقد سارٍ ولا يمكن إعادة تسعيره.' : 'Sold under a live whole-building contract; repricing is disabled.'}
+            </div>
+          )}
+          {repriceResult.blocked === 'RATE_TOO_LOW' && (
+            <div className={`${s.notice} ${s.noticeDanger}`} role="alert">
+              {isAr ? 'السعر للمتر منخفض جداً لتسعير الوحدات بالجنيه الكامل' : 'Rate too low to price units in whole EGP'}
+            </div>
+          )}
           {/* R5: Sticky Bottom Action Bar */}
           <div className={s.bottomBar}>
             <div>
@@ -672,7 +689,7 @@ export function CostPricingCalculator({
                 <button
                   type="button"
                   className={shellStyles.btnSecondary}
-                  disabled={isSaving || n(result.totalPrice) <= 0 || (units.length > 0 && !isUnitsSumMatching)}
+                  disabled={isSoldWhole || Boolean(repriceResult.blocked) || isSaving || n(result.totalPrice) <= 0 || (units.length > 0 && !isUnitsSumMatching)}
                   onClick={() => setIsFinalizeOpen(true)}
                 >
                   <Flag size={14} />
@@ -725,14 +742,14 @@ export function CostPricingCalculator({
               <button
                 type="button"
                 className={shellStyles.btnPrimary}
-                disabled={isSaving}
+                disabled={isSaveDisabled}
                 onClick={async () => {
                   setIsSaving(true);
                   try {
                     if (isSaveDisabled) return;
                     const saveTotal = D(result.totalPrice).toNumber();
                     const ok = await onUpdateSellingPrice(property.id, saveTotal, {
-                      unitPrices: availableUnitPrices,
+                      ...(units.length > 0 ? { unitPrices: availableUnitPrices } : {}),
                       costBasisEgp: audit.totalLoggedCost,
                     });
                     if (ok !== false) {
@@ -751,9 +768,9 @@ export function CostPricingCalculator({
         >
           <ZFFacts
             items={[
-              { label: isAr ? 'السعر الحالي' : 'Current price', value: `${fmt(list)} ${cur}` },
-              { label: isAr ? 'السعر الجديد' : 'New price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
-              { label: isAr ? 'الفرق' : 'Difference', value: `${signed(result.changeVsList)} ${cur}` },
+              { label: isAr ? 'السعر الحالي' : 'Current price', value: `${statementAmount(list)} ${cur}` },
+              { label: isAr ? 'السعر الجديد' : 'New price', value: `${statementAmount(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'الفرق' : 'Difference', value: `${D(result.changeVsList).gt(0) ? '+' : ''}${statementAmount(result.changeVsList)} ${cur}` },
               ...(units.length > 0
                 ? [
                     {
@@ -1075,14 +1092,14 @@ export function CostPricingCalculator({
               <button
                 type="button"
                 className={shellStyles.btnPrimary}
-                disabled={isSaving || D(chosenPerSqm).lt(0) || !D(audit.totalLoggedCost).gt(0) || n(result.totalPrice) <= 0 || !isUnitsSumMatching}
+                disabled={isSoldWhole || Boolean(repriceResult.blocked) || isSaving || D(chosenPerSqm).lt(0) || !D(audit.totalLoggedCost).gt(0) || n(result.totalPrice) <= 0 || !isUnitsSumMatching}
                 onClick={async () => {
-                  if (D(chosenPerSqm).lt(0) || !D(audit.totalLoggedCost).gt(0) || !D(result.totalPrice).gt(0) || !isUnitsSumMatching) return;
+                  if (isSoldWhole || repriceResult.blocked || D(chosenPerSqm).lt(0) || !D(audit.totalLoggedCost).gt(0) || !D(result.totalPrice).gt(0) || !isUnitsSumMatching) return;
                   setIsSaving(true);
                   try {
                     const ok = await onUpdateSellingPrice(property.id, D(result.totalPrice).toNumber(), {
                       finalize: true,
-                      unitPrices: availableUnitPrices,
+                      ...(units.length > 0 ? { unitPrices: availableUnitPrices } : {}),
                       costBasisEgp: audit.totalLoggedCost
                     });
                     if (ok !== false) {
@@ -1102,8 +1119,9 @@ export function CostPricingCalculator({
           <ZFFacts
             items={[
               { label: isAr ? 'التكلفة الفعلية' : 'Actual cost', value: `${fmt(audit.totalLoggedCost)} ${cur}` },
-              { label: isAr ? 'السعر المبدئي' : 'Initial price', value: `${fmt(list)} ${cur}` },
-              { label: isAr ? 'السعر النهائي' : 'Final price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'السعر المبدئي' : 'Initial price', value: `${statementAmount(list)} ${cur}` },
+              { label: isAr ? 'السعر النهائي' : 'Final price', value: `${statementAmount(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'الفرق' : 'Difference', value: `${D(result.changeVsList).gt(0) ? '+' : ''}${statementAmount(result.changeVsList)} ${cur}` },
               { label: isAr ? 'سعر المتر' : 'Per m²', value: `${fmt(chosenPerSqm)} ${perSqm}` }
             ]}
           />

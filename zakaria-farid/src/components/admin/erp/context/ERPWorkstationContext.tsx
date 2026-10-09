@@ -4590,35 +4590,37 @@ export function ERPWorkstationProvider({
         }
       }
       const finalizedAt = new Date().toISOString();
-      setData(prev => ({
-        ...prev,
-        properties: prev.properties.map(p => {
-          if (p.id !== propertyId) return p;
-          // A reservation during the RPC invalidates the calculator's proposed unit map.
-          if (needsUnitRefresh) return savedProperty ? { ...p, ...savedProperty } : p;
-          const updatedUnits = options?.unitPrices
-            ? p.building_units?.map(u =>
-                u.status === 'available' && options.unitPrices?.[u.unit_id] != null
-                  ? { ...u, price_egp: options.unitPrices[u.unit_id] }
-                  : u
-              )
-            : p.building_units;
-          if (!options?.finalize) {
-            return {
-              ...p,
-              price_egp: savedPriceEgp,
-              building_units: updatedUnits,
-            };
-          }
+      const updatePrice = (p: Property): Property => {
+        if (p.id !== propertyId) return p;
+        // A reservation during the RPC invalidates the calculator's proposed unit map.
+        if (needsUnitRefresh) return savedProperty ? { ...p, ...savedProperty } : p;
+        const updatedUnits = options?.unitPrices
+          ? p.building_units?.map(u =>
+              u.status === 'available' && options.unitPrices?.[u.unit_id] != null
+                ? { ...u, price_egp: options.unitPrices[u.unit_id] }
+                : u
+            )
+          : p.building_units;
+        if (!options?.finalize) {
           return {
             ...p,
             price_egp: savedPriceEgp,
-            completion_status: 'ready',
-            construction_completed_at: finalizedAt,
-            price_finalized_at: finalizedAt,
             building_units: updatedUnits,
           };
-        })
+        }
+        return {
+          ...p,
+          price_egp: savedPriceEgp,
+          completion_status: 'ready',
+          construction_completed_at: finalizedAt,
+          price_finalized_at: finalizedAt,
+          building_units: updatedUnits,
+        };
+      };
+      setData(prev => ({
+        ...prev,
+        properties: prev.properties.map(updatePrice),
+        recordedProperties: prev.recordedProperties?.map(updatePrice),
       }));
       const priceText = isAr ? `${savedPriceEgp.toLocaleString('en-US')} ج.م` : `${savedPriceEgp.toLocaleString('en-US')} EGP`;
       toast.success(
@@ -4643,13 +4645,21 @@ export function ERPWorkstationProvider({
     } catch (err) {
       console.error('Property price update failed:', err);
       const msg = String((err as Error)?.message || '');
-      const reason = msg.includes('PRICE_ALREADY_FINAL')
-        ? (isAr ? 'السعر النهائي للعقار ده اتعمد قبل كده.' : 'This property already has a final price.')
-        : msg.includes('FINAL_PRICE_ONLY_FOR_OFF_PLAN')
-          ? (isAr ? 'السعر النهائي للعقارات تحت الإنشاء بس.' : 'Final pricing is only for under-construction properties.')
-          : msg.includes('record_property_price')
-            ? (isAr ? 'سجل الأسعار لسه ما اتفعّلش في قاعدة البيانات.' : 'Price history is not enabled in the database yet.')
-            : msg;
+      const reason = msg.includes('PROPERTY_SOLD_WHOLE')
+        ? (isAr ? 'العقار مباع بالكامل بعقد سارٍ ولا يمكن إعادة تسعيره.' : 'The property is sold under a live whole-building contract and cannot be repriced.')
+        : msg.includes('INVALID_UNIT_PRICE')
+          ? (isAr ? 'أسعار الوحدات يجب أن تكون أرقاماً صحيحة بالجنيه وغير سالبة.' : 'Unit prices must be nonnegative whole EGP numbers.')
+          : msg.includes('UNKNOWN_UNIT')
+            ? (isAr ? 'إحدى الوحدات غير مسجلة في هذا العقار. حدّث الصفحة قبل إعادة التسعير.' : 'A unit is not recorded in this property. Reload before repricing.')
+            : msg.includes('UNPRICED_UNIT')
+              ? (isAr ? 'توجد وحدة بدون سعر مسجل. سجّل أسعار كل الوحدات أولاً.' : 'A unit has no recorded price. Record prices for all units first.')
+              : msg.includes('PRICE_ALREADY_FINAL')
+                ? (isAr ? 'السعر النهائي للعقار ده اتعمد قبل كده.' : 'This property already has a final price.')
+                : msg.includes('FINAL_PRICE_ONLY_FOR_OFF_PLAN')
+                  ? (isAr ? 'السعر النهائي للعقارات تحت الإنشاء بس.' : 'Final pricing is only for under-construction properties.')
+                  : msg.includes('record_property_price')
+                    ? (isAr ? 'سجل الأسعار لسه ما اتفعّلش في قاعدة البيانات.' : 'Price history is not enabled in the database yet.')
+                    : msg;
       toast.error(isAr ? 'فشل حفظ السعر' : 'Failed to save the price', { description: reason });
       return false;
     } finally {

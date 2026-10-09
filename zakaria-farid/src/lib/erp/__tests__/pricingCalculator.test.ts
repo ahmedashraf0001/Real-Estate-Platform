@@ -279,3 +279,28 @@ describe('rounding remainder (user-confirmed 2026-10-08)', () => {
     assert.equal(sum(res.units), res.totalPrice);
   });
 });
+
+
+describe('calculator money guards', () => {
+  it('rounds exact 99.50 x 1.01 once to 100 whole EGP', () => {
+    const res = repriceBuilding([{ unit_id: 'u', area_sqm: 1.01, status: 'available' }], '99.50');
+    assert.equal(res.units[0].newPrice, '100.00');
+    assert.equal(res.totalPrice, '100.00');
+  });
+  it('does not absorb exact-total hint when areas are 100 vs 100.01', () => {
+    const res = repriceBuilding([{ unit_id: 'u', area_sqm: 100.01, status: 'available' }], '100', undefined, 10000, 100);
+    assert.equal(res.units[0].newPrice, '10001.00');
+    assert.equal(res.totalPrice, '10001.00');
+  });
+  it('blocks five 50 m2 units at 0.01 without returning unit prices', () => {
+    const res = repriceBuilding(Array.from({ length: 5 }, (_, i) => ({ unit_id: `u${i}`, area_sqm: 50, status: 'available' })), '0.01');
+    assert.equal(res.blocked, 'RATE_TOO_LOW');
+    assert.deepEqual(res.units, []);
+  });
+  it('untouched rounded default absorbs only with exactly matching building area', () => {
+    const units = [100, 100, 100, 100].map((area, i) => ({ unit_id: `u${i}`, area_sqm: area, status: 'available' }));
+    const res = repriceBuilding(units, defaultPricePerSqm(4000101, 400), undefined, 4000101, 400);
+    assert.equal(res.totalPrice, '4000101.00');
+    assert.equal(res.units.reduce((total, u) => total.plus(u.newPrice), D(0)).toFixed(2), res.totalPrice);
+  });
+});

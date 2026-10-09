@@ -61,6 +61,8 @@ export interface LiveERPDataset {
   partnerCommitments?: ERPPartnerCommitment[];
   makerCheckerRequests: ERPMakerCheckerRequest[];
   properties: Property[];
+  /** Unnormalized database rows for the calculator; wizard inventory remains in properties. */
+  recordedProperties?: Property[];
   leads: Lead[];
   propertyCosts: ERPPropertyCostItem[];
   purchaseOrders?: ERPConstructionPurchaseOrder[];
@@ -155,6 +157,7 @@ export class ERPSupabaseService {
           partnerCommitments: [],
           makerCheckerRequests: [],
           properties,
+          recordedProperties: rawProps,
           leads,
           propertyCosts: [],
           purchaseOrders: [],
@@ -507,6 +510,7 @@ export class ERPSupabaseService {
       partnerCommitments,
       makerCheckerRequests,
       properties,
+      recordedProperties: rawProps,
       leads,
       propertyCosts,
       purchaseOrders: purchaseOrdersData.map(order => ({ ...order, amount_egp: D(order.amount_egp).toFixed(2) })),
@@ -1677,7 +1681,7 @@ export class ERPSupabaseService {
       p_property_id: params.propertyId,
       p_price_egp: params.priceEgp,
       p_finalize: Boolean(params.finalize),
-      p_unit_prices: params.unitPrices || {},
+      ...(params.unitPrices ? { p_unit_prices: params.unitPrices } : {}),
       p_cost_basis_egp: params.costBasisEgp != null ? Number(params.costBasisEgp) : null,
       p_note: params.note || null
     });
