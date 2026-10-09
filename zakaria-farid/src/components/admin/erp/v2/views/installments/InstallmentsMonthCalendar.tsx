@@ -182,10 +182,10 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
 
   return (
     <div style={{
-      background: '#ffffff',
+      background: 'var(--erp-bg-panel)',
       borderRadius: '10px',
       fontSize: '12px',
-      color: '#334155',
+      color: 'var(--erp-text-body)',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px'
@@ -202,8 +202,8 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
             width: '24px',
             height: '24px',
             borderRadius: '6px',
-            background: 'var(--erp-accent-subtle, #eff6ff)',
-            color: 'var(--erp-accent, #2563eb)',
+            background: 'var(--erp-accent-subtle)',
+            color: 'var(--erp-accent)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -212,7 +212,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
           }}>
             ▦
           </span>
-          <b style={{ color: '#0f172a', fontSize: '0.82rem' }}>
+          <b style={{ color: 'var(--erp-text-title)', fontSize: '0.82rem' }}>
             {isAr ? 'تقويم المستحقات' : 'Dues Calendar'}
           </b>
         </div>
@@ -220,10 +220,10 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
         {/* Week / Month Segmented Switch */}
         <div style={{
           display: 'inline-flex',
-          border: '1px solid #cbd5e1',
+          border: '1px solid var(--erp-border)',
           borderRadius: '7px',
           overflow: 'hidden',
-          background: '#f8fafc'
+          background: 'var(--erp-bg-panel)'
         }}>
           <button
             type="button"
@@ -232,8 +232,8 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
               padding: '3px 8px',
               fontSize: '11px',
               border: 'none',
-              background: mode === 'week' ? 'var(--erp-accent-subtle, #eff6ff)' : 'transparent',
-              color: mode === 'week' ? 'var(--erp-accent, #2563eb)' : '#64748b',
+              background: mode === 'week' ? 'var(--erp-accent-subtle)' : 'transparent',
+              color: mode === 'week' ? 'var(--erp-accent)' : 'var(--erp-text-muted)',
               fontWeight: mode === 'week' ? 700 : 500,
               cursor: 'pointer'
             }}
@@ -247,9 +247,9 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
               padding: '3px 8px',
               fontSize: '11px',
               border: 'none',
-              borderInlineStart: '1px solid #e2e8f0',
-              background: mode === 'month' ? 'var(--erp-accent-subtle, #eff6ff)' : 'transparent',
-              color: mode === 'month' ? 'var(--erp-accent, #2563eb)' : '#64748b',
+              borderInlineStart: '1px solid var(--erp-card-border)',
+              background: mode === 'month' ? 'var(--erp-accent-subtle)' : 'transparent',
+              color: mode === 'month' ? 'var(--erp-accent)' : 'var(--erp-text-muted)',
               fontWeight: mode === 'month' ? 700 : 500,
               cursor: 'pointer'
             }}
@@ -273,7 +273,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
           style={{
             background: 'none',
             border: 'none',
-            color: '#64748b',
+            color: 'var(--erp-text-muted)',
             cursor: 'pointer',
             padding: '2px 4px',
             display: 'flex',
@@ -283,7 +283,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
           {isAr ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
         </button>
 
-        <b style={{ color: '#0f172a', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+        <b style={{ color: 'var(--erp-text-title)', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
           {monthLabel}
         </b>
 
@@ -294,7 +294,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
           style={{
             background: 'none',
             border: 'none',
-            color: '#64748b',
+            color: 'var(--erp-text-muted)',
             cursor: 'pointer',
             padding: '2px 4px',
             display: 'flex',
@@ -317,7 +317,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
           <div
             key={dayName}
             style={{
-              color: '#94a3b8',
+              color: 'var(--erp-text-subtle)',
               fontSize: '10px',
               padding: '3px 0',
               fontWeight: 600
@@ -332,14 +332,14 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
           const bucket = getCalendarDayBuckets(dayItems, cell.dateStr, todayStr);
 
           let cellBg = 'transparent';
-          if (cell.isSelected) cellBg = 'var(--erp-accent-subtle, #eff6ff)';
+          if (cell.isSelected) cellBg = 'var(--erp-accent-subtle)';
 
           let cellBorder = '1px solid transparent';
-          if (cell.isToday) cellBorder = '1px solid var(--erp-accent, #2563eb)';
-          if (cell.isSelected) cellBorder = '1px solid var(--erp-accent, #2563eb)';
+          if (cell.isToday) cellBorder = '1px solid var(--erp-accent)';
+          if (cell.isSelected) cellBorder = '1px solid var(--erp-accent)';
 
-          let textColor = cell.isCurrentMonth ? '#1e293b' : '#cbd5e1';
-          if (cell.isToday) textColor = 'var(--erp-accent, #2563eb)';
+          let textColor = cell.isCurrentMonth ? 'var(--erp-text-title)' : 'var(--erp-border)';
+          if (cell.isToday) textColor = 'var(--erp-accent)';
 
           return (
             <button
@@ -374,9 +374,9 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
                 minHeight: '4px'
               }}>
                 {bucket.dots.map(dot => {
-                  let bg = 'var(--erp-success, #16a34a)';
-                  if (dot === 'out') bg = 'var(--erp-danger, #dc2626)';
-                  if (dot === 'late') bg = '#b45309';
+                  let bg = 'var(--erp-success)';
+                  if (dot === 'out') bg = 'var(--erp-danger)';
+                  if (dot === 'late') bg = 'var(--erp-warning)';
 
                   return (
                     <span
@@ -403,20 +403,20 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
         alignItems: 'center',
         gap: '10px',
         fontSize: '11px',
-        color: '#64748b',
+        color: 'var(--erp-text-muted)',
         padding: '4px 0',
-        borderBottom: '1px solid #f1f5f9'
+        borderBottom: '1px solid var(--erp-border-subtle)'
       }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--erp-success, #16a34a)' }} />
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--erp-success)' }} />
           <span>{isAr ? 'وارد' : 'In'}</span>
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--erp-danger, #dc2626)' }} />
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--erp-danger)' }} />
           <span>{isAr ? 'صادر' : 'Out'}</span>
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#b45309' }} />
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--erp-warning)' }} />
           <span>{isAr ? 'متأخر' : 'Late'}</span>
         </span>
       </div>
@@ -426,7 +426,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
         <div style={{
           fontSize: '11.5px',
           fontWeight: 700,
-          color: '#0f172a',
+          color: 'var(--erp-text-title)',
           marginBottom: '6px',
           fontVariantNumeric: 'tabular-nums'
         }}>
@@ -441,33 +441,33 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
               {activeDayBucket.items.map(item => {
                 const isInflow = item.direction === 'in';
                 const sign = isInflow ? '+' : '−';
-                const color = isInflow ? 'var(--erp-success, #16a34a)' : 'var(--erp-danger, #dc2626)';
+                const color = isInflow ? 'var(--erp-success)' : 'var(--erp-danger)';
                 const arrow = isInflow ? '↓' : '↑';
                 const shortDesc = item.description || (item.direction === 'out' ? item.costCategoryLabel : '');
 
                 return (
                   <div
                     key={item.id}
-                    onClick={() => onInspectItem && onInspectItem(item.id)}
+                    onClick={isInflow && onInspectItem ? () => onInspectItem(item.id) : undefined}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '4px 6px',
                       borderRadius: '6px',
-                      background: '#f8fafc',
-                      border: '1px solid #f1f5f9',
+                      background: 'var(--erp-bg-panel)',
+                      border: '1px solid var(--erp-border-subtle)',
                       fontSize: '11.5px',
-                      cursor: onInspectItem ? 'pointer' : 'default'
+                      cursor: isInflow && onInspectItem ? 'pointer' : 'default'
                     }}
                   >
                     <div style={{ minWidth: 0, flex: 1, marginInlineEnd: '6px' }}>
-                      <div style={{ fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--erp-text-title)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <span>{arrow} </span>
                         <span>{item.party}</span>
                       </div>
                       {shortDesc && (
-                        <div style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: '10px', color: 'var(--erp-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {shortDesc}
                         </div>
                       )}
@@ -494,14 +494,14 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
               alignItems: 'center',
               justifyContent: 'space-between',
               paddingTop: '6px',
-              borderTop: '1px solid #e2e8f0',
+              borderTop: '1px solid var(--erp-card-border)',
               fontSize: '11.5px'
             }}>
-              <span style={{ color: '#64748b', fontWeight: 600 }}>
+              <span style={{ color: 'var(--erp-text-muted)', fontWeight: 600 }}>
                 {isAr ? 'صافي اليوم' : 'Day Net'}
               </span>
               <b style={{
-                color: activeDayBucket.dayNet.gte(0) ? 'var(--erp-success, #16a34a)' : 'var(--erp-danger, #dc2626)',
+                color: activeDayBucket.dayNet.gte(0) ? 'var(--erp-success)' : 'var(--erp-danger)',
                 fontVariantNumeric: 'tabular-nums',
                 direction: 'ltr',
                 unicodeBidi: 'isolate'
@@ -513,7 +513,7 @@ export const InstallmentsMonthCalendar: React.FC<InstallmentsMonthCalendarProps>
         ) : (
           <div style={{
             fontSize: '11.5px',
-            color: '#94a3b8',
+            color: 'var(--erp-text-subtle)',
             padding: '8px 0',
             textAlign: 'center'
           }}>

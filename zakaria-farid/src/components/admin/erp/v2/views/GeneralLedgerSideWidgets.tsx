@@ -2,7 +2,6 @@
 
 import React from 'react';
 import {
-  Calendar,
   Lock,
   Unlock,
   ShieldCheck,
@@ -18,9 +17,8 @@ import {
 } from 'lucide-react';
 import { ERPAccountingPeriod, ERPAccount } from '@/lib/erp/types';
 import { Decimal } from '@/lib/erp/math';
-import { resolveEffectivePeriod, CANONICAL_COA } from '@/lib/erp/ledger';
+import { resolveEffectivePeriod } from '@/lib/erp/ledger';
 import { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets';
-import { ERPLedgerAmount } from '../common/ERPLedgerAmount';
 import { COAFileExplorer, COACategorySelection } from './COAFileExplorer';
 import css from './GeneralLedgerView.module.css';
 
@@ -38,9 +36,6 @@ export interface GeneralLedgerSideWidgetsProps {
     isBalancesBalanced: boolean;
     rows?: unknown[];
   };
-  totalEntriesCount: number;
-  periodEntriesCount?: number;
-  availableCash?: { totalCash: Decimal };
   // COA Hierarchy Tree
   accounts?: ERPAccount[];
   accountStats?: Record<string, { debits: Decimal; credits: Decimal; count: number }>;
@@ -56,8 +51,6 @@ export interface GeneralLedgerSideWidgetsProps {
   isExportingExcel?: boolean;
   onPrintTrialBalance?: () => void;
   onNavigateTab?: (tab: 'journal' | 'coa' | 'trial_balance' | 'detailed_tb' | 'balance_sheet' | 'income_statement') => void;
-  onFilterUnpostedEntries?: () => void;
-  onFilterLiquidAccounts?: () => void;
   onOpenNewEntry?: () => void;
   onAddSubAccount?: () => void;
   standalone?: boolean;
@@ -73,8 +66,6 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
   isAr = true,
   isMutating = false,
   trialBalanceReport,
-  totalEntriesCount,
-  periodEntriesCount,
   accounts,
   accountStats,
   selectedCategoryInTree,
@@ -283,9 +274,9 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
               <div
                 className={css.iconSquircle}
                 style={{
-                  background: 'var(--erp-accent-subtle, #eff6ff)',
-                  color: 'var(--erp-accent, #2563eb)',
-                  border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.15))'
+                  background: 'var(--erp-accent-subtle)',
+                  color: 'var(--erp-accent)',
+                  border: '1px solid var(--erp-accent-tint)'
                 }}
               >
                 <ShieldCheck size={15} />
@@ -303,7 +294,7 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                 aria-label={isAr ? 'خيارات إقفال الفترة والسنة' : 'Period & Year Actions'}
                 style={{
                   background: 'transparent',
-                  border: '1px solid var(--erp-border, #cbd5e1)',
+                  border: '1px solid var(--erp-border)',
                   borderRadius: '6px',
                   width: '26px',
                   height: '26px',
@@ -311,7 +302,7 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#64748b'
+                  color: 'var(--erp-text-muted)'
                 }}
               >
                 <MoreHorizontal size={15} />
@@ -325,10 +316,10 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                     zIndex: 50,
                     marginTop: '4px',
                     minWidth: '190px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
+                    background: 'var(--erp-bg-panel)',
+                    border: '1px solid var(--erp-border)',
                     borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                    boxShadow: '0 4px 12px color-mix(in srgb, var(--erp-text-title) 8%, transparent)',
                     padding: '4px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -353,12 +344,12 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                       borderRadius: '6px',
                       fontSize: '0.75rem',
                       fontWeight: 500,
-                      color: '#1e293b',
+                      color: 'var(--erp-text-body)',
                       cursor: 'pointer',
                       textAlign: isAr ? 'right' : 'left'
                     }}
                   >
-                    {isPeriodLocked ? <Unlock size={13} color="#2563eb" /> : <Lock size={13} color="#64748b" />}
+                    {isPeriodLocked ? <Unlock size={13} color="var(--erp-accent)" /> : <Lock size={13} color="var(--erp-text-muted)" />}
                     <span>
                       {isPeriodLocked
                         ? (isAr ? 'إعادة فتح الفترة المحاسبية' : 'Reopen Fiscal Period')
@@ -384,12 +375,12 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                         borderRadius: '6px',
                         fontSize: '0.75rem',
                         fontWeight: 500,
-                        color: '#dc2626',
+                        color: 'var(--erp-danger)',
                         cursor: 'pointer',
                         textAlign: isAr ? 'right' : 'left'
                       }}
                     >
-                      <Lock size={13} color="#dc2626" />
+                      <Lock size={13} color="var(--erp-danger)" />
                       <span>
                         {isAr
                           ? `إغلاق السنة المالية ${effectivePeriod.fiscal_year}`
@@ -415,9 +406,9 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                     fontSize: '0.75rem',
                     fontWeight: 600,
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#0f172a',
+                    border: '1px solid var(--erp-border)',
+                    background: 'var(--erp-bg-panel)',
+                    color: 'var(--erp-text-title)',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     width: 'auto',
@@ -441,7 +432,7 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                   ))}
                 </select>
               ) : (
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--erp-text-title)' }}>
                   {effectivePeriod ? `${effectivePeriod.fiscal_year} / ${String(effectivePeriod.period_number).padStart(2, '0')}` : '—'}
                 </span>
               )}
@@ -468,21 +459,21 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 fontSize: '0.73rem',
-                color: '#64748b',
+                color: 'var(--erp-text-muted)',
                 marginTop: '4px',
                 paddingTop: '2px'
               }}
             >
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {isAr ? 'مدين ' : 'Debit '}
-                <strong style={{ color: '#334155', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                <strong style={{ color: 'var(--erp-text-body)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                   {trialBalanceReport.sumDebits.toNumber().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </span>
-              <span style={{ color: '#cbd5e1' }}>·</span>
+              <span style={{ color: 'var(--erp-border)' }}>·</span>
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {isAr ? 'دائن ' : 'Credit '}
-                <strong style={{ color: '#334155', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                <strong style={{ color: 'var(--erp-text-body)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                   {trialBalanceReport.sumCredits.toNumber().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </span>

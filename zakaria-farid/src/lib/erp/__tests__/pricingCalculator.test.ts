@@ -4,7 +4,6 @@ import {
   priceBuiltProperty,
   pricePerSqmForMarkup,
   priceUnitsAtRate,
-  priceSliderBounds,
   estimateFeasibility,
   repriceBuilding,
   defaultPricePerSqm,
@@ -59,11 +58,7 @@ describe('pricingCalculator — helpers', () => {
     assert.equal(rows[1].newPrice, '0.00');
   });
 
-  it('slider bounds span cost and market', () => {
-    assert.deepEqual(priceSliderBounds(666.67, 20000), { min: 500, max: 26000, step: 100 });
-    assert.deepEqual(priceSliderBounds(0, 0), { min: 0, max: 100, step: 100 });
-    assert.deepEqual(priceSliderBounds(12000, 10000), { min: 8000, max: 15600, step: 100 });
-  });
+
 });
 
 describe('pricingCalculator — feasibility', () => {
@@ -223,6 +218,22 @@ describe('repriceBuilding & save handler (T1-T4)', () => {
 });
 
 describe('rounding remainder (user-confirmed 2026-10-08)', () => {
+  it('RPC errors never fall back to an unlogged non-atomic property update', async () => {
+    for (const error of [
+      { code: 'PGRST202', message: 'record_property_price missing' },
+      { code: '42501', message: 'record_property_price permission denied' },
+    ]) {
+      let writes = 0;
+      const client = {
+        rpc: async () => ({ data: null, error }),
+        from: () => { writes++; return { update: () => ({ eq: async () => ({ error: null }) }) }; },
+      };
+      await assert.rejects(() => ERPSupabaseService.recordPropertyPrice(client as any, {
+        propertyId: 'p1', priceEgp: 100,
+      }), (actual: unknown) => actual === error);
+      assert.equal(writes, 0);
+    }
+  });
   // 400 m² split 66.67 × 5 + 66.65 (unit area split rule), price 4,000,100.
   const areas = [66.67, 66.67, 66.67, 66.67, 66.67, 66.65];
   const allAvailable = areas.map((a, i) => ({ unit_id: `u${i + 1}`, area_sqm: a, price_egp: 0, status: 'available' }));
@@ -257,6 +268,14 @@ describe('rounding remainder (user-confirmed 2026-10-08)', () => {
     assert.equal(res.repricedTotal, '4000100.00'); // 10000.25 × 400
     assert.equal(res.totalPrice, '4800100.00');
     assert.equal(res.units[0].newPrice, '800000.00');
+    assert.equal(sum(res.units), res.totalPrice);
+  });
+
+  it('last available unit can absorb a remainder down to zero', () => {
+    const units = [1, 2].map(id => ({ unit_id: `small-${id}`, area_sqm: 0.5, price_egp: 10, status: 'available' }));
+    const res = repriceBuilding(units, 1);
+    assert.deepEqual(res.units.map(u => u.newPrice), ['1.00', '0.00']);
+    assert.equal(res.repricedTotal, '1.00');
     assert.equal(sum(res.units), res.totalPrice);
   });
 });

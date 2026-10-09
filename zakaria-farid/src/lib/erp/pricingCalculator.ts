@@ -131,7 +131,7 @@ export function priceUnitsAtRate(units: UnitPriceRow[], pricePerSqm: Num): UnitP
 
 /**
  * Reprice a building with units (BINDING RULE 2026-10-08):
- * - available units get new price per m² × their area (whole EGP via Math.round)
+ * - available units get new price per m² × their area (whole EGP, half-up using integer piastres)
  * - reserved/contracted units keep their current price (locked)
  * - total building price = sum of ALL units (locked + repriced)
  * - [user-confirmed 2026-10-08] the last available unit absorbs the whole-EGP rounding remainder, so the
@@ -147,19 +147,14 @@ export function repriceBuilding(
   const rate = D(pricePerSqm || 0);
 
   const contractedIds = new Set<string>();
-  if (contractsOrContractedIds) {
-    if (typeof (contractsOrContractedIds as any)[Symbol.iterator] === 'function') {
-      for (const item of contractsOrContractedIds as any) {
-        if (typeof item === 'string') {
-          contractedIds.add(item);
-        } else if (item && typeof item === 'object') {
-          if ((!item.status || item.status !== 'Rescinded') && item.building_unit_id) {
-            contractedIds.add(item.building_unit_id);
-          }
-        }
-      }
-    }
+  for (const item of contractsOrContractedIds ?? []) {
+    if (typeof item === 'string') contractedIds.add(item);
+    else if (item.status !== 'Rescinded' && item.building_unit_id) contractedIds.add(item.building_unit_id);
   }
+  const roundWholeEgp = (value: ReturnType<typeof D>) => {
+    const whole = (value.abs().toCents() + BigInt(50)) / BigInt(100);
+    return D(value.lt(0) ? -whole : whole);
+  };
 
   let lockedTotal = D(0);
   let repricedTotal = D(0);
@@ -188,8 +183,7 @@ export function repriceBuilding(
     }
 
     const area = D(u.area_sqm > 0 ? u.area_sqm : 0);
-    const roundedPrice = Math.round(rate.times(area).toNumber());
-    const next = D(roundedPrice);
+    const next = roundWholeEgp(rate.times(area));
     repricedTotal = repricedTotal.plus(next);
     repricedCount++;
     repricedArea = repricedArea.plus(area);
@@ -206,7 +200,7 @@ export function repriceBuilding(
 
   // Last available unit absorbs the rounding remainder (whole EGP).
   if (lastRepricedIdx >= 0) {
-    const atRate = D(Math.round(rate.times(repricedArea).toNumber()));
+    const atRate = roundWholeEgp(rate.times(repricedArea));
     // exactTotal only covers the 2-decimal rate rounding; unit areas that do not add up to the
     // building area must not be pushed onto one unit.
     const useExact = exactTotal != null && lockedCount === 0 &&
@@ -215,7 +209,7 @@ export function repriceBuilding(
     const diff = target.minus(repricedTotal);
     const last = unitResults[lastRepricedIdx];
     const absorbed = D(last.newPrice).plus(diff);
-    if (!diff.isZero() && absorbed.isPositive()) {
+    if (!diff.isZero() && absorbed.gte(0)) {
       last.newPrice = absorbed.toFixed(2);
       last.change = absorbed.minus(last.currentPrice).toFixed(2);
       repricedTotal = target;
@@ -232,17 +226,6 @@ export function repriceBuilding(
     lockedCount,
     repricedCount,
   };
-}
-
-/** Slider bounds: from 80% of the lower anchor to 130% of the higher anchor, rounded to 100 EGP/m². */
-export function priceSliderBounds(costPerSqm: Num, marketPricePerSqm: Num): { min: number; max: number; step: number } {
-  const c = D(costPerSqm || 0);
-  const m = D(marketPricePerSqm || 0);
-  const lo = c.isZero() ? m : (m.isZero() ? c : (c.lessThan(m) ? c : m));
-  const hi = c.greaterThan(m) ? c : m;
-  const min = Math.max(0, Math.floor(lo.times(0.8).dividedBy(100).toNumber()) * 100);
-  const max = Math.max(min + 100, Math.ceil(hi.times(1.3).dividedBy(100).toNumber()) * 100);
-  return { min, max, step: 100 };
 }
 
 export interface FeasibilityInput {

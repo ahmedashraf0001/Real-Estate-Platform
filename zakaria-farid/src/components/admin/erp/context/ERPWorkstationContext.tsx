@@ -4575,11 +4575,27 @@ export function ERPWorkstationProvider({
       });
       // The RPC saves price = sum of unit prices when units are repriced; mirror what it saved.
       const savedPriceEgp = result.price_egp ?? newPriceEgp;
+      const needsUnitRefresh = result.units_repriced !== Object.keys(options?.unitPrices ?? {}).length ||
+        !D(savedPriceEgp).eq(newPriceEgp);
+      let savedProperty: Partial<Property> | null = null;
+      if (needsUnitRefresh) {
+        try {
+          const { data: row, error } = await supabase.from('properties')
+            .select('price_egp, building_units, completion_status, construction_completed_at, price_finalized_at')
+            .eq('id', propertyId).single();
+          if (error) throw error;
+          savedProperty = row;
+        } catch (error) {
+          console.warn('Saved property refresh failed:', error);
+        }
+      }
       const finalizedAt = new Date().toISOString();
       setData(prev => ({
         ...prev,
         properties: prev.properties.map(p => {
           if (p.id !== propertyId) return p;
+          // A reservation during the RPC invalidates the calculator's proposed unit map.
+          if (needsUnitRefresh) return savedProperty ? { ...p, ...savedProperty } : p;
           const updatedUnits = options?.unitPrices
             ? p.building_units?.map(u =>
                 u.status === 'available' && options.unitPrices?.[u.unit_id] != null
@@ -4618,6 +4634,11 @@ export function ERPWorkstationProvider({
           duration: 5000
         }
       );
+      if (needsUnitRefresh && !savedProperty) {
+        toast.warning(isAr
+          ? 'تم حفظ السعر. تعذّر تحديث بيانات الوحدات؛ حدّث الصفحة قبل إعادة التسعير.'
+          : 'Price saved. Unit data could not refresh; reload before repricing again.');
+      }
       return true;
     } catch (err) {
       console.error('Property price update failed:', err);

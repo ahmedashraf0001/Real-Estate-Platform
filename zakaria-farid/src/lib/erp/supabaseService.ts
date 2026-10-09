@@ -1685,32 +1685,6 @@ export class ERPSupabaseService {
     // (migration 20261008120000); price_egp is the saved price.
     if (!error) return data as { stage: PropertyPriceStage; units_repriced: number; price_egp?: number };
 
-    // Before the price-history migration is applied: a plain revision still works.
-    const missingFn = (error as { code?: string }).code === 'PGRST202' || String(error.message || '').includes('record_property_price');
-    if (missingFn && !params.finalize) {
-      let unitsRepriced = 0;
-      let updatePayload: any = { price_egp: params.priceEgp };
-      if (params.unitPrices && Object.keys(params.unitPrices).length > 0) {
-        const { data: prop, error: readErr } = await supabase
-          .from('properties')
-          .select('building_units')
-          .eq('id', params.propertyId)
-          .single();
-        if (readErr) throw readErr;
-        if (prop && Array.isArray(prop.building_units)) {
-          updatePayload.building_units = prop.building_units.map((u: any) => {
-            if (u.status === 'available' && params.unitPrices![u.unit_id] != null) {
-              unitsRepriced++;
-              return { ...u, price_egp: params.unitPrices![u.unit_id] };
-            }
-            return u;
-          });
-        }
-      }
-      const { error: updErr } = await supabase.from('properties').update(updatePayload).eq('id', params.propertyId);
-      if (updErr) throw updErr;
-      return { stage: 'revised', units_repriced: unitsRepriced };
-    }
     throw error;
   }
 
