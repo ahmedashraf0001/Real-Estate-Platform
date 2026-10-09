@@ -1962,12 +1962,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 0.65rem;
           }
         }
-        [data-theme="light"] .hero-title-glass-card .gold-text-span,
-        [data-theme="light"] .hero-title-glass-card .white-text-span {
+        [data-theme="light"] .hero-title-glass-card .gold-text-span {
           color: var(--text-primary) !important;
           -webkit-text-fill-color: var(--text-primary) !important;
           background: none !important;
-          text-shadow: var(--glass-text-shadow) !important;
+          filter: none !important;
+        }
+        [data-theme="light"] .hero-title-glass-card .white-text-span {
+          background: linear-gradient(135deg, #B8934A 0%, #8C6826 55%, #6B4E1B 100%) !important;
+          -webkit-background-clip: text !important;
+          background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          color: transparent !important;
+          filter: none !important;
         }
       `}</style>
     </div>

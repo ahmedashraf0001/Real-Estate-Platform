@@ -238,7 +238,8 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               flex-direction: column;
               overflow: hidden;
               transition: all var(--transition-smooth);
-              background: var(--bg-glass-card);
+              /* No blur inside the drawer, so a see-through fill showed the page as grey haze. */
+              background: var(--bg-surface);
               border: var(--glass-border);
               box-shadow: var(--shadow-glass);
               text-shadow: var(--glass-text-shadow);

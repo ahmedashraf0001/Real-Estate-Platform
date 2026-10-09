@@ -271,7 +271,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     sqm: property.sqm,
     builtYear: property.builtYear,
   }, locale);
-  const specIcons = { floors: Building2, units: Building2, bedrooms: Bed, bathrooms: Bath, area: Maximize2, year: Calendar, finishing: CheckCircle, type: Building2 };
+  const specIcons = { floors: Building2, units: Building2, bedrooms: Bed, bathrooms: Bath, area: Maximize2, year: Calendar, finishing: CheckCircle, status: CheckCircle, type: Building2 };
   const [pageUrl, setPageUrl] = useState('');
   useEffect(() => { setPageUrl(window.location.href); }, [locale, property.slug]);
   const contactPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER

@@ -25,7 +25,7 @@ test('public photo glass uses tokens and descendants inherit the outer blur supp
     const source = readFileSync(`src/components/${file}`, 'utf8');
     const dormant = /[^{}]*\.(?:spec-matrix-card|calculator-glass-card|viewing-form-card)\s*\{[^{}]*\}/g;
     assert.doesNotMatch(source.replace(dormant, ''), /backdrop-filter:\s*blur\(/, file);
-    assert.match(source, /background: var\(--glass-strong\)/, file);
+    assert.match(source, /background: var\(--glass-(?:card-)?strong\)/, file);
   }
   assert.match(css, /\.app-root :is\([\s\S]*?\) > \* \{\s*--glass-blur: none;\s*--glass-blur-nav: none;/);
 });

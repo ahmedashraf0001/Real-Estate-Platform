@@ -925,6 +925,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           transition: all var(--transition-smooth);
         }
 
+        [data-theme="light"] .card-image-wrapper {
+          background: #ECE6DA;
+        }
+
         [data-theme="light"] .property-card {
           background: #f8fafc;
           border: 1px solid rgba(184, 133, 48, 0.2);
@@ -1061,7 +1065,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           z-index: 3;
           margin: 0 0.85rem;
           padding: 1.35rem 1.35rem 1.15rem;
-          background: var(--glass-strong);
+          background: var(--glass-card-strong);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);
@@ -1073,7 +1077,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         /* Frosted Crystal Glass (Light Mode) */
         [data-theme="light"] .card-content-overlay {
-          background: var(--glass-strong);
+          background: var(--glass-card-strong);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);
