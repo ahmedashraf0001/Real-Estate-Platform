@@ -10,9 +10,27 @@ fin-c2-partner-id-lines done 4a021ff
 fin-c2b-partner-id-race done 1f02bd4
 ui-c3-real-display-values done 958bed3 (ZFKpiCard neutral rates)
 sim-area-field-bug closed not-reproduced (DB area 400; form renders 400; 390px fixed wizard footer covers field; regression test added)
-unit-area-split running (codex high; incl. card area line)
-manual-checks todo (payout post, cost-edit JE, 2x2 building units; payout confirm needs user)
-pdf-reports todo (HTML-based PDF: property lifecycle money/paid/debt, client statement, partner statement; mockup first)
-ui-calculator-repricing todo (repricing UI weird/buggy; mockup first)
-ui-pdc-one-table todo (merge 2 tables + filters; filter count shows 2 but empty table; redesign schedule calendar widget; mockup + removal approval)
-ui-ledger-widgets todo (trim bloated widget row; clearer account popup; mockup + removal approval)
+unit-area-split done (incl. card area line; 1 existing building differs, no backfill)
+manual-checks partial 2026-10-08: 2x2 units OK (e3a7d02b: floors=3 incl ground x2 -> 4 units f1-2, sum 4M; contract wizard "4 شقة متاحة"); cost-edit JE OK (JE-WIP-EDIT-EB836973-MUZSXNWK Dr151000/Cr201000 2,500); payout post still needs user click. GL WIP 6,012,499 vs sub-ledger 6,692,499: legacy items be1445a5 (400k) and 18597d3f (300k) have no WIP JE, 935ac196 +20k (B1), c1729fd2 +2
+erp-open-items running (Codex review only of agy commits 99b0be5/cd8a1b9, 3995622, 1116d34 on PR #15 branch; Part B/C done elsewhere)
+pdf-reports done (fixture-verified; real-data render check pending with manual-checks)
+ui-calculator-repricing done (agy; Claude-checked; codex review pending; follow-up: move unit repricing into record_property_price RPC for atomic save)
+ui-pdc-one-table done (agy; Claude-checked; codex review pending)
+ui-ledger-widgets done (agy; Claude-checked; codex review pending)
+# --- Public site polish (user 2026-10-08). Plan: .agents/plans/site-polish-2026-10-08.md
+site-prod-500 done db1b1e4 (branch hotfix/prod-property-500, deployed al-zakaria b3757838; not pushed)
+site-scroll-perf done b1cacfc (detail long tasks 2->0, missed frames -31%; paint still top cost)
+site-specs-broker done 17fd89d
+site-travel-osrm done ac0da7d
+site-map-fixes done 044db05
+site-glass done 24c05dc
+site-blueprint-admin done 6dda5f6 (Gouna repair applied on test DB: 279->35 trade attachments)
+site-blueprint-detail done 57fabe9
+site-deploy done 266c689 (main; al-zakaria 15bfd461)
+# --- ERP follow-ups (user 2026-10-08 night). Branch feat/erp-calc-atomic-reprice, PR #15
+calc-atomic-reprice done 604013a (migration 20261008120000 applied to prod DB)
+final-price-rounding done 416aded
+ui-pdc-columns done e05b490 (short labels, icon print buttons, money cols before text cols, sticky action)
+ui-calc-sticky-wrap done 2e3507c
+pdf-real-data done cf7a63d (client statement real-data render OK; callout cents fixed; partner PDF render via dossier modal not reached)
+modal-escape done ecb1d52 (from f094e82; fix/erp-open-items branch now redundant)

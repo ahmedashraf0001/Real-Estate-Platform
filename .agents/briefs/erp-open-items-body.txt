@@ -1,0 +1,29 @@
+TASK erp-open-items (Codex: review + finish; no agy). Work on the current branch feat/erp-calc-atomic-reprice (PR #15) in place; do not switch branches. Repo C:/Users/lyr1csan/workspace/Real-Estate-Platform, app in zakaria-farid/. Git Bash. No git add/commit/push. git needs -c "safe.directory=C:/Users/lyr1csan/workspace/Real-Estate-Platform".
+RUN_DIR = .agents/runs/erp-open-items
+
+CONTEXT
+agy implemented three tasks that Claude only spot-checked; nobody reviewed them. They are already on main:
+- ui-pdc-one-table: commits 99b0be5, cd8a1b9. Spec: .agents/briefs/ui-pdc-one-table-agy.txt
+- ui-ledger-widgets: commit 3995622. Spec: .agents/briefs/ui-ledger-widgets-agy.txt
+- ui-calculator-repricing: commit 1116d34 (MONEY PATH). Spec: .agents/briefs/ui-calculator-repricing-agy.txt
+Read first: .agents/briefs/_agy-header.txt (PROJECT RULES = invariants), PROJECT_SPEC.md sections tagged [user-confirmed 2026-10-06/07/08], zakaria-farid/.claude/skills/erp-partner-payout-pricing/SKILL.md, zakaria-farid/.agents/briefs/ui-rules.body.txt, C:\Users\lyr1csan\.claude\skills\agy-lessons\SKILL.md "Review and orchestration checks".
+
+PART A - review the three commits (git show <sha>) against their specs
+Blocking only: unmet spec item, bug, broken invariant, fake/assertion-free test, hardcoded/static data, dead code or bloat agy added, unwired module, visual-rules break. Tag each finding [R<n>]/[ACC]/[Q:..]/[INV]/[VR]/[BUG]. Fix every blocking finding yourself. Non-blocking -> "Notes for Claude", do nothing.
+Do NOT remove any page, widget or button (user approves removals item by item) unless the spec already says to.
+
+ALREADY DONE on this branch (do not redo; review only if a Part A finding touches them): 604013a atomic record_property_price (migration 20261008120000 applied to PRODUCTION; never edit or re-apply it), 416aded rounding, e05b490 PDC columns, 2e3507c sticky bar, cf7a63d statement callouts, ecb1d52 modal Escape. Review commit 1116d34 as amended by 604013a/416aded (judge the current code, not the old save path).
+The only Supabase project is PRODUCTION: no DB writes, no migrations, no supabase CLI/MCP.
+
+UI CHECK
+Screenshots 1280 and 390 (and 1440 for C1) of PDC page, ledger page + account statement popup, calculator, into RUN_DIR/shots using the existing capture scripts. Look at them. If capture cannot run, say so.
+
+GATES (must exit 0; report counts)
+First, before edits: cd zakaria-farid && npm test -> record baseline pass/fail counts and failing test names.
+End: cd zakaria-farid && npx tsc --noEmit ; cd zakaria-farid && npm test (only the baseline failures may fail).
+Run `git checkout -- zakaria-farid/graphify-out` if graphify dirtied it.
+
+OUTPUT
+RUN_DIR/verdict.txt first line PASS or DONE or BLOCKED (+question line 2).
+RUN_DIR/final.md: verdict; findings per commit (file:line, tag, fixed?); Part B design (where units live, what the function now does); files changed; tests added + RED evidence; gate exit codes and counts; screenshot paths; Notes for Claude; manual test steps.
+No narration while working. Terse caveman style in final.md, all paths/lines/counts verbatim.
