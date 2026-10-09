@@ -195,3 +195,9 @@ Implementation guide: `zakaria-farid/.claude/skills/erp-partner-payout-pricing/S
 
 - [user-confirmed 2026-10-09] Contractor bill payments post with a new journal source_module `CONSTRUCTION_SETTLEMENT`, not `MANUAL_ADJUSTMENT`. Existing contractor settlement entries are retagged by a one-time backfill on the production DB.
 - [user-confirmed 2026-10-09] Partner capital-injection journal lines carry the partner's `partner_id`. Existing lines are backfilled from their source transaction; show the user the row count before running the backfill on production.
+
+## Calculator money guards (2026-10-09) [user-confirmed]
+
+- [user-confirmed 2026-10-09] If a price per m² is so low that whole-EGP unit prices cannot sum to the target (the last unit would go negative), the calculator blocks the save with a clear message. No remainder spreading.
+- [user-confirmed 2026-10-09] A building with a live (non-rescinded) whole-building contract cannot be repriced: the calculator shows it as sold and `record_property_price` rejects the call.
+- [user-confirmed 2026-10-09] `record_property_price` enforces the money rules itself: unit prices must be whole EGP and ≥ 0; units with a live contract keep their price whatever their status says; the building price always equals the unit total when the building has units; a building with any unpriced unit is rejected.

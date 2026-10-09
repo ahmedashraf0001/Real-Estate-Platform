@@ -12,7 +12,7 @@ ui-c3-real-display-values done 958bed3 (ZFKpiCard neutral rates)
 sim-area-field-bug closed not-reproduced (DB area 400; form renders 400; 390px fixed wizard footer covers field; regression test added)
 unit-area-split done (incl. card area line; 1 existing building differs, no backfill)
 manual-checks partial 2026-10-08: 2x2 units OK (e3a7d02b: floors=3 incl ground x2 -> 4 units f1-2, sum 4M; contract wizard "4 شقة متاحة"); cost-edit JE OK (JE-WIP-EDIT-EB836973-MUZSXNWK Dr151000/Cr201000 2,500); payout post still needs user click. GL WIP 6,012,499 vs sub-ledger 6,692,499: legacy items be1445a5 (400k) and 18597d3f (300k) have no WIP JE, 935ac196 +20k (B1), c1729fd2 +2
-erp-open-items running (Codex review only of agy commits 99b0be5/cd8a1b9, 3995622, 1116d34 on PR #15 branch; Part B/C done elsewhere)
+erp-open-items done 68bd535 (Codex review: 19 fixes; 2 money blockers moved to calc-money-guards)
 pdf-reports done (fixture-verified; real-data render check pending with manual-checks)
 ui-calculator-repricing done (agy; Claude-checked; codex review pending; follow-up: move unit repricing into record_property_price RPC for atomic save)
 ui-pdc-one-table done (agy; Claude-checked; codex review pending)
@@ -34,3 +34,6 @@ ui-pdc-columns done e05b490 (short labels, icon print buttons, money cols before
 ui-calc-sticky-wrap done 2e3507c
 pdf-real-data done cf7a63d (client statement real-data render OK; callout cents fixed; partner PDF render via dossier modal not reached)
 modal-escape done ecb1d52 (from f094e82; fix/erp-open-items branch now redundant)
+journal-source-module done def9933 (CONSTRUCTION_SETTLEMENT; 4 retagged on prod)
+partner-capital-lines done def9933 (6 equity lines backfilled on prod)
+calc-money-guards running (codex-impl high; brief .agents/briefs/calc-money-guards-body.txt)

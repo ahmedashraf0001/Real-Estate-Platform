@@ -1,0 +1,48 @@
+TASK calc-money-guards (FINANCIAL_CORE + DATABASE_SCHEMA, money path). Branch feat/erp-calc-atomic-reprice (PR #15), work in place, do not switch branches. App in zakaria-farid/. Git Bash. No git add/commit/push.
+
+GOAL
+Close the calculator money-path gaps found by the independent audit of the erp-open-items review. Rules are binding: PROJECT_SPEC.md "Calculator money guards (2026-10-09)" and the [user-confirmed 2026-10-08] calculator lines above it.
+
+READ FIRST
+- PROJECT_SPEC.md sections "Partner payouts and final pricing" (2026-10-08 lines) and "Calculator money guards (2026-10-09)"
+- .agents/runs/erp-open-items/final.md and .agents/runs/erp-open-items/audit.md (the findings this task closes)
+- zakaria-farid/supabase/migrations/20261008120000_record_price_reprice_units.sql (live on PRODUCTION; never edit or re-apply it)
+- zakaria-farid/src/lib/erp/pricingCalculator.ts (repriceBuilding), zakaria-farid/src/components/admin/erp/v2/views/calculator/CostPricingCalculator.tsx, zakaria-farid/src/lib/erp/supabaseService.ts recordPropertyPrice, zakaria-farid/src/components/admin/erp/context/ERPWorkstationContext.tsx price-save handler, zakaria-farid/src/lib/erp/projectStatusHelper.ts (normalizeERPProperty, live-contract helpers at lines ~17, ~39, ~173, ~198)
+
+DATA FACTS (production, checked 2026-10-09): 2 properties have building_units; every unit has a numeric whole-EGP price_egp; each such property's price_egp equals its unit sum. Units live only in properties.building_units (jsonb array; unit_id, status, price_egp, area). Contracts: public.erp_contracts with property_id, building_unit_id, status ('Rescinded' = not live). A whole-building contract is a live contract for the property whose building_unit_id is NULL or equals the property id (match the client helpers in projectStatusHelper.ts exactly; read them and mirror their rule in SQL).
+
+REQUIRED
+R1. New migration zakaria-farid/supabase/migrations/20261009100000_record_price_money_guards.sql: CREATE OR REPLACE public.record_property_price with the SAME signature (UUID, NUMERIC, BOOLEAN, JSONB, NUMERIC, TEXT), SECURITY INVOKER, search_path, REVOKE/GRANT and NOTIFY exactly as 20261008120000. Keep the finalize checks (off_plan only, not already final). Add, in this order, before any write:
+  a. Live whole-building contract for the property -> RAISE EXCEPTION 'PROPERTY_SOLD_WHOLE'.
+  b. Every value in p_unit_prices must be a JSON number, finite, >= 0 and whole EGP (value = round(value, 0)); otherwise RAISE 'INVALID_UNIT_PRICE'. Keys not matching a unit_id of the property -> RAISE 'UNKNOWN_UNIT'.
+  c. A unit is locked when its status is not 'available' OR it has a live (non-Rescinded) contract with building_unit_id = unit_id. Locked units keep their stored price even if present in p_unit_prices.
+  d. If the property has units: every unit after repricing must have a numeric price, else RAISE 'UNPRICED_UNIT'; the saved price_egp = unit sum ALWAYS (even when 0 units were repriced). p_price_egp is then only a client hint; if it differs from the unit sum the saved value is still the unit sum and the RPC returns that sum (client already mirrors the returned price).
+  e. If the property has no units: keep today's behaviour (price = p_price_egp, piastres allowed, must be > 0).
+  f. units_repriced in the history row = number of units actually repriced.
+  Do NOT apply the migration to any database (no supabase CLI, no MCP). Claude applies it.
+R2. pricingCalculator.ts repriceBuilding:
+  a. Each unit price = rate x area rounded ONCE to whole EGP half-up from the exact Decimal product (no rounding of an already-rounded value). Audit example: rate 99.50, area 1.01 -> exact 100.495 -> 100, never 101.
+  b. Exact-total absorb (last available unit takes the remainder) applies only when the available units' areas sum EXACTLY (Decimal equality, no tolerance) to the area used for the target. Audit example: building area 100, unit areas totalling 100.01 -> no absorb.
+  c. If the remainder would make the last available unit negative, return a blocking state (e.g. `blocked: 'RATE_TOO_LOW'`) instead of prices; never return a total that differs from the unit sum.
+R3. CostPricingCalculator.tsx:
+  a. RATE_TOO_LOW: save buttons disabled and an inline message in Arabic and English ("السعر للمتر منخفض جداً لتسعير الوحدات بالجنيه الكامل" / "Rate too low to price units in whole EGP").
+  b. Live whole-building contract: calculator shows the building as sold (one short line, existing notice style) and both save paths are disabled.
+  c. Use the property's RECORDED building_units only. If a building has no recorded units, do not reprice units (price the property as a whole); never feed normalizeERPProperty's generated fallback inventory (6 units / 1200 m2 / 35,000,000) into the calculator. Do not change normalizeERPProperty itself (contract wizards depend on it).
+  d. Both confirmation dialogs show the exact submitted old price, new price and difference with piastres when present (use the project's existing money formatter that keeps non-zero cents), never a rounded figure.
+R4. ERPWorkstationContext / supabaseService: map the new RPC errors (PROPERTY_SOLD_WHOLE, INVALID_UNIT_PRICE, UNKNOWN_UNIT, UNPRICED_UNIT) to clear Arabic/English toasts; no fallback write path.
+
+OUT OF SCOPE
+Any page, widget or button removal; normalizeERPProperty; other ERP views; data backfills.
+
+TESTS (RED first, record RED logs in RUN_DIR)
+- pricingCalculator.test.ts: 99.50 x 1.01 -> 100; areas 100 vs 100.01 -> no absorb; five 50 m2 units at 0.01 -> blocked RATE_TOO_LOW; default rate untouched still sums to current price exactly (existing test must stay green).
+- Calculator component/handler tests (pattern in erpOpenItems.test.ts): RATE_TOO_LOW disables save; whole-building live contract disables save; building without recorded units does not send p_unit_prices; confirmation shows 102.50 not 103.
+- SQL: add a SQL test file zakaria-farid/supabase/tests/record_price_money_guards.sql written as plain SQL with assertions inside a transaction that ROLLBACKs (BEGIN ... ROLLBACK), covering: zero repriced units still forces price = unit sum; negative/fractional/null price rejected; unit with live contract but status 'available' keeps its price; whole-building contract rejects; unpriced unit rejects. Do not run it against any database; Claude runs it in a rolled-back transaction.
+
+ACCEPTANCE
+- grep: no `v_repriced > 0` guard around the sum in the new migration.
+- npx tsc --noEmit exit 0; npm test only the 7 known baseline failures (names in .agents/runs/erp-open-items/final.md).
+- No change to 20261008120000 or any older migration.
+
+DOCS
+PROJECT_SPEC.md: none (rules already recorded). final.md: list each audit finding (audit.md) with fixed/not and file:line.
