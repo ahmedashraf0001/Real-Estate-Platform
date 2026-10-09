@@ -36,5 +36,6 @@ pdf-real-data done cf7a63d (client statement real-data render OK; callout cents 
 modal-escape done ecb1d52 (from f094e82; fix/erp-open-items branch now redundant)
 journal-source-module done def9933 (CONSTRUCTION_SETTLEMENT; 4 retagged on prod)
 partner-capital-lines done def9933 (6 equity lines backfilled on prod)
-calc-money-guards running (codex-impl high; brief .agents/briefs/calc-money-guards-body.txt)
+calc-money-guards codex-finished (unreviewed: read .agents/runs/calc-money-guards/final.md, run gates, run supabase/tests SQL in rolled-back txn, apply migration 20261009100000, commit)
 codebase-cleanup paused (survey done, all 4 groups approved; plan .agents/plans/codebase-cleanup-2026-10-09.md)
+site-visual done c8d1045 (PR #16, branch fix/site-visual in ../REP-site; light-mode text shadow, hero gold, card glass, drawer, building specs). Not merged/deployed yet.
