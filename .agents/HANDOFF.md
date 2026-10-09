@@ -56,8 +56,8 @@
 - Deploy order: migration first (done), then the client. A manual deploy is still needed (see the prod-deploy memory).
 - Next in order (user picked "start in order"):
   6. manual-checks: cost-edit JE and 2x2 building units. These WRITE to the production DB, so confirm with the user first. The payout post needs the user's own click.
-  7. journal-source-module (contractor settlement posts MANUAL_ADJUSTMENT; needs a decision).
-  8. partner-capital-lines (partner_id NULL on capital-injection lines; migration/backfill needs OK).
+  7. journal-source-module: decided 2026-10-09, new CONSTRUCTION_SETTLEMENT tag + backfill (PROJECT_SPEC "Journal tagging").
+  8. partner-capital-lines: decided 2026-10-09, write partner_id + backfill (show row count first).
   9. crm-b8 (lead assignment + visit scheduling; agy, mockup first).
   10. ui-phone-partner-rows.
 - Partner PDF real-data render not reached: the global PartnerDossierModal opens via erp.setDossierTargetPartner, while the partners page drawer is a different component.

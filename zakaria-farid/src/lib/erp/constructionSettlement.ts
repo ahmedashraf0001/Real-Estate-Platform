@@ -26,7 +26,7 @@ export function prepareConstructionSettlement(original: ERPPropertyCostItem, upd
   const memo = `${method === 'INSTAPAY_102000' ? 'إنستاباي' : 'كاش بالخزينة'} • ${original.supplier_contractor || original.item_name_ar} • ${account === '102000' ? 'إنستاباي 102000' : 'الخزينة 101000'}`;
   const journal: ERPJournalEntry = GeneralLedgerEngine.validateAndCreateEntry({
     entry_number: `AP-${paymentId}`, entry_date: paymentDate, period,
-    description: memo, source_module: 'MANUAL_ADJUSTMENT', source_entity_id: original.item_id, created_by: 'FIN_OS',
+    description: memo, source_module: 'CONSTRUCTION_SETTLEMENT', source_entity_id: original.item_id, created_by: 'FIN_OS',
     lines: [
       { account_code: '201000', debit_amount: amount.toFixed(2), credit_amount: '0.00', memo },
       { account_code: account, debit_amount: '0.00', credit_amount: amount.toFixed(2), memo }

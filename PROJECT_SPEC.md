@@ -190,3 +190,8 @@ Implementation guide: `zakaria-farid/.claude/skills/erp-partner-payout-pricing/S
 ## Public property travel times (2026-10-08) [user-confirmed]
 
 - [user-confirmed 2026-10-08] Use FOSSGIS OSRM car/foot routing without an API key. Default origin is explicitly labelled Tahrir Square, Cairo (30.0444, 31.2357); geolocation is opt-in. Always show walking; cap its duration label above 3 hours. Transit/cab is estimated from car duration x 1.35 + 10 minutes. Routing failures use haversine x 1.3, car 50 km/h, walking 4.8 km/h, with every fallback row labelled estimated.
+
+## Journal tagging (2026-10-09) [user-confirmed]
+
+- [user-confirmed 2026-10-09] Contractor bill payments post with a new journal source_module `CONSTRUCTION_SETTLEMENT`, not `MANUAL_ADJUSTMENT`. Existing contractor settlement entries are retagged by a one-time backfill on the production DB.
+- [user-confirmed 2026-10-09] Partner capital-injection journal lines carry the partner's `partner_id`. Existing lines are backfilled from their source transaction; show the user the row count before running the backfill on production.
