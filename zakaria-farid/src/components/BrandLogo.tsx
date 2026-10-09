@@ -240,6 +240,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.95)) !important;
         }
 
+        [data-theme="light"] .hero-blended .name-serif-gold {
+          background: linear-gradient(135deg, #A87A28 0%, #8C6826 60%, #684812 100%) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          filter: none !important;
+        }
+
         /* Responsive Size Scales */
         .size-sm .name-serif-gold { font-size: 1.05rem; }
         .size-md .name-serif-gold { font-size: 1.28rem; }
