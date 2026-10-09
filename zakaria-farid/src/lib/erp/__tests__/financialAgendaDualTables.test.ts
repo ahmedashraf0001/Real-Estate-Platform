@@ -341,8 +341,8 @@ describe('Financial Agenda Dual Tables & Zero-Cheque Architecture', () => {
       'Rendered view must display Cash and/or InstaPay payment indicators'
     );
     assert.ok(
-      html.includes('سداد (كاش / إنستاباي)'),
-      'Outflows table must provide Settle via Cash / InstaPay action button'
+      html.includes('<span>سداد</span>'),
+      'Outflows table must provide the Settle action button (cash / InstaPay chosen in the settle modal)'
     );
   });
 });

@@ -8,12 +8,21 @@
         "--prefix",
         "zakaria-farid",
         "run",
-        "dev",
-        "--",
-        "-p",
-        "51101"
+        "dev"
       ],
       "port": 51101,
+      "autoPort": true
+    },
+    {
+      "name": "zakaria-dev-attach",
+      "url": "http://localhost:51101",
+      "port": 51101
+    },
+    {
+      "name": "rep-open-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../REP-open/zakaria-farid", "run", "dev", "--", "-p", "51102"],
+      "port": 51102,
       "autoPort": false
     }
   ]

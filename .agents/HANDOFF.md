@@ -49,7 +49,21 @@
 - PR base is `main`. Commit only verified work. Ask before any push or PR that is not already authorized.
 - Run `bash .agents/scripts/sync_graph.sh` from the repo root after each commit.
 
-## Resume point (2026-10-08 evening)
+## Resume point (2026-10-08 night)
+- PR #12 is MERGED (main 266c689). New branch feat/erp-calc-atomic-reprice, PR #15 (open, pushed).
+- The only Supabase project (lybkeycbiposjkjkyjlh) is PRODUCTION. Migration 20261008120000_record_price_reprice_units is applied there (user OK).
+- Done: calc-atomic-reprice 604013a, final-price-rounding 416aded, ui-pdc-columns e05b490, ui-calc-sticky-wrap 2e3507c, pdf-real-data cf7a63d. Rules recorded in PROJECT_SPEC.md [user-confirmed 2026-10-08].
+- Deploy order: migration first (done), then the client. A manual deploy is still needed (see the prod-deploy memory).
+- Next in order (user picked "start in order"):
+  6. manual-checks: cost-edit JE and 2x2 building units. These WRITE to the production DB, so confirm with the user first. The payout post needs the user's own click.
+  7. journal-source-module: decided 2026-10-09, new CONSTRUCTION_SETTLEMENT tag + backfill (PROJECT_SPEC "Journal tagging").
+  8. partner-capital-lines: decided 2026-10-09, write partner_id + backfill (show row count first).
+  9. crm-b8 (lead assignment + visit scheduling; agy, mockup first).
+  10. ui-phone-partner-rows.
+- Partner PDF real-data render not reached: the global PartnerDossierModal opens via erp.setDossierTargetPartner, while the partners page drawer is a different component.
+- The browser pane must be signed in by the user, because erp_* reads return 401 otherwise.
+
+## Resume point (2026-10-08 evening, superseded)
 - Branch feat/erp-partner-logic, PR #12. All work below is pushed.
 - Done today: sim-area-field-bug closed (not reproduced; test 50c4dc5), unit-area-split 6441fc6, pdf-reports a94a82b (Codex), ui-pdc-one-table 99b0be5+cd8a1b9, ui-ledger-widgets 3995622, ui-calculator-repricing 1116d34 (agy only, Claude-checked).
 - Codex is PAUSED by the user. agy runs via `bash .agents/agy-impl.sh <id>` (agy only, no review). When Codex is back: have it review 99b0be5..1116d34 (PDC, ledger, calculator) with SENSITIVE audit on 1116d34 (money path).

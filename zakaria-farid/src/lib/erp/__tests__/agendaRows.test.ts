@@ -264,16 +264,16 @@ describe('Unified Financial Agenda Rows Engine (agendaRows)', () => {
     assert.strictEqual(sorted[0].id, 'row-overdue', 'First must be overdue');
     assert.strictEqual(sorted[1].id, 'row-today', 'Second must be due_today');
     assert.strictEqual(
-      sorted[2].id,
+      sorted[3].id,
       'row-upcoming-early-date',
-      'Third must be earlier upcoming date 2027-02-07 even with smaller nominal value'
+      'Earlier upcoming date precedes later upcoming date even with smaller nominal value'
     );
     assert.strictEqual(
-      sorted[3].id,
+      sorted[4].id,
       'row-upcoming-late-date',
-      'Fourth must be later upcoming date 2027-07-07'
+      'Later upcoming date comes last'
     );
-    assert.strictEqual(sorted[4].id, 'row-cleared', 'Fifth must be cleared/paid');
+    assert.strictEqual(sorted[2].id, 'row-cleared', 'After overdue and today, all statuses sort by ascending date');
   });
 
   it('T4. footer net = inflow remaining − outflow remaining, exact decimals', () => {

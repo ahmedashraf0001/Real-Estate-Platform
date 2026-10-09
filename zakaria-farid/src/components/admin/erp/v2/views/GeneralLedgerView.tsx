@@ -239,15 +239,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
     handleTabChange('journal');
   }, [handleTabChange]);
 
-  const selectedPeriodEntriesCount = useMemo(() => {
-    if (!effectiveSelectedPeriod.start_date || !effectiveSelectedPeriod.end_date) {
-      return journalEntries.length;
-    }
-    return journalEntries.filter(
-      e => e.entry_date >= effectiveSelectedPeriod.start_date! && e.entry_date <= effectiveSelectedPeriod.end_date!
-    ).length;
-  }, [journalEntries, effectiveSelectedPeriod]);
-
   // Chart of Accounts Filters & State
   const [selectedAccountForModal, setSelectedAccountForModal] = useState<ERPAccount | null>(null);
   const [selectedAccountForInspector, setSelectedAccountForInspector] = useState<ERPAccount | null>(
@@ -1331,9 +1322,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         isAr={isAr}
         isMutating={isMutating}
         trialBalanceReport={trialBalanceReport}
-        totalEntriesCount={journalEntries.length}
-        periodEntriesCount={selectedPeriodEntriesCount}
-        availableCash={{ totalCash: kpis.totalCash }}
         accounts={Object.values(CANONICAL_COA)}
         accountStats={accountStats}
         selectedCategoryInTree={selectedCategoryInTree}
@@ -1380,16 +1368,6 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         onNavigateTab={handleTabChange}
         onOpenNewEntry={handleOpenExpense}
         onAddSubAccount={handleAddAccount}
-        onFilterUnpostedEntries={() => {
-          setSelectedStatusFilter('review');
-          setCurrentPage(1);
-          handleTabChange('journal');
-        }}
-        onFilterLiquidAccounts={() => {
-          setFilterAccountInEntries('101000');
-          setCurrentPage(1);
-          handleTabChange('journal');
-        }}
       />
 
       {/* ─── 1. TOP HEADER & BREADCRUMB ─── */}
