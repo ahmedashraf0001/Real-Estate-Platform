@@ -75,8 +75,8 @@
 .root .addSlot { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-style: dashed; color: var(--accent-blue, #3B82F6); font-weight: 600; }
 .root .addSlot:hover { border-color: var(--accent-blue, #3B82F6); background: color-mix(in srgb, var(--accent-blue, #3B82F6) 8%, transparent); }
 .planAdd .addSlot { min-width: 200px; }
-.floorRow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; }
-.root .kebab { min-width: 34px; padding: 0 6px; color: var(--text-secondary, #B0B4BE); }
+.floorRow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px; }
+.root .kebab { min-width: 34px; min-height: 34px; height: 34px; padding: 0 6px; margin-top: 6px; border-color: transparent; color: var(--text-secondary, #B0B4BE); }
 .floorMenu, .typeMenu { position: absolute; z-index: 20; display: flex; flex-direction: column; padding: 4px; background: var(--bg-card, #16171C); border: 1px solid var(--bp-line); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.35); max-height: 280px; overflow: auto; }
 .floorMenu { inset-inline-end: 0; top: calc(100% + 4px); min-width: 190px; }
 .typeMenu { inset-inline: 6px; bottom: 40px; }
