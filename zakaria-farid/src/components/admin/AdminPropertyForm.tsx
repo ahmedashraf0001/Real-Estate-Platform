@@ -519,6 +519,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   });
 
   const selectedType = watch('type');
+  // Buildings open the details rail only when a tile is inspected; it starts closed instead of empty.
+  useEffect(() => { if (selectedType === 'building') setRailOpen(false); }, [selectedType]);
   const bedroomsCount = watch('bedrooms') || 2;
   const selectedSubtype = watch('subtype');
   const totalFloorsRaw = watch('total_floors');
@@ -2031,11 +2033,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           <style>{`
             .rooms-rail {
               position: fixed;
-              top: 0;
+              /* Below the admin top bar, above the step bar. */
+              top: 92px;
               bottom: 72px;
               inset-inline-end: 0;
               width: 340px;
-              height: calc(100dvh - 72px);
+              height: calc(100dvh - 164px);
               z-index: 60;
               background: var(--admin-card-bg);
               border-inline-start: 1px solid var(--admin-card-border);
@@ -2640,7 +2643,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       )}
 
       {/* ─── Stepper Bottom Navigation Bar ─── */}
-      <div className={styles.saveBar} style={currentStep === 3 && selectedType === 'building' ? { position: 'relative', inset: 'auto', width: '100%', flexWrap: 'wrap' } : undefined}>
+      <div className={styles.saveBar}>
         <div className={styles.saveBarStepper}>
           {steps.map((st, idx) => {
             const isActive = currentStep === st.num;
