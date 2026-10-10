@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { 
   MessageSquare, 
@@ -23,20 +23,6 @@ interface LeadVelocityQueueProps {
 export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }: LeadVelocityQueueProps) {
   const isAr = adminLocale === 'ar';
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  useEffect(() => {
-    const readTheme = () => {
-      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
-        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
-      setTheme(cur);
-    };
-    readTheme();
-    const obs = new MutationObserver(readTheme);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
-  }, []);
-  const isLight = theme === 'light';
-
   const formatHoursAgo = (dateStr: string) => {
     const then = new Date(dateStr).getTime();
     const diffHours = Math.round((Date.now() - then) / (1000 * 60 * 60));
@@ -48,7 +34,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
   };
 
   return (
-    <div className={`velocity-grid ${isLight ? 'is-light' : ''}`}>
+    <div className={`velocity-grid is-light`}>
       {/* 1. Lead Origin Channel Share */}
       <div className="channel-card">
         <div className="section-header">

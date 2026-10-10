@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Palette, Check, RotateCcw } from 'lucide-react';
 import { ERP_PALETTE_PRESETS } from '@/lib/erp/erpPalettePresets';
-import { useAccentPreset, accentTokens, AccentMode } from '@/lib/theme/accentPalette';
+import { useAccentPreset, accentTokens } from '@/lib/theme/accentPalette';
 import styles from './AdminPaletteMenu.module.css';
 
 export interface AdminPaletteMenuProps {
@@ -14,37 +14,6 @@ export function AdminPaletteMenu({ isAr }: AdminPaletteMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [activePreset, select] = useAccentPreset();
-  const [mode, setMode] = useState<AccentMode>('dark');
-
-  // Sync mode with document data-theme
-  useEffect(() => {
-    const resolveMode = (): AccentMode => {
-      if (typeof document !== 'undefined') {
-        const docTheme = document.documentElement.getAttribute('data-theme');
-        return docTheme === 'light' ? 'light' : 'dark';
-      }
-      return 'dark';
-    };
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMode(resolveMode());
-
-    if (typeof document !== 'undefined') {
-      const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-            setMode(resolveMode());
-          }
-        }
-      });
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme'],
-      });
-      return () => observer.disconnect();
-    }
-  }, []);
-
   // Close on outside click or Escape
   useEffect(() => {
     if (!isOpen) return;
@@ -104,7 +73,7 @@ export function AdminPaletteMenu({ isAr }: AdminPaletteMenuProps) {
           <div className={styles.optionsList}>
             {ERP_PALETTE_PRESETS.map((preset) => {
               const isSelected = activePreset?.id === preset.id;
-              const color = accentTokens(preset, mode).accent;
+              const color = accentTokens(preset, 'light').accent;
 
               return (
                 <button

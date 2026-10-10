@@ -57,3 +57,65 @@
 .photoSlot { border: 1px dashed var(--bp-line); padding: 25px 10px; text-align: center; }
 @media(max-width:1100px) { .workspace { grid-template-columns: 125px minmax(0,1fr); gap: 16px; } .detail { grid-column: 2; border-inline-start: 0; border-top: 1px solid var(--bp-line); padding: 20px 0 0; } }
 @media(max-width:600px) { .root { padding: 14px; } .workspace { display: flex; flex-direction: column; gap: 18px; } .floors { flex-direction: row; overflow-x: auto; width: 100%; padding: 4px 0 8px; } .floors button { flex: 0 0 125px; } .planColumn, .detail { width: 100%; } .floorPlan { grid-template-columns: minmax(0,1fr) 82px minmax(0,1fr); gap: 4px; padding: 5px; min-height: 390px; } .root .unit { padding: 15px 4px; gap: 13px; } .unit strong { font-size: 16px; } .unit>span { font-size: 12px; } .root .element { padding: 15px 4px; font-size: 12px; } .path .back { margin-inline-start: 0; } .facts { gap: 18px; } .summary { gap: 10px; } .roomPlan { gap: 4px; padding: 5px; } .root .room { padding: 10px 4px; } }
+/* Apartment plan: balconies along the front, living side and private side; tile size follows area. */
+.roomPlan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; align-items: stretch; min-height: 420px; }
+.aptFront { grid-column: 1 / -1; display: flex; gap: 6px; }
+.aptFront > * { flex: 1; }
+.aptFront .room { min-height: 90px; }
+.aptSide { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.aptSide .room, .aptSide .tileWrap { flex-basis: 0; min-height: 110px; }
+.root .room { flex-grow: 1; }
+.dims { font-size: 12px; color: var(--text-secondary, #B0B4BE); }
+.planAdd { grid-column: 1 / -1; display: flex; justify-content: center; }
+/* Admin edit layer */
+.tileWrap { position: relative; display: flex; flex-direction: column; min-width: 0; flex: 1; transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease; }
+.tileWrap[draggable="true"] { cursor: grab; }
+.tileWrap[draggable="true"]:active { cursor: grabbing; }
+.tileWrap.isDragging { opacity: .4; filter: grayscale(30%); }
+.tileWrap.dropTarget {
+  outline: 2px dashed var(--bp-gold);
+  outline-offset: 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bp-gold) 15%, transparent) !important;
+  box-shadow: 0 0 14px rgba(229, 184, 105, .35);
+}
+.tileWrap > button:first-child { flex: 1; padding-bottom: 44px; width: 100%; }
+.tileActions { position: absolute; inset-inline: 6px; bottom: 6px; display: flex; justify-content: center; gap: 3px; opacity: .6; transition: opacity .15s; }
+.tileWrap:hover .tileActions, .tileWrap:focus-within .tileActions { opacity: 1; }
+.root .tileActions button { min-height: 28px; min-width: 28px; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; background: var(--bg-card, #16171C); }
+.root .tileActions .dangerIcon:hover:not(:disabled) { border-color: #E5734A; color: #E5734A; }
+.renameInput { margin: auto 8px 44px; padding: 8px; background: var(--bg-card, #16171C); color: inherit; border: 1px solid var(--bp-gold); border-radius: 6px; font: inherit; text-align: center; min-height: 60px; }
+.root .addSlot { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-style: dashed; color: var(--accent-blue, #3B82F6); font-weight: 600; }
+.root .addSlot:hover { border-color: var(--accent-blue, #3B82F6); background: color-mix(in srgb, var(--accent-blue, #3B82F6) 8%, transparent); }
+.planAdd .addSlot { min-width: 200px; }
+.floorRow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px; }
+.root .kebab { min-width: 34px; min-height: 34px; height: 34px; padding: 0 6px; margin-top: 6px; border-color: transparent; color: var(--text-secondary, #B0B4BE); }
+.floorMenu, .typeMenu { position: absolute; z-index: 20; display: flex; flex-direction: column; padding: 4px; background: var(--bg-card, #16171C); border: 1px solid var(--bp-line); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.35); max-height: 280px; overflow: auto; }
+.floorMenu { inset-inline-end: 0; top: calc(100% + 4px); min-width: 190px; }
+.typeMenu { inset-inline: 6px; bottom: 40px; }
+.root .floorMenu button, .root .typeMenu button { border: 0; text-align: start; min-height: 36px; padding: 6px 10px; font-size: 13px; }
+.root .floorMenu button:hover, .root .typeMenu button:hover { background: color-mix(in srgb, var(--bp-gold) 10%, transparent); }
+.root .typeMenu button[aria-checked="true"] { color: var(--bp-gold); }
+.root .dangerText { color: #E5734A; }
+.confirm { position: absolute; z-index: 15; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 12px; border-radius: 6px; background: color-mix(in srgb, var(--bg-card, #16171C) 96%, #E5734A); border: 1px solid #E5734A; font-size: 13px; text-align: center; }
+.floorConfirm { position: static; grid-column: 1 / -1; }
+.confirm div { display: flex; justify-content: center; gap: 6px; }
+.root .confirm button { min-height: 34px; padding: 4px 12px; }
+.root .dangerSolid { background: #E5734A; border-color: #E5734A; color: #fff; }
+.addFloors { display: flex; flex-wrap: wrap; gap: 6px; }
+.root .addFloors button { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; min-height: 34px; padding: 4px 10px; border-style: dashed; color: var(--accent-blue, #3B82F6); font-size: 13px; }
+.picker { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid var(--accent-blue, #3B82F6); border-radius: 10px; background: var(--bg-card, #16171C); }
+.picker header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.root .chips button { min-height: 34px; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+.custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.custom label { font-size: 12px; color: var(--text-secondary, #B0B4BE); width: 100%; }
+.custom input { flex: 1 1 200px; min-height: 40px; padding: 8px 10px; background: var(--bg-primary, #0E1117); color: inherit; border: 1px solid var(--bp-line); border-radius: 6px; font: inherit; }
+.root .custom button { background: var(--accent-blue, #3B82F6); border-color: var(--accent-blue, #3B82F6); color: #fff; }
+.floorPlanNoUnits { display: flex; flex-direction: column; gap: 10px; grid-template-columns: none; min-height: 220px; }
+.compactCore { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); gap: 8px; width: 100%; }
+.compactCore .tileWrap, .compactCore .element { min-height: 100px; }
+.compactCore .addSlot { min-height: 100px; }
+@media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } .compactCore { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; } }
+.workspace.noDetail { grid-template-columns: 150px minmax(0,1fr); }
+

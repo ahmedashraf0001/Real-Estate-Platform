@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import styles from './ZFERPLoadingWorkstation.module.css';
 
 export interface ZFERPLoadingWorkstationProps {
@@ -12,37 +12,10 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
   isAr = true,
   className = '',
 }) => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    const getTheme = (): 'light' | 'dark' => {
-      if (typeof document === 'undefined') return 'light';
-      const attr = document.documentElement.getAttribute('data-theme');
-      if (attr === 'dark') return 'dark';
-      if (attr === 'light') return 'light';
-      const match = document.cookie.match(/(?:^|;\s*)zf_theme=([^;]*)/);
-      if (match && match[1] === 'dark') return 'dark';
-      return 'light';
-    };
-
-    setTheme(getTheme());
-
-    const observer = new MutationObserver(() => {
-      setTheme(getTheme());
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme', 'class'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div
       className={`${styles.screen} ${className}`}
-      data-theme={theme}
+      data-theme="light"
       dir={isAr ? 'rtl' : 'ltr'}
       role="status"
       aria-live="polite"

@@ -17,7 +17,7 @@
   margin-right: auto;
   box-sizing: border-box;
   font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
-  transition: all 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.2, 0, 0, 1), margin 0.25s cubic-bezier(0.2, 0, 0, 1), max-width 0.25s cubic-bezier(0.2, 0, 0, 1), all 0.2s ease;
 }
 
 [data-theme="light"] .universalHeader {
