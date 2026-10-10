@@ -245,3 +245,43 @@ export function arrangeUnitRooms(rooms: ZoneInstance[]): { front: ZoneInstance[]
   if (!privateSide.length && social.length > 1) return { front, social: social.slice(0, Math.ceil(social.length / 2)), private: social.slice(Math.ceil(social.length / 2)) };
   return { front, social, private: privateSide };
 }
+
+const GATE_TEMPLATES = new Set(['bld.entrance_gate']);
+const FRONT_GROUND_TEMPLATES = new Set(['bld.entrance_lobby', 'bld.ground_lobby']);
+const CORE_GROUND_TEMPLATES = new Set(['bld.staircase', 'bld.elevator']);
+const LARGE_GROUND_TEMPLATES = new Set(['bld.garage_bays', 'bld.basement']);
+
+export interface GroundFloorArrangement {
+  gate: ZoneInstance[];
+  front: ZoneInstance[];
+  core: ZoneInstance[];
+  large: ZoneInstance[];
+  services: ZoneInstance[];
+}
+
+/** Ground floor (or no-unit floor) layout partition: gate & wall, front lobby strip, core, large/garage block, and services/other. */
+export function arrangeGroundFloor(zones: ZoneInstance[]): GroundFloorArrangement {
+  const ordered = sortTiles(zones);
+  const gate: ZoneInstance[] = [];
+  const front: ZoneInstance[] = [];
+  const core: ZoneInstance[] = [];
+  const large: ZoneInstance[] = [];
+  const services: ZoneInstance[] = [];
+
+  for (const z of ordered) {
+    const id = z.zone_template_id;
+    if (GATE_TEMPLATES.has(id)) {
+      gate.push(z);
+    } else if (FRONT_GROUND_TEMPLATES.has(id)) {
+      front.push(z);
+    } else if (CORE_GROUND_TEMPLATES.has(id)) {
+      core.push(z);
+    } else if (LARGE_GROUND_TEMPLATES.has(id)) {
+      large.push(z);
+    } else {
+      services.push(z);
+    }
+  }
+
+  return { gate, front, core, large, services };
+}

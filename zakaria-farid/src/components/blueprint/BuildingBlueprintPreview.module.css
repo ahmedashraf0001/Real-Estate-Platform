@@ -118,4 +118,115 @@
 .compactCore .addSlot { min-height: 100px; }
 @media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } .compactCore { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; } }
 .workspace.noDetail { grid-template-columns: 150px minmax(0,1fr); }
+.workspaceFacade { grid-template-columns: minmax(0, 1fr) 255px !important; }
+@media(max-width:900px) { .workspaceFacade { grid-template-columns: 1fr !important; } }
+
+/* Tile photo cover */
+.tileWithPhoto { position: relative !important; overflow: hidden !important; }
+.tilePhotoCover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.tilePhotoScrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%); z-index: 2; pointer-events: none; }
+.tilePhotoContent { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%; color: #FFFFFF !important; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.tilePhotoContent strong { color: #FFFFFF !important; }
+.tilePhotoContent span { color: rgba(255, 255, 255, 0.92) !important; }
+
+/* Real Ground Floor Plan */
+.groundPlanContainer { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }
+.groundBuildingFrame { border: 3px solid var(--bp-gold); border-radius: 8px; background: var(--bg-primary, #0E1117); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 320px; }
+.groundFrameHeader { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px; border-bottom: 1px solid var(--bp-line); }
+.groundFrameBadge { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--bp-gold); text-transform: uppercase; }
+.groundUpperGrid { display: flex; gap: 8px; align-items: stretch; flex: 1; min-height: 200px; }
+.groundGarageCol { flex: 1.4; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.groundGarageCol > *, .groundGarageCol .element, .groundGarageCol .tileWrap { flex: 1; min-height: 150px; }
+.groundCoreCol { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.groundCoreCol > *, .groundCoreCol .element, .groundCoreCol .tileWrap { flex: 1; min-height: 80px; }
+.groundServicesCol { flex: 1.1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.groundServicesCol > *, .groundServicesCol .element, .groundServicesCol .tileWrap { flex: 1; min-height: 70px; }
+.groundFrontStrip { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+.groundFrontStrip > *, .groundFrontStrip .element, .groundFrontStrip .tileWrap { flex: 1; min-height: 75px; }
+
+/* Gate & Wall under frame, centred, dashed */
+.groundGateBoundary { display: flex; justify-content: center; margin: 10px auto 4px; width: 100%; max-width: 440px; }
+.groundGateWall { width: 100%; border: 2px dashed var(--bp-gold); border-radius: 8px; padding: 6px; display: flex; justify-content: center; gap: 8px; background: color-mix(in srgb, var(--bp-gold) 6%, transparent); }
+.groundGateWall > *, .groundGateWall .element, .groundGateWall .tileWrap { flex: 1; min-height: 60px; }
+
+/* Street */
+.groundStreet { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; margin-top: 4px; background: color-mix(in srgb, var(--bp-line) 50%, transparent); border-top: 2px solid var(--bp-line); border-bottom: 2px solid var(--bp-line); border-radius: 4px; }
+.groundStreetDashes { flex: 1; border-top: 2px dashed color-mix(in srgb, var(--text-secondary, #B0B4BE) 40%, transparent); }
+.groundStreetLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-secondary, #B0B4BE); white-space: nowrap; text-transform: uppercase; }
+
+.floorsAdminCompact { border: 1px dashed var(--bp-gold); border-radius: 8px; padding: 8px; }
+
+@media(max-width:600px) {
+  .groundUpperGrid {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    min-height: 150px;
+    align-items: stretch;
+  }
+  .groundGarageCol {
+    flex: 1.3;
+    gap: 4px;
+    min-width: 0;
+  }
+  .groundGarageCol > *, .groundGarageCol .element, .groundGarageCol .tileWrap {
+    min-height: 110px;
+    padding: 6px 3px;
+  }
+  .groundCoreCol {
+    flex: 1;
+    gap: 4px;
+    min-width: 0;
+  }
+  .groundCoreCol > *, .groundCoreCol .element, .groundCoreCol .tileWrap {
+    min-height: 52px;
+    padding: 4px 2px;
+  }
+  .groundServicesCol {
+    flex: 1.1;
+    gap: 4px;
+    min-width: 0;
+  }
+  .groundServicesCol > *, .groundServicesCol .element, .groundServicesCol .tileWrap {
+    min-height: 48px;
+    padding: 4px 2px;
+  }
+  .groundUpperGrid .element strong {
+    font-size: 11px;
+    line-height: 1.2;
+    word-break: break-word;
+    text-align: center;
+  }
+  .groundUpperGrid .element span,
+  .groundUpperGrid .element small {
+    font-size: 10px;
+  }
+  .groundUpperGrid .element svg {
+    width: 20px;
+    height: 20px;
+  }
+  .groundFrontStrip {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .groundFrontStrip > *, .groundFrontStrip .element, .groundFrontStrip .tileWrap {
+    min-height: 50px;
+    padding: 6px 6px;
+  }
+  .groundFrontStrip .element strong {
+    font-size: 11px;
+  }
+  .groundGateBoundary {
+    margin: 6px auto 2px;
+  }
+  .groundGateWall > *, .groundGateWall .element, .groundGateWall .tileWrap {
+    min-height: 46px;
+    padding: 4px 6px;
+  }
+  .groundStreet {
+    padding: 6px 8px;
+  }
+}
 

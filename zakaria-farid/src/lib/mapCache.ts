@@ -4,23 +4,33 @@ import type { Property } from '@/lib/supabase/types';
 const MAP_CACHE_NAME = 'zf-sovereign-map-cache-v1';
 
 /** Provider templates shared by the visible basemap and property-site prefetch. */
-export function getBaseLayerSpecs(mode: 'satellite' | 'neon'): { url: string; options: L.TileLayerOptions }[] {
-  const service = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
-  const attribution = 'Tiles &copy; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, and the GIS user community';
-  if (mode === 'neon') {
-    return ['World_Dark_Gray_Base', 'World_Dark_Gray_Reference'].map(name => ({
-      url: `${service}Canvas/${name}/MapServer/tile/{z}/{y}/{x}`,
-      options: { maxZoom: 19, maxNativeZoom: 16, pane: 'neon-basemap', attribution },
-    }));
+export function getBaseLayerSpecs(
+  mode: 'satellite' | 'map',
+  theme: 'light' | 'dark' = 'dark'
+): { url: string; options: L.TileLayerOptions }[] {
+  if (mode === 'satellite') {
+    return [{
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      options: {
+        maxZoom: 19,
+        opacity: 1,
+        attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS user community',
+      },
+    }];
   }
-  return [{
-    url: `${service}World_Imagery/MapServer/tile/{z}/{y}/{x}`,
+
+  const service = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  const attribution = 'Tiles &copy; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, and the GIS user community';
+  const prefix = theme === 'light' ? 'World_Light_Gray' : 'World_Dark_Gray';
+
+  return [`${prefix}_Base`, `${prefix}_Reference`].map((name) => ({
+    url: `${service}${name}/MapServer/tile/{z}/{y}/{x}`,
     options: {
       maxZoom: 19,
-      opacity: 1,
-      attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS user community',
+      maxNativeZoom: 16,
+      attribution,
     },
-  }];
+  }));
 }
 
 /**
@@ -95,10 +105,13 @@ export async function preloadPropertyMapSites(properties?: Property[]): Promise<
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
       );
 
-      const neonTiles = getBaseLayerSpecs('neon').flatMap(spec =>
+      const vectorLightTiles = getBaseLayerSpecs('map', 'light').flatMap(spec =>
         getTileUrlsForLocation(lat, lng, [11, 14], spec.url)
       );
-      tileUrls.push(...satTiles, ...neonTiles);
+      const vectorDarkTiles = getBaseLayerSpecs('map', 'dark').flatMap(spec =>
+        getTileUrlsForLocation(lat, lng, [11, 14], spec.url)
+      );
+      tileUrls.push(...satTiles, ...vectorLightTiles, ...vectorDarkTiles);
     });
 
     // Also cache Cairo headquarters
@@ -162,6 +175,7 @@ export function createCachedTileLayer(
       tile.setAttribute('role', 'presentation');
 
       const url = (this as any).getTileUrl(coords);
+      tile.setAttribute('data-tile-url', url);
 
       let objectUrl: string | undefined;
       let tileCache: Cache | undefined;

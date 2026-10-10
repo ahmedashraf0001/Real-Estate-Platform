@@ -785,7 +785,10 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       ].filter(Boolean).join(' • ');
 
       const infoCard = (level: typeof buildingLevels[number], y: number, strong = false) => (
-        <g transform={`translate(${bldRight + 16}, ${y})`}>
+        <g transform={`translate(${bldRight + 16}, ${y})`} role="button" tabIndex={0}
+          aria-label={isAr ? `\u0639\u0631\u0636 ${level.labelAr}` : `View ${level.labelEn}`}
+          style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: level.key })}
+          onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setBldView({ mode: 'floor', floorKey: level.key }); } }}>
           <rect width="150" height="34" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity={strong ? 0.6 : 0.3} strokeWidth={strong ? 1.2 : 1} />
           <text x={isAr ? 142 : 8} y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
             {isAr ? level.labelAr : level.labelEn}

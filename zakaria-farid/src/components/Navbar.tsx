@@ -34,6 +34,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' ? window.innerWidth > 992 : true);
+  const [isMapSidebarOpen, setIsMapSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncSidebar = () => {
+      const state = document.documentElement.getAttribute('data-map-sidebar');
+      setIsMapSidebarOpen(state !== 'closed');
+    };
+    syncSidebar();
+    const observer = new MutationObserver(syncSidebar);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-map-sidebar'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Determine current view from pathname if not explicitly passed
   let currentView = propCurrentView;
@@ -150,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           initial={false}
           animate={{
             x: 0,
-            maxWidth: isMapMode && isDesktop ? 680 : 1280,
+            maxWidth: isMapMode && isDesktop ? (isMapSidebarOpen ? 780 : 880) : 1280,
           }}
           transition={{
             type: 'spring',
@@ -287,7 +300,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           width: 100%;
           z-index: 2000;
           pointer-events: none;
-          transition: top 350ms cubic-bezier(0.16, 1, 0.3, 1);
+          transition: top 350ms cubic-bezier(0.16, 1, 0.3, 1),
+                      left 320ms cubic-bezier(0.16, 1, 0.3, 1),
+                      right 320ms cubic-bezier(0.16, 1, 0.3, 1),
+                      width 320ms cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .nav-capsule-container {
@@ -300,23 +316,61 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         @media (min-width: 993px) {
-          .map-glass-capsule {
-            padding: 0 1.35rem;
+          .nav-glass-capsule.map-glass-capsule {
+            padding: 0 1rem;
             width: auto;
             max-width: fit-content;
+            height: 56px;
+            gap: 0.75rem;
           }
 
           .map-glass-capsule .desktop-nav {
-            gap: 1.25rem;
+            gap: 0.75rem;
+            flex-shrink: 0;
+          }
+
+          .map-glass-capsule .nav-link {
+            padding: 0.35rem 0.3rem;
+            font-size: 0.88rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+          }
+
+          .map-glass-capsule .luxury-brand-logo {
+            flex-shrink: 0;
+          }
+
+          .map-glass-capsule .nav-controls {
+            gap: 0.5rem;
+            flex-shrink: 0;
+          }
+
+          /* While sidebar is open on map page: */
+          /* RTL: sidebar is on the left. Inline-start edge sits after the sidebar. */
+          html[data-map-sidebar="open"][dir="rtl"] .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] [dir="rtl"] .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] .navbar-wrapper[dir="rtl"]:has(.map-glass-capsule) {
+            left: calc(420px + 2rem);
+            right: 0;
+            width: auto;
+          }
+
+          /* LTR: sidebar is on the right. Navbar sits in the remaining width. */
+          html[data-map-sidebar="open"]:not([dir="rtl"]) .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] [dir="ltr"] .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] .navbar-wrapper[dir="ltr"]:has(.map-glass-capsule) {
+            left: 0;
+            right: calc(420px + 2rem);
+            width: auto;
           }
 
           .navbar-wrapper:has(.map-glass-capsule) .nav-capsule-container {
-            justify-content: flex-start;
+            justify-content: center;
           }
 
           .navbar-wrapper[dir="rtl"]:has(.map-glass-capsule) .nav-capsule-container,
           [dir="rtl"] .navbar-wrapper:has(.map-glass-capsule) .nav-capsule-container {
-            justify-content: flex-start;
+            justify-content: center;
           }
         }
 

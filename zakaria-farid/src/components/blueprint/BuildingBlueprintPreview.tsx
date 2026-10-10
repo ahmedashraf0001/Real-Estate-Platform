@@ -8,7 +8,7 @@ import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
 import { buildingFloorKey, floorLabel, resolveBlueprintUnit, selectBuildingFloor, type BlueprintView } from '@/lib/layering/buildingBlueprint';
 import { blueprintElementDetail } from '@/lib/layering/publicBlueprint';
-import { arrangeUnitRooms, roomWeight, sortTiles } from '@/lib/layering/blueprintEditor';
+import { arrangeGroundFloor, arrangeUnitRooms, roomWeight, sortTiles } from '@/lib/layering/blueprintEditor';
 import { useBlueprintEditing, type BlueprintEditing } from './useBlueprintEditing';
 import styles from './BuildingBlueprintPreview.module.css';
 
@@ -71,20 +71,94 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
       </div>
     );
   };
-  const unitTile = (z: ZoneInstance) => wrap(z, units, 'unit', floorKey ?? 'elevation', <button type="button" key={z.id} className={styles.unit} onClick={() => navigate({ mode: 'unit', floorKey: buildingFloorKey(z), unitId: z.id })}>
-    {icon(z, 28)}<strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
-    {unitFacts(z) && <span>{unitFacts(z)}</span>}
-    {status(resolveBlueprintUnit(z, inventory).status)}
-    <span className={styles.link}>{text('عرض مخطط الشقة ‹', 'View unit plan ›')}</span>
-    <span className={styles.door} title={text('باب الشقة', 'Unit door')}><DoorOpen size={19} /></span>
-  </button>);
+  const unitTile = (z: ZoneInstance) => {
+    const hasPhoto = Boolean(z.images?.length && z.images[0]);
+    return wrap(z, units, 'unit', floorKey ?? 'elevation', (
+      <button type="button" key={z.id} className={`${styles.unit} ${hasPhoto ? styles.tileWithPhoto : ''}`} onClick={() => navigate({ mode: 'unit', floorKey: buildingFloorKey(z), unitId: z.id })}>
+        {hasPhoto ? (
+          <>
+            <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
+            <div className={styles.tilePhotoScrim} />
+            <div className={styles.tilePhotoContent}>
+              <strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
+              {unitFacts(z) && <span>{unitFacts(z)}</span>}
+              {status(resolveBlueprintUnit(z, inventory).status)}
+              <span className={styles.link}>{text('عرض مخطط الشقة ‹', 'View unit plan ›')}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            {icon(z, 28)}<strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
+            {unitFacts(z) && <span>{unitFacts(z)}</span>}
+            {status(resolveBlueprintUnit(z, inventory).status)}
+            <span className={styles.link}>{text('عرض مخطط الشقة ‹', 'View unit plan ›')}</span>
+          </>
+        )}
+        <span className={styles.door} title={text('باب الشقة', 'Unit door')}><DoorOpen size={19} /></span>
+      </button>
+    ));
+  };
   // Admin edits through its own side panel, so a click opens it directly.
   const pick = (id: string) => { onSelect(id); if (ed.editing) onInspect?.(id); };
-  const coreButton = (z: ZoneInstance) => <button type="button" key={z.id} aria-pressed={selectedId === z.id} className={`${styles.element} ${z.zone_template_id === 'bld.lightwell' ? styles.lightwell : ''}`} onClick={() => pick(z.id)}>{icon(z)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}</button>;
+  const coreButton = (z: ZoneInstance) => {
+    const hasPhoto = Boolean(z.images?.length && z.images[0]);
+    return (
+      <button
+        type="button"
+        key={z.id}
+        aria-pressed={selectedId === z.id}
+        className={`${styles.element} ${z.zone_template_id === 'bld.lightwell' ? styles.lightwell : ''} ${hasPhoto ? styles.tileWithPhoto : ''}`}
+        onClick={() => pick(z.id)}
+      >
+        {hasPhoto ? (
+          <>
+            <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
+            <div className={styles.tilePhotoScrim} />
+            <div className={styles.tilePhotoContent}>
+              <strong>{zoneLabel(z, isAr)}</strong>
+              {dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}
+            </div>
+          </>
+        ) : (
+          <>
+            {icon(z)}<strong>{zoneLabel(z, isAr)}</strong>
+            {dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}
+          </>
+        )}
+      </button>
+    );
+  };
   const coreTile = (z: ZoneInstance) => wrap(z, core, 'shared', floorKey ?? 'elevation', coreButton(z));
-  const roomTile = (z: ZoneInstance) => wrap(z, orderedRooms, 'room', unit?.id ?? 'unit',
-    <button type="button" key={z.id} className={styles.room} style={ed.editing ? undefined : { flexGrow: roomWeight(z) }} aria-pressed={selectedId === z.id} onClick={() => pick(z.id)}>{icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span>{dimensions(z)}</span>}</button>,
-    { flexGrow: roomWeight(z) });
+  const roomTile = (z: ZoneInstance) => {
+    const hasPhoto = Boolean(z.images?.length && z.images[0]);
+    return wrap(z, orderedRooms, 'room', unit?.id ?? 'unit',
+      <button
+        type="button"
+        key={z.id}
+        className={`${styles.room} ${hasPhoto ? styles.tileWithPhoto : ''}`}
+        style={ed.editing ? undefined : { flexGrow: roomWeight(z) }}
+        aria-pressed={selectedId === z.id}
+        onClick={() => pick(z.id)}
+      >
+        {hasPhoto ? (
+          <>
+            <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
+            <div className={styles.tilePhotoScrim} />
+            <div className={styles.tilePhotoContent}>
+              <strong>{zoneLabel(z, isAr)}</strong>
+              {dimensions(z) && <span>{dimensions(z)}</span>}
+            </div>
+          </>
+        ) : (
+          <>
+            {icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>
+            {dimensions(z) && <span>{dimensions(z)}</span>}
+          </>
+        )}
+      </button>,
+      { flexGrow: roomWeight(z) }
+    );
+  };
   const apartment = arrangeUnitRooms(rooms);
   const detail = selected ? blueprintElementDetail(selected, isAr) : null;
   const selectedFacts = selected ? [
@@ -125,17 +199,19 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         {onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(unit)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
       </div>;
     })()}
-    <div className={`${styles.workspace} ${ed.editing ? styles.noDetail : ''}`}>
-      <aside className={styles.floors} aria-label={text('الأدوار', 'Floors')}>
-        {keys.map(key => {
-          const data = selectBuildingFloor(zones, key);
-          const available = data.units.filter(u => resolveBlueprintUnit(u, inventory).status === 'available').length;
-          const availabilityKnown = data.units.length > 0 && data.units.every(u => resolveBlueprintUnit(u, inventory).status !== undefined);
-          const button = <button type="button" key={key} aria-current={key === floorKey ? 'page' : undefined} onClick={() => navigate({ mode: 'floor', floorKey: key })}><strong>{floorLabel(key, isAr)}</strong><small>{data.units.length} {text('شقة', 'units')}{availabilityKnown && <> · {available} {text('متاحة', 'available')}</>}</small></button>;
-          return ed.editing ? <div key={key} className={styles.floorRow}>{button}{ed.floorControls(key)}</div> : button;
-        })}
-        {ed.addFloors}
-      </aside>
+    <div className={`${styles.workspace} ${ed.editing ? styles.noDetail : ''} ${view.mode === 'elevation' && !ed.editing ? styles.workspaceFacade : ''}`}>
+      {(view.mode !== 'elevation' || ed.editing) && (
+        <aside className={`${styles.floors} ${view.mode === 'elevation' ? styles.floorsAdminCompact : ''}`} aria-label={text('الأدوار', 'Floors')}>
+          {keys.map(key => {
+            const data = selectBuildingFloor(zones, key);
+            const available = data.units.filter(u => resolveBlueprintUnit(u, inventory).status === 'available').length;
+            const availabilityKnown = data.units.length > 0 && data.units.every(u => resolveBlueprintUnit(u, inventory).status !== undefined);
+            const button = <button type="button" key={key} aria-current={key === floorKey ? 'page' : undefined} onClick={() => navigate({ mode: 'floor', floorKey: key })}><strong>{floorLabel(key, isAr)}</strong><small>{data.units.length} {text('شقة', 'units')}{availabilityKnown && <> · {available} {text('متاحة', 'available')}</>}</small></button>;
+            return ed.editing ? <div key={key} className={styles.floorRow}>{button}{ed.floorControls(key)}</div> : button;
+          })}
+          {ed.addFloors}
+        </aside>
+      )}
       <div className={styles.planColumn}>
         {view.mode === 'elevation' ? <>{elevation}<div className={styles.building}>
           <h3>{text('واجهة المبنى', 'Building overview')}</h3>
@@ -148,14 +224,69 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           <div className={styles.aptSide}>{apartment.private.map(roomTile)}</div>
           {!rooms.length && <p className={styles.empty}>{text('لم تسجل غرف هذه الشقة.', 'No rooms recorded for this unit.')}</p>}
           {ed.editing && unit && <div className={styles.planAdd}>{ed.addSlot('room', orderedRooms, unit.id)}</div>}
-        </div> : units.length === 0 ? <div className={`${styles.floorPlan} ${styles.floorPlanNoUnits}`}>
-          <div className={styles.compactCore}>
-            {core.map(coreTile)}
-            {!core.length && !ed.editing && <p className={styles.empty}>{text('لم تسجل المساحات المشتركة', 'Shared spaces not recorded')}</p>}
-            {ed.addSlot('shared', core)}
-          </div>
-          {ed.editing && <div className={styles.planAdd}>{ed.addSlot('unit', units)}</div>}
-        </div> : <div className={styles.floorPlan}>
+        </div> : units.length === 0 ? (() => {
+          const ground = arrangeGroundFloor(core);
+          const hasUpper = ground.large.length > 0 || ground.core.length > 0 || ground.services.length > 0;
+          return (
+            <div className={styles.groundPlanContainer}>
+              <div className={styles.groundBuildingFrame}>
+                <div className={styles.groundFrameHeader}>
+                  <span className={styles.groundFrameBadge}>{floorLabel(floorKey ?? 'bld_ground', isAr)}</span>
+                </div>
+                {hasUpper && (
+                  <div className={styles.groundUpperGrid}>
+                    {ground.large.length > 0 && (
+                      <div className={styles.groundGarageCol}>
+                        {ground.large.map(z => wrap(z, ground.large, 'shared', `${floorKey}-large`, coreButton(z)))}
+                      </div>
+                    )}
+                    {ground.core.length > 0 && (
+                      <div className={styles.groundCoreCol}>
+                        {ground.core.map(z => wrap(z, ground.core, 'shared', `${floorKey}-core`, coreButton(z)))}
+                      </div>
+                    )}
+                    {ground.services.length > 0 && (
+                      <div className={styles.groundServicesCol}>
+                        {ground.services.map(z => wrap(z, ground.services, 'shared', `${floorKey}-services`, coreButton(z)))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {ground.front.length > 0 && (
+                  <div className={styles.groundFrontStrip}>
+                    {ground.front.map(z => wrap(z, ground.front, 'shared', `${floorKey}-front`, coreButton(z)))}
+                  </div>
+                )}
+                {!hasUpper && ground.front.length === 0 && !ed.editing && (
+                  <p className={styles.empty}>{text('لم تسجل عناصر الدور الأرضي.', 'No ground floor elements recorded.')}</p>
+                )}
+              </div>
+
+              {/* Gate & Wall outside the building line under the frame, centred, dashed */}
+              {ground.gate.length > 0 && (
+                <div className={styles.groundGateBoundary}>
+                  <div className={styles.groundGateWall}>
+                    {ground.gate.map(z => wrap(z, ground.gate, 'shared', `${floorKey}-gate`, coreButton(z)))}
+                  </div>
+                </div>
+              )}
+
+              {/* Street at the bottom */}
+              <div className={styles.groundStreet}>
+                <div className={styles.groundStreetDashes} />
+                <span className={styles.groundStreetLabel}>{text('شارع المدخل الرئيسي', 'Main Entrance Street')}</span>
+                <div className={styles.groundStreetDashes} />
+              </div>
+
+              {ed.editing && (
+                <div className={styles.planAdd}>
+                  {ed.addSlot('shared', core)}
+                  {ed.addSlot('unit', units)}
+                </div>
+              )}
+            </div>
+          );
+        })() : <div className={styles.floorPlan}>
           <div className={styles.unitStack}>{units.filter((_, i) => i % 2 === 0).map(unitTile)}</div>
           <div className={styles.core}>{core.map(coreTile)}{!core.length && !ed.editing && <p>{text('لم تسجل المساحات المشتركة', 'Shared spaces not recorded')}</p>}{ed.addSlot('shared', core)}</div>
           <div className={styles.unitStack}>{units.filter((_, i) => i % 2 === 1).map(unitTile)}</div>
