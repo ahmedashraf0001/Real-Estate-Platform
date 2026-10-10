@@ -47,10 +47,31 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const units = sortTiles(floor.units);
   const core = sortTiles(floor.core);
   const orderedRooms = sortTiles(rooms);
-  /** In the admin each tile carries its edit bar; on the public page the tile renders alone. */
-  const wrap = (z: ZoneInstance, list: ZoneInstance[], kind: 'shared' | 'room' | 'unit', tile: React.ReactElement, style?: React.CSSProperties) => !ed.editing ? tile
-    : <div key={z.id} className={styles.tileWrap} style={style}>{ed.renameField(z) ?? tile}{ed.tileControls(z, list, kind)}</div>;
-  const unitTile = (z: ZoneInstance) => wrap(z, units, 'unit', <button type="button" key={z.id} className={styles.unit} onClick={() => navigate({ mode: 'unit', floorKey: buildingFloorKey(z), unitId: z.id })}>
+  /** In the admin each tile carries its edit bar and drag handles; on the public page the tile renders alone. */
+  const wrap = (z: ZoneInstance, list: ZoneInstance[], kind: 'shared' | 'room' | 'unit', groupKey: string, tile: React.ReactElement, style?: React.CSSProperties) => {
+    if (!ed.editing) return tile;
+    const drag = ed.tileDragProps(z, list, kind, groupKey);
+    return (
+      <div
+        key={z.id}
+        className={`${styles.tileWrap} ${drag.className || ''}`.trim()}
+        style={style}
+        draggable={drag.draggable}
+        data-drop-target={drag['data-drop-target']}
+        data-is-dragging={drag['data-is-dragging']}
+        onDragStart={drag.onDragStart}
+        onDragOver={drag.onDragOver}
+        onDragEnter={drag.onDragEnter}
+        onDragLeave={drag.onDragLeave}
+        onDrop={drag.onDrop}
+        onDragEnd={drag.onDragEnd}
+      >
+        {ed.renameField(z) ?? tile}
+        {ed.tileControls(z, list, kind)}
+      </div>
+    );
+  };
+  const unitTile = (z: ZoneInstance) => wrap(z, units, 'unit', floorKey ?? 'elevation', <button type="button" key={z.id} className={styles.unit} onClick={() => navigate({ mode: 'unit', floorKey: buildingFloorKey(z), unitId: z.id })}>
     {icon(z, 28)}<strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
     {unitFacts(z) && <span>{unitFacts(z)}</span>}
     {status(resolveBlueprintUnit(z, inventory).status)}
@@ -60,8 +81,8 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   // Admin edits through its own side panel, so a click opens it directly.
   const pick = (id: string) => { onSelect(id); if (ed.editing) onInspect?.(id); };
   const coreButton = (z: ZoneInstance) => <button type="button" key={z.id} aria-pressed={selectedId === z.id} className={`${styles.element} ${z.zone_template_id === 'bld.lightwell' ? styles.lightwell : ''}`} onClick={() => pick(z.id)}>{icon(z)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}</button>;
-  const coreTile = (z: ZoneInstance) => wrap(z, core, 'shared', coreButton(z));
-  const roomTile = (z: ZoneInstance) => wrap(z, orderedRooms, 'room',
+  const coreTile = (z: ZoneInstance) => wrap(z, core, 'shared', floorKey ?? 'elevation', coreButton(z));
+  const roomTile = (z: ZoneInstance) => wrap(z, orderedRooms, 'room', unit?.id ?? 'unit',
     <button type="button" key={z.id} className={styles.room} style={ed.editing ? undefined : { flexGrow: roomWeight(z) }} aria-pressed={selectedId === z.id} onClick={() => pick(z.id)}>{icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span>{dimensions(z)}</span>}</button>,
     { flexGrow: roomWeight(z) });
   const apartment = arrangeUnitRooms(rooms);
@@ -127,11 +148,17 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           <div className={styles.aptSide}>{apartment.private.map(roomTile)}</div>
           {!rooms.length && <p className={styles.empty}>{text('لم تسجل غرف هذه الشقة.', 'No rooms recorded for this unit.')}</p>}
           {ed.editing && unit && <div className={styles.planAdd}>{ed.addSlot('room', orderedRooms, unit.id)}</div>}
+        </div> : units.length === 0 ? <div className={`${styles.floorPlan} ${styles.floorPlanNoUnits}`}>
+          <div className={styles.compactCore}>
+            {core.map(coreTile)}
+            {!core.length && !ed.editing && <p className={styles.empty}>{text('لم تسجل المساحات المشتركة', 'Shared spaces not recorded')}</p>}
+            {ed.addSlot('shared', core)}
+          </div>
+          {ed.editing && <div className={styles.planAdd}>{ed.addSlot('unit', units)}</div>}
         </div> : <div className={styles.floorPlan}>
           <div className={styles.unitStack}>{units.filter((_, i) => i % 2 === 0).map(unitTile)}</div>
           <div className={styles.core}>{core.map(coreTile)}{!core.length && !ed.editing && <p>{text('لم تسجل المساحات المشتركة', 'Shared spaces not recorded')}</p>}{ed.addSlot('shared', core)}</div>
           <div className={styles.unitStack}>{units.filter((_, i) => i % 2 === 1).map(unitTile)}</div>
-          {!units.length && <p className={styles.empty}>{text('لا توجد شقق مسجلة لهذا الدور', 'No units recorded on this floor')}</p>}
           {ed.editing && <div className={styles.planAdd}>{ed.addSlot('unit', units)}</div>}
         </div>}
         {ed.pickerPanel}

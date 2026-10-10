@@ -521,6 +521,16 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const selectedType = watch('type');
   // Buildings open the details rail only when a tile is inspected; it starts closed instead of empty.
   useEffect(() => { if (selectedType === 'building') setRailOpen(false); }, [selectedType]);
+  useEffect(() => {
+    if (currentStep === 3 && railOpen) {
+      document.body.setAttribute('data-rail-open', 'true');
+    } else {
+      document.body.removeAttribute('data-rail-open');
+    }
+    return () => {
+      document.body.removeAttribute('data-rail-open');
+    };
+  }, [currentStep, railOpen]);
   const bedroomsCount = watch('bedrooms') || 2;
   const selectedSubtype = watch('subtype');
   const totalFloorsRaw = watch('total_floors');
@@ -889,14 +899,31 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       <style>{`
         .form-step-3-with-rail {
           max-width: 100% !important;
-          padding-inline-end: 356px;
+          padding-inline-end: 340px;
+          transition: padding-inline-end 0.25s cubic-bezier(0.2, 0, 0, 1);
         }
         .form-step-3-full {
           max-width: 100% !important;
           padding-inline-end: 0;
+          transition: padding-inline-end 0.25s cubic-bezier(0.2, 0, 0, 1);
+        }
+        body[data-rail-open="true"] header[data-admin-top-bar="true"],
+        :has(.form-step-3-with-rail) header[data-admin-top-bar="true"] {
+          width: calc(100% - 340px) !important;
+          max-width: calc(1360px - 340px) !important;
+          margin-inline-end: 340px !important;
+          margin-inline-start: auto !important;
+          transition: width 0.25s cubic-bezier(0.2, 0, 0, 1), margin 0.25s cubic-bezier(0.2, 0, 0, 1), max-width 0.25s cubic-bezier(0.2, 0, 0, 1) !important;
         }
         @media (max-width: 1023px) {
           .form-step-3-with-rail, .form-step-3-full { padding-inline-end: 0; }
+          body[data-rail-open="true"] header[data-admin-top-bar="true"],
+          :has(.form-step-3-with-rail) header[data-admin-top-bar="true"] {
+            width: 100% !important;
+            max-width: 1360px !important;
+            margin-inline-end: 0 !important;
+            margin-inline-start: auto !important;
+          }
         }
       `}</style>
 
@@ -2033,12 +2060,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           <style>{`
             .rooms-rail {
               position: fixed;
-              /* Below the admin top bar, above the step bar. */
-              top: 92px;
+              top: 0;
               bottom: 72px;
               inset-inline-end: 0;
               width: 340px;
-              height: calc(100dvh - 164px);
+              height: calc(100dvh - 72px);
               z-index: 60;
               background: var(--admin-card-bg);
               border-inline-start: 1px solid var(--admin-card-border);
@@ -2047,7 +2073,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               display: flex;
               flex-direction: column;
               overflow: hidden;
-              transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+              transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
             }
             [dir="rtl"].rooms-rail {
               box-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);

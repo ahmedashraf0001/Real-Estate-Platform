@@ -65,7 +65,17 @@
 .dims { font-size: 12px; color: var(--text-secondary, #B0B4BE); }
 .planAdd { grid-column: 1 / -1; display: flex; justify-content: center; }
 /* Admin edit layer */
-.tileWrap { position: relative; display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.tileWrap { position: relative; display: flex; flex-direction: column; min-width: 0; flex: 1; transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease; }
+.tileWrap[draggable="true"] { cursor: grab; }
+.tileWrap[draggable="true"]:active { cursor: grabbing; }
+.tileWrap.isDragging { opacity: .4; filter: grayscale(30%); }
+.tileWrap.dropTarget {
+  outline: 2px dashed var(--bp-gold);
+  outline-offset: 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bp-gold) 15%, transparent) !important;
+  box-shadow: 0 0 14px rgba(229, 184, 105, .35);
+}
 .tileWrap > button:first-child { flex: 1; padding-bottom: 44px; width: 100%; }
 .tileActions { position: absolute; inset-inline: 6px; bottom: 6px; display: flex; justify-content: center; gap: 3px; opacity: .6; transition: opacity .15s; }
 .tileWrap:hover .tileActions, .tileWrap:focus-within .tileActions { opacity: 1; }
@@ -99,5 +109,10 @@
 .custom label { font-size: 12px; color: var(--text-secondary, #B0B4BE); width: 100%; }
 .custom input { flex: 1 1 200px; min-height: 40px; padding: 8px 10px; background: var(--bg-primary, #0E1117); color: inherit; border: 1px solid var(--bp-line); border-radius: 6px; font: inherit; }
 .root .custom button { background: var(--accent-blue, #3B82F6); border-color: var(--accent-blue, #3B82F6); color: #fff; }
-@media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } }
+.floorPlanNoUnits { display: flex; flex-direction: column; gap: 10px; grid-template-columns: none; min-height: 220px; }
+.compactCore { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); gap: 8px; width: 100%; }
+.compactCore .tileWrap, .compactCore .element { min-height: 100px; }
+.compactCore .addSlot { min-height: 100px; }
+@media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } .compactCore { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; } }
 .workspace.noDetail { grid-template-columns: 150px minmax(0,1fr); }
+

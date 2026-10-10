@@ -173,6 +173,17 @@ export function moveInList(ids: string[], id: string, delta: -1 | 1): string[] {
   return next;
 }
 
+/** Move an item to the index of a target item in the list. */
+export function moveIdToTarget(ids: string[], id: string, targetId: string): string[] {
+  if (id === targetId) return ids;
+  const fromIndex = ids.indexOf(id);
+  const toIndex = ids.indexOf(targetId);
+  if (fromIndex === -1 || toIndex === -1) return ids;
+  const next = [...ids];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
 /** Copy every zone of one floor to a new floor. Unit codes follow the target floor. */
 export function duplicateFloor(zones: ZoneInstance[], fromKey: string, toKey: string): ZoneInstance[] {
   const source = zones.filter(z => z.zone_template_id !== 'bld.building' && buildingFloorKey(z) === fromKey);

@@ -8,7 +8,7 @@ import { zoneLabel } from '@/lib/layering/labels';
 import { buildingFloorKey, floorLabel, type BlueprintView } from '@/lib/layering/buildingBlueprint';
 import {
   changeZoneType, createUnit, createZone, deleteFloor, duplicateFloor, duplicateZone, insertZone, isUnitLocked,
-  listFloorKeys, lockedUnitsOnFloor, moveInList, nextFloorKey, nextUnitCode, removeZoneById, renameZone, reorderZones,
+  listFloorKeys, lockedUnitsOnFloor, moveIdToTarget, moveInList, nextFloorKey, nextUnitCode, removeZoneById, renameZone, reorderZones,
   ROOM_TEMPLATES, SHARED_SPACE_TEMPLATES,
 } from '@/lib/layering/blueprintEditor';
 import type { ZoneTemplate } from '@/lib/layering/templates';
@@ -43,6 +43,8 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
   const [typeMenu, setTypeMenu] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ kind: 'zone' | 'floor'; id: string } | null>(null);
   const [floorMenu, setFloorMenu] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{ id: string; kind: TileKind; groupKey: string } | null>(null);
+  const [dropOverId, setDropOverId] = useState<string | null>(null);
   const floorKey = view.mode === 'elevation' ? undefined : view.floorKey;
 
   const commit = (next: ZoneInstance[]) => { edit?.onChange(next); setConfirm(null); setTypeMenu(null); };
@@ -99,6 +101,62 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
         <div><button type="button" className={styles.dangerSolid} onClick={() => commit(removeZoneById(zones, z.id))}>{text('حذف', 'Delete')}</button><button type="button" onClick={() => setConfirm(null)}>{text('إلغاء', 'Cancel')}</button></div>
       </div>}
     </>;
+  };
+
+  const tileDragProps = (z: ZoneInstance, list: ZoneInstance[], kind: TileKind, groupKey: string) => {
+    if (!edit) return {};
+    const isOver = dropOverId === z.id && dragState?.kind === kind && dragState?.groupKey === groupKey && dragState?.id !== z.id;
+    const isDragging = dragState?.id === z.id;
+    return {
+      draggable: true,
+      className: `${isOver ? styles.dropTarget : ''} ${isDragging ? styles.isDragging : ''}`.trim(),
+      'data-drop-target': isOver ? 'true' : undefined,
+      'data-is-dragging': isDragging ? 'true' : undefined,
+      onDragStart: (e: React.DragEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest?.(`.${styles.tileActions}`) || target?.closest?.(`.${styles.renameInput}`)) {
+          e.preventDefault();
+          return;
+        }
+        setDragState({ id: z.id, kind, groupKey });
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', z.id);
+      },
+      onDragOver: (e: React.DragEvent) => {
+        if (!dragState) return;
+        if (dragState.kind !== kind || dragState.groupKey !== groupKey) return;
+        if (dragState.id === z.id) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      },
+      onDragEnter: (e: React.DragEvent) => {
+        if (!dragState) return;
+        if (dragState.kind !== kind || dragState.groupKey !== groupKey) return;
+        if (dragState.id === z.id) return;
+        e.preventDefault();
+        setDropOverId(z.id);
+      },
+      onDragLeave: (e: React.DragEvent) => {
+        if (dropOverId === z.id) {
+          setDropOverId(null);
+        }
+      },
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        if (!dragState) return;
+        if (dragState.kind === kind && dragState.groupKey === groupKey && dragState.id !== z.id) {
+          const idList = list.map(item => item.id);
+          const reordered = moveIdToTarget(idList, dragState.id, z.id);
+          commit(reorderZones(zones, reordered));
+        }
+        setDragState(null);
+        setDropOverId(null);
+      },
+      onDragEnd: () => {
+        setDragState(null);
+        setDropOverId(null);
+      },
+    };
   };
 
   const addSlot = (kind: 'shared' | 'room' | 'unit', list: ZoneInstance[], parentId?: string) => !edit ? null : (
@@ -161,5 +219,5 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
     </div>
   );
 
-  return { editing: !!edit, floors, renameField, tileControls, addSlot, pickerPanel, floorControls, addFloors };
+  return { editing: !!edit, floors, renameField, tileControls, tileDragProps, addSlot, pickerPanel, floorControls, addFloors };
 }

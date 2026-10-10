@@ -4,7 +4,7 @@ import type { ZoneInstance } from '../../layering/instances';
 import { buildingFloorKey } from '../../layering/buildingBlueprint';
 import {
   changeZoneType, createUnit, createZone, deleteFloor, duplicateFloor, duplicateZone, findZone, insertZone,
-  isUnitLocked, listFloorKeys, lockedUnitsOnFloor, moveInList, nextFloorKey, nextUnitCode, removeZoneById,
+  isUnitLocked, listFloorKeys, lockedUnitsOnFloor, moveIdToTarget, moveInList, nextFloorKey, nextUnitCode, removeZoneById,
   renameZone, reorderZones, ROOM_TEMPLATES, SHARED_SPACE_TEMPLATES,
 } from '../../layering/blueprintEditor';
 
@@ -139,3 +139,32 @@ test('unit rooms are arranged like an apartment and sized by area', async () => 
   assert.equal(onlyBeds.social.length + onlyBeds.private.length, 2);
   assert.ok(onlyBeds.social.length > 0 && onlyBeds.private.length > 0, 'both columns used');
 });
+
+test('move id to the index of target id: before/after target, same position no-op, unknown id no-op', () => {
+  const ids = ['A', 'B', 'C', 'D'];
+  // move forward (after target): 'A' to index of 'C' (index 2) -> ['B', 'C', 'A', 'D']
+  assert.deepEqual(moveIdToTarget(ids, 'A', 'C'), ['B', 'C', 'A', 'D']);
+  // move backward (before target): 'D' to index of 'B' (index 1) -> ['A', 'D', 'B', 'C']
+  assert.deepEqual(moveIdToTarget(ids, 'D', 'B'), ['A', 'D', 'B', 'C']);
+  // same position no-op
+  assert.deepEqual(moveIdToTarget(ids, 'B', 'B'), ids);
+  // unknown id no-op (unknown source, unknown target, or both)
+  assert.deepEqual(moveIdToTarget(ids, 'X', 'B'), ids);
+  assert.deepEqual(moveIdToTarget(ids, 'B', 'X'), ids);
+  assert.deepEqual(moveIdToTarget(ids, 'X', 'Y'), ids);
+});
+
+test('dropping persists order through reorderZones so public sortTiles matches', () => {
+  const { sortTiles } = require('../../layering/blueprintEditor');
+  const z1 = createZone({ templateId: 'bld.entrance_lobby', floorKey: 'bld_ground', sortOrder: 1 });
+  const z2 = createZone({ templateId: 'bld.guard_room', floorKey: 'bld_ground', sortOrder: 2 });
+  const z3 = createZone({ templateId: 'bld.staircase', floorKey: 'bld_ground', sortOrder: 3 });
+  let list = [z1, z2, z3];
+  // move z3 to z1 (before target)
+  const newIds = moveIdToTarget(list.map(z => z.id), z3.id, z1.id);
+  list = reorderZones(list, newIds);
+  const sorted = sortTiles(list);
+  assert.deepEqual(sorted.map((z: ZoneInstance) => z.id), [z3.id, z1.id, z2.id]);
+});
+
+

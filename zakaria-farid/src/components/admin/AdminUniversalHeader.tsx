@@ -137,7 +137,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
   };
 
   return (
-    <header className={styles.universalHeader} dir={isAr ? 'rtl' : 'ltr'}>
+    <header data-admin-top-bar="true" className={styles.universalHeader} dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Page Breadcrumb Context */}
       <div className={styles.breadcrumbBox}>
         {renderBreadcrumb()}
