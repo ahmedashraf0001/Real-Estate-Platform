@@ -1371,28 +1371,3 @@
   background: #f8fafc;
 }
 
-:global([data-theme="dark"]) .buildingSectionRow {
-  background: #1e293b !important;
-  border-color: #334155;
-}
-
-:global([data-theme="dark"]) .buildingSectionToggleBtn,
-:global([data-theme="dark"]) .buildingSectionSquircle,
-:global([data-theme="dark"]) .buildingSectionActionBtn {
-  background: #0f172a;
-  border-color: #334155;
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .buildingSectionTitle {
-  color: #f8fafc;
-}
-
-:global([data-theme="dark"]) .buildingUnitRow {
-  background: #0f172a;
-}
-
-:global([data-theme="dark"]) .buildingUnitRow:hover {
-  background: #1e293b;
-}
-

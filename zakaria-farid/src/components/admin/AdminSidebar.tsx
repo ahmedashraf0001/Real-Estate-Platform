@@ -16,8 +16,6 @@ import {
   X, 
   Sliders, 
   Landmark,
-  Sun,
-  Moon,
   Search
 } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -32,28 +30,6 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-  useEffect(() => {
-    const currentTheme = document.documentElement.getAttribute('data-theme') as 'dark' | 'light';
-    if (currentTheme === 'light' || currentTheme === 'dark') {
-      setTheme(currentTheme);
-    } else {
-      const saved = localStorage.getItem('zf_theme') as 'dark' | 'light';
-      if (saved === 'light' || saved === 'dark') {
-        setTheme(saved);
-      }
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    localStorage.setItem('zf_theme', nextTheme);
-    document.cookie = `zf_theme=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`;
-  };
-
   const isAr = adminLocale === 'ar';
 
   const navGroups = [
@@ -238,16 +214,6 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
           </Link>
 
           <div className={styles.systemControlsRow}>
-            <button 
-              type="button" 
-              className={styles.themeToggleBtn} 
-              onClick={toggleTheme}
-              title={isAr ? (theme === 'dark' ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي') : (theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode')}
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
-              <span>{isAr ? (theme === 'dark' ? 'نهاري' : 'ليلي') : (theme === 'dark' ? 'Light' : 'Dark')}</span>
-            </button>
 
             <Link href={togglePath} className={styles.langBtn}>
               <Languages size={15} strokeWidth={1.8} />

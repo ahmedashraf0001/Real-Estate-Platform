@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Compass, MapPin, Sparkles, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { DistrictDemandMetric } from '@/lib/services/dashboardAnalytics';
 
@@ -12,22 +12,8 @@ interface DistrictDemandMatrixProps {
 export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictDemandMatrixProps) {
   const isAr = adminLocale === 'ar';
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  useEffect(() => {
-    const readTheme = () => {
-      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
-        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
-      setTheme(cur);
-    };
-    readTheme();
-    const obs = new MutationObserver(readTheme);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
-  }, []);
-  const isLight = theme === 'light';
+  const getStatusBadge = (status: DistrictDemandMetric['marketStatus']) => {
 
-  const getStatusBadge = (status: DistrictDemandMetric['marketStatus'], isLightMode: boolean) => {
-    if (isLightMode) {
       switch (status) {
         case 'undersupplied':
           return {
@@ -49,39 +35,13 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
             label: isAr ? 'سيولة متوازنة' : 'Balanced Liquidity',
             color: 'var(--admin-accent)',
             bg: 'rgba(37, 99, 235, 0.08)',
-            border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
-          };
-      }
-    }
-
-    switch (status) {
-      case 'undersupplied':
-        return {
-          label: isAr ? 'طلب يفوق المعروض (فرصة استحواذ)' : 'High Demand (Acquisition Gap)',
-          color: '#34D399',
-          bg: 'rgba(16, 185, 129, 0.12)',
-          border: 'rgba(16, 185, 129, 0.25)',
-        };
-      case 'oversupplied':
-        return {
-          label: isAr ? 'معروض وفير (تكثيف التسويق)' : 'High Supply (Boost Marketing)',
-          color: '#FBBF24',
-          bg: 'rgba(245, 158, 11, 0.12)',
-          border: 'rgba(245, 158, 11, 0.25)',
-        };
-      case 'balanced':
-      default:
-        return {
-          label: isAr ? 'سيولة متوازنة' : 'Balanced Liquidity',
-          color: 'var(--admin-accent)',
-          bg: 'rgba(59, 130, 246, 0.12)',
           border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
         };
-    }
+      }
   };
 
   return (
-    <div className={`matrix-card ${isLight ? 'is-light' : ''}`}>
+    <div className={`matrix-card is-light`}>
       <div className="matrix-header">
         <div className="matrix-title-group">
           <div className="matrix-icon-box">
@@ -102,7 +62,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
 
       <div className="matrix-grid">
         {metrics.map((dist) => {
-          const badge = getStatusBadge(dist.marketStatus, isLight);
+          const badge = getStatusBadge(dist.marketStatus);
           const name = isAr ? dist.nameAr : dist.nameEn;
 
           return (
@@ -130,7 +90,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
                 <div className="bar-row">
                   <div className="bar-label-group">
                     <span className="bar-tag">{isAr ? 'حصة طلبات المشترين' : 'Buyer Inquiries Share'}</span>
-                    <strong className="bar-val" style={{ color: isLight ? '#0F172A' : '#E2E8F0' }}>
+                    <strong className="bar-val" style={{ color: '#0F172A' }}>
                       {dist.inquirySharePct}% ({dist.inquiryCount} {isAr ? 'طلبات' : 'Leads'})
                     </strong>
                   </div>
@@ -139,9 +99,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
                       className="bar-fill" 
                       style={{ 
                         width: `${Math.max(4, dist.inquirySharePct)}%`,
-                        background: isLight 
-                          ? 'linear-gradient(90deg, #64748B, #475569)' 
-                          : 'linear-gradient(90deg, #64748B, #94A3B8)' 
+                        background: 'linear-gradient(90deg, #64748B, #475569)'
                       }} 
                     />
                   </div>
@@ -151,7 +109,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
                 <div className="bar-row">
                   <div className="bar-label-group">
                     <span className="bar-tag">{isAr ? 'حصة المعروض بالمحفظة' : 'Active Listed Value Share'}</span>
-                    <strong className="bar-val" style={{ color: isLight ? 'var(--admin-accent)' : 'var(--admin-accent)' }}>
+                    <strong className="bar-val" style={{ color: 'var(--admin-accent)' }}>
                       {dist.supplySharePct}% ({new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(dist.listedSupplyValueEgp)} {isAr ? 'ج.م' : 'EGP'})
                     </strong>
                   </div>
@@ -160,9 +118,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
                       className="bar-fill" 
                       style={{ 
                         width: `${Math.max(4, dist.supplySharePct)}%`,
-                        background: isLight 
-                          ? 'linear-gradient(90deg, #60A5FA, #2563EB)' 
-                          : 'linear-gradient(90deg, #60A5FA, #3B82F6)' 
+                        background: 'linear-gradient(90deg, #60A5FA, #2563EB)'
                       }} 
                     />
                   </div>

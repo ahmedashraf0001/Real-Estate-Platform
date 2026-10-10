@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Flame, 
@@ -32,21 +32,6 @@ type SortOption = 'demand' | 'inquiries' | 'price' | 'negotiations';
 export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: PropertyEngagementLeaderboardProps) {
   const isAr = adminLocale === 'ar';
 
-  // ─── Live Theme Observer (Dark / Light) ───
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  useEffect(() => {
-    const readTheme = () => {
-      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
-        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
-      setTheme(cur);
-    };
-    readTheme();
-    const obs = new MutationObserver(readTheme);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
-  }, []);
-  const isLight = theme === 'light';
-
   // ─── Filter & Search & Sort State ───
   const [filterTier, setFilterTier] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -68,8 +53,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
   const countNeedsAttention = useMemo(() => metrics.filter(m => m.liquidityTier === 'under_engaged').length, [metrics]);
 
   // ─── Tier Badges Definition ───
-  const getTierBadge = (tier: PropertyEngagementMetric['liquidityTier'], isLightMode: boolean) => {
-    if (isLightMode) {
+  const getTierBadge = (tier: PropertyEngagementMetric['liquidityTier']) => {
+
       switch (tier) {
         case 'ultra_hot':
           return {
@@ -93,8 +78,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
             icon: Crown,
             color: 'var(--admin-accent)',
             bg: 'rgba(37, 99, 235, 0.08)',
-            border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
-          };
+          border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
+        };
         case 'under_engaged':
         default:
           return {
@@ -105,113 +90,41 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
             border: 'rgba(217, 119, 6, 0.25)',
           };
       }
-    }
-
-    // Dark Mode
-    switch (tier) {
-      case 'ultra_hot':
-        return {
-          label: isAr ? 'طلب استثنائي مرتفع' : 'Ultra-High Demand',
-          icon: Flame,
-          color: '#FB7185',
-          bg: 'rgba(244, 63, 94, 0.12)',
-          border: 'rgba(244, 63, 94, 0.25)',
-        };
-      case 'active_interest':
-        return {
-          label: isAr ? 'تفاعل نشط ومستمر' : 'Active Market Interest',
-          icon: Zap,
-          color: '#34D399',
-          bg: 'rgba(16, 185, 129, 0.12)',
-          border: 'rgba(16, 185, 129, 0.25)',
-        };
-      case 'trophy_asset':
-        return {
-          label: isAr ? 'أصل سيادي نادر' : 'Trophy Sovereign Asset',
-          icon: Crown,
-          color: 'var(--admin-accent)',
-          bg: 'rgba(59, 130, 246, 0.12)',
-          border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
-        };
-      case 'under_engaged':
-      default:
-        return {
-          label: isAr ? 'تفاعل منخفض (مراجعة التسعير)' : 'Low Engagement (Review Price)',
-          icon: AlertCircle,
-          color: '#FBBF24',
-          bg: 'rgba(245, 158, 11, 0.12)',
-          border: 'rgba(245, 158, 11, 0.25)',
-        };
-    }
   };
 
   // ─── Rank Badge Style ───
-  const getRankBadgeStyle = (rankIndex: number, isLightMode: boolean) => {
+  const getRankBadgeStyle = (rankIndex: number) => {
     const rankNum = rankIndex + 1;
     const formatted = `#${rankNum < 10 ? '0' + rankNum : rankNum}`;
 
-    if (isLightMode) {
       if (rankIndex === 0) {
         return {
           color: 'var(--admin-accent)',
           bg: 'rgba(37, 99, 235, 0.12)',
           border: 'color-mix(in srgb, var(--admin-accent) 35%, transparent)',
-          label: formatted,
-        };
+      label: formatted,
+    };
       }
       if (rankIndex === 1) {
         return {
           color: '#475569',
           bg: 'rgba(71, 85, 105, 0.1)',
           border: 'rgba(71, 85, 105, 0.3)',
-          label: formatted,
-        };
+      label: formatted,
+    };
       }
       if (rankIndex === 2) {
         return {
           color: '#854D0E',
           bg: 'rgba(133, 77, 14, 0.1)',
           border: 'rgba(133, 77, 14, 0.3)',
-          label: formatted,
-        };
+      label: formatted,
+    };
       }
       return {
         color: '#64748B',
         bg: '#F1F5F9',
         border: '#E2E8F0',
-        label: formatted,
-      };
-    }
-
-    // Dark mode
-    if (rankIndex === 0) {
-      return {
-        color: 'var(--admin-accent)',
-        bg: 'rgba(59, 130, 246, 0.15)',
-        border: 'color-mix(in srgb, var(--admin-accent) 35%, transparent)',
-        label: formatted,
-      };
-    }
-    if (rankIndex === 1) {
-      return {
-        color: '#94A3B8',
-        bg: 'rgba(148, 163, 184, 0.12)',
-        border: 'rgba(148, 163, 184, 0.25)',
-        label: formatted,
-      };
-    }
-    if (rankIndex === 2) {
-      return {
-        color: '#D97706',
-        bg: 'rgba(217, 119, 6, 0.12)',
-        border: 'rgba(217, 119, 6, 0.25)',
-        label: formatted,
-      };
-    }
-    return {
-      color: 'rgba(255, 255, 255, 0.4)',
-      bg: 'rgba(255, 255, 255, 0.04)',
-      border: 'rgba(255, 255, 255, 0.08)',
       label: formatted,
     };
   };
@@ -255,7 +168,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
   }, [metrics, filterTier, searchQuery, sortBy]);
 
   return (
-    <div className={`leaderboard-card ${isLight ? 'is-light' : ''}`}>
+    <div className={`leaderboard-card is-light`}>
       {/* ─── Header & Portfolio Ribbon ─── */}
       <div className="leaderboard-header">
         <div className="leaderboard-title-group">
@@ -414,10 +327,10 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           ) : (
             <div className="leaderboard-rows">
               {processedMetrics.map((item, idx) => {
-                const tierBadge = getTierBadge(item.liquidityTier, isLight);
+                const tierBadge = getTierBadge(item.liquidityTier);
                 const TierIcon = tierBadge.icon;
                 const title = isAr ? item.titleAr : item.titleEn;
-                const rankStyle = getRankBadgeStyle(idx, isLight);
+                const rankStyle = getRankBadgeStyle(idx);
 
                 return (
                   <div key={item.propertyId} className="leaderboard-row">

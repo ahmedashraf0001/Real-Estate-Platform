@@ -484,41 +484,6 @@
   color: var(--admin-accent);
 }
 
-.themeToggleBtn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 7px 8px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.themeToggleBtn:hover {
-  border-color: var(--admin-accent-border);
-  color: var(--admin-accent);
-  background: var(--admin-accent-tint);
-}
-
-[data-theme="light"] .themeToggleBtn {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  color: #334155;
-}
-
-[data-theme="light"] .themeToggleBtn:hover {
-  background: var(--admin-accent-tint);
-  border-color: var(--admin-accent-border);
-  color: var(--admin-accent);
-}
-
 .signOutBtn {
   display: flex;
   align-items: center;
@@ -574,7 +539,6 @@
     padding: 10px 14px;
   }
   .langBtn,
-  .themeToggleBtn,
   .signOutBtn {
     min-height: 44px;
     padding: 10px 12px;

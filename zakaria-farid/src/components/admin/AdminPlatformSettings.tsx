@@ -51,42 +51,6 @@ type TabKey = 'radar' | 'home' | 'about' | 'contact';
 
 export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSettingsProps) {
   const isAr = adminLocale === 'ar';
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-  useEffect(() => {
-    const readTheme = () => {
-      if (typeof document === 'undefined') return;
-      const attr = document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null;
-      if (attr === 'light' || attr === 'dark') {
-        setTheme(attr);
-        return;
-      }
-      try {
-        const stored = localStorage.getItem('zf_theme') as 'dark' | 'light' | null;
-        if (stored === 'light' || stored === 'dark') {
-          setTheme(stored);
-          return;
-        }
-      } catch {}
-      try {
-        const match = document.cookie.match(/(?:^|;\s*)zf_theme=(light|dark)/);
-        if (match && (match[1] === 'light' || match[1] === 'dark')) {
-          setTheme(match[1] as 'dark' | 'light');
-          return;
-        }
-      } catch {}
-      setTheme('dark');
-    };
-
-    readTheme();
-    const obs = new MutationObserver(() => {
-      readTheme();
-    });
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
-  }, []);
-
-  const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<TabKey>('radar');
   const [settings, setSettings] = useState<PlatformDisplaySettings>(DEFAULT_PLATFORM_SETTINGS);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -229,7 +193,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
   const contact = settings.contact || DEFAULT_CONTACT_SETTINGS;
 
   return (
-    <div className={`admin-settings-root ${isLight ? 'is-light' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`admin-settings-root is-light`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* Top Header Card */}
       <div className="settings-header-card">
         <div className="settings-header-left">
@@ -387,7 +351,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                   }}
                   style={{ width: 18, height: 18, accentColor: 'var(--admin-accent)', cursor: 'pointer' }}
                 />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: settings.hidePropertyPrices ? 'var(--admin-accent)' : (isLight ? '#475569' : 'var(--admin-text-muted, #64748B)') }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: settings.hidePropertyPrices ? 'var(--admin-accent)' : ('#475569') }}>
                   {settings.hidePropertyPrices ? (isAr ? 'مفعل (مخفي)' : 'Enabled (Hidden)') : (isAr ? 'معطل (معروض)' : 'Disabled (Visible)')}
                 </span>
               </label>
