@@ -100,3 +100,4 @@
 .custom input { flex: 1 1 200px; min-height: 40px; padding: 8px 10px; background: var(--bg-primary, #0E1117); color: inherit; border: 1px solid var(--bp-line); border-radius: 6px; font: inherit; }
 .root .custom button { background: var(--accent-blue, #3B82F6); border-color: var(--accent-blue, #3B82F6); color: #fff; }
 @media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } }
+.workspace.noDetail { grid-template-columns: 150px minmax(0,1fr); }

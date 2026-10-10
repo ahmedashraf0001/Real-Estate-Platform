@@ -57,10 +57,12 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
     <span className={styles.link}>{text('عرض مخطط الشقة ‹', 'View unit plan ›')}</span>
     <span className={styles.door} title={text('باب الشقة', 'Unit door')}><DoorOpen size={19} /></span>
   </button>);
-  const coreButton = (z: ZoneInstance) => <button type="button" key={z.id} aria-pressed={selectedId === z.id} className={`${styles.element} ${z.zone_template_id === 'bld.lightwell' ? styles.lightwell : ''}`} onClick={() => onSelect(z.id)}>{icon(z)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}</button>;
+  // Admin edits through its own side panel, so a click opens it directly.
+  const pick = (id: string) => { onSelect(id); if (ed.editing) onInspect?.(id); };
+  const coreButton = (z: ZoneInstance) => <button type="button" key={z.id} aria-pressed={selectedId === z.id} className={`${styles.element} ${z.zone_template_id === 'bld.lightwell' ? styles.lightwell : ''}`} onClick={() => pick(z.id)}>{icon(z)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}</button>;
   const coreTile = (z: ZoneInstance) => wrap(z, core, 'shared', coreButton(z));
   const roomTile = (z: ZoneInstance) => wrap(z, orderedRooms, 'room',
-    <button type="button" key={z.id} className={styles.room} style={ed.editing ? undefined : { flexGrow: roomWeight(z) }} aria-pressed={selectedId === z.id} onClick={() => onSelect(z.id)}>{icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span>{dimensions(z)}</span>}</button>,
+    <button type="button" key={z.id} className={styles.room} style={ed.editing ? undefined : { flexGrow: roomWeight(z) }} aria-pressed={selectedId === z.id} onClick={() => pick(z.id)}>{icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span>{dimensions(z)}</span>}</button>,
     { flexGrow: roomWeight(z) });
   const apartment = arrangeUnitRooms(rooms);
   const detail = selected ? blueprintElementDetail(selected, isAr) : null;
@@ -102,7 +104,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         {onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(unit)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
       </div>;
     })()}
-    <div className={styles.workspace}>
+    <div className={`${styles.workspace} ${ed.editing ? styles.noDetail : ''}`}>
       <aside className={styles.floors} aria-label={text('الأدوار', 'Floors')}>
         {keys.map(key => {
           const data = selectBuildingFloor(zones, key);
@@ -135,7 +137,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         {ed.pickerPanel}
         <div className={styles.legend}><span className={styles.available}>{text('متاحة', 'Available')}</span><span>{text('مباعة / محجوزة', 'Sold / Reserved')}</span><span>{text('مساحات مشتركة', 'Shared spaces')}</span><span><DoorOpen size={15} />{text('باب الشقة', 'Unit door')}</span></div>
       </div>
-      <aside className={styles.detail} aria-label={text('تفاصيل العنصر', 'Element details')}>
+      {!ed.editing && <aside className={styles.detail} aria-label={text('تفاصيل العنصر', 'Element details')}>
         {selected ? <>
           <span className={styles.iconTile}>{icon(selected, 30)}</span><h3>{zoneLabel(selected, isAr)}</h3><p>{selectedLocation}</p>
           {onInspect && <button type="button" onClick={() => onInspect(selected.id)}>{text('تحرير بيانات العنصر', 'Edit element facts')}</button>}
@@ -147,7 +149,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           {selected.images?.length ? <div className={styles.photos}>{selected.images.map((url, i) => <img key={`${url}-${i}`} src={url} alt={`${zoneLabel(selected, isAr)} ${i + 1}`} />)}</div> : <p className={styles.photoSlot}>{text('لم تضاف صور بعد', 'No photos added yet')}</p>}
         </> : <p>{text('اختر عنصراً لعرض بياناته وأعماله', 'Select an element to see its facts and trades')}</p>}
         <p className={styles.note}>{text('الأعمال العامة للمبنى تظهر تحت «المبنى».', 'Building-wide work appears under “Building”.')}</p>
-      </aside>
+      </aside>}
     </div>
   </section>;
 }
