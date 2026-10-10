@@ -882,7 +882,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             ) : (
               <div className="card-price" dir="ltr">
                 <span className="price-amount tabular-nums">{formattedPrice}</span>
-                <span className="currency-unit" style={{ color: 'var(--text-secondary)' }}>{isAr ? 'ج.م' : property.currency}</span>
+                <span className="currency-unit">{isAr ? 'ج.م' : property.currency}</span>
               </div>
             )}
 
@@ -1147,7 +1147,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .currency-unit {
-          color: var(--text-secondary) !important;
+          color: #1E293B !important;
           text-shadow: var(--glass-text-shadow) !important;
         }
 
@@ -1256,7 +1256,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .spec-label {
-          color: #334155 !important;
+          color: #1E293B !important;
           text-shadow: var(--glass-text-shadow) !important;
         }
 

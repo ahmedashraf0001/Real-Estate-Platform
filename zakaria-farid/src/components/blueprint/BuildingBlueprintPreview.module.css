@@ -17,6 +17,9 @@
 .planColumn { min-width: 0; }
 .floorPlan { display: grid; grid-template-columns: minmax(0,1fr) minmax(90px,.65fr) minmax(0,1fr); border: 3px solid var(--bp-gold); gap: 5px; padding: 9px; min-height: 410px; }
 .unitStack, .core { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.floorPlan.noUnits { display: flex; flex-direction: column; justify-content: center; min-height: 410px; gap: 12px; }
+.floorPlan.noUnits .core { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; width: 100%; }
+.floorPlan.noUnits .core .element { min-height: 90px; padding: 14px 10px; }
 .root .unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; flex: 1; padding: 24px 8px; position: relative; background: var(--bg-primary, #0E1117); }
 .unit strong { font-size: 20px; font-weight: 600; }
 .unit>span:not(.door) { max-width: 100%; overflow-wrap: anywhere; text-align: center; }

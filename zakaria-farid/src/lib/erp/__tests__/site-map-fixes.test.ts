@@ -14,9 +14,10 @@ test('neon uses key-free Esri dark base and reference in a dedicated pane', () =
   }
 });
 
-test('satellite contains imagery plus both reference layers', () => {
+test('satellite contains imagery only', () => {
   const specs = getBaseLayerSpecs('satellite');
-  assert.equal(specs.length, 3);
-  assert.deepEqual(specs.map(s => s.url.match(/services\/(.*?)\/MapServer/)?.[1]), ['World_Imagery', 'Reference/World_Transportation', 'Reference/World_Boundaries_and_Places']);
-  for (const spec of specs) assert.match(spec.options.attribution!, /Esri/);
+  assert.equal(specs.length, 1);
+  assert.deepEqual(specs.map(s => s.url.match(/services\/(.*?)\/MapServer/)?.[1]), ['World_Imagery']);
+  assert.doesNotMatch(specs[0].url, /Reference\//);
+  assert.match(specs[0].options.attribution!, /Esri/);
 });

@@ -13,12 +13,14 @@ export function getBaseLayerSpecs(mode: 'satellite' | 'neon'): { url: string; op
       options: { maxZoom: 19, maxNativeZoom: 16, pane: 'neon-basemap', attribution },
     }));
   }
-  return ['World_Imagery', 'Reference/World_Transportation', 'Reference/World_Boundaries_and_Places'].map((name, index) => ({
-    url: `${service}${name}/MapServer/tile/{z}/{y}/{x}`,
-    options: { maxZoom: 19, opacity: index === 0 ? 1 : 0.95, attribution: index === 0
-      ? 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS user community'
-      : attribution },
-  }));
+  return [{
+    url: `${service}World_Imagery/MapServer/tile/{z}/{y}/{x}`,
+    options: {
+      maxZoom: 19,
+      opacity: 1,
+      attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS user community',
+    },
+  }];
 }
 
 /**

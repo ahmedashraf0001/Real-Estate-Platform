@@ -1166,7 +1166,7 @@ export const MapView: React.FC<MapViewProps> = ({
         /* 3. Floating Sidebar Open Trigger */
         .floating-sidebar-trigger {
           position: absolute;
-          top: calc(var(--map-navbar-bottom, 0px) + 1.5rem);
+          top: 1.5rem;
           right: 1.5rem;
           z-index: 1000;
           display: inline-flex;
@@ -1209,7 +1209,7 @@ export const MapView: React.FC<MapViewProps> = ({
         /* 4. Floating Frosted Crystal Glass Directory Dock */
         .floating-glass-directory {
           position: absolute;
-          top: calc(var(--map-navbar-bottom, 0px) + 1.5rem);
+          top: 1.5rem;
           bottom: 1.5rem;
           right: 1.5rem;
           left: auto;

@@ -107,10 +107,10 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         </div></> : view.mode === 'unit' ? <div className={styles.roomPlan}>
           {rooms.map(z => <button type="button" key={z.id} className={styles.room} aria-pressed={selectedId === z.id} onClick={() => onSelect(z.id)}>{icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>{dimensions(z) && <span>{dimensions(z)}</span>}</button>)}
           {!rooms.length && <p>{text('لم تسجل غرف هذه الشقة.', 'No rooms recorded for this unit.')}</p>}
-        </div> : <div className={styles.floorPlan}>
-          <div className={styles.unitStack}>{floor.units.filter((_, i) => i % 2 === 0).map(unitTile)}</div>
+        </div> : <div className={`${styles.floorPlan} ${!floor.units.length ? styles.noUnits : ''}`}>
+          {floor.units.length > 0 && <div className={styles.unitStack}>{floor.units.filter((_, i) => i % 2 === 0).map(unitTile)}</div>}
           <div className={styles.core}>{floor.core.map(coreTile)}{!floor.core.length && <p>{text('لم تسجل المساحات المشتركة', 'Shared spaces not recorded')}</p>}</div>
-          <div className={styles.unitStack}>{floor.units.filter((_, i) => i % 2 === 1).map(unitTile)}</div>
+          {floor.units.length > 0 && <div className={styles.unitStack}>{floor.units.filter((_, i) => i % 2 === 1).map(unitTile)}</div>}
           {!floor.units.length && <p className={styles.empty}>{text('لا توجد شقق مسجلة لهذا الدور', 'No units recorded on this floor')}</p>}
         </div>}
         <div className={styles.legend}><span className={styles.available}>{text('متاحة', 'Available')}</span><span>{text('مباعة / محجوزة', 'Sold / Reserved')}</span><span>{text('مساحات مشتركة', 'Shared spaces')}</span><span><DoorOpen size={15} />{text('باب الشقة', 'Unit door')}</span></div>

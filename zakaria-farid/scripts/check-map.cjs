@@ -28,27 +28,27 @@ let checks = 0;
   });
   assert.equal(result.layers,expected);assert.equal(result.position,'absolute');assert.equal(result.filter,'sepia(0.65) saturate(1.25)');assert.equal(result.coverage,true);assert.equal(result.overflow,false);
   assert.ok(result.nav.left>=-1&&result.nav.right<=await page.evaluate(()=>innerWidth)+1);
-  assert.ok(result.sidebar.top>=result.nav.bottom);assert.ok(result.controls.top>=result.nav.bottom);
+  assert.ok(result.nav.right<=result.sidebar.left||result.nav.left>=result.sidebar.right||result.sidebar.top>=result.nav.bottom);assert.ok(result.controls.top>=result.nav.bottom||result.controls.right<=result.nav.left||result.controls.left>=result.nav.right);
   assert.ok(result.controls.right<=result.sidebar.left||result.controls.left>=result.sidebar.right||result.controls.bottom<=result.sidebar.top);
   assert.match(result.attribution,/Esri/);assert.ok(result.controls.left>=0&&result.controls.right<=await page.evaluate(()=>innerWidth));checks++;
   assert.equal(await page.evaluate(()=>{const c=document.querySelector('.leaflet-control-attribution');const r=c.getBoundingClientRect();return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('.leaflet-control-attribution')}),true);
  };
  for(const width of [1280,1024,390])for(const locale of ['en','ar']){
   await page.setViewport({width,height:width===390?844:900});
-  await page.goto(baseUrl+'/'+locale+'/map',{waitUntil:'networkidle2',timeout:45000});await check(3);
+  await page.goto(baseUrl+'/'+locale+'/map',{waitUntil:'networkidle2',timeout:45000});await check(1);
   if(output&&width!==1024){fs.mkdirSync(path.join(output,String(width)),{recursive:true});await page.screenshot({path:path.join(output,String(width),'satellite-'+locale+'.png'),fullPage:true});}
-  for(let i=0;i<5;i++){await page.click('.map-mode-pill-btn');await check(i%2===0?2:3);}
+  for(let i=0;i<5;i++){await page.click('.map-mode-pill-btn');await check(i%2===0?2:1);}
   if(output&&width!==1024){fs.mkdirSync(path.join(output,String(width)),{recursive:true});await page.screenshot({path:path.join(output,String(width),'neon-'+locale+'.png'),fullPage:true});}
   await page.click('.map-glass-ctrl-btn');await settle();await check(2);
   // Drag the actual map; loaded base tiles must still cover all nine viewport samples.
   await page.mouse.move(width===390?170:width/2,170);await page.mouse.down();await page.mouse.move(width===390?260:width/2+140,210,{steps:12});await page.mouse.up();await settle();await check(2);
-  await page.focus('.map-mode-pill-btn');await page.keyboard.press('Enter');await check(3);
+  await page.focus('.map-mode-pill-btn');await page.keyboard.press('Enter');await check(1);
  }
  // Corrupt the existing cache with all three formerly accepted invalid responses.
  const invalidUrls=await page.evaluate(async()=>{
   const cache=await caches.open('zf-sovereign-map-cache-v1');const urls=(await cache.keys()).map(r=>r.url).filter(url=>url.includes('World_Imagery'));for(let i=0;i<urls.length;i++)await cache.put(urls[i],new Response(i%3===0?'error':i%3===1?'':'not an image',{headers:{'Content-Type':i%3===0?'text/html':'image/png'}}));return urls;
  });
- assert.ok(invalidUrls.length>0);await page.reload({waitUntil:'networkidle2'});await check(3);
+ assert.ok(invalidUrls.length>0);await page.reload({waitUntil:'networkidle2'});await check(1);
  console.log('CACHE_RECOVERY',invalidUrls.length,'invalid cached images recovered');
  console.log('PASS',checks,'real-map assertions across 1280/1024/390 and en/ar; five switches, keyboard, pan/zoom, CDN failure and cache recovery');
  }finally{await b.close();}

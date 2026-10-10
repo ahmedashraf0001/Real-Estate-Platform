@@ -863,10 +863,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           .hero-title-glass-card {
-            background: var(--glass-strong) !important;
-            border-radius: var(--radius-lg);
+            background: transparent !important;
             border: none !important;
-            box-shadow: var(--shadow-glass) !important;
+            box-shadow: none !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
             padding: 0 !important;
@@ -991,12 +990,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: calc(1.22em * 2 + 4px + 1.85rem) !important;
             margin: 0 auto 0.2rem auto !important;
             padding: 0.95rem 0.8rem 0.85rem !important;
-            background: var(--glass-strong) !important;
-            backdrop-filter: var(--glass-blur) !important;
-            -webkit-backdrop-filter: var(--glass-blur) !important;
-            border: var(--glass-border) !important;
-            border-radius: 20px !important;
-            box-shadow: var(--shadow-glass) !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
@@ -1084,7 +1082,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             -webkit-text-fill-color: transparent !important;
             color: transparent !important;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
-            text-shadow: var(--glass-text-shadow) !important;
+            text-shadow: none !important;
             white-space: nowrap !important;
           }
 
@@ -1961,20 +1959,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .stat-lbl {
             font-size: 0.65rem;
           }
-        }
-        [data-theme="light"] .hero-title-glass-card .gold-text-span {
-          color: var(--text-primary) !important;
-          -webkit-text-fill-color: var(--text-primary) !important;
-          background: none !important;
-          filter: none !important;
-        }
-        [data-theme="light"] .hero-title-glass-card .white-text-span {
-          background: linear-gradient(135deg, #B8934A 0%, #8C6826 55%, #6B4E1B 100%) !important;
-          -webkit-background-clip: text !important;
-          background-clip: text !important;
-          -webkit-text-fill-color: transparent !important;
-          color: transparent !important;
-          filter: none !important;
         }
       `}</style>
     </div>

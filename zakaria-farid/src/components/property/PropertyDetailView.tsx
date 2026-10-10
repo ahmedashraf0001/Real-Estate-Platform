@@ -2725,14 +2725,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .carousel-card-slot {
           position: absolute;
-          width: 72vw;
-          max-width: 960px;
-          height: 58vh;
-          max-height: 600px;
+          width: min(88vw, 1320px);
+          height: 100%;
+          max-height: 100%;
           border-radius: 24px;
           overflow: hidden;
           will-change: transform, opacity;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           transition: border-color var(--transition-fast), box-shadow var(--transition-smooth), opacity var(--transition-fast);
         }
 
@@ -2766,7 +2768,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .carousel-card-img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
           display: block;
         }
 
@@ -4942,6 +4946,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             gap: 0;
             justify-content: center;
             border-radius: 50%;
+          }
+          .carousel-card-slot {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            border-radius: 16px !important;
           }
           .dock-title-group {
             display: none;

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { createFrameScheduler } from '@/lib/utils/frameScheduler';
+import { getNavbarSurfaceState } from '@/lib/utils/navbarScroll';
 
 interface NavbarProps {
   currentView?: 'home' | 'properties' | 'detail' | 'about' | 'contact' | 'map' | 'admin' | 'maintenance' | 'not-found';
@@ -88,7 +89,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     let scrolled = false;
     const scrollFrame = createFrameScheduler(() => {
-      const next = window.scrollY > 30;
+      const surface = getNavbarSurfaceState(window.scrollY);
+      const next = surface === 'glass';
       if (next !== scrolled) {
         scrolled = next;
         setIsScrolled(next);
@@ -148,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           initial={false}
           animate={{
             x: 0,
-            maxWidth: isMapMode && isDesktop ? 1040 : 1280,
+            maxWidth: isMapMode && isDesktop ? 680 : 1280,
           }}
           transition={{
             type: 'spring',
@@ -300,10 +302,21 @@ export const Navbar: React.FC<NavbarProps> = ({
         @media (min-width: 993px) {
           .map-glass-capsule {
             padding: 0 1.35rem;
+            width: auto;
+            max-width: fit-content;
           }
 
           .map-glass-capsule .desktop-nav {
             gap: 1.25rem;
+          }
+
+          .navbar-wrapper:has(.map-glass-capsule) .nav-capsule-container {
+            justify-content: flex-start;
+          }
+
+          .navbar-wrapper[dir="rtl"]:has(.map-glass-capsule) .nav-capsule-container,
+          [dir="rtl"] .navbar-wrapper:has(.map-glass-capsule) .nav-capsule-container {
+            justify-content: flex-start;
           }
         }
 
@@ -322,22 +335,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
         }
 
-        /* 2. Strong tint over hero imagery; retain the existing no-blur state. */
+        @media (prefers-reduced-motion: reduce) {
+          .nav-glass-capsule {
+            transition: none !important;
+          }
+        }
+
+        /* 2. Transparent top state over hero imagery; glass appears on scroll. */
         .nav-glass-capsule.hero-blended {
-          background: var(--glass-strong) !important;
+          background: transparent !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
-          border: var(--glass-border) !important;
-          box-shadow: var(--shadow-glass) !important;
+          border-color: transparent !important;
+          box-shadow: none !important;
         }
 
         [data-theme="dark"] .nav-glass-capsule.hero-blended,
         [data-theme="light"] .nav-glass-capsule.hero-blended {
-          background: var(--glass-strong) !important;
-          border: var(--glass-border) !important;
+          background: transparent !important;
+          border-color: transparent !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
-          box-shadow: var(--shadow-glass) !important;
+          box-shadow: none !important;
         }
 
         /* 3. Scrolled / Separated State */
@@ -386,8 +405,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .nav-glass-capsule.hero-blended .blended-pill {
-          background: transparent !important;
-          color: var(--text-primary) !important;
+          background: rgba(0, 0, 0, 0.25) !important;
+          color: #FFFFFF !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        [data-theme="light"] .nav-glass-capsule.hero-blended .blended-pill {
+          background: rgba(255, 255, 255, 0.85) !important;
+          color: #0D1117 !important;
+          border-color: rgba(30, 24, 16, 0.16) !important;
         }
 
         .nav-glass-capsule.separated-glass.detail-glass-capsule { background: var(--glass-strong); }
@@ -416,6 +442,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           text-shadow: var(--glass-text-shadow);
         }
 
+        [data-theme="light"] .hero-blended .nav-link {
+          color: #0D1117 !important;
+          font-weight: 700;
+          text-shadow: none;
+        }
+
         .nav-link:hover,
         .nav-link.active {
           color: var(--gold-primary);
@@ -424,6 +456,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         .hero-blended .nav-link:hover,
         .hero-blended .nav-link.active {
           color: var(--gold-primary);
+        }
+
+        [data-theme="light"] .hero-blended .nav-link:hover,
+        [data-theme="light"] .hero-blended .nav-link.active {
+          color: var(--gold-dark) !important;
         }
 
         .nav-indicator {
