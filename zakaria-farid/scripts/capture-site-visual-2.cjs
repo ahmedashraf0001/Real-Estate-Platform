@@ -91,6 +91,60 @@ async function measureContrast(page, selector, theme) {
   return metrics;
 }
 
+async function assertFullscreenImage(page, image, fixture) {
+  await image.evaluate(e => e.decode());
+  await page.waitForFunction(() => {
+    const image = document.querySelector('.carousel-card-slot.slot-center .carousel-card-img');
+    if (!image || !image.complete || !image.naturalWidth) return false;
+    for (let e = image; e; e = e.parentElement) {
+      if (Number(getComputedStyle(e).opacity) < 0.999) return false;
+    }
+    return true;
+  });
+  const geometry = await image.evaluate(e => {
+    const box = e.getBoundingClientRect();
+    const style = getComputedStyle(e);
+    const scale = style.objectFit === 'cover'
+      ? Math.max(box.width / e.naturalWidth, box.height / e.naturalHeight)
+      : Math.min(box.width / e.naturalWidth, box.height / e.naturalHeight);
+    const width = e.naturalWidth * scale, height = e.naturalHeight * scale;
+    const content = { x: box.x + (box.width - width) / 2, y: box.y + (box.height - height) / 2, width, height };
+    const clips = [{ x: 0, y: 0, width: innerWidth, height: innerHeight }];
+    for (let ancestor = e; ancestor; ancestor = ancestor.parentElement) {
+      const css = getComputedStyle(ancestor);
+      if (ancestor === e || /(hidden|clip|scroll|auto)/.test(css.overflowX + css.overflowY)) {
+        const rect = ancestor.getBoundingClientRect();
+        clips.push({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+      }
+    }
+    const top = document.querySelector('.lightbox-top-bar').getBoundingClientRect();
+    const bottom = document.querySelector('.lightbox-bottom-dock').getBoundingClientRect();
+    return { naturalWidth: e.naturalWidth, naturalHeight: e.naturalHeight, content, clips, topBottom: top.bottom, bottomTop: bottom.top };
+  });
+  assert.equal(geometry.naturalWidth, fixture.width, 'Fixture must decode at its expected width');
+  assert.equal(geometry.naturalHeight, fixture.height, 'Fixture must decode at its expected height');
+  const { content } = geometry;
+  for (const clip of geometry.clips) {
+    assert.ok(content.x >= clip.x - 1 && content.y >= clip.y - 1 &&
+      content.x + content.width <= clip.x + clip.width + 1 &&
+      content.y + content.height <= clip.y + clip.height + 1, 'Full image content must be unclipped');
+  }
+  assert.ok(content.y >= geometry.topBottom - 1 && content.y + content.height <= geometry.bottomTop + 1,
+    'Full image content must fit between fullscreen controls');
+  const screenshot = await page.screenshot();
+  const { data, info } = await sharp(screenshot).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  for (const mark of fixture.marks) {
+    const x = Math.round(content.x + mark.x / fixture.width * content.width);
+    const y = Math.round(content.y + mark.y / fixture.height * content.height);
+    const pixel = [...data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3)];
+    // The floating header casts a shadow over top marks: compare hue, retaining a visible brightness floor.
+    const peak = Math.max(...pixel), expectedPeak = Math.max(...mark.rgb);
+    assert.ok(peak >= 100 && pixel.every((value, i) => Math.abs(value / peak - mark.rgb[i] / expectedPeak) <= 0.08),
+      `${mark.name} corner must be visible: ${pixel}`);
+  }
+  return { screenshot, geometry };
+}
+
 async function run() {
   console.log(`Connecting to ${BASE}...`);
   console.log(`Saving screenshots to ${SHOTS_DIR}...`);
@@ -181,71 +235,55 @@ async function run() {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 3. LIGHTBOX FULLSCREEN (Landscape & Portrait at 1920 & 390)
+    // 3. LIGHTBOX FULLSCREEN (Landscape & Portrait at 1920, 1280 & 390)
     // ─────────────────────────────────────────────────────────────
-    console.log('Testing Req 3: Lightbox Fullscreen cropping checks (1920 & 390)...');
-    for (const width of [1920, 390]) {
-      const height = width === 1920 ? 951 : 844;
+    console.log('Testing Req 3: decoded fullscreen landscape and portrait (1920, 1280, 390)...');
+    for (const width of [1920, 1280, 390]) {
+      const height = width === 1920 ? 951 : width === 1280 ? 800 : 844;
       await page.setViewportSize({ width, height });
       await page.goto(`${BASE}/ar/properties/${gounaSlug}`, { waitUntil: 'networkidle' });
-      await wait(1000);
-
-      // Open fullscreen lightbox
-      const fullscreenBtn = page.locator('.gallery-fullscreen-btn');
-      await fullscreenBtn.scrollIntoViewIfNeeded();
-      await fullscreenBtn.click();
-      await wait(1000);
-
-      const lightboxOverlay = page.locator('.lightbox-overlay');
-      await lightboxOverlay.waitFor({ timeout: 10000 });
-
-      // Landscape image (first card)
-      const centerImg = page.locator('.carousel-card-slot.slot-center .carousel-card-img').first();
-      await centerImg.waitFor({ timeout: 5000 });
-      const imgStyle = await centerImg.evaluate(e => {
-        const s = getComputedStyle(e);
-        return {
-          objectFit: s.objectFit,
-          clientWidth: e.clientWidth,
-          clientHeight: e.clientHeight,
-          naturalWidth: e.naturalWidth,
-          naturalHeight: e.naturalHeight
-        };
-      });
-      console.log(`Lightbox at ${width}px landscape:`, imgStyle);
-      assert.equal(imgStyle.objectFit, 'contain', 'Image must have object-fit: contain');
-      await page.screenshot({ path: path.join(SHOTS_DIR, `lightbox-fullscreen-landscape-${width}.png`) });
-
-      // Switch image or test portrait
-      // Replace active image src with a portrait image aspect ratio test to verify contain without crop
-      await page.evaluate(() => {
-        const img = document.querySelector('.carousel-card-slot.slot-center .carousel-card-img');
-        if (img) {
-          // 800x1200 portrait SVG data URL
-          img.setAttribute('src', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><rect width="800" height="1200" fill="%231a202c"/><circle cx="400" cy="600" r="250" fill="%23d4af37"/><text x="400" y="620" font-size="48" fill="%23ffffff" text-anchor="middle">Portrait Test</text></svg>');
+      const imageUrl = await page.locator('.main-hero-img').first().evaluate(e => e.currentSrc || e.src);
+      assert.ok(imageUrl, 'Production gallery must expose an image URL');
+      for (const orientation of ['landscape', 'portrait']) {
+        const fixture = { width: orientation === 'landscape' ? 1200 : 800, height: orientation === 'landscape' ? 800 : 1200 };
+        assert.ok(orientation === 'landscape' ? fixture.width > fixture.height : fixture.height > fixture.width);
+        fixture.marks = [
+          { name: 'TL', x: 48, y: 48, rgb: [240, 40, 40] },
+          { name: 'TR', x: fixture.width - 48, y: 48, rgb: [40, 220, 60] },
+          { name: 'BL', x: 48, y: fixture.height - 48, rgb: [40, 80, 240] },
+          { name: 'BR', x: fixture.width - 48, y: fixture.height - 48, rgb: [240, 220, 40] }
+        ];
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${fixture.width}" height="${fixture.height}"><rect width="100%" height="100%" fill="#243344"/><rect x="4" y="4" width="${fixture.width - 8}" height="${fixture.height - 8}" fill="none" stroke="white" stroke-width="8"/>${fixture.marks.map(m => `<rect x="${m.x - 32}" y="${m.y - 32}" width="64" height="64" fill="rgb(${m.rgb})"/>`).join('')}<text x="50%" y="50%" text-anchor="middle" fill="white" font-size="48">${orientation} ${fixture.width} x ${fixture.height}</text></svg>`;
+        const body = await sharp(Buffer.from(svg)).png().toBuffer();
+        await page.route(imageUrl, route => route.fulfill({ status: 200, contentType: 'image/png', body }));
+        try {
+          await page.reload({ waitUntil: 'networkidle' });
+          const fullscreen = page.locator('.gallery-fullscreen-btn');
+          await fullscreen.scrollIntoViewIfNeeded();
+          await fullscreen.click();
+          const image = page.locator('.carousel-card-slot.slot-center .carousel-card-img').first();
+          await image.waitFor({ state: 'visible' });
+          await wait(800);
+          const green = await assertFullscreenImage(page, image, fixture);
+          console.log(`GREEN fullscreen ${orientation} ${width}x${height}:`, green.geometry);
+          await image.evaluate(e => e.style.setProperty('object-fit', 'cover', 'important'));
+          let red;
+          try { await assertFullscreenImage(page, image, fixture); } catch (error) { red = error; }
+          await image.evaluate(e => e.style.removeProperty('object-fit'));
+          assert.ok(red && /unclipped|corner must be visible/.test(red.message), 'Checker must reject cover cropping');
+          console.log(`RED cover ${orientation} ${width}: ${red.message}`);
+          fs.writeFileSync(path.join(SHOTS_DIR, `lightbox-fullscreen-${orientation}-${width}.png`), green.screenshot);
+          const close = page.locator('.lightbox-close-btn');
+          await close.focus();
+          assert.ok(await close.evaluate(e => document.activeElement === e), 'Fullscreen close must accept keyboard focus');
+          await page.keyboard.press('Enter');
+          await page.locator('.lightbox-overlay').waitFor({ state: 'hidden' });
+        } finally {
+          await page.unroute(imageUrl);
         }
-      });
-      await wait(500);
-
-      const portraitStyle = await centerImg.evaluate(e => {
-        const s = getComputedStyle(e);
-        return {
-          objectFit: s.objectFit,
-          clientWidth: e.clientWidth,
-          clientHeight: e.clientHeight
-        };
-      });
-      console.log(`Lightbox at ${width}px portrait:`, portraitStyle);
-      assert.equal(portraitStyle.objectFit, 'contain', 'Portrait image must have object-fit: contain');
-      await page.screenshot({ path: path.join(SHOTS_DIR, `lightbox-fullscreen-portrait-${width}.png`) });
-
-      // Close lightbox
-      const closeBtn = page.locator('.lightbox-close-btn');
-      await closeBtn.click();
-      await wait(500);
+      }
     }
 
-    // ─────────────────────────────────────────────────────────────
     // 4 & 5. /ar/map SATELLITE & DIRECTORY (1920, 1280, 390)
     // ─────────────────────────────────────────────────────────────
     console.log('Testing Req 4 & 5: Map directory & Satellite layers (1920, 1280, 390)...');
