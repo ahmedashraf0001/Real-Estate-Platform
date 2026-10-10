@@ -44,7 +44,7 @@ import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/catego
 import { computeMetricLayout, openingSegments } from '@/lib/layering/floorplanLayout';
 import { fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 
-import BuildingBlueprintPreview from '@/components/blueprint/BuildingBlueprintPreview';
+import BuildingTileEditor from './blueprint/BuildingTileEditor';
 import { buildingFloorKey, floorLabel, selectBuildingFloor, patchBlueprintZone } from '@/lib/layering/buildingBlueprint';
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
 import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
@@ -734,7 +734,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     | { mode: 'floor'; floorKey: string }
     | { mode: 'unit'; floorKey: string; unitId: string }
   >({ mode: 'elevation' });
-  const [buildingPreview, setBuildingPreview] = useState(true);
 
   // ── Canvas Pan & Zoom Interactive States ──
   const [canvasPan, setCanvasPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -1155,46 +1154,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       trades,
     };
   }, [isAr]);
-
-  const handlePropagateUnit = () => {
-    if (bldView.mode !== 'unit' || !buildingModel) return;
-    const unit = buildingModel.units.find(u => u.id === bldView.unitId);
-    if (!unit) return;
-    const letter = (unit.instance_label || '').trim().slice(-1).toUpperCase();
-    if (!/[A-Z]/.test(letter)) return;
-
-    const cloneZones = (zones: ZoneInstance[], levelLabel?: string): ZoneInstance[] =>
-      zones.map((z, i) => ({
-        ...z,
-        id: `zone-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}`,
-        level_label: levelLabel ?? z.level_label,
-        trades: (z.trades || []).map(t => ({
-          ...t,
-          id: `trade-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          attributes: t.attributes.map(a => ({ ...a })),
-        })),
-        spatial: z.spatial
-          ? { ...z.spatial, openings: z.spatial.openings?.map(o => ({ ...o, id: `open-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })) }
-          : undefined,
-        children: z.children && z.children.length > 0 ? cloneZones(z.children, levelLabel ?? z.level_label) : undefined,
-      }));
-
-    const targets = buildingModel.units.filter(u =>
-      u.id !== unit.id && (u.instance_label || '').trim().slice(-1).toUpperCase() === letter,
-    );
-    if (targets.length === 0) {
-      showToast(isAr ? 'لا توجد وحدات مطابقة' : 'No matching units found');
-      return;
-    }
-    const targetIds = new Set(targets.map(t => t.id));
-    pushHistory(zoneInstances);
-    onZoneInstancesChange(zoneInstances.map(z =>
-      targetIds.has(z.id) ? { ...z, children: cloneZones(unit.children ?? [], z.level_label) } : z,
-    ));
-    showToast(isAr
-      ? `تم التطبيق على ${targets.length} ${targets.length === 1 ? 'وحدة' : 'وحدات'}`
-      : `Applied to ${targets.length} ${targets.length === 1 ? 'unit' : 'units'}`);
-  };
 
   const handleAddRoom = (templateId: string) => {
     if (propertyType === 'building') {
@@ -3626,7 +3585,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   }, [viewAnimKey]);
 
   return (
-    <div className={`fp-root ${propertyType === 'building' && buildingPreview ? 'fp-building-preview' : ''}`} dir={isAr ? 'rtl' : 'ltr'} ref={rootRef} data-lenis-prevent="true" onKeyDown={e => {
+    <div className={`fp-root ${propertyType === 'building' ? 'fp-building-preview' : ''}`} dir={isAr ? 'rtl' : 'ltr'} ref={rootRef} data-lenis-prevent="true" onKeyDown={e => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement || (e.target as HTMLElement).isContentEditable || (e.target as HTMLElement).closest('.fp-row')) return;
       if (!composerActive || !selectedZoneId || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
       e.preventDefault(); e.stopPropagation();
@@ -3638,61 +3597,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       handleUpdateSpatial(selectedZoneId, { pos_x_m: Math.max(0, x + (e.key === 'ArrowRight' ? step : e.key === 'ArrowLeft' ? -step : 0)), pos_y_m: Math.max(0, y + (e.key === 'ArrowDown' ? step : e.key === 'ArrowUp' ? -step : 0)) });
     }}>
 
-      {propertyType === 'building' ? (
-        <div className="fp-floor-tabs" style={buildingPreview ? { display: 'none' } : undefined}>
-          <nav className="fp-crumbs" aria-label={isAr ? 'مسار المبنى' : 'Building navigation'}>
-            <button
-              type="button"
-              className={`fp-crumb ${bldView.mode === 'elevation' ? 'active' : ''}`}
-              onClick={() => {
-                setBldView({ mode: 'elevation' });
-                setSelectedZoneId(null);
-                setComposerTool('select');
-              }}
-            >
-              <Building size={13} />
-              <span>{isAr ? 'المبنى' : 'Building'}</span>
-            </button>
-            {bldView.mode !== 'elevation' && (
-              <>
-                <span className="fp-crumb-sep" aria-hidden="true">›</span>
-                <button
-                  type="button"
-                  className={`fp-crumb ${bldView.mode === 'floor' ? 'active' : ''}`}
-                  onClick={() => {
-                    setBldView({ mode: 'floor', floorKey: bldView.floorKey });
-                    setSelectedZoneId(null);
-                    setComposerTool('select');
-                  }}
-                >
-                  {bldView.floorKey === 'bld_basement'
-                    ? (isAr ? 'البدروم' : 'Basement')
-                    : bldView.floorKey === 'bld_ground'
-                      ? (isAr ? 'الدور الأرضي' : 'Ground Floor')
-                      : bldView.floorKey === 'bld_roof'
-                        ? (isAr ? 'السطح' : 'Roof')
-                        : floorLabel(bldView.floorKey, isAr)}
-                </button>
-              </>
-            )}
-            {bldView.mode === 'unit' && (() => {
-              const unit = buildingModel?.units.find(u => u.id === bldView.unitId);
-              return (
-                <>
-                  <span className="fp-crumb-sep" aria-hidden="true">›</span>
-                  <span className="fp-crumb active" aria-current="page">{unit ? zoneLabel(unit, isAr) : (isAr ? 'وحدة' : 'Unit')}</span>
-                </>
-              );
-            })()}
-            {bldView.mode === 'unit' && (
-              <button type="button" className="fp-crumb-propagate" onClick={handlePropagateUnit}>
-                <Copy size={12} />
-                <span>{isAr ? 'تطبيق على الوحدات المطابقة' : 'Apply to matching units'}</span>
-              </button>
-            )}
-          </nav>
-        </div>
-      ) : (
+      {propertyType !== 'building' && (
       <div className="fp-floor-tabs">
         <div className="fp-floor-tabs-scroll" role="tablist">
           {Object.entries(floorGroups).map(([key, group], _idx, entries) => {
@@ -3783,17 +3688,16 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       </div>
       )}
 
-      {propertyType === 'building' && <div className="fp-building-modes" role="group" aria-label={isAr ? 'طريقة العرض' : 'View mode'}>
-        <button type="button" aria-pressed={buildingPreview} onClick={() => setBuildingPreview(true)}>{isAr ? 'معاينة المخطط' : 'Plan preview'}</button>
-        <button type="button" aria-pressed={!buildingPreview} onClick={() => setBuildingPreview(false)}>{isAr ? 'تحرير الأبعاد والموقع' : 'Edit dimensions and position'}</button>
-      </div>}
+      {propertyType === 'building' ? (
+        <BuildingTileEditor zones={zoneInstances} onChange={onZoneInstancesChange} inventory={buildingUnits} selectedId={selectedZoneId} onSelect={setSelectedZoneId} onInspect={onInspectZone} isAr={isAr} />
+      ) : (
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
 
         <div className="fp-canvas-panel">
           {/* ── Single Unified Sleek CAD Header Toolbar ── */}
           <div className="fp-canvas-bar">
             <div className="fp-canvas-bar-left">
-              {previewSlots.length > 0 && (propertyType !== 'building' || bldView.mode !== 'elevation') && (
+              {previewSlots.length > 0 && (
                 <div className="fp-tools" role="group" aria-label={isAr ? 'أدوات المخطط والمغناطيس' : 'CAD Designer Studio Tools'}>
                   {/* Magnetic Snapping Toggle */}
                   <button
@@ -3948,7 +3852,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
             </div>
           </div>
 
-          {composerActive && currentSelectedZone && (!buildingPreview || propertyType !== 'building') && <fieldset className="fp-numeric-layout">
+          {composerActive && currentSelectedZone && <fieldset className="fp-numeric-layout">
             <legend>{isAr ? 'الموقع والأبعاد بالمتر' : 'Position and dimensions in metres'}</legend>
             {(['pos_x_m', 'pos_y_m', 'width_m', 'length_m'] as const).map((field, i) => <label key={field}>
               <span>{(isAr ? ['الموضع الأفقي', 'الموضع الرأسي', 'العرض', 'الطول'] : ['X', 'Y', 'Width', 'Height'])[i]}</span>
@@ -3957,7 +3861,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           </fieldset>}
           <div className="fp-canvas-body" style={{ position: 'relative' }}>
             {/* Floating Bottom-Right Zoom & Pan Controls */}
-            <div className="fp-floating-zoom-widget" style={propertyType === 'building' && buildingPreview ? { display: 'none' } : undefined}>
+            <div className="fp-floating-zoom-widget">
               <button
                 type="button"
                 className="fp-float-zoom-btn"
@@ -3985,438 +3889,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                 <Plus size={13} />
               </button>
             </div>
-            {propertyType === 'building' && buildingPreview ? (
-              <BuildingBlueprintPreview zones={zoneInstances} inventory={buildingUnits} view={bldView} onViewChange={setBldView} selectedId={selectedZoneId} onSelect={setSelectedZoneId} onInspect={onInspectZone} isAr={isAr} />
-            ) : propertyType === 'building' && bldView.mode === 'elevation' && buildingModel ? (() => {
-              const sigFirstFloor = new Map<string, string>();
-              for (const f of buildingModel.floors) {
-                if (!sigFirstFloor.has(f.signature)) sigFirstFloor.set(f.signature, f.key);
-              }
-              const hasBasement = buildingModel.basement.length > 0;
-              const hasRoof = buildingModel.roof.length > 0;
-              const hasGround = buildingModel.ground.length > 0 || buildingModel.others.length > 0;
-              const floorsList = [...buildingModel.floors].reverse();
-              const totalFloorsCount = floorsList.length;
-
-              if (totalFloorsCount === 0 && !hasRoof && !hasGround && !hasBasement) {
-                return (
-                  <div className="fp-empty-box">
-                    <Building size={36} className="fp-empty-icon" />
-                    <h4 className="fp-empty-title">{isAr ? 'لا توجد طوابق بعد' : 'No floors yet'}</h4>
-                    <p className="fp-empty-desc">{isAr ? 'أضف مناطق المبنى من القائمة الجانبية.' : 'Add building zones from the side list.'}</p>
-                  </div>
-                );
-              }
-
-              // Dimensions for the 760x480 architectural canvas
-              const bldX = 120;
-              const bldW = 460;
-              const bldRight = bldX + bldW; // 580
-              const basementH = hasBasement ? 48 : 0;
-              const groundBaseY = hasBasement ? 398 : 420; // ±0.00m line
-              const groundH = Math.min(74, Math.max(54, (groundBaseY - 50) / (totalFloorsCount + (hasRoof ? 1 : 0) + 1.2) * 1.25));
-              const groundY = groundBaseY - groundH;
-              const roofStructH = hasRoof ? Math.min(44, Math.max(30, (groundY - 50) / (totalFloorsCount + 1) * 0.85)) : 0;
-              const availTypicalH = groundY - 50 - roofStructH;
-              const typFloorH = Math.min(68, Math.max(38, availTypicalH / Math.max(1, totalFloorsCount)));
-              const actualTypicalTotalH = totalFloorsCount * typFloorH;
-              const roofY = groundY - actualTypicalTotalH;
-              return (
-                <svg key={viewAnimKey} viewBox="0 0 760 480" className="fp-canvas-svg fp-building-elevation fp-view-animated" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <pattern id="adminElevGrid" width="12" height="12" patternUnits="userSpaceOnUse">
-                      <path d="M 12 0 L 0 0 0 12" fill="none" stroke="rgba(37, 99, 235, 0.07)" strokeWidth="0.5" />
-                    </pattern>
-                    <pattern id="adminElevMajorGrid" width="60" height="60" patternUnits="userSpaceOnUse">
-                      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(37, 99, 235, 0.12)" strokeWidth="0.8" />
-                    </pattern>
-                    <pattern id="adminElevGroundHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                      <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" />
-                    </pattern>
-                    <linearGradient id="adminElevGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="rgba(127, 180, 216, 0.35)" />
-                      <stop offset="40%" stopColor="rgba(127, 180, 216, 0.15)" />
-                      <stop offset="60%" stopColor="rgba(37, 99, 235, 0.08)" />
-                      <stop offset="100%" stopColor="rgba(127, 180, 216, 0.25)" />
-                    </linearGradient>
-                    <linearGradient id="adminElevBalconyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="rgba(127, 180, 216, 0.28)" />
-                      <stop offset="100%" stopColor="rgba(127, 180, 216, 0.06)" />
-                    </linearGradient>
-                    <linearGradient id="adminElevLobbyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="rgba(37, 99, 235, 0.22)" />
-                      <stop offset="100%" stopColor="rgba(37, 99, 235, 0.04)" />
-                    </linearGradient>
-                    <filter id="adminElevHoverGlow" x="-10%" y="-10%" width="120%" height="120%">
-                      <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2563eb" floodOpacity="0.6" />
-                    </filter>
-                  </defs>
-
-                  {/* CAD Blueprint Background Grid */}
-                  <rect width="760" height="480" fill="url(#adminElevGrid)" />
-                  <rect width="760" height="480" fill="url(#adminElevMajorGrid)" opacity="0.4" />
-
-                  {/* Left Datum / Elevation Level Lines */}
-                  {floorsList.map((f, idx) => {
-                    const floorY = roofY + idx * typFloorH;
-                    const datumM = ((floorsList.length - idx) * 3.3).toFixed(2);
-                    return (
-                      <g key={`datum-${f.key}`} className="fp-datum-group">
-                        <line x1="20" y1={floorY} x2={bldX - 8} y2={floorY} stroke="rgba(37, 99, 235, 0.3)" strokeDasharray="3 3" />
-                        <circle cx="34" cy={floorY} r="4" fill="none" stroke="#2563eb" strokeWidth="1" />
-                        <line x1="30" y1={floorY} x2="38" y2={floorY} stroke="#2563eb" strokeWidth="1" />
-                        <line x1="34" y1={floorY - 4} x2="34" y2={floorY + 4} stroke="#2563eb" strokeWidth="1" />
-                        <text x="44" y={floorY + 3} fontSize="8.5" fill="#2563eb" fontFamily="monospace" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-                          +{datumM}m
-                        </text>
-                      </g>
-                    );
-                  })}
-                  {/* Ground Datum Line */}
-                  <g className="fp-datum-group">
-                    <line x1="20" y1={groundBaseY} x2={bldX - 8} y2={groundBaseY} stroke="#2563eb" strokeWidth="1.2" />
-                    <text x="44" y={groundBaseY + 3} fontSize="9" fill="#2563eb" fontWeight="800" fontFamily="monospace" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-                      ±0.00m
-                    </text>
-                  </g>
-                  {hasBasement && (
-                    <g className="fp-datum-group">
-                      <line x1="20" y1={groundBaseY + basementH} x2={bldX - 8} y2={groundBaseY + basementH} stroke="rgba(37, 99, 235, 0.3)" strokeDasharray="3 3" />
-                      <text x="44" y={groundBaseY + basementH + 3} fontSize="8.5" fill="#2563eb" fontFamily="monospace" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-                        -3.00m
-                      </text>
-                    </g>
-                  )}
-
-                  {/* ─── ROOFTOP ARCHITECTURAL CROWN ─── */}
-                  {hasRoof && (
-                    <g
-                      role="button"
-                      tabIndex={0}
-                      className="fp-elev-floor-group"
-                      style={{ cursor: 'pointer' }}
-                      aria-label={`${isAr ? 'السطح والتراس' : 'Roof Terrace'} — ${floorSqm(buildingModel.roof)} m²`}
-                      onClick={() => {
-                        setBldView({ mode: 'floor', floorKey: 'bld_roof' });
-                        setSelectedZoneId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setBldView({ mode: 'floor', floorKey: 'bld_roof' });
-                          setSelectedZoneId(null);
-                        }
-                      }}
-                    >
-                      {/* Left Rooftop Modern Pergola */}
-                      <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
-                        <rect width="140" height="24" fill="rgba(37, 99, 235, 0.08)" stroke="#2563eb" strokeWidth="1.2" />
-                        {[20, 40, 60, 80, 100, 120].map(px => (
-                          <line key={`perg-${px}`} x1={px} y1="0" x2={px} y2="24" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
-                        ))}
-                        <line x1="0" y1="0" x2="140" y2="0" stroke="#2563eb" strokeWidth="2" />
-                      </g>
-
-                      {/* Center Elevator Penthouse Machine Room */}
-                      <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
-                        <rect width="80" height="32" rx="2" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1.5" />
-                        <line x1="20" y1="10" x2="60" y2="10" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
-                        <line x1="20" y1="16" x2="60" y2="16" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
-                        <line x1="20" y1="22" x2="60" y2="22" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
-                        <text x="40" y="7" fontSize="7" fill="#2563eb" textAnchor="middle" fontWeight="700" fontFamily="monospace">ELEVATOR PENTHOUSE</text>
-                      </g>
-
-                      {/* Right Rooftop Water Storage Tanks */}
-                      <g transform={`translate(${bldRight - 110}, ${roofY - 22})`}>
-                        <rect x="0" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
-                        <rect x="42" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
-                        <line x1="34" y1="13" x2="42" y2="13" stroke="#7FB4D8" strokeWidth="1.5" />
-                        <text x="38" y="-1" fontSize="6.5" fill="#7FB4D8" textAnchor="middle" fontFamily="monospace">WATER TANKS</text>
-                      </g>
-
-                      {/* Roof Parapet & Glass Balustrade */}
-                      <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="#2563eb" />
-                      <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
-
-                      {/* Roof Info Card on the Right */}
-                      <g transform={`translate(${bldRight + 16}, ${roofY - 20})`}>
-                        <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                        <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'السطح والتراس' : 'Roof Terrace'}
-                        </text>
-                        <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
-                          {`${floorSqm(buildingModel.roof)} m²`}
-                        </text>
-                        <text x="130" y="25" fontSize="7.5" fill="rgba(255, 255, 255, 0.5)" textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'عرض ‹' : 'Inspect ›'}
-                        </text>
-                      </g>
-                    </g>
-                  )}
-
-                  {/* ─── TYPICAL RESIDENTIAL FLOORS (FACADE & BALCONIES) ─── */}
-                  {floorsList.map((floor, idx) => {
-                    const floorY = roofY + idx * typFloorH;
-                    const isLinked = sigFirstFloor.get(floor.signature) !== floor.key;
-                    const unitsCount = floor.units.length;
-
-                    return (
-                      <g
-                        key={floorLabel(floor.key, isAr)}
-                        role="button"
-                        tabIndex={0}
-                        className="fp-elev-floor-group"
-                        style={{ cursor: 'pointer' }}
-                        aria-label={`${floorLabel(floor.key, isAr)} — ${floor.sqm} m² — ${unitsCount} ${isAr ? 'شقق' : 'units'}`}
-                        onClick={() => {
-                          setBldView({ mode: 'floor', floorKey: floor.key });
-                          setSelectedZoneId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setBldView({ mode: 'floor', floorKey: floor.key });
-                            setSelectedZoneId(null);
-                          }
-                        }}
-                      >
-                        {/* Floor Backdrop with Hover Filter */}
-                        <rect
-                          x={bldX}
-                          y={floorY}
-                          width={bldW}
-                          height={typFloorH}
-                          fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(37, 99, 235, 0.02)'}
-                          stroke="none"
-                          className="fp-elev-floor-bg"
-                        />
-
-                        {/* Concrete Floor Slab Band */}
-                        <rect x={bldX - 4} y={floorY + typFloorH - 3} width={bldW + 8} height="4" fill="#2563eb" opacity="0.9" />
-
-                        {/* Left Residential Bay (Flat A Balcony & Windows) */}
-                        <g transform={`translate(${bldX + 16}, ${floorY + 4})`}>
-                          {/* Sliding French Doors Behind Balcony */}
-                          <rect x="10" y="4" width="70" height={typFloorH - 12} fill="url(#adminElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="45" y1="4" x2="45" y2={typFloorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
-                          {/* Cantilevered Balcony Slab & Glass Balustrade */}
-                          <rect x="4" y={typFloorH - 10} width="82" height="4" fill="#2563eb" />
-                          <rect x="4" y={typFloorH - 22} width="82" height="12" fill="url(#adminElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                          {/* Vertical Glass Stanchions */}
-                          <line x1="24" y1={typFloorH - 22} x2="24" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="44" y1={typFloorH - 22} x2="44" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="64" y1={typFloorH - 22} x2="64" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-
-                          {/* Bedroom Window Set */}
-                          <rect x="100" y="8" width="56" height={typFloorH - 20} rx="1" fill="url(#adminElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="128" y1="8" x2="128" y2={typFloorH - 12} stroke="#7FB4D8" strokeWidth="1" />
-                        </g>
-
-                        {/* Center Architectural Spine (Staircase & Elevator Core Glazing) */}
-                        <g transform={`translate(${bldX + bldW / 2 - 28}, ${floorY + 4})`}>
-                          <rect width="56" height={typFloorH - 8} style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1.2" />
-                          {/* Modern Vertical Architectural Mullions */}
-                          <line x1="14" y1="0" x2="14" y2={typFloorH - 8} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1" />
-                          <line x1="28" y1="0" x2="28" y2={typFloorH - 8} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1" />
-                          <line x1="42" y1="0" x2="42" y2={typFloorH - 8} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1" />
-                        </g>
-
-                        {/* Right Residential Bay (Flat B Windows & Balcony) */}
-                        <g transform={`translate(${bldRight - 186}, ${floorY + 4})`}>
-                          {/* Bedroom Window Set */}
-                          <rect x="14" y="8" width="56" height={typFloorH - 20} rx="1" fill="url(#adminElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="42" y1="8" x2="42" y2={typFloorH - 12} stroke="#7FB4D8" strokeWidth="1" />
-
-                          {/* Sliding French Doors Behind Balcony */}
-                          <rect x="90" y="4" width="70" height={typFloorH - 12} fill="url(#adminElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="125" y1="4" x2="125" y2={typFloorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
-                          {/* Cantilevered Balcony Slab & Glass Balustrade */}
-                          <rect x="84" y={typFloorH - 10} width="82" height="4" fill="#2563eb" />
-                          <rect x="84" y={typFloorH - 22} width="82" height="12" fill="url(#adminElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                          {/* Vertical Glass Stanchions */}
-                          <line x1="104" y1={typFloorH - 22} x2="104" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="124" y1={typFloorH - 22} x2="124" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                          <line x1="144" y1={typFloorH - 22} x2="144" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                        </g>
-
-                        {/* Floor Badge on Building Facade */}
-                        <g transform={`translate(${bldX + 10}, ${floorY + 12})`}>
-                          <rect width="52" height="15" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
-                          <text x="26" y="11" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
-                            {floorLabel(floor.key, isAr)}
-                          </text>
-                        </g>
-
-                        {/* Right Floor Info Card */}
-                        <g transform={`translate(${bldRight + 16}, ${floorY + (typFloorH - 32) / 2})`}>
-                          <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                          <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                            {floorLabel(floor.key, isAr)}
-                          </text>
-                          <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
-                            {`${floor.sqm} m² • ${unitsCount} ${isAr ? 'شقق' : 'units'}`}
-                          </text>
-                          {isLinked && (
-                            <text x="130" y="14" fontSize="7" fill="rgba(37, 99, 235, 0.7)" textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif">
-                              {isAr ? 'نموذج مكرر' : 'Linked'}
-                            </text>
-                          )}
-                          <text x="130" y="25" fontSize="7.5" fill="rgba(255, 255, 255, 0.5)" textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif">
-                            {isAr ? 'عرض ‹' : 'Inspect ›'}
-                          </text>
-                        </g>
-                      </g>
-                    );
-                  })}
-
-                  {/* ─── GROUND FLOOR & GRAND ENTRANCE PORTICO ─── */}
-                  {hasGround && (
-                    <g
-                      role="button"
-                      tabIndex={0}
-                      className="fp-elev-floor-group"
-                      style={{ cursor: 'pointer' }}
-                      aria-label={`${isAr ? 'الدور الأرضي والمدخل' : 'Ground Floor & Lobby'} — ${floorSqm([...buildingModel.ground, ...buildingModel.others])} m²`}
-                      onClick={() => {
-                        setBldView({ mode: 'floor', floorKey: 'bld_ground' });
-                        setSelectedZoneId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setBldView({ mode: 'floor', floorKey: 'bld_ground' });
-                          setSelectedZoneId(null);
-                        }
-                      }}
-                    >
-                      {/* Ground Floor Base Box */}
-                      <rect x={bldX} y={groundY} width={bldW} height={groundH} fill="url(#adminElevLobbyGrad)" stroke="none" className="fp-elev-floor-bg" />
-
-                      {/* Floor Slab */}
-                      <rect x={bldX - 4} y={groundY + groundH - 3} width={bldW + 8} height="4" fill="#2563eb" opacity="0.9" />
-
-                      {/* Double-Height Glazing on Left and Right of Lobby */}
-                      <rect x={bldX + 16} y={groundY + 8} width={130} height={groundH - 18} fill="url(#adminElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                      <line x1={bldX + 59} y1={groundY + 8} x2={bldX + 59} y2={groundY + groundH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                      <line x1={bldX + 102} y1={groundY + 8} x2={bldX + 102} y2={groundY + groundH - 10} stroke="#7FB4D8" strokeWidth="1" />
-
-                      <rect x={bldRight - 146} y={groundY + 8} width={130} height={groundH - 18} fill="url(#adminElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-                      <line x1={bldRight - 103} y1={groundY + 8} x2={bldRight - 103} y2={groundY + groundH - 10} stroke="#7FB4D8" strokeWidth="1" />
-                      <line x1={bldRight - 60} y1={groundY + 8} x2={bldRight - 60} y2={groundY + groundH - 10} stroke="#7FB4D8" strokeWidth="1" />
-
-                      {/* Grand Center Entrance Portico & Canopy */}
-                      <g transform={`translate(${bldX + bldW / 2 - 55}, ${groundY})`}>
-                        {/* Cantilevered Portico Canopy with Spotlights */}
-                        <polygon points="-8,10 118,10 112,0 -2,0" fill="#2563eb" />
-                        <line x1="-8" y1="10" x2="118" y2="10" stroke="#FFFFFF" strokeWidth="1" />
-                        {/* Spotlights */}
-                        <circle cx="20" cy="10" r="2" fill="#FFFFFF" />
-                        <circle cx="55" cy="10" r="2" fill="#FFFFFF" />
-                        <circle cx="90" cy="10" r="2" fill="#FFFFFF" />
-
-                        {/* Glazed Double Entrance Doors */}
-                        <rect x="15" y="10" width="80" height={groundH - 14} fill="url(#adminElevGlassGrad)" stroke="#2563eb" strokeWidth="1.5" />
-                        <line x1="55" y1="10" x2="55" y2={groundH - 4} stroke="#2563eb" strokeWidth="1.5" />
-                        {/* Brass Pull Handles */}
-                        <line x1="51" y1={groundH / 2} x2="51" y2={groundH / 2 + 12} stroke="#2563eb" strokeWidth="2" />
-                        <line x1="59" y1={groundH / 2} x2="59" y2={groundH / 2 + 12} stroke="#2563eb" strokeWidth="2" />
-
-                        {/* Entrance Steps */}
-                        <rect x="5" y={groundH - 4} width="100" height="4" fill="#2563eb" />
-                      </g>
-
-                      {/* Ground Floor Label */}
-                      <g transform={`translate(${bldX + 10}, ${groundY + 12})`}>
-                        <rect width="66" height="15" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
-                        <text x="33" y="11" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'الأرضي' : 'GROUND'}
-                        </text>
-                      </g>
-
-                      {/* Right Ground Info Card */}
-                      <g transform={`translate(${bldRight + 16}, ${groundY + (groundH - 32) / 2})`}>
-                        <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                        <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'الدور الأرضي والمدخل' : 'Ground Floor & Lobby'}
-                        </text>
-                        <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
-                          {`${floorSqm([...buildingModel.ground, ...buildingModel.others])} m²`}
-                        </text>
-                        <text x="130" y="25" fontSize="7.5" fill="rgba(255, 255, 255, 0.5)" textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'عرض ‹' : 'Inspect ›'}
-                        </text>
-                      </g>
-                    </g>
-                  )}
-
-                  {/* ─── BASEMENT & SUBTERRANEAN GARAGE ─── */}
-                  {/* Ground Surface Datum Level Solid Line & Hatch */}
-                  <rect x="0" y={groundBaseY} width="760" height="6" fill="url(#adminElevGroundHatch)" />
-                  <line x1="0" y1={groundBaseY} x2="760" y2={groundBaseY} stroke="#2563eb" strokeWidth="2" />
-
-                  {hasBasement && (
-                    <g
-                      role="button"
-                      tabIndex={0}
-                      className="fp-elev-floor-group"
-                      style={{ cursor: 'pointer' }}
-                      aria-label={`${isAr ? 'البدروم والجراج' : 'Basement Garage'} — ${floorSqm(buildingModel.basement)} m²`}
-                      onClick={() => {
-                        setBldView({ mode: 'floor', floorKey: 'bld_basement' });
-                        setSelectedZoneId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setBldView({ mode: 'floor', floorKey: 'bld_basement' });
-                          setSelectedZoneId(null);
-                        }
-                      }}
-                    >
-                      {/* Basement Retaining Walls & Box */}
-                      <rect x={bldX} y={groundBaseY} width={bldW} height={basementH} style={{ fill: 'var(--fp-canvas-bg)', opacity: 0.9 }} stroke="rgba(37, 99, 235, 0.3)" strokeDasharray="4 2" className="fp-elev-floor-bg" />
-
-                      {/* Garage Vehicular Ramp Entrance */}
-                      <g transform={`translate(${bldX + 24}, ${groundBaseY + 6})`}>
-                        <polygon points="0,0 80,0 80,36 0,36" fill="rgba(37, 99, 235, 0.08)" stroke="#2563eb" strokeWidth="1" strokeDasharray="3 2" />
-                        <line x1="0" y1="0" x2="80" y2="36" stroke="#2563eb" strokeWidth="1.5" />
-                        <text x="40" y="22" fontSize="7.5" fill="#2563eb" textAnchor="middle" fontFamily="monospace" fontWeight="700">RAMP ↘ 15%</text>
-                      </g>
-
-                      {/* Parking Bays Grid Hints */}
-                      {[140, 190, 240, 290, 340, 390].map(bx => (
-                        <g key={`pbay-${bx}`} transform={`translate(${bldX + bx}, ${groundBaseY + 6})`}>
-                          <rect width="40" height="36" fill="rgba(255, 255, 255, 0.02)" stroke="rgba(37, 99, 235, 0.2)" strokeWidth="0.8" />
-                          <text x="20" y="22" fontSize="7" fill="rgba(255, 255, 255, 0.4)" textAnchor="middle" fontFamily="monospace">P</text>
-                        </g>
-                      ))}
-
-                      {/* Basement Floor Label */}
-                      <g transform={`translate(${bldX + 10}, ${groundBaseY + 12})`}>
-                        <rect width="66" height="15" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
-                        <text x="33" y="11" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'البدروم' : 'BASEMENT'}
-                        </text>
-                      </g>
-
-                      {/* Right Basement Info Card */}
-                      <g transform={`translate(${bldRight + 16}, ${groundBaseY + (basementH - 32) / 2})`}>
-                        <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                        <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'البدروم والجراج' : 'Basement / Garage'}
-                        </text>
-                        <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
-                          {`${floorSqm(buildingModel.basement)} m²`}
-                        </text>
-                        <text x="130" y="25" fontSize="7.5" fill="rgba(255, 255, 255, 0.5)" textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif">
-                          {isAr ? 'عرض ‹' : 'Inspect ›'}
-                        </text>
-                      </g>
-                    </g>
-                  )}
-                </svg>
-              );
-            })() : previewSlots.length > 0 ? (() => {
+            {previewSlots.length > 0 ? (() => {
               const minX = Math.min(...previewSlots.map(s => s.x));
               const maxX = Math.max(...previewSlots.map(s => s.x + s.w));
               const minY = Math.min(...previewSlots.map(s => s.y));
@@ -4637,11 +4110,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                             handleComposerClick(s.zone.id, e);
                             return;
                           }
-                          if (propertyType === 'building' && bldView.mode === 'floor' && s.zone.zone_template_id === 'bld.unit' && e.type === 'keydown') {
-                            setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: s.zone.id });
-                            setSelectedZoneId(null);
-                            return;
-                          }
                           selectZone(s.zone.id, true);
                         }}
                         onPointerDown={(e) => handleCanvasRoomPointerDown(s.zone.id, e)}
@@ -4650,11 +4118,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            if (propertyType === 'building' && bldView.mode === 'floor' && s.zone.zone_template_id === 'bld.unit' && e.type === 'keydown') {
-                              setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: s.zone.id });
-                              setSelectedZoneId(null);
-                              return;
-                            }
                             selectZone(s.zone.id, true);
                           }
                         }}
@@ -5750,23 +5213,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         isAr={isAr}
                         rowRef={(el) => { rowRefs.current[zone.id] = el; }}
                         onSelect={() => {
-                          if (propertyType === 'building') {
-                            if (zone.zone_template_id === 'bld.unit') {
-                              if (bldView.mode === 'elevation' || bldView.mode === 'floor') {
-                                setBldView({ mode: 'unit', floorKey: buildingFloorKey(zone), unitId: zone.id });
-                                selectZone(zone.id);
-                                return;
-                              }
-                            }
-                            if (bldView.mode === 'elevation') {
-                              if (zone.zone_template_id === 'bld.ground_lobby' || zone.zone_template_id === 'bld.basement' || zone.zone_template_id === 'bld.roof') {
-                                const key = zone.zone_template_id === 'bld.ground_lobby' ? 'bld_ground' : zone.zone_template_id === 'bld.basement' ? 'bld_basement' : 'bld_roof';
-                                setBldView({ mode: 'floor', floorKey: key });
-                                selectZone(zone.id);
-                                return;
-                              }
-                            }
-                          }
                           selectZone(zone.id);
                         }}
                         onPatch={(updates) => handleUpdateSpatial(zone.id, updates)}
@@ -5976,7 +5422,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         return listPortalTarget ? createPortal(listPanel, listPortalTarget) : listPanel;
         })()}
 
-      </div>
+      </div>)}
 
       {wizardOpen && (
         <div className="fp-wizard-overlay" role="dialog" aria-modal="true" aria-label={isAr ? 'معالج توليد التخطيط الذكي' : 'Smart layout generation wizard'}>
@@ -6554,9 +6000,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-building-preview .fp-canvas-body { padding: 0; }
         .fp-building-preview .fp-canvas-panel { border-radius: 0; box-shadow: none; }
         .fp-building-preview .fp-canvas-bar, .fp-building-preview .fp-recon { display: none; }
-        .fp-building-modes { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px; }
-        .fp-building-modes button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--gold-border); color: var(--gold-primary); background: var(--bg-surface); border-radius: 6px; cursor: pointer; }
-        .fp-building-modes button[aria-pressed='true'] { border-color: var(--gold-primary); }
         .fp-numeric-layout { display: flex; flex-wrap: wrap; gap: 12px; border: 0; border-bottom: 1px solid var(--fp-border); padding: 12px; }
         .fp-numeric-layout label { display: grid; gap: 6px; flex: 1; min-width: 100px; }
         .fp-numeric-layout input { width: 100%; min-height: 44px; padding: 8px; }
