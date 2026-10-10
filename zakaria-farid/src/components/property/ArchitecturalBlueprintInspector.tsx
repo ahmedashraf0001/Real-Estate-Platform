@@ -25,6 +25,7 @@ import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from
 import { ATTRIBUTE_TEMPLATES } from '@/lib/layering';
 import { blueprintLabel } from '@/lib/layering/labels';
 import BuildingBlueprintPreview from '@/components/blueprint/BuildingBlueprintPreview';
+import type { BlueprintEditing } from '@/components/blueprint/useBlueprintEditing';
 import { buildingFloorKey, floorLabel, selectBuildingFloor, type BlueprintView } from '@/lib/layering/buildingBlueprint';
 import { parseBlueprintView, serializeBlueprintView } from '@/lib/layering/publicBlueprint';
 import { zoneLabel } from '@/lib/layering/labels';
@@ -48,6 +49,9 @@ interface ArchitecturalBlueprintInspectorProps {
   propertyImages?: string[];
   inventory?: BuildingUnitItem[];
   onRequestUnit?: (unit: ZoneInstance) => void;
+  /** Admin: same drawing with edit controls; navigation stays local instead of in the URL. */
+  edit?: BlueprintEditing;
+  onInspect?: (id: string) => void;
 }
 
 interface TradeSpecItem {
@@ -306,6 +310,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   propertyType = 'apartment',
   inventory = [],
   onRequestUnit,
+  edit,
+  onInspect,
   propertyImages: _propertyImages = []
 }) => {
   const isAr = locale === 'ar';
@@ -317,12 +323,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     updateBldView(view);
     setIsFullscreen(false);
     setSelectedZoneId(null);
+    if (edit) return;
     const url = new URL(window.location.href);
     url.searchParams.set('bp', serializeBlueprintView(view));
     window.history.pushState(null, '', url);
   };
   useEffect(() => {
-    if (propertyType !== 'building') return;
+    if (propertyType !== 'building' || edit) return;
     const hydrate = () => {
       const view = parseBlueprintView(new URL(window.location.href).searchParams.get('bp'));
       const floor = view.mode !== 'elevation' ? selectBuildingFloor(zones, view.floorKey) : null;
@@ -333,7 +340,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     hydrate();
     window.addEventListener('popstate', hydrate);
     return () => window.removeEventListener('popstate', hydrate);
-  }, [propertyType, zones]);
+  }, [propertyType, zones, edit]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [activeModalZone, setActiveModalZone] = useState<ProcessedZone | null>(null);
   const [zoom, setZoom] = useState<number>(1);
@@ -1376,7 +1383,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       {propertyType === 'building' ? (
         <BuildingBlueprintPreview zones={zones} inventory={inventory} view={bldView}
           onViewChange={setBldView} selectedId={selectedZoneId} onSelect={setSelectedZoneId}
-          isAr={isAr} onRequestUnit={onRequestUnit}
+          isAr={isAr} onRequestUnit={onRequestUnit} edit={edit} onInspect={onInspect}
           elevation={bldView.mode === 'elevation' ? renderInlineStage() : undefined} />
       ) : renderInlineStage()}
 

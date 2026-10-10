@@ -123,3 +123,19 @@ test('pickers offer real tile types only, never floor-group templates', () => {
   assert.ok(SHARED_SPACE_TEMPLATES.some(t => t.id === 'bld.staircase'));
   assert.ok(ROOM_TEMPLATES.every(t => t.id.startsWith('apt.') && t.id !== 'apt.level'));
 });
+
+test('unit rooms are arranged like an apartment and sized by area', async () => {
+  const { arrangeUnitRooms, roomWeight } = await import('../../layering/blueprintEditor');
+  const ids = ['apt.reception', 'apt.master_bed', 'apt.kitchen', 'apt.balcony', 'apt.main_bath', 'apt.std_bed'];
+  const rooms = ids.map((id, i) => createZone({ templateId: id, sortOrder: i + 1 }));
+  const plan = arrangeUnitRooms(rooms);
+  assert.deepEqual(plan.front.map(z => z.zone_template_id), ['apt.balcony']);
+  assert.deepEqual(plan.social.map(z => z.zone_template_id), ['apt.reception', 'apt.kitchen']);
+  assert.deepEqual(plan.private.map(z => z.zone_template_id), ['apt.master_bed', 'apt.main_bath', 'apt.std_bed']);
+  const measured = { ...rooms[0], spatial: { length_m: 6, width_m: 5, sqm: 30 } } as ZoneInstance;
+  assert.equal(roomWeight(measured), 30);
+  assert.ok(roomWeight(rooms[0]) > roomWeight(rooms[4]), 'reception outweighs a bathroom by default');
+  const onlyBeds = arrangeUnitRooms([rooms[1], rooms[5]]);
+  assert.equal(onlyBeds.social.length + onlyBeds.private.length, 2);
+  assert.ok(onlyBeds.social.length > 0 && onlyBeds.private.length > 0, 'both columns used');
+});

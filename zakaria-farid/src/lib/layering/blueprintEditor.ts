@@ -208,3 +208,29 @@ export function deleteFloor(zones: ZoneInstance[], key: string): ZoneInstance[] 
 export function sortTiles(list: ZoneInstance[]): ZoneInstance[] {
   return [...list].sort((a, b) => a.sort_order - b.sort_order);
 }
+
+const FRONT_ROOMS = new Set(['apt.balcony', 'bld.balcony']);
+const PRIVATE_ROOMS = new Set(['apt.master_bed', 'apt.std_bed', 'apt.master_bath', 'apt.main_bath', 'apt.dressing']);
+const ROOM_DEFAULT_SQM: Record<string, number> = {
+  'apt.reception': 28, 'apt.master_bed': 16, 'apt.std_bed': 12, 'apt.master_bath': 5, 'apt.main_bath': 4.5,
+  'apt.kitchen': 9, 'apt.balcony': 6, 'apt.corridor': 6, 'apt.guest_bath': 2.5, 'apt.laundry': 5, 'apt.dressing': 6,
+};
+
+/** Recorded area, else length × width, else a typical size for the room type. Drives tile size only. */
+export function roomWeight(zone: ZoneInstance): number {
+  const s = zone.spatial;
+  const sqm = s?.sqm || (s && s.length_m > 0 && s.width_m > 0 ? s.length_m * s.width_m : 0);
+  return Math.max(2, sqm || ROOM_DEFAULT_SQM[zone.zone_template_id] || 10);
+}
+
+/** Apartment-like order: balconies along the front, living spaces by the entrance, bedrooms and baths on the private side. */
+export function arrangeUnitRooms(rooms: ZoneInstance[]): { front: ZoneInstance[]; social: ZoneInstance[]; private: ZoneInstance[] } {
+  const ordered = sortTiles(rooms);
+  const front = ordered.filter(z => FRONT_ROOMS.has(z.zone_template_id));
+  const privateSide = ordered.filter(z => PRIVATE_ROOMS.has(z.zone_template_id));
+  const social = ordered.filter(z => !FRONT_ROOMS.has(z.zone_template_id) && !PRIVATE_ROOMS.has(z.zone_template_id));
+  // A unit with only one kind of room still fills both columns.
+  if (!social.length && privateSide.length > 1) return { front, social: privateSide.slice(0, Math.ceil(privateSide.length / 2)), private: privateSide.slice(Math.ceil(privateSide.length / 2)) };
+  if (!privateSide.length && social.length > 1) return { front, social: social.slice(0, Math.ceil(social.length / 2)), private: social.slice(Math.ceil(social.length / 2)) };
+  return { front, social, private: privateSide };
+}

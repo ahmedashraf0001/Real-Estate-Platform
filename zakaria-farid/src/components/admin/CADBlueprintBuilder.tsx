@@ -44,7 +44,7 @@ import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/catego
 import { computeMetricLayout, openingSegments } from '@/lib/layering/floorplanLayout';
 import { fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 
-import BuildingTileEditor from './blueprint/BuildingTileEditor';
+import { ArchitecturalBlueprintInspector } from '@/components/property/ArchitecturalBlueprintInspector';
 import { buildingFloorKey, floorLabel, selectBuildingFloor, patchBlueprintZone } from '@/lib/layering/buildingBlueprint';
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
 import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
@@ -3689,7 +3689,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       )}
 
       {propertyType === 'building' ? (
-        <BuildingTileEditor zones={zoneInstances} onChange={onZoneInstancesChange} inventory={buildingUnits} selectedId={selectedZoneId} onSelect={setSelectedZoneId} onInspect={onInspectZone} isAr={isAr} />
+        <ArchitecturalBlueprintInspector zones={zoneInstances} propertyTitle="" locale={isAr ? 'ar' : 'en'} propertyType="building" inventory={buildingUnits} edit={{ onChange: onZoneInstancesChange }} onInspect={onInspectZone} />
       ) : (
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
 
