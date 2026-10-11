@@ -151,7 +151,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'contact', label: locale === 'ar' ? 'اتصل بنا' : 'Contact' }
   ];
 
-  const isBlendedMode = currentView === 'home' && !isScrolled;
+  const isHeroTopPage = currentView === 'home' || currentView === 'detail';
+  const isBlendedMode = isHeroTopPage && !isScrolled;
   const isMapMode = currentView === 'map' && !isLoading;
 
   return (
@@ -396,17 +397,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         /* 2. Transparent top state over hero imagery; glass appears on scroll. */
-        .nav-glass-capsule.hero-blended {
-          background: transparent !important;
-          backdrop-filter: none !important;
-          -webkit-backdrop-filter: none !important;
-          border-color: transparent !important;
-          box-shadow: none !important;
-        }
-
+        .nav-glass-capsule.hero-blended,
         [data-theme="dark"] .nav-glass-capsule.hero-blended,
         [data-theme="light"] .nav-glass-capsule.hero-blended {
           background: transparent !important;
+          background-color: transparent !important;
+          border: none !important;
           border-color: transparent !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
@@ -504,17 +500,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         .nav-link:hover,
         .nav-link.active {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .hero-blended .nav-link:hover,
         .hero-blended .nav-link.active {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         [data-theme="light"] .hero-blended .nav-link:hover,
         [data-theme="light"] .hero-blended .nav-link.active {
-          color: var(--gold-dark) !important;
+          color: var(--gold-text) !important;
         }
 
         .nav-indicator {
@@ -556,13 +552,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .lang-btn:hover {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           transform: translateY(-1px);
         }
 
         .active-lang {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           font-weight: 800;
         }
 
@@ -588,7 +584,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .bookmark-nav-btn.has-favorites {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           background: rgba(229, 184, 105, 0.12);
         }
@@ -612,7 +608,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         .theme-btn:hover,
         .bookmark-nav-btn:hover {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           transform: translateY(-1px);
         }
@@ -709,12 +705,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         .mobile-nav-link:hover {
           background: rgba(229, 184, 105, 0.12);
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .mobile-nav-link.active {
           background: rgba(229, 184, 105, 0.18);
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .mobile-active-dot {
@@ -786,7 +782,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
         [data-theme="light"] .nav-glass-capsule .nav-link.active,
         [data-theme="light"] .nav-glass-capsule .active-lang {
-          color: var(--gold-dark);
+          color: var(--gold-text);
         }
       `}</style>
     </header>

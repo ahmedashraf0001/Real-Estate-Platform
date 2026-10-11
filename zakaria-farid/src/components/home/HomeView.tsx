@@ -752,14 +752,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
             -webkit-background-clip: unset !important;
             background-clip: unset !important;
             -webkit-text-fill-color: #FFFFFF !important;
-            text-shadow: var(--glass-text-shadow) !important;
+            text-shadow: none !important;
+            filter: none !important;
             font-weight: 800 !important;
           }
 
           [data-theme="light"] .hero-pill-line-gold .gold-text-span {
             color: #FFFFFF !important;
             -webkit-text-fill-color: #FFFFFF !important;
-            text-shadow: var(--glass-text-shadow) !important;
+            text-shadow: none !important;
+            filter: none !important;
             font-weight: 800 !important;
           }
 
@@ -795,15 +797,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             padding: 0.05em 0.2em;
             margin: -0.05em -0.2em;
             overflow: visible;
+            filter: none !important;
+            text-shadow: none !important;
           }
 
           [data-theme="light"] .hero-pill-line-white .white-text-span {
-            background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             color: transparent !important;
-            filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.75)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9)) !important;
+            filter: none !important;
+            text-shadow: none !important;
             display: inline-block;
             padding: 0.05em 0.2em;
             margin: -0.05em -0.2em;
@@ -1004,42 +1009,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             text-shadow: var(--glass-text-shadow);
           }
 
-          /* Highlight glow perfectly centered behind text */
-          .glass-center-glow {
-            display: block !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 210px !important;
-            height: 80px !important;
-            border-radius: 50% !important;
-            background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.3) 0%, rgba(229, 184, 105, 0.1) 45%, transparent 75%) !important;
-            filter: blur(14px) !important;
-            pointer-events: none !important;
-            z-index: 1 !important;
-          }
-
+          /* Highlight glow and edge glint disabled */
+          .glass-center-glow,
           .glass-edge-glint {
-            display: block !important;
-            position: absolute !important;
-            top: 50% !important;
-            transform: translateY(-50%) !important;
-            width: 3px !important;
-            height: 48px !important;
-            background: linear-gradient(180deg, transparent 0%, rgba(255, 245, 220, 0.95) 50%, transparent 100%) !important;
-            filter: drop-shadow(0 0 10px rgba(255, 235, 180, 0.9)) !important;
-            pointer-events: none !important;
-            border-radius: 3px !important;
-            z-index: 3 !important;
-          }
-
-          .glint-left {
-            left: -1.5px !important;
-          }
-
-          .glint-right {
-            right: -1.5px !important;
+            display: none !important;
           }
 
           /* Lines Container: Fixed 2-Line Height to Eliminate Typing Resizing */
@@ -1059,7 +1032,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             z-index: 2 !important;
           }
 
-          /* Mobile Line 1: Rich Metallic Egyptian Gold */
+          /* Mobile Line 1: Crisp Pure White (matching dark theme) */
           .hero-pill-line-gold {
             display: flex !important;
             align-items: center !important;
@@ -1072,30 +1045,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
             margin: 0 auto !important;
             padding: 0 !important;
             line-height: 1.22 !important;
+            color: #FFFFFF !important;
           }
 
           .hero-pill-line-gold .gold-text-span {
             display: inline-block !important;
-            background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
-            -webkit-background-clip: text !important;
-            background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            color: transparent !important;
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
+            color: #FFFFFF !important;
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            filter: none !important;
             text-shadow: none !important;
             white-space: nowrap !important;
           }
 
           [data-theme="light"] .hero-pill-line-gold .gold-text-span {
-            background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
-            -webkit-background-clip: text !important;
-            background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            color: transparent !important;
-            filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75)) !important;
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            filter: none !important;
+            text-shadow: none !important;
           }
 
-          /* Mobile Line 2: Crisp Pure White */
+          /* Mobile Line 2: Metallic Egyptian Gold Gradient */
           .hero-pill-line-white {
             display: flex !important;
             align-items: center !important;
@@ -1112,16 +1084,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           .hero-pill-line-white .white-text-span {
             display: inline-block !important;
-            color: #FFFFFF !important;
-            background: none !important;
-            -webkit-background-clip: unset !important;
-            background-clip: unset !important;
-            -webkit-text-fill-color: #FFFFFF !important;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
             font-family: inherit !important;
             font-style: normal !important;
             font-weight: 800 !important;
-            text-shadow: var(--glass-text-shadow) !important;
+            filter: none !important;
+            text-shadow: none !important;
             white-space: nowrap !important;
+          }
+
+          [data-theme="light"] .hero-pill-line-white .white-text-span {
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+            filter: none !important;
+            text-shadow: none !important;
           }
 
           /* Mobile Arabic / RTL Sizing (-10% Adjusted) */
@@ -1138,12 +1121,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: clamp(1.34rem, 5.5vw, 1.54rem) !important;
             font-weight: 800 !important;
             letter-spacing: -0.015em !important;
-          }
-
-          [data-theme="light"] .hero-pill-line-white .white-text-span {
-            color: #FFFFFF !important;
-            -webkit-text-fill-color: #FFFFFF !important;
-            text-shadow: var(--glass-text-shadow) !important;
           }
 
           /* Mobile Sparkling Star Divider with Symmetrical Glowing Lines */
@@ -1286,7 +1263,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .dest-chip-arrow {
-            color: #C5A059;
+            color: var(--gold-text, #96670e);
           }
 
           /* Trust Guarantee Badges Bar */
@@ -1330,7 +1307,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-trust-icon {
-            color: #C5A059;
+            color: var(--gold-text, #96670e);
           }
 
           .hero-trust-divider {
@@ -1463,9 +1440,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .section-eyebrow-pill {
-          color: #C5A059;
-          background: rgba(197, 160, 89, 0.08);
-          border-color: rgba(197, 160, 89, 0.22);
+          color: var(--gold-text, #96670e) !important;
+          background: rgba(150, 103, 14, 0.08);
+          border-color: rgba(150, 103, 14, 0.25);
         }
 
         .eyebrow-dot {
@@ -1477,7 +1454,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .eyebrow-dot {
-          background: #C5A059;
+          background: var(--gold-text, #96670e);
         }
 
         .section-title {
@@ -1502,7 +1479,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .title-serif-accent {
-          color: #C5A059;
+          color: var(--gold-text, #96670e) !important;
         }
 
         .explore-catalog-btn {
@@ -1520,7 +1497,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .explore-catalog-btn {
-          color: #C5A059;
+          color: var(--gold-text, #96670e) !important;
         }
 
         .explore-catalog-btn:hover {
@@ -1741,7 +1718,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .seller-eyebrow {
-          color: #C5A059;
+          color: var(--gold-text, #96670e) !important;
         }
 
         .seller-confidential-tag {
@@ -1759,9 +1736,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .seller-confidential-tag {
-          color: #C5A059;
-          background: rgba(197, 160, 89, 0.1);
-          border-color: rgba(197, 160, 89, 0.25);
+          color: var(--gold-text, #96670e) !important;
+          background: rgba(150, 103, 14, 0.1);
+          border-color: rgba(150, 103, 14, 0.25);
         }
 
         .seller-title {
@@ -1808,7 +1785,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .stat-val {
-          color: #C5A059;
+          color: var(--gold-text, #96670e) !important;
         }
 
         .stat-lbl {
@@ -1897,8 +1874,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         [data-theme="light"] .seller-outline-btn:hover {
           background: #FFFFFF;
-          color: #C5A059;
-          border-color: rgba(197, 160, 89, 0.4);
+          color: var(--gold-text, #96670e);
+          border-color: rgba(150, 103, 14, 0.4);
         }
 
         @media (max-width: 960px) {
