@@ -24,7 +24,7 @@ Write <RUN_DIR>/verdict.txt whose FIRST LINE is exactly one word:
 - PASS — the tree fully satisfies the TASK (including any small fixes you made).
 - DONE — you fixed the remaining findings yourself and the tree fully satisfies the TASK.
 - BLOCKED — a decision only Claude/the user can make stops the task. Write the question on line 2.
-On PASS or DONE: run the GATES once, update the docs the TASK asks for (the handoff zakaria-farid/.agents/HANDOFF-2026-10-07-partner-payout-pricing.md (one line per task under Commits, sha left as TBD)), and write the FINAL REPORT to <RUN_DIR>/final.md.
+On PASS or DONE: run the GATES once, update only the docs the TASK names (never any HANDOFF file), and write the FINAL REPORT to <RUN_DIR>/final.md.
 If agy repeated a new kind of mistake, append a lesson to C:\Users\lyr1csan\.claude\skills\agy-lessons\LOG.md (next free L-number) and add or tighten one clause in that skill's SKILL.md.
 
 GATES (must all exit 0; report actual counts)
