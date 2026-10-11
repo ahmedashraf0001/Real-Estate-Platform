@@ -98,12 +98,21 @@ export interface RepriceUnitRowResult extends UnitPriceResult {
 }
 
 export interface RepriceBuildingResult {
+  blocked?: 'RATE_TOO_LOW';
   units: RepriceUnitRowResult[];
   totalPrice: string;
   lockedTotal: string;
   repricedTotal: string;
   lockedCount: number;
   repricedCount: number;
+}
+
+/** Default price per m² from the current list price, 2 decimals (a whole-EGP rate drifts the total). */
+export function defaultPricePerSqm(listPrice: Num, areaSqm: Num): string {
+  const list = D(listPrice || 0);
+  const area = D(areaSqm || 0);
+  if (!list.isPositive() || !area.isPositive()) return '0';
+  return list.dividedBy(area).toFixed(2);
 }
 
 /** Unit prices at a uniform price per m² (whole-property choice spread by area). */
@@ -123,38 +132,43 @@ export function priceUnitsAtRate(units: UnitPriceRow[], pricePerSqm: Num): UnitP
 
 /**
  * Reprice a building with units (BINDING RULE 2026-10-08):
- * - available units get new price per m² × their area (whole EGP via Math.round)
+ * - available units get new price per m² × their area (whole EGP, half-up using integer piastres)
  * - reserved/contracted units keep their current price (locked)
  * - total building price = sum of ALL units (locked + repriced)
+ * - [user-confirmed 2026-10-08] the last available unit absorbs the whole-EGP rounding remainder, so the
+ *   repriced units sum to rate × their total area (or to exactTotal, when given, no unit is locked and the
+ *   gap is only the 2-decimal rate rounding)
  */
 export function repriceBuilding(
   units: UnitPriceRow[],
   pricePerSqm: Num,
-  contractsOrContractedIds?: Iterable<string> | Array<{ building_unit_id?: string | null; status?: string }>
+  contractsOrContractedIds?: Iterable<string> | Array<{ building_unit_id?: string | null; status?: string }>,
+  exactTotal?: Num,
+  targetAreaSqm?: Num
 ): RepriceBuildingResult {
   const rate = D(pricePerSqm || 0);
 
   const contractedIds = new Set<string>();
-  if (contractsOrContractedIds) {
-    if (typeof (contractsOrContractedIds as any)[Symbol.iterator] === 'function') {
-      for (const item of contractsOrContractedIds as any) {
-        if (typeof item === 'string') {
-          contractedIds.add(item);
-        } else if (item && typeof item === 'object') {
-          if ((!item.status || item.status !== 'Rescinded') && item.building_unit_id) {
-            contractedIds.add(item.building_unit_id);
-          }
-        }
-      }
-    }
+  for (const item of contractsOrContractedIds ?? []) {
+    if (typeof item === 'string') contractedIds.add(item);
+    else if (item.status !== 'Rescinded' && item.building_unit_id) contractedIds.add(item.building_unit_id);
   }
+  const roundWholeProduct = (area: ReturnType<typeof D>) => {
+    // Both operands have two decimals. Round their exact product directly to EGP,
+    // without first rounding it to piastres (99.50 × 1.01 = 100.495 -> 100).
+    const product = rate.toCents() * area.toCents();
+    const whole = ((product < BigInt(0) ? -product : product) + BigInt(5000)) / BigInt(10000);
+    return D(product < BigInt(0) ? -whole : whole);
+  };
 
   let lockedTotal = D(0);
   let repricedTotal = D(0);
   let lockedCount = 0;
   let repricedCount = 0;
+  let repricedArea = D(0);
+  let lastRepricedIdx = -1;
 
-  const unitResults: RepriceUnitRowResult[] = units.map((u) => {
+  const unitResults: RepriceUnitRowResult[] = units.map((u, i) => {
     const current = D(u.price_egp || 0);
     const isLocked =
       Boolean(u.status && u.status !== 'available') ||
@@ -174,10 +188,11 @@ export function repriceBuilding(
     }
 
     const area = D(u.area_sqm > 0 ? u.area_sqm : 0);
-    const roundedPrice = Math.round(rate.times(area).toNumber());
-    const next = D(roundedPrice);
+    const next = roundWholeProduct(area);
     repricedTotal = repricedTotal.plus(next);
     repricedCount++;
+    repricedArea = repricedArea.plus(area);
+    lastRepricedIdx = i;
 
     return {
       unit_id: u.unit_id,
@@ -187,6 +202,28 @@ export function repriceBuilding(
       locked: false,
     };
   });
+
+  // Last available unit absorbs the rounding remainder (whole EGP).
+  if (lastRepricedIdx >= 0) {
+    const atRate = roundWholeProduct(repricedArea);
+    // exactTotal only covers the 2-decimal rate rounding; unit areas that do not add up to the
+    // building area must not be pushed onto one unit.
+    const useExact = exactTotal != null && lockedCount === 0 && targetAreaSqm != null &&
+      repricedArea.eq(targetAreaSqm) && D(exactTotal).toCents() % BigInt(100) === BigInt(0);
+    const target = useExact ? D(exactTotal as Num) : atRate;
+    const diff = target.minus(repricedTotal);
+    const last = unitResults[lastRepricedIdx];
+    const absorbed = D(last.newPrice).plus(diff);
+    if (absorbed.lt(0)) {
+      return { blocked: 'RATE_TOO_LOW', units: [], totalPrice: '0.00', lockedTotal: lockedTotal.toFixed(2),
+        repricedTotal: '0.00', lockedCount, repricedCount };
+    }
+    if (!diff.isZero()) {
+      last.newPrice = absorbed.toFixed(2);
+      last.change = absorbed.minus(last.currentPrice).toFixed(2);
+      repricedTotal = target;
+    }
+  }
 
   const totalPrice = lockedTotal.plus(repricedTotal);
 
@@ -198,17 +235,6 @@ export function repriceBuilding(
     lockedCount,
     repricedCount,
   };
-}
-
-/** Slider bounds: from 80% of the lower anchor to 130% of the higher anchor, rounded to 100 EGP/m². */
-export function priceSliderBounds(costPerSqm: Num, marketPricePerSqm: Num): { min: number; max: number; step: number } {
-  const c = D(costPerSqm || 0);
-  const m = D(marketPricePerSqm || 0);
-  const lo = c.isZero() ? m : (m.isZero() ? c : (c.lessThan(m) ? c : m));
-  const hi = c.greaterThan(m) ? c : m;
-  const min = Math.max(0, Math.floor(lo.times(0.8).dividedBy(100).toNumber()) * 100);
-  const max = Math.max(min + 100, Math.ceil(hi.times(1.3).dividedBy(100).toNumber()) * 100);
-  return { min, max, step: 100 };
 }
 
 export interface FeasibilityInput {

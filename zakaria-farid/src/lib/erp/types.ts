@@ -47,7 +47,8 @@ export type JournalSourceModule =
   | 'TAX' 
   | 'CAPITAL_CALL'
   | 'MANUAL'
-  | 'MANUAL_ADJUSTMENT';
+  | 'MANUAL_ADJUSTMENT'
+  | 'CONSTRUCTION_SETTLEMENT';
 
 export interface ERPJournalLine {
   line_id: string;

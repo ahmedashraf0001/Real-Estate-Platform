@@ -276,6 +276,7 @@ describe('Cash 101000 / InstaPay 102000 Payment Methods Architecture', () => {
       const settlement = prepareConstructionSettlement(fixtureCost, updatedCost, testPeriod);
       assert.strictEqual(settlement.journal.lines[1].account_code, '102000', 'Credit line must be 102000');
       assert.strictEqual(settlement.journal.lines[1].credit_amount, '3000.00');
+      assert.strictEqual(settlement.journal.source_module, 'CONSTRUCTION_SETTLEMENT', 'Contractor payments carry their own journal source');
 
       const updatedInst = settlement.updatedItem.payable_installments?.[0];
       assert.strictEqual(updatedInst?.payment_method, 'INSTAPAY_102000', 'Must normalize to INSTAPAY_102000');

@@ -85,10 +85,14 @@ export function calculateAccountStatement(
     }
   });
 
-  // 2. Sort chronologically ASC by entry_date then original entry order (tie-breaker)
+  // 2. Sort by date and creation time; retain source order for lines within one entry.
   periodLinesWithIndex.sort((a, b) => {
     const cmp = (a.line.entry_date || '').localeCompare(b.line.entry_date || '');
     if (cmp !== 0) return cmp;
+    if (a.line.created_at && b.line.created_at) {
+      const created = a.line.created_at.localeCompare(b.line.created_at);
+      if (created !== 0) return created;
+    }
     return a.originalIndex - b.originalIndex;
   });
 

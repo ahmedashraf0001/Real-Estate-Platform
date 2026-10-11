@@ -8,6 +8,15 @@ import {
 } from '@/lib/erp/accountStatement';
 
 describe('Account Statement Suite (ui-ledger-widgets)', () => {
+  it('same-day entries use creation order even when the store arrives newest first', () => {
+    const result = calculateAccountStatement([
+      { entry_id: 'later', entry_date: '2026-10-06', created_at: '2026-10-06T12:00:00Z', debit_amount: '0', credit_amount: '40' },
+      { entry_id: 'earlier', entry_date: '2026-10-06', created_at: '2026-10-06T09:00:00Z', debit_amount: '100', credit_amount: '0' },
+    ], { normalBalance: 'DEBIT' });
+    assert.deepEqual(result.lines.map(line => [line.entry_id, line.runningBalance.toFixed(2)]), [
+      ['earlier', '100.00'], ['later', '60.00'],
+    ]);
+  });
   // T1. debit-nature account, lines Dr 2,083,333 / Dr 7,500,000 / Cr 3,000,000 -> running 2,083,333 / 9,583,333 / 6,583,333; closing 6,583,333 "مدين".
   it('T1: debit-nature account running balances and closing balance', () => {
     const lines: AccountStatementLineInput[] = [

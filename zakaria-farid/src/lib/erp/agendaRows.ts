@@ -316,9 +316,7 @@ export function sortAgendaRows(
         const getPriorityRank = (status: string) => {
           if (status === 'overdue') return 1;
           if (status === 'due_today') return 2;
-          if (status === 'upcoming' || status === 'in_safe') return 3;
-          if (status === 'cleared' || status === 'paid') return 4;
-          return 5;
+          return 3;
         };
         const rankA = getPriorityRank(a.status);
         const rankB = getPriorityRank(b.status);

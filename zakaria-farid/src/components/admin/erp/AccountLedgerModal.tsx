@@ -7,8 +7,6 @@ import {
   Search, 
   ArrowUpDown, 
   RotateCcw,
-  User,
-  Building2,
   Zap,
   Coins,
   Key,
@@ -231,17 +229,17 @@ const getBadgeToneClass = (icon: string) => {
   switch (icon) {
     case 'down_payment':
     case 'installment':
-      return styles.statusPillGreen;
+      return shellStyles.statusPillGreen;
     case 'instapay':
     case 'transfer':
-      return styles.statusPillBlue;
+      return shellStyles.statusPillBlue;
     case 'handover':
     case 'supplement':
-      return styles.statusPillAmber;
+      return shellStyles.statusPillAmber;
     case 'expense':
-      return styles.statusPillRed;
+      return shellStyles.statusPillRed;
     default:
-      return styles.statusPillNeutral;
+      return shellStyles.statusPillNeutral;
   }
 };
 
@@ -750,6 +748,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       unit_id?: string;
       counter_codes?: string[];
       source_module?: string;
+      created_at?: string;
     }[] = [];
 
     journalEntries.forEach(entry => {
@@ -761,6 +760,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           entry_id: entry.entry_id,
           entry_number: entry.entry_number,
           entry_date: entry.entry_date,
+          created_at: entry.created_at,
           description: entry.description,
           debit_amount: line.debit_amount,
           credit_amount: line.credit_amount,
@@ -855,10 +855,12 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       await exportAccountLedgerExcel(
         account,
         journalEntries,
-        statement.closingBalance.toNumber(),
+        (statement.closingBalanceNature === account.normal_balance
+          ? statement.closingBalance : D(0).minus(statement.closingBalance)).toNumber(),
         contracts,
         properties,
-        isAr
+        isAr,
+        statement
       );
       toast.success(isAr ? 'تم تصدير كشف الحساب بنجاح إلى Excel' : 'Statement exported to Excel');
     } catch {
@@ -923,10 +925,16 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             <th className={styles.printTh}>{isAr ? 'البيان وشرح الحركة' : 'Description'}</th>
             <th className={styles.printThNum}>{isAr ? 'مدين' : 'Debit'}</th>
             <th className={styles.printThNum}>{isAr ? 'دائن' : 'Credit'}</th>
-            <th className={styles.printThNum}>{isAr ? 'الرصيد' : 'Balance'}</th>
+            {sortBy === 'date_asc' && <th className={styles.printThNum}>{isAr ? 'الرصيد' : 'Balance'}</th>}
           </tr>
         </thead>
         <tbody>
+          {sortBy === 'date_asc' && (
+            <tr className={styles.printTr}>
+              <td colSpan={6} className={styles.printTd}>{isAr ? 'رصيد أول المدة' : 'Opening Balance'}</td>
+              <td className={styles.printTdNum}>{fmtMoney(statement.openingBalance)}</td>
+            </tr>
+          )}
           {statement.lines.map((line, idx) => (
             <tr key={idx} className={styles.printTr}>
               <td className={styles.printTdCenter}>{idx + 1}</td>
@@ -942,9 +950,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               <td className={styles.printTdNum}>
                 {D(line.credit_amount).isZero() ? '—' : fmtMoney(line.credit_amount)}
               </td>
-              <td className={styles.printTdNum}>
+              {sortBy === 'date_asc' && <td className={styles.printTdNum}>
                 {fmtMoney(line.runningBalance)}
-              </td>
+              </td>}
             </tr>
           ))}
         </tbody>
@@ -955,7 +963,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             </td>
             <td className={styles.printTdNum}>{fmtMoney(statement.totalDebits)}</td>
             <td className={styles.printTdNum}>{fmtMoney(statement.totalCredits)}</td>
-            <td className={styles.printTdNum}>{fmtMoney(statement.closingBalance)}</td>
+            {sortBy === 'date_asc' && <td className={styles.printTdNum}>{fmtMoney(statement.closingBalance)}</td>}
           </tr>
         </tfoot>
       </table>
@@ -1177,7 +1185,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                               </span>
                             </td>
                             <td className={styles.tdType}>
-                              <span className={`${styles.statusPill} ${getBadgeToneClass(line.parsed.actionBadge.icon)}`}>
+                              <span className={`${shellStyles.statusPill} ${getBadgeToneClass(line.parsed.actionBadge.icon)}`}>
                                 {renderBadgeIcon(line.parsed.actionBadge.icon)}
                                 <span>{line.parsed.actionBadge.label}</span>
                               </span>
@@ -1201,8 +1209,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                       <tr className={styles.tfootRow}>
                         <td colSpan={4} className={styles.tfootLabel}>
                           {isAr
-                            ? `الإجمالي · ${displayLines.length} حركة`
-                            : `Total · ${displayLines.length} movements`}
+                            ? `الإجمالي · ${statement.lines.length} حركة`
+                            : `Total · ${statement.lines.length} movements`}
                         </td>
                         <td className={styles.tfootDebit}>{fmtMoney(statement.totalDebits)}</td>
                         <td className={styles.tfootCredit}>{fmtMoney(statement.totalCredits)}</td>

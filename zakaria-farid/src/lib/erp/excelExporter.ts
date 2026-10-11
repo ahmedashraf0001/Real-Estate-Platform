@@ -5,6 +5,8 @@
  */
 
 import ExcelJS from 'exceljs';
+import { D } from './math';
+import { calculateAccountStatement, AccountStatementResult } from './accountStatement';
 import { LiveERPDataset } from './supabaseService';
 import { ERPAccount, ERPJournalEntry, ERPContract, ERPPropertyCostItem, ERPInstallmentSchedule } from './types';
 import { Property } from '@/lib/supabase/types';
@@ -923,7 +925,8 @@ export async function exportAccountLedgerExcel(
   currentBalance?: number | string,
   contracts?: ERPContract[],
   properties?: Property[],
-  isAr: boolean = true
+  isAr: boolean = true,
+  statement?: AccountStatementResult
 ): Promise<void> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'شركة زكريا فريد للتطوير العقاري';
@@ -971,44 +974,30 @@ export async function exportAccountLedgerExcel(
   });
   styleHeaderRow(headerRow, isAr);
 
-  // Filter matching journal lines
-  const lines: {
-    date: string;
-    entryNumber: string;
-    description: string;
-    debit: number;
-    credit: number;
-  }[] = [];
-
-  journalEntries.forEach(entry => {
-    entry.lines.forEach(line => {
-      if (line.account_code === account.account_code) {
-        lines.push({
-          date: entry.entry_date,
-          entryNumber: entry.entry_number,
-          description: line.memo || entry.description,
-          debit: parseFloat(line.debit_amount) || 0,
-          credit: parseFloat(line.credit_amount) || 0
-        });
-      }
-    });
-  });
-
-  // Sort chronologically
-  lines.sort((a, b) => a.date.localeCompare(b.date));
-
-  let runningBalance = 0;
+  const statementData = statement ?? calculateAccountStatement(journalEntries.flatMap(entry =>
+    entry.lines.filter(line => line.account_code === account.account_code).map(line => ({
+      ...line, entry_id: entry.entry_id, entry_number: entry.entry_number,
+      entry_date: entry.entry_date, created_at: entry.created_at, description: line.memo || entry.description,
+    }))
+  ), { normalBalance: account.normal_balance });
+  const lines = statementData.lines.map(line => ({
+    date: line.entry_date, entryNumber: line.entry_number, description: line.description,
+    debit: D(line.debit_amount).toNumber(), credit: D(line.credit_amount).toNumber(),
+    runningBalance: line.runningBalance,
+  }));
   let rowIdx = 6;
+
+  if (statement) {
+    ws.getCell('D6').value = isAr ? 'رصيد أول المدة' : 'Opening Balance';
+    ws.getCell('G6').value = statement.openingBalance.toNumber();
+    ws.getCell('G6').numFmt = '#,##0.00';
+    rowIdx++;
+  }
+  const firstMovementRow = rowIdx;
 
   lines.forEach((l, idx) => {
     const r = ws.getRow(rowIdx);
     r.height = 22;
-
-    if (account.normal_balance === 'DEBIT') {
-      runningBalance += l.debit - l.credit;
-    } else {
-      runningBalance += l.credit - l.debit;
-    }
 
     r.getCell(1).value = idx + 1;
     r.getCell(2).value = l.date;
@@ -1016,7 +1005,7 @@ export async function exportAccountLedgerExcel(
     r.getCell(4).value = l.description;
     r.getCell(5).value = l.debit;
     r.getCell(6).value = l.credit;
-    r.getCell(7).value = runningBalance;
+    r.getCell(7).value = l.runningBalance.toNumber();
 
     r.getCell(1).alignment = { horizontal: 'center' };
     r.getCell(2).alignment = { horizontal: 'center' };
@@ -1057,17 +1046,19 @@ export async function exportAccountLedgerExcel(
   sumRow.getCell(4).alignment = { horizontal: 'right' };
 
   const debitSum = sumRow.getCell(5);
-  debitSum.value = { formula: `SUM(E6:E${rowIdx - 1})` };
+  debitSum.value = lines.length ? { formula: `SUM(E${firstMovementRow}:E${rowIdx - 1})`, result: statementData.totalDebits.toNumber() } : 0;
   debitSum.numFmt = '#,##0.00 "ج.م"';
   debitSum.font = { bold: true };
 
   const creditSum = sumRow.getCell(6);
-  creditSum.value = { formula: `SUM(F6:F${rowIdx - 1})` };
+  creditSum.value = lines.length ? { formula: `SUM(F${firstMovementRow}:F${rowIdx - 1})`, result: statementData.totalCredits.toNumber() } : 0;
   creditSum.numFmt = '#,##0.00 "ج.م"';
   creditSum.font = { bold: true };
 
   const finalBal = sumRow.getCell(7);
-  finalBal.value = runningBalance;
+  finalBal.value = (account.normal_balance === 'DEBIT'
+    ? statementData.openingBalance.plus(statementData.totalDebits).minus(statementData.totalCredits)
+    : statementData.openingBalance.plus(statementData.totalCredits).minus(statementData.totalDebits)).toNumber();
   finalBal.numFmt = '#,##0.00 "ج.م"';
   finalBal.font = { bold: true, size: 11, color: { argb: PALETTE.emerald } };
 

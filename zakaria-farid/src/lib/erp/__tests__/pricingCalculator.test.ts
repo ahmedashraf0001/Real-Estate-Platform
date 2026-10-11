@@ -4,9 +4,9 @@ import {
   priceBuiltProperty,
   pricePerSqmForMarkup,
   priceUnitsAtRate,
-  priceSliderBounds,
   estimateFeasibility,
   repriceBuilding,
+  defaultPricePerSqm,
 } from '../pricingCalculator';
 import { ERPSupabaseService } from '../supabaseService';
 import { D } from '../math';
@@ -58,11 +58,7 @@ describe('pricingCalculator — helpers', () => {
     assert.equal(rows[1].newPrice, '0.00');
   });
 
-  it('slider bounds span cost and market', () => {
-    assert.deepEqual(priceSliderBounds(666.67, 20000), { min: 500, max: 26000, step: 100 });
-    assert.deepEqual(priceSliderBounds(0, 0), { min: 0, max: 100, step: 100 });
-    assert.deepEqual(priceSliderBounds(12000, 10000), { min: 8000, max: 15600, step: 100 });
-  });
+
 });
 
 describe('pricingCalculator — feasibility', () => {
@@ -183,66 +179,128 @@ describe('repriceBuilding & save handler (T1-T4)', () => {
     assert.equal(res.totalPrice, '2650000.00');
   });
 
-  // T4: save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged
-  it('T4 save handler: non-finalize save with unitPrices updates only available units and sets property price to the passed total; contracted/reserved unchanged', async () => {
-    const updatePayloads: any[] = [];
+  // T4: non-finalize save is one atomic RPC call: unit prices go to record_property_price,
+  // which reprices available units and saves price = sum of units (migration 20261008120000).
+  it('T4 save handler: non-finalize save sends unitPrices in the single RPC call and makes no client-side update', async () => {
     const rpcCalls: any[] = [];
+    let tableCalls = 0;
 
     const mockSupabase: any = {
       rpc: async (fn: string, args: any) => {
         rpcCalls.push({ fn, args });
-        return { data: { stage: 'revised', units_repriced: 0 }, error: null };
+        return { data: { stage: 'revised', units_repriced: 1, price_egp: 2850000 }, error: null };
       },
-      from: (table: string) => ({
-        select: (_cols: string) => ({
-          eq: (_col: string, _val: any) => ({
-            single: async () => ({
-              data: {
-                building_units: [
-                  { unit_id: 'u1', area_sqm: 100, price_egp: 800000, status: 'available' },
-                  { unit_id: 'u2', area_sqm: 100, price_egp: 950000, status: 'reserved' },
-                  { unit_id: 'u3', area_sqm: 100, price_egp: 1000000, status: 'contracted', contract_id: 'c1' },
-                ],
-              },
-              error: null,
-            }),
-          }),
-        }),
-        update: (payload: any) => ({
-          eq: async (_col: string, _val: any) => {
-            updatePayloads.push(payload);
-            return { error: null };
-          },
-        }),
-      }),
+      from: () => {
+        tableCalls++;
+        throw new Error('no client-side table access expected');
+      },
     };
 
+    const unitPrices = { u1: 900000, u2: 900000 };
     const res = await ERPSupabaseService.recordPropertyPrice(mockSupabase, {
       propertyId: 'p-1',
       priceEgp: 2750000,
       finalize: false,
-      unitPrices: {
-        u1: 900000, // available unit repriced
-        u2: 900000, // reserved unit MUST NOT be updated
-        u3: 900000, // contracted unit MUST NOT be updated
-      },
+      unitPrices,
       costBasisEgp: '1500000',
     });
 
-    // Assert RPC called to log price history with total
     assert.equal(rpcCalls.length, 1);
     assert.equal(rpcCalls[0].fn, 'record_property_price');
     assert.equal(rpcCalls[0].args.p_price_egp, 2750000);
     assert.equal(rpcCalls[0].args.p_finalize, false);
-
-    // Assert exact update payload: property price and updated available units only
-    assert.equal(updatePayloads.length, 1);
-    const payload = updatePayloads[0];
-    assert.equal(payload.price_egp, 2750000);
-    assert.equal(payload.building_units.length, 3);
-    assert.equal(payload.building_units[0].price_egp, 900000); // available: updated
-    assert.equal(payload.building_units[1].price_egp, 950000); // reserved: unchanged
-    assert.equal(payload.building_units[2].price_egp, 1000000); // contracted: unchanged
+    assert.deepEqual(rpcCalls[0].args.p_unit_prices, unitPrices);
+    assert.equal(rpcCalls[0].args.p_cost_basis_egp, 1500000);
+    assert.equal(tableCalls, 0);
     assert.equal(res.units_repriced, 1);
+    assert.equal(res.price_egp, 2850000);
+  });
+});
+
+describe('rounding remainder (user-confirmed 2026-10-08)', () => {
+  it('RPC errors never fall back to an unlogged non-atomic property update', async () => {
+    for (const error of [
+      { code: 'PGRST202', message: 'record_property_price missing' },
+      { code: '42501', message: 'record_property_price permission denied' },
+    ]) {
+      let writes = 0;
+      const client = {
+        rpc: async () => ({ data: null, error }),
+        from: () => { writes++; return { update: () => ({ eq: async () => ({ error: null }) }) }; },
+      };
+      await assert.rejects(() => ERPSupabaseService.recordPropertyPrice(client as any, {
+        propertyId: 'p1', priceEgp: 100,
+      }), (actual: unknown) => actual === error);
+      assert.equal(writes, 0);
+    }
+  });
+  // 400 m² split 66.67 × 5 + 66.65 (unit area split rule), price 4,000,100.
+  const areas = [66.67, 66.67, 66.67, 66.67, 66.67, 66.65];
+  const allAvailable = areas.map((a, i) => ({ unit_id: `u${i + 1}`, area_sqm: a, price_egp: 0, status: 'available' }));
+  const sum = (units: { newPrice: string }[]) => units.reduce((acc, u) => acc.plus(u.newPrice), D(0)).toFixed(2);
+
+  it('default rate keeps 2 decimals', () => {
+    assert.equal(defaultPricePerSqm(4000100, 400), '10000.25');
+    assert.equal(defaultPricePerSqm(0, 400), '0');
+    assert.equal(defaultPricePerSqm(4000100, 0), '0');
+  });
+
+  it('untouched default rate with no locked unit: units sum to the current price exactly', () => {
+    const res = repriceBuilding(allAvailable, defaultPricePerSqm(4000100, 400), undefined, 4000100);
+    assert.equal(res.totalPrice, '4000100.00');
+    assert.equal(sum(res.units), '4000100.00');
+    // only the last available unit moves, by a few EGP at most
+    const plain = repriceBuilding(allAvailable, '10000.25');
+    for (let i = 0; i < 5; i++) assert.equal(res.units[i].newPrice, plain.units[i].newPrice);
+    assert.ok(Math.abs(Number(res.units[5].newPrice) - Number(plain.units[5].newPrice)) <= 5);
+  });
+
+  it('exactTotal is ignored when unit areas do not add up to the building area', () => {
+    const units = Array.from({ length: 6 }, (_, i) => ({ unit_id: `v${i}`, area_sqm: 67, price_egp: 0, status: 'available' }));
+    const res = repriceBuilding(units, defaultPricePerSqm(4000000, 400), undefined, 4000000);
+    assert.equal(res.totalPrice, '4020000.00'); // 10,000 × 402, not 4,000,000 forced onto one unit
+    assert.ok(res.units.every(u => u.newPrice === '670000.00'));
+  });
+
+  it('any rate: repriced units sum to round(rate × available area); locked units ignore exactTotal', () => {
+    const units = [{ unit_id: 'x', area_sqm: 100, price_egp: 800000, status: 'contracted' }, ...allAvailable];
+    const res = repriceBuilding(units, '10000.25', undefined, 4000100);
+    assert.equal(res.repricedTotal, '4000100.00'); // 10000.25 × 400
+    assert.equal(res.totalPrice, '4800100.00');
+    assert.equal(res.units[0].newPrice, '800000.00');
+    assert.equal(sum(res.units), res.totalPrice);
+  });
+
+  it('last available unit can absorb a remainder down to zero', () => {
+    const units = [1, 2].map(id => ({ unit_id: `small-${id}`, area_sqm: 0.5, price_egp: 10, status: 'available' }));
+    const res = repriceBuilding(units, 1);
+    assert.deepEqual(res.units.map(u => u.newPrice), ['1.00', '0.00']);
+    assert.equal(res.repricedTotal, '1.00');
+    assert.equal(sum(res.units), res.totalPrice);
+  });
+});
+
+
+describe('calculator money guards', () => {
+  it('rounds exact 99.50 x 1.01 once to 100 whole EGP', () => {
+    const res = repriceBuilding([{ unit_id: 'u', area_sqm: 1.01, status: 'available' }], '99.50');
+    assert.equal(res.units[0].newPrice, '100.00');
+    assert.equal(res.totalPrice, '100.00');
+  });
+  it('does not absorb exact-total hint when areas are 100 vs 100.01', () => {
+    const res = repriceBuilding([{ unit_id: 'u', area_sqm: 100.01, status: 'available' }], '100', undefined, 10000, 100);
+    assert.equal(res.units[0].newPrice, '10001.00');
+    assert.equal(res.totalPrice, '10001.00');
+  });
+  it('blocks five 50 m2 units at 0.01 without returning unit prices', () => {
+    const res = repriceBuilding(Array.from({ length: 5 }, (_, i) => ({ unit_id: `u${i}`, area_sqm: 50, status: 'available' })), '0.01');
+    assert.equal(res.blocked, 'RATE_TOO_LOW');
+    assert.deepEqual(res.units, []);
+  });
+  it('untouched rounded default absorbs only with exactly matching building area', () => {
+    const units = [100, 100, 100, 100].map((area, i) => ({ unit_id: `u${i}`, area_sqm: area, status: 'available' }));
+    const res = repriceBuilding(units, defaultPricePerSqm(4000101, 400), undefined, 4000101, 400);
+    assert.equal(res.totalPrice, '4000101.00');
+    assert.equal(res.units.reduce((total, u) => total.plus(u.newPrice), D(0)).toFixed(2), res.totalPrice);
   });
 });

@@ -32,6 +32,12 @@ export interface Statement {
   signatures: string[];
   footer: string;
 }
+/** Statement money: thousands separators, cents only when non-zero (same in tables and callouts). */
+export function statementAmount(value: string | number) {
+  const [whole, cents] = D(value).toFixed(2).split('.');
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${cents === '00' ? '' : `.${cents}`}`;
+}
+const egp = (value: string | number) => `${statementAmount(value)} ج.م`;
 const sum = (amounts: string[]) => amounts.reduce((total, amount) => total.plus(amount), D(0)).toFixed(2);
 const money = (label: string): Column => ({ label, kind: 'money' });
 const ref: Column = { label: 'القيد', kind: 'ref' };
@@ -96,7 +102,7 @@ export function buildClientStatement(contract: ERPContract, data: StatementData,
   model.summary = [{ label: 'سعر الوحدة', value: totals.price }, { label: 'إجمالي المسدد', value: totals.paid,
     details: D(totals.price).gt(0) ? [{ label: 'نسبة السداد', value: `${ratio(D(totals.paid).times(100), totals.price, 1)}%` }] : [] },
     { label: 'المتبقي', value: totals.remaining, details: [{ label: 'منه متأخر', value: totals.overdue, bad: true }] }];
-  if (D(totals.overdue).gt(0)) model.callouts.push(`على العميل مبلغ متأخر ${contract.currency === 'EGP' ? D(totals.overdue).formatEGP(true) : `${D(totals.overdue).toFixed(2)} ${model.currency}`} من ${installmentRows.filter(row => row.overdueDays > 0).length} أقساط: ${installmentRows.filter(row => row.overdueDays > 0).map(row => `${row.label} متأخر ${row.overdueDays} يوماً`).join('، ')}.`);
+  if (D(totals.overdue).gt(0)) model.callouts.push(`على العميل مبلغ متأخر ${contract.currency === 'EGP' ? egp(totals.overdue) : `${statementAmount(totals.overdue)} ${model.currency}`} من ${installmentRows.filter(row => row.overdueDays > 0).length} أقساط: ${installmentRows.filter(row => row.overdueDays > 0).map(row => `${row.label} متأخر ${row.overdueDays} يوماً`).join('، ')}.`);
   const relatedIds = [contract.contract_id, ...data.schedules.filter(s => s.contract_id === contract.contract_id).map(s => s.schedule_id),
     ...(data.pdcRecords || []).filter(p => p.contract_id === contract.contract_id).map(p => p.cheque_id)];
   const receiptRows = data.journalEntries.flatMap(entry => {
@@ -242,7 +248,7 @@ export function buildPartnerStatement(partner: Pick<ERPPartnerProfile, 'name' | 
       rows: open.map(row => ({ cells: [data.properties.find(p => p.id === row.commitment.property_id)?.title_ar, row.commitment.due_date,
         row.committedAmount.toFixed(2), row.paidAmount.toFixed(2), row.unpaidBalance.toFixed(2), row.isOverdue ? `متأخر ${row.daysOverdue} يوم` : 'مستحق',
         transactions.filter(t => t.commitment_id === row.commitment.commitment_id).map(t => t.journal_entry_number).filter(Boolean).join(' · ') || undefined], overdue: row.isOverdue })), empty: 'لا توجد التزامات رأس مال مفتوحة.' }];
-  model.callouts = projectRows.map(row => `متاح للصرف في ${row.property.title_ar} = نصيبه من التحصيل ${D(row.collectionsShare).formatEGP(true)} − ما صُرف له ${D(row.paidOut).formatEGP(true)} − مديونية رأس المال ${D(row.commitmentDebt).formatEGP(true)}. المتاح نقداً ${D(row.cashAvailable).formatEGP(true)}. عند الصرف تُخصم المديونية أولاً تلقائياً.${D(row.debtAfter).gt(0) ? ` المديونية بعد الخصم ${D(row.debtAfter).formatEGP(true)}.` : ''}`);
+  model.callouts = projectRows.map(row => `متاح للصرف في ${row.property.title_ar} = نصيبه من التحصيل ${egp(row.collectionsShare)} − ما صُرف له ${egp(row.paidOut)} − مديونية رأس المال ${egp(row.commitmentDebt)}. المتاح نقداً ${egp(row.cashAvailable)}. عند الصرف تُخصم المديونية أولاً تلقائياً.${D(row.debtAfter).gt(0) ? ` المديونية بعد الخصم ${egp(row.debtAfter)}.` : ''}`);
   model.signatures = ['المحاسب', 'اعتماد الإدارة', 'توقيع الشريك بالاستلام'];
   model.footer = 'نصيب التحصيل محسوب من المبالغ المحصلة فعلياً، وليس من قيمة العقود.';
   return { ...model, totals, projectRows };

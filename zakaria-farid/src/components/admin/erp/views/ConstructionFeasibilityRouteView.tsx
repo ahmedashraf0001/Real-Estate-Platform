@@ -12,7 +12,7 @@ export function ConstructionFeasibilityRouteView() {
 
   return (
     <ConstructionFeasibilityView 
-      properties={erp.data.properties}
+      properties={erp.data.recordedProperties ?? []}
       propertyCosts={erp.data.propertyCosts}
       initialPropertyId={propertyId}
       onOpenAuditForProperty={erp.handleOpenAuditForProperty}

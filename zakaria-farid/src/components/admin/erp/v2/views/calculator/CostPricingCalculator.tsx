@@ -25,8 +25,10 @@ import {
   pricePerSqmForMarkup,
   estimateFeasibility,
   repriceBuilding,
+  defaultPricePerSqm,
 } from '@/lib/erp/pricingCalculator';
 import { D } from '@/lib/erp/math';
+import { statementAmount } from '@/lib/erp/statements/builders';
 import { ZFPageHeader, ZFPanel, ZFSegmented } from '../../common/ZFPageHeader';
 import { ZFKpiCard, ZFKpiGrid } from '../../ZFKpiCard';
 import { useERPWorkstationContext } from '../../../context/ERPWorkstationContext';
@@ -123,19 +125,16 @@ export function CostPricingCalculator({
   }, [property, area, propertyCosts]);
 
   const [marketPerSqm, setMarketPerSqm] = useState<string>(() => {
-    const initList = property?.price_egp || 0;
-    const initArea = property?.area_sqm || 0;
-    const m = initArea > 0 && initList > 0 ? Math.round(initList / initArea) : 0;
-    return String(m);
+    return defaultPricePerSqm(property?.price_egp || 0, property?.area_sqm || 0);
   });
 
   const [chosenPerSqm, setChosenPerSqm] = useState<string>(() => {
     const initList = property?.price_egp || 0;
     const initArea = property?.area_sqm || 0;
-    const m = initArea > 0 && initList > 0 ? Math.round(initList / initArea) : 0;
+    const m = n(defaultPricePerSqm(initList, initArea));
     const initAudit = property ? calculatePropertyAuditMetrics(property.id, initArea, propertyCosts ?? []) : null;
     const c = initAudit ? n(initAudit.costPerSqm) : 0;
-    return String(m > 0 ? m : Math.round(c * 1.3));
+    return m > 0 ? defaultPricePerSqm(initList, initArea) : pricePerSqmForMarkup(c, 30);
   });
 
   const lastPropertyIdRef = useRef<string>(propertyId);
@@ -146,11 +145,11 @@ export function CostPricingCalculator({
       if (property) {
         const propList = property.price_egp || 0;
         const propArea = property.area_sqm || 0;
-        const m = propArea > 0 && propList > 0 ? Math.round(propList / propArea) : 0;
+        const m = defaultPricePerSqm(propList, propArea);
         const c = n(audit.costPerSqm);
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setMarketPerSqm(String(m));
-        setChosenPerSqm(String(m > 0 ? m : Math.round(c * 1.3)));
+        setMarketPerSqm(m);
+        setChosenPerSqm(n(m) > 0 ? m : pricePerSqmForMarkup(c, 30));
       } else {
         setMarketPerSqm('0');
         setChosenPerSqm('0');
@@ -192,6 +191,10 @@ export function CostPricingCalculator({
   const [salePerSqm, setSalePerSqm] = useState('15000');
 
   const contracts = erpCtx?.data.contracts;
+  const isSoldWhole = Boolean(property && (contracts ?? []).some(c =>
+    c.status !== 'Rescinded' && c.property_id === property.id &&
+    (!c.building_unit_id || c.building_unit_id === property.id)
+  ));
   // A unit with a live contract is contracted even when the stored unit still says available.
   const units = useMemo(() => {
     const raw = property?.building_units ?? [];
@@ -203,16 +206,18 @@ export function CostPricingCalculator({
     return raw.map(u => (u.status === 'available' && contractedIds.has(u.unit_id) ? { ...u, status: 'contracted' as const } : u));
   }, [property?.building_units, property?.id, contracts]);
 
+  // Untouched default rate: the units must add up to the current price exactly (user-confirmed 2026-10-08).
+  const isDefaultRate = list > 0 && chosenPerSqm === defaultPricePerSqm(list, area);
   const repriceResult = useMemo(
-    () => repriceBuilding(units, chosenPerSqm, contracts),
-    [units, chosenPerSqm, contracts]
+    () => repriceBuilding(units, chosenPerSqm, contracts, isDefaultRate ? list : undefined, area),
+    [units, chosenPerSqm, contracts, isDefaultRate, list, area]
   );
 
   const availableUnitPrices = useMemo(() => {
     const map: Record<string, number> = {};
     repriceResult.units.forEach(u => {
-      if (!u.locked && n(u.newPrice) > 0) {
-        map[u.unit_id] = Math.round(n(u.newPrice));
+      if (!u.locked) {
+        map[u.unit_id] = n(u.newPrice);
       }
     });
     return map;
@@ -229,9 +234,9 @@ export function CostPricingCalculator({
         marketPricePerSqm: marketPerSqm,
         chosenPricePerSqm: chosenPerSqm,
         currentListPrice: list,
-        overrideTotalPrice: units.length > 0 ? repriceResult.totalPrice : undefined,
+        overrideTotalPrice: units.length > 0 ? repriceResult.totalPrice : (isDefaultRate ? list : undefined),
       }),
-    [audit.totalLoggedCost, area, marketPerSqm, chosenPerSqm, list, units.length, repriceResult.totalPrice]
+    [audit.totalLoggedCost, area, marketPerSqm, chosenPerSqm, list, units.length, repriceResult.totalPrice, isDefaultRate]
   );
 
   const sumCurrent = useMemo(
@@ -248,15 +253,19 @@ export function CostPricingCalculator({
   );
   const isUnitsSumMatching = units.length === 0 || sumNew.toFixed(2) === D(result.totalPrice).toFixed(2);
 
-  const breakEvenVal = Math.round(n(result.breakEvenPricePerSqm));
-  const markup15Val = Math.round(n(pricePerSqmForMarkup(result.costPerSqm, 15)));
-  const markup30Val = Math.round(n(pricePerSqmForMarkup(result.costPerSqm, 30)));
-  const marketVal = Math.round(n(marketPerSqm));
+  const breakEvenVal = result.breakEvenPricePerSqm;
+  const markup15Val = pricePerSqmForMarkup(result.costPerSqm, 15);
+  const markup30Val = pricePerSqmForMarkup(result.costPerSqm, 30);
+  const marketVal = marketPerSqm;
 
   const isSaveDisabled =
     isSaving ||
+    isSoldWhole ||
+    Boolean(repriceResult.blocked) ||
+    !onUpdateSellingPrice ||
+    D(chosenPerSqm).lt(0) ||
     n(result.totalPrice) <= 0 ||
-    Math.round(n(result.totalPrice)) === Math.round(list) ||
+    (D(result.totalPrice).eq(list) && repriceResult.units.every(u => D(u.newPrice).eq(u.currentPrice))) ||
     (units.length > 0 && !isUnitsSumMatching);
 
   const feas = useMemo(
@@ -341,8 +350,8 @@ export function CostPricingCalculator({
             <div className={s.sp} />
             {property.completion_status === 'off_plan' && (
               <div className={s.steps}>
-                <span className={`${s.step} ${s.stepDone}`}>
-                  <b>✓</b>
+                <span className={`${s.step} ${list > 0 ? s.stepDone : s.stepCur}`}>
+                  <b>{list > 0 ? '✓' : '1'}</b>
                   <span>{isAr ? 'السعر المبدئي' : 'Initial price'}</span>
                   {list > 0 && <span className={`${s.num} ${s.lbl}`}>{fmt(list)}</span>}
                 </span>
@@ -432,32 +441,32 @@ export function CostPricingCalculator({
                 <div className={s.chipsRow}>
                   <button
                     type="button"
-                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === breakEvenVal && breakEvenVal > 0 ? s.chipActive : ''}`}
-                    onClick={() => breakEvenVal > 0 && setChosenPerSqm(String(breakEvenVal))}
+                    className={`${s.chip} ${D(chosenPerSqm).eq(breakEvenVal) && D(breakEvenVal).gt(0) ? s.chipActive : ''}`}
+                    onClick={() => D(breakEvenVal).gt(0) && setChosenPerSqm(String(breakEvenVal))}
                   >
                     <span>{isAr ? 'التعادل' : 'Break-even'}</span>
-                    <i className={s.chipVal}>{fmt(breakEvenVal)}</i>
+                    <i className={s.chipVal}>{n(breakEvenVal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</i>
                   </button>
                   <button
                     type="button"
-                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === markup15Val && markup15Val > 0 ? s.chipActive : ''}`}
-                    onClick={() => markup15Val > 0 && setChosenPerSqm(String(markup15Val))}
+                    className={`${s.chip} ${D(chosenPerSqm).eq(markup15Val) && D(markup15Val).gt(0) ? s.chipActive : ''}`}
+                    onClick={() => D(markup15Val).gt(0) && setChosenPerSqm(String(markup15Val))}
                   >
                     <span>{isAr ? 'التكلفة +15%' : 'Cost +15%'}</span>
-                    <i className={s.chipVal}>{fmt(markup15Val)}</i>
+                    <i className={s.chipVal}>{n(markup15Val).toLocaleString('en-US', { maximumFractionDigits: 2 })}</i>
                   </button>
                   <button
                     type="button"
-                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === markup30Val && markup30Val > 0 ? s.chipActive : ''}`}
-                    onClick={() => markup30Val > 0 && setChosenPerSqm(String(markup30Val))}
+                    className={`${s.chip} ${D(chosenPerSqm).eq(markup30Val) && D(markup30Val).gt(0) ? s.chipActive : ''}`}
+                    onClick={() => D(markup30Val).gt(0) && setChosenPerSqm(String(markup30Val))}
                   >
                     <span>{isAr ? 'التكلفة +30%' : 'Cost +30%'}</span>
-                    <i className={s.chipVal}>{fmt(markup30Val)}</i>
+                    <i className={s.chipVal}>{n(markup30Val).toLocaleString('en-US', { maximumFractionDigits: 2 })}</i>
                   </button>
                   <div
-                    className={`${s.chip} ${Math.round(n(chosenPerSqm)) === marketVal && marketVal > 0 ? s.chipActive : ''}`}
+                    className={`${s.chip} ${D(chosenPerSqm).eq(marketVal) && D(marketVal).gt(0) ? s.chipActive : ''}`}
                     onClick={() => {
-                      if (!isEditingMarket && marketVal > 0) setChosenPerSqm(String(marketVal));
+                      if (!isEditingMarket && D(marketVal).gt(0)) setChosenPerSqm(marketPerSqm);
                     }}
                   >
                     <span>{isAr ? 'سعر السوق' : 'Market'}</span>
@@ -475,7 +484,7 @@ export function CostPricingCalculator({
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <i className={s.chipVal}>{fmt(marketVal)}</i>
+                      <i className={s.chipVal}>{n(marketVal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</i>
                     )}
                     <button
                       type="button"
@@ -551,8 +560,8 @@ export function CostPricingCalculator({
 
               <div className={s.noteLbl} style={{ marginTop: 8 }}>
                 {isAr
-                  ? 'سعر السوق يُكتب مرة لكل عقار ويُحفظ معه. الأزرار تملأ الخانة فقط؛ لا شيء يُحفظ قبل الضغط على زر الاعتماد.'
-                  : 'Market price is entered once per property. Chips only fill the input; nothing is saved until confirmed.'}
+                  ? 'سعر السوق يُستخدم للمقارنة في هذه الجلسة. الأزرار تملأ الخانة فقط؛ لا شيء يُحفظ قبل الضغط على زر الاعتماد.'
+                  : 'Market price is used for comparison in this session. Chips only fill the input; nothing is saved until confirmed.'}
               </div>
             </div>
           </div>
@@ -646,6 +655,16 @@ export function CostPricingCalculator({
             </div>
           )}
 
+          {isSoldWhole && (
+            <div className={`${s.notice} ${s.noticeWarn}`} role="status">
+              {isAr ? 'العقار مباع بالكامل بعقد سارٍ ولا يمكن إعادة تسعيره.' : 'Sold under a live whole-building contract; repricing is disabled.'}
+            </div>
+          )}
+          {repriceResult.blocked === 'RATE_TOO_LOW' && (
+            <div className={`${s.notice} ${s.noticeDanger}`} role="alert">
+              {isAr ? 'السعر للمتر منخفض جداً لتسعير الوحدات بالجنيه الكامل' : 'Rate too low to price units in whole EGP'}
+            </div>
+          )}
           {/* R5: Sticky Bottom Action Bar */}
           <div className={s.bottomBar}>
             <div>
@@ -670,7 +689,7 @@ export function CostPricingCalculator({
                 <button
                   type="button"
                   className={shellStyles.btnSecondary}
-                  disabled={isSaving || n(result.totalPrice) <= 0 || (units.length > 0 && !isUnitsSumMatching)}
+                  disabled={isSoldWhole || Boolean(repriceResult.blocked) || isSaving || n(result.totalPrice) <= 0 || (units.length > 0 && !isUnitsSumMatching)}
                   onClick={() => setIsFinalizeOpen(true)}
                 >
                   <Flag size={14} />
@@ -723,13 +742,14 @@ export function CostPricingCalculator({
               <button
                 type="button"
                 className={shellStyles.btnPrimary}
-                disabled={isSaving}
+                disabled={isSaveDisabled}
                 onClick={async () => {
                   setIsSaving(true);
                   try {
-                    const saveTotal = Math.round(n(result.totalPrice));
+                    if (isSaveDisabled) return;
+                    const saveTotal = D(result.totalPrice).toNumber();
                     const ok = await onUpdateSellingPrice(property.id, saveTotal, {
-                      unitPrices: availableUnitPrices,
+                      ...(units.length > 0 ? { unitPrices: availableUnitPrices } : {}),
                       costBasisEgp: audit.totalLoggedCost,
                     });
                     if (ok !== false) {
@@ -748,9 +768,9 @@ export function CostPricingCalculator({
         >
           <ZFFacts
             items={[
-              { label: isAr ? 'السعر الحالي' : 'Current price', value: `${fmt(list)} ${cur}` },
-              { label: isAr ? 'السعر الجديد' : 'New price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
-              { label: isAr ? 'الفرق' : 'Difference', value: `${signed(result.changeVsList)} ${cur}` },
+              { label: isAr ? 'السعر الحالي' : 'Current price', value: `${statementAmount(list)} ${cur}` },
+              { label: isAr ? 'السعر الجديد' : 'New price', value: `${statementAmount(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'الفرق' : 'Difference', value: `${D(result.changeVsList).gt(0) ? '+' : ''}${statementAmount(result.changeVsList)} ${cur}` },
               ...(units.length > 0
                 ? [
                     {
@@ -1072,13 +1092,14 @@ export function CostPricingCalculator({
               <button
                 type="button"
                 className={shellStyles.btnPrimary}
-                disabled={isSaving || audit.itemsCount === 0 || n(result.totalPrice) <= 0}
+                disabled={isSoldWhole || Boolean(repriceResult.blocked) || isSaving || D(chosenPerSqm).lt(0) || !D(audit.totalLoggedCost).gt(0) || n(result.totalPrice) <= 0 || !isUnitsSumMatching}
                 onClick={async () => {
+                  if (isSoldWhole || repriceResult.blocked || D(chosenPerSqm).lt(0) || !D(audit.totalLoggedCost).gt(0) || !D(result.totalPrice).gt(0) || !isUnitsSumMatching) return;
                   setIsSaving(true);
                   try {
-                    const ok = await onUpdateSellingPrice(property.id, Math.round(n(result.totalPrice)), {
+                    const ok = await onUpdateSellingPrice(property.id, D(result.totalPrice).toNumber(), {
                       finalize: true,
-                      unitPrices: availableUnitPrices,
+                      ...(units.length > 0 ? { unitPrices: availableUnitPrices } : {}),
                       costBasisEgp: audit.totalLoggedCost
                     });
                     if (ok !== false) {
@@ -1098,12 +1119,13 @@ export function CostPricingCalculator({
           <ZFFacts
             items={[
               { label: isAr ? 'التكلفة الفعلية' : 'Actual cost', value: `${fmt(audit.totalLoggedCost)} ${cur}` },
-              { label: isAr ? 'السعر المبدئي' : 'Initial price', value: `${fmt(list)} ${cur}` },
-              { label: isAr ? 'السعر النهائي' : 'Final price', value: `${fmt(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'السعر المبدئي' : 'Initial price', value: `${statementAmount(list)} ${cur}` },
+              { label: isAr ? 'السعر النهائي' : 'Final price', value: `${statementAmount(result.totalPrice)} ${cur}`, tone: 'pos' },
+              { label: isAr ? 'الفرق' : 'Difference', value: `${D(result.changeVsList).gt(0) ? '+' : ''}${statementAmount(result.changeVsList)} ${cur}` },
               { label: isAr ? 'سعر المتر' : 'Per m²', value: `${fmt(chosenPerSqm)} ${perSqm}` }
             ]}
           />
-          {audit.itemsCount === 0 ? (
+          {!D(audit.totalLoggedCost).gt(0) ? (
             <ZFEffect tone="danger">
               {isAr
                 ? 'مفيش تكاليف مسجلة للعقار ده. سجّل تكاليف البناء الأول عشان السعر النهائي يتحسب على التكلفة الفعلية.'

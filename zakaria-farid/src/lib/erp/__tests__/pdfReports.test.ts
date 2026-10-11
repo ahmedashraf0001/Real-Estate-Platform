@@ -76,6 +76,13 @@ test('client mockup totals and calendar overdue days on 2026-10-08', () => {
   assert.equal(model.installmentRows.reduce((sum, row) => sum.plus(row.paid), D(0)).toFixed(2), model.totals.paid);
   assert.equal(model.installmentRows.reduce((sum, row) => sum.plus(row.amount), D(0)).toFixed(2), model.totals.price);
 });
+test('callout amounts follow the table convention: whole pounds without .00', () => {
+  const client = buildClientStatement(contract, data, issuedAt);
+  assert.match(client.callouts[0], /مبلغ متأخر 132,000 ج\.م /);
+  const partnerModel = buildPartnerStatement(partner, data, issuedAt);
+  assert.ok(partnerModel.callouts.every(text => !/\.00 ج\.م/.test(text)), partnerModel.callouts.join(' | '));
+  assert.match(partnerModel.callouts.join(' '), /744,000 ج\.م/);
+});
 test('partner mockup available 744000 - 300000 - 100000 = 344000, sums project rows', () => {
   const model = buildPartnerStatement(partner, data, issuedAt);
   assert.deepEqual([model.totals.collectionsShare, model.totals.paidOut, model.totals.commitmentDebt, model.totals.cashAvailable], ['744000.00', '300000.00', '100000.00', '344000.00']);

@@ -1,20 +1,8 @@
 /* FIN-OS Account Ledger Modal Styles */
 
-.tableHeaderRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
 
-.filterControls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
+
+
 
 .sortWrap {
   display: inline-flex;
@@ -27,7 +15,7 @@
   font-size: 0.72rem;
   border-radius: 6px;
   border: 1px solid var(--erp-border, #cbd5e1);
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   color: var(--erp-text-body, #334155);
   font-family: inherit;
   outline: none;
@@ -42,7 +30,7 @@
   font-weight: 600;
   border-radius: 6px;
   border: 1px solid var(--erp-border, #cbd5e1);
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   color: var(--erp-text-muted, #64748b);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -53,53 +41,15 @@
   color: var(--erp-text-title, #0f172a);
 }
 
-.searchWrap {
-  position: relative;
-  min-width: 160px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-}
 
-.searchIcon {
-  position: absolute;
-  inset-inline-start: 0.5rem;
-  color: #94a3b8;
-  pointer-events: none;
-}
 
-.searchInput {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  padding-inline-start: 1.75rem;
-  padding-inline-end: 1.5rem;
-  font-size: 0.72rem;
-  border-radius: 6px;
-  border: 1px solid var(--erp-border, #cbd5e1);
-  background: #ffffff;
-  color: var(--erp-text-title, #0f172a);
-  font-family: inherit;
-  outline: none;
-}
 
-.searchInput:focus {
-  border-color: var(--erp-accent, #2563eb);
-}
 
-.clearSearchBtn {
-  position: absolute;
-  inset-inline-end: 0.4rem;
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 0.7rem;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+
+
+
+
+
 
 .countPill {
   font-size: 0.72rem;
@@ -115,7 +65,7 @@
 .emptyState {
   padding: 2.5rem 1.5rem;
   text-align: center;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   border: 1px dashed var(--erp-border, #cbd5e1);
   border-radius: 8px;
   color: var(--erp-text-muted, #64748b);
@@ -126,7 +76,7 @@
   border: 1px solid var(--erp-border, #cbd5e1);
   border-radius: 8px;
   overflow-x: auto;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
 }
 
 .table {
@@ -156,7 +106,7 @@
 
 .tr {
   border-bottom: 1px solid #f1f5f9;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   transition: background 0.1s ease;
 }
 
@@ -175,14 +125,7 @@
   color: var(--erp-text-muted, #64748b);
 }
 
-.entryNum {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--erp-text-title, #0f172a);
-  font-size: 0.76rem;
-  font-family: monospace, tabular-nums;
-  margin-top: 2px;
-}
+
 
 .tdDesc {
   padding: 0.75rem 0.85rem;
@@ -190,58 +133,17 @@
   min-width: 200px;
 }
 
-.descStack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
 
-.headlineRow {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
 
-.actionBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.12rem 0.45rem;
-  border-radius: 4px;
-  background: #f1f5f9;
-  color: var(--erp-text-body, #334155);
-  border: 1px solid var(--erp-border, #cbd5e1);
-  flex-shrink: 0;
-}
 
-.headline {
-  font-weight: 700;
-  color: var(--erp-text-title, #0f172a);
-  font-size: 0.82rem;
-}
 
-.tagsRow {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
 
-.tagPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--erp-text-body, #334155);
-  background: #f8fafc;
-  border: 1px solid var(--erp-border, #cbd5e1);
-  padding: 0.1rem 0.45rem;
-  border-radius: 4px;
-}
+
+
+
+
+
+
 
 .memoRow {
   font-size: 0.71rem;
@@ -252,30 +154,11 @@
   line-height: 1.4;
 }
 
-.memoArrow {
-  color: #94a3b8;
-  font-size: 0.75rem;
-}
 
-.tdDebit {
-  padding: 0.75rem 0.85rem;
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  vertical-align: top;
-  color: var(--erp-text-title, #0f172a);
-  width: 130px;
-}
 
-.tdCredit {
-  padding: 0.75rem 0.85rem;
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  vertical-align: top;
-  color: var(--erp-text-title, #0f172a);
-  width: 130px;
-}
+
+
+
 
 .emptyAmount {
   color: #94a3b8;
@@ -289,7 +172,7 @@
   border: 1px solid var(--erp-border, #cbd5e1);
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
 }
 
 .guideSummary {
@@ -345,7 +228,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 0.85rem;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
 }
 
 .printKpiLabel {
@@ -398,7 +281,7 @@
 
 .printTr {
   border-bottom: 1px solid #e2e8f0;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
 }
 
 .printTd {
@@ -421,7 +304,7 @@
 }
 
 .printTfoot {
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   border-top: 1px solid #cbd5e1;
   font-weight: 800;
 }
@@ -441,7 +324,7 @@
   font-weight: 600;
   border-radius: 9999px;
   border: 1px solid var(--erp-border, #cbd5e1);
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   color: var(--erp-text-title, #0f172a);
   font-family: inherit;
   outline: none;
@@ -472,7 +355,7 @@
   font-size: 0.72rem;
   border-radius: 8px;
   border: 1px solid var(--erp-border, #cbd5e1);
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   color: var(--erp-text-title, #0f172a);
   font-family: inherit;
   outline: none;
@@ -500,7 +383,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   border-bottom: 1px solid var(--erp-hairline, #e2e8f0);
-  background: #ffffff;
+  background: var(--erp-bg-panel);
   margin-bottom: 0.75rem;
 }
 
@@ -561,47 +444,17 @@
   color: var(--erp-text-body, #334155);
 }
 
-.statusPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 9999px;
-  padding: 1px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  border: 1px solid;
-  white-space: nowrap;
-}
 
-.statusPillGreen {
-  color: #15803d;
-  background: #f0fdf4;
-  border-color: rgba(22, 163, 74, 0.2);
-}
 
-.statusPillAmber {
-  color: #b45309;
-  background: #fffbeb;
-  border-color: rgba(217, 119, 6, 0.2);
-}
 
-.statusPillRed {
-  color: #b91c1c;
-  background: #fef2f2;
-  border-color: rgba(220, 38, 38, 0.2);
-}
 
-.statusPillBlue {
-  color: #2563eb;
-  background: #eff6ff;
-  border-color: rgba(37, 99, 235, 0.2);
-}
 
-.statusPillNeutral {
-  color: #64748b;
-  background: #f8fafc;
-  border-color: #e2e8f0;
-}
+
+
+
+
+
+
 
 .trMuted td {
   color: var(--erp-text-muted, #94a3b8) !important;
@@ -609,9 +462,7 @@
   background: #fafbfc;
 }
 
-.tdMuted {
-  color: var(--erp-text-muted, #94a3b8) !important;
-}
+
 
 .tdRef {
   padding: 0.65rem 0.85rem;
@@ -625,6 +476,7 @@
   width: 100px;
 }
 
+.tdNum,
 .tdBalance {
   padding: 0.65rem 0.85rem;
   text-align: end;
@@ -640,7 +492,7 @@
   color: var(--erp-text-title, #0f172a);
   border-top: 1px solid var(--erp-border, #cbd5e1);
   padding: 0.65rem 0.85rem;
-  background: #ffffff;
+  background: var(--erp-bg-panel);
 }
 
 .tfootLabel {
@@ -663,15 +515,15 @@
 }
 
 
-.tdNum {
-  padding: 0.65rem 0.85rem;
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  vertical-align: middle;
-}
 
 .tdDate,
+.tdNum,
 .tdBalance {
   white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .figuresRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figureCell { min-width: 0; padding: 10px 8px; }
+  .figureValue { flex-wrap: wrap; font-size: 0.9rem; }
 }
