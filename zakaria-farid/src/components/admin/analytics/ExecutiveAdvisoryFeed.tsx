@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { 
   Sparkles, 
@@ -26,20 +26,6 @@ interface ExecutiveAdvisoryFeedProps {
 export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: ExecutiveAdvisoryFeedProps) {
   const isAr = adminLocale === 'ar';
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  useEffect(() => {
-    const readTheme = () => {
-      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
-        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
-      setTheme(cur);
-    };
-    readTheme();
-    const obs = new MutationObserver(readTheme);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
-  }, []);
-  const isLight = theme === 'light';
-
   const getTypeIcon = (type: ExecutiveAdvisory['type']) => {
     switch (type) {
       case 'deal_alert':
@@ -54,8 +40,8 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
     }
   };
 
-  const getSeverityStyle = (severity: ExecutiveAdvisory['severity'], isLightMode: boolean) => {
-    if (isLightMode) {
+  const getSeverityStyle = (severity: ExecutiveAdvisory['severity']) => {
+
       switch (severity) {
         case 'high':
           return {
@@ -113,69 +99,10 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
             metricColor: '#0369A1',
           };
       }
-    }
-
-    switch (severity) {
-      case 'high':
-        return {
-          themeColor: '#FB7185',
-          bgGradient: 'linear-gradient(145deg, rgba(244, 63, 94, 0.14) 0%, rgba(16, 20, 29, 0.95) 100%)',
-          border: 'rgba(244, 63, 94, 0.35)',
-          topBorder: '#FB7185',
-          badgeBg: 'rgba(244, 63, 94, 0.15)',
-          badgeColor: '#FB7185',
-          badgeBorder: 'rgba(244, 63, 94, 0.3)',
-          badgeLabel: isAr ? 'إجراء عاجل' : 'HIGH PRIORITY',
-          btnBg: 'rgba(244, 63, 94, 0.12)',
-          btnBorder: 'rgba(244, 63, 94, 0.35)',
-          btnColor: '#FDA4AF',
-          btnHoverBg: '#FB7185',
-          btnHoverColor: '#0A0C10',
-          metricBg: 'rgba(244, 63, 94, 0.12)',
-          metricColor: '#FB7185',
-        };
-      case 'medium':
-        return {
-          themeColor: '#3B82F6',
-          bgGradient: 'linear-gradient(145deg, rgba(59, 130, 246, 0.12) 0%, rgba(16, 20, 29, 0.95) 100%)',
-          border: 'color-mix(in srgb, var(--admin-accent) 30%, transparent)',
-          topBorder: '#3B82F6',
-          badgeBg: 'rgba(59, 130, 246, 0.15)',
-          badgeColor: '#3B82F6',
-          badgeBorder: 'rgba(59, 130, 246, 0.35)',
-          badgeLabel: isAr ? 'فرصة نمو استثمارية' : 'GROWTH OPPORTUNITY',
-          btnBg: 'rgba(59, 130, 246, 0.15)',
-          btnBorder: 'rgba(59, 130, 246, 0.35)',
-          btnColor: '#93C5FD',
-          btnHoverBg: '#3B82F6',
-          btnHoverColor: '#FFFFFF',
-          metricBg: 'rgba(59, 130, 246, 0.12)',
-          metricColor: '#3B82F6',
-        };
-      case 'info':
-      default:
-        return {
-          themeColor: '#38BDF8',
-          bgGradient: 'linear-gradient(145deg, rgba(56, 189, 248, 0.12) 0%, rgba(16, 20, 29, 0.95) 100%)',
-          border: 'rgba(56, 189, 248, 0.3)',
-          topBorder: '#38BDF8',
-          badgeBg: 'rgba(56, 189, 248, 0.15)',
-          badgeColor: '#38BDF8',
-          badgeBorder: 'rgba(56, 189, 248, 0.35)',
-          badgeLabel: isAr ? 'رؤية استراتيجية' : 'STRATEGIC INSIGHT',
-          btnBg: 'rgba(56, 189, 248, 0.12)',
-          btnBorder: 'rgba(56, 189, 248, 0.3)',
-          btnColor: '#7DD3FC',
-          btnHoverBg: '#38BDF8',
-          btnHoverColor: '#0A0C10',
-          metricBg: 'rgba(56, 189, 248, 0.12)',
-          metricColor: '#38BDF8',
-        };
-    }
   };
 
   return (
-    <div className={`advisory-master-container ${isLight ? 'is-light' : ''}`}>
+    <div className={`advisory-master-container is-light`}>
       {/* Header Bar */}
       <div className="advisory-header">
         <div className="advisory-title-group">
@@ -205,7 +132,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
       <div className="advisory-grid">
         {advisories.map((item) => {
           const Icon = getTypeIcon(item.type);
-          const style = getSeverityStyle(item.severity, isLight);
+          const style = getSeverityStyle(item.severity);
           const title = isAr ? item.titleAr : item.titleEn;
           const msg = isAr ? item.messageAr : item.messageEn;
           const actionText = isAr ? item.actionTextAr : item.actionTextEn;
@@ -218,8 +145,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
                 background: style.bgGradient,
                 borderColor: style.border,
                 borderTop: `2px solid ${style.topBorder}`,
-                boxShadow: isLight ? '0 8px 24px rgba(15, 23, 42, 0.05)' : '0 10px 28px rgba(0, 0, 0, 0.3)',
-              }}
+                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}
             >
               {/* Top Row: Severity Badge + Metric Chip */}
               <div className="advisory-card-top">

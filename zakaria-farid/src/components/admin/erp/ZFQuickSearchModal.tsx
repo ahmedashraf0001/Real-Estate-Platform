@@ -13,8 +13,6 @@ import {
   UserCheck, 
   Sliders, 
   Plus, 
-  Sun, 
-  Moon, 
   EyeOff, 
   ExternalLink, 
   TrendingUp, 
@@ -59,7 +57,6 @@ export interface ZFQuickSearchModalProps {
   partners?: ERPPartnerProfile[];
   rescissions?: any[];
   taxRecords?: any[];
-  theme?: 'dark' | 'light';
   onSelectModule?: (mod: string) => void;
   onSelectContract?: (contract: ERPContract) => void;
   onSelectProperty?: (prop: Property) => void;
@@ -81,7 +78,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   partners,
   rescissions,
   taxRecords,
-  theme: propTheme,
   onSelectModule,
   onSelectContract,
   onSelectProperty,
@@ -101,7 +97,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
 
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SearchCategoryKey>('all');
-  const [theme, setTheme] = useState<'dark' | 'light'>(propTheme || 'light');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
@@ -143,10 +138,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   useEffect(() => {
     if (taxRecords && taxRecords.length > 0) setInternalTaxRecords(taxRecords);
   }, [taxRecords]);
-
-  useEffect(() => {
-    if (propTheme) setTheme(propTheme);
-  }, [propTheme]);
 
   // 2. Intelligent background fetch for missing data when modal is open
   useEffect(() => {
@@ -260,55 +251,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
       isMounted = false;
     };
   }, [isOpen, properties, leads, contracts, cheques, partners, rescissions, taxRecords]);
-
-  // 3. Theme Awareness via data-theme and MutationObserver
-  useEffect(() => {
-    if (propTheme) {
-      setTheme(propTheme);
-      return;
-    }
-
-    const resolveTheme = (): 'dark' | 'light' => {
-      if (typeof document !== 'undefined') {
-        const docTheme = document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null;
-        if (docTheme === 'dark' || docTheme === 'light') return docTheme;
-      }
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('zf_theme') as 'dark' | 'light' | null;
-        if (saved === 'dark' || saved === 'light') return saved;
-      }
-      return 'light';
-    };
-
-    setTheme(resolveTheme());
-
-    if (typeof document !== 'undefined') {
-      const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-            setTheme(resolveTheme());
-          }
-        }
-      });
-
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme']
-      });
-
-      const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'zf_theme') {
-          setTheme(resolveTheme());
-        }
-      };
-      window.addEventListener('storage', handleStorageChange);
-
-      return () => {
-        observer.disconnect();
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    }
-  }, [propTheme]);
 
   // 4. Focus input & lock body scroll on open
   useEffect(() => {
@@ -515,32 +457,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           onClose();
         },
         priority: 88
-      },
-      {
-        id: 'qa-toggle-theme',
-        group: 'actions',
-        title: isArMode 
-          ? `تبديل المظهر إلى الوضع ${theme === 'dark' ? 'النهاري الألباستر الفاخر' : 'الليلي الداكن'}` 
-          : `Switch Theme to ${theme === 'dark' ? 'Alabaster Light' : 'Obsidian Dark'}`,
-        subtitle: isArMode 
-          ? 'التبديل الفوري بين المظهر النهاري والليلي في كامل لوحة التحكم والـ ERP' 
-          : 'Instant theme toggle across all dashboard panels and ERP suite',
-        category: isArMode ? 'أمر نظام' : 'System Command',
-        icon: theme === 'dark' ? Sun : Moon,
-        action: () => {
-          const next = theme === 'dark' ? 'light' : 'dark';
-          setTheme(next);
-          document.documentElement.setAttribute('data-theme', next);
-          localStorage.setItem('zf_theme', next);
-          document.cookie = `zf_theme=${next}; path=/; max-age=31536000; SameSite=Lax`;
-          toast.success(
-            isArMode 
-              ? `تم تفعيل الوضع ${next === 'light' ? 'النهاري الألباستر الفاخر' : 'الليلي الداكن'}` 
-              : `Switched to ${next === 'light' ? 'Luxury Alabaster Light' : 'Deep Obsidian Dark'} Mode`
-          );
-          onClose();
-        },
-        priority: 87
       },
       {
         id: 'qa-toggle-price-secrecy',
@@ -1164,7 +1080,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   }, [
     query, 
     selectedCategory,
-    theme, 
     effectiveIsAr, 
     currentLocale, 
     pathname, 
@@ -1215,8 +1130,6 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isLight = theme === 'light';
-
   // Category Tabs Definition
   const categoryTabs: { key: SearchCategoryKey; label: string }[] = [
     { key: 'all', label: effectiveIsAr ? 'الكل' : 'All' },
@@ -1241,10 +1154,10 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
     fontSize: '0.68rem',
     fontFamily: 'inherit',
     fontWeight: 700,
-    background: isLight ? '#FFFFFF' : 'rgba(255, 255, 255, 0.08)',
-    border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.15)',
-    color: isLight ? '#0F172A' : '#94A3B8',
-    boxShadow: isLight ? '0 1px 2px rgba(15, 23, 42, 0.04)' : 'none',
+    background: '#FFFFFF',
+    border: '1px solid #e2e8f0',
+    color: '#0F172A',
+    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
     lineHeight: 1
   };
 
@@ -1256,9 +1169,9 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        background: isLight ? 'rgba(15, 23, 42, 0.35)' : 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: isLight ? 'blur(4px)' : 'blur(12px)',
-        WebkitBackdropFilter: isLight ? 'blur(4px)' : 'blur(12px)',
+        background: 'rgba(15, 23, 42, 0.35)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
@@ -1269,7 +1182,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
     >
       <style>{`
         .zf-omni-input::placeholder {
-          color: ${isLight ? '#64748B' : '#94A3B8'};
+          color: ${'#64748B'};
           opacity: 1;
         }
         .zf-search-scrollbar::-webkit-scrollbar {
@@ -1280,11 +1193,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           background: transparent;
         }
         .zf-search-scrollbar::-webkit-scrollbar-thumb {
-          background: ${isLight ? 'color-mix(in srgb, var(--erp-accent) 25%, transparent)' : 'rgba(255, 255, 255, 0.25)'};
+          background: ${'color-mix(in srgb, var(--erp-accent) 25%, transparent)'};
           border-radius: 4px;
         }
         .zf-search-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: ${isLight ? 'color-mix(in srgb, var(--erp-accent) 45%, transparent)' : 'rgba(255, 255, 255, 0.45)'};
+          background: ${'color-mix(in srgb, var(--erp-accent) 45%, transparent)'};
         }
         .zf-chip-scrollbar::-webkit-scrollbar {
           display: none;
@@ -1309,12 +1222,10 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         style={{
           width: '680px',
           maxWidth: '94vw',
-          background: isLight ? '#FFFFFF' : 'rgba(14, 18, 28, 0.98)',
-          border: isLight ? '1px solid #e2e8f0' : '1.5px solid rgba(255, 255, 255, 0.15)',
+          background: '#FFFFFF',
+          border: '1px solid #e2e8f0',
           borderRadius: '16px',
-          boxShadow: isLight
-            ? '0 24px 64px rgba(15, 23, 42, 0.12), 0 4px 16px rgba(15, 23, 42, 0.06)'
-            : '0 30px 60px rgba(0, 0, 0, 0.9), 0 0 25px rgba(37, 99, 235, 0.15)',
+          boxShadow: '0 24px 64px rgba(15, 23, 42, 0.12), 0 4px 16px rgba(15, 23, 42, 0.06)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -1331,11 +1242,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             alignItems: 'center',
             gap: '0.85rem',
             padding: '1.05rem 1.25rem',
-            background: isLight ? '#F8FAFC' : 'rgba(20, 25, 38, 0.8)',
-            borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'
+            background: '#F8FAFC',
+            borderBottom: '1px solid #e2e8f0'
           }}
         >
-          <Search size={18} color={isLight ? 'var(--erp-accent, #2563eb)' : '#38bdf8'} style={{ flexShrink: 0 }} />
+          <Search size={18} color={'var(--erp-accent, #2563eb)'} style={{ flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
@@ -1351,7 +1262,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               background: 'transparent',
               border: 'none',
               outline: 'none',
-              color: isLight ? '#0F172A' : '#FFFFFF',
+              color: '#0F172A',
               fontSize: '0.98rem',
               fontWeight: 500,
               width: '100%',
@@ -1365,7 +1276,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: isLight ? '#94A3B8' : '#64748B',
+                color: '#94A3B8',
                 cursor: 'pointer',
                 padding: '4px',
                 borderRadius: '4px',
@@ -1384,10 +1295,10 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             onClick={onClose}
             aria-label={effectiveIsAr ? 'إغلاق' : 'Close'}
             style={{
-              background: isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.06)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.1)',
+              background: '#F1F5F9',
+              border: '1px solid #e2e8f0',
               borderRadius: '6px',
-              color: isLight ? '#64748B' : '#94A3B8',
+              color: '#64748B',
               width: '28px',
               height: '28px',
               display: 'flex',
@@ -1398,12 +1309,12 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               flexShrink: 0
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.color = isLight ? '#0F172A' : '#FFFFFF';
-              e.currentTarget.style.background = isLight ? '#E2E8F0' : 'rgba(255, 255, 255, 0.12)';
+              e.currentTarget.style.color = '#0F172A';
+              e.currentTarget.style.background = '#E2E8F0';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.color = isLight ? '#64748B' : '#94A3B8';
-              e.currentTarget.style.background = isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.06)';
+              e.currentTarget.style.color = '#64748B';
+              e.currentTarget.style.background = '#F1F5F9';
             }}
           >
             <X size={15} />
@@ -1418,8 +1329,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             alignItems: 'center',
             gap: '0.45rem',
             padding: '0.55rem 1.15rem',
-            background: isLight ? '#FAFAF9' : 'rgba(16, 21, 33, 0.7)',
-            borderBottom: isLight ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.06)',
+            background: '#FAFAF9',
+            borderBottom: '1px solid #E2E8F0',
             overflowX: 'auto',
             whiteSpace: 'nowrap'
           }}
@@ -1443,13 +1354,13 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                   transition: 'all 0.15s ease',
                   border: isActive
                     ? '1px solid var(--erp-accent, #2563eb)'
-                    : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.1)'),
+                    : ('1px solid #e2e8f0'),
                   background: isActive
                     ? 'var(--erp-accent, #2563eb)'
-                    : (isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.04)'),
+                    : ('#F1F5F9'),
                   color: isActive
                     ? '#FFFFFF'
-                    : (isLight ? '#64748B' : '#94A3B8'),
+                    : ('#64748B'),
                   boxShadow: 'none'
                 }}
               >
@@ -1476,7 +1387,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               style={{
                 padding: '2.8rem 1rem',
                 textAlign: 'center',
-                color: isLight ? '#64748B' : '#94A3B8',
+                color: '#64748B',
                 fontSize: '0.88rem',
                 fontWeight: 500
               }}
@@ -1505,7 +1416,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                     cursor: 'pointer',
                     transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                     background: isSelected
-                      ? (isLight ? '#eff6ff' : 'rgba(37, 99, 235, 0.15)')
+                      ? ('#eff6ff')
                       : 'transparent'
                   }}
                   onMouseEnter={() => setSelectedIndex(index)}
@@ -1525,11 +1436,9 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                         width: '36px',
                         height: '36px',
                         borderRadius: '9px',
-                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'color-mix(in srgb, var(--erp-accent) 12%, transparent)',
-                        color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)',
-                        border: isLight
-                          ? '1px solid #bfdbfe'
-                          : '1px solid rgba(37, 99, 235, 0.25)',
+                        background: 'var(--erp-accent-subtle, #eff6ff)',
+                        color: 'var(--erp-accent, #2563eb)',
+                        border: '1px solid #bfdbfe',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1545,7 +1454,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                         style={{
                           fontSize: '0.88rem',
                           fontWeight: 700,
-                          color: isLight ? '#0F172A' : '#FFFFFF',
+                          color: '#0F172A',
                           letterSpacing: '-0.01em',
                           lineHeight: 1.25,
                           marginBottom: '2px',
@@ -1559,7 +1468,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                       <div
                         style={{
                           fontSize: '0.74rem',
-                          color: isLight ? '#64748B' : '#94A3B8',
+                          color: '#64748B',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -1576,11 +1485,9 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                       style={{
                         fontSize: '0.68rem',
                         fontWeight: 700,
-                        color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)',
-                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
-                        border: isLight
-                          ? '1px solid #bfdbfe'
-                          : '1px solid rgba(37, 99, 235, 0.25)',
+                        color: 'var(--erp-accent, #2563eb)',
+                        background: 'var(--erp-accent-subtle, #eff6ff)',
+                        border: '1px solid #bfdbfe',
                         padding: '0.16rem 0.52rem',
                         borderRadius: '6px',
                         whiteSpace: 'nowrap'
@@ -1592,7 +1499,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                     {isSelected && (
                       <div
                         style={{
-                          color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)',
+                          color: 'var(--erp-accent, #2563eb)',
                           display: 'flex',
                           alignItems: 'center',
                           opacity: 0.9
@@ -1612,13 +1519,13 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         <div
           style={{
             padding: '0.68rem 1.25rem',
-            background: isLight ? '#F8FAFC' : 'rgba(20, 25, 38, 0.95)',
-            borderTop: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+            background: '#F8FAFC',
+            borderTop: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '0.74rem',
-            color: isLight ? '#64748B' : '#94A3B8',
+            color: '#64748B',
             direction: effectiveIsAr ? 'rtl' : 'ltr'
           }}
         >
@@ -1644,7 +1551,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               gap: '0.35rem',
               fontWeight: 700,
               fontSize: '0.68rem',
-              color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)'
+              color: 'var(--erp-accent, #2563eb)'
             }}
           >
             <span>{effectiveIsAr ? 'محرك البحث الشامل' : 'Omni-Search'}</span>

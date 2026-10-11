@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Search, 
   Plus, 
-  Sun, 
-  Moon, 
   ExternalLink, 
   Languages
 } from 'lucide-react';
@@ -25,49 +23,6 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
 }) => {
   const pathname = usePathname() || '';
   const isAr = adminLocale === 'ar';
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
-
-  // Sync theme with document & localStorage
-  useEffect(() => {
-    const resolveTheme = (): 'dark' | 'light' => {
-      if (typeof document !== 'undefined') {
-        const docTheme = document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null;
-        if (docTheme === 'dark' || docTheme === 'light') return docTheme;
-      }
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('zf_theme') as 'dark' | 'light' | null;
-        if (saved === 'dark' || saved === 'light') return saved;
-      }
-      return 'light';
-    };
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTheme(resolveTheme());
-
-    if (typeof document !== 'undefined') {
-      const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-            setTheme(resolveTheme());
-          }
-        }
-      });
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme']
-      });
-      return () => observer.disconnect();
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('zf_theme', next);
-    document.cookie = `zf_theme=${next}; path=/; max-age=31536000; SameSite=Lax`;
-  };
-
   // Language toggle target URL
   const nextLang = isAr ? 'en' : 'ar';
   const togglePath = pathname.replace(`/admin/${adminLocale}`, `/admin/${nextLang}`);
@@ -182,7 +137,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
   };
 
   return (
-    <header className={styles.universalHeader} dir={isAr ? 'rtl' : 'ltr'}>
+    <header data-admin-top-bar="true" className={styles.universalHeader} dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Page Breadcrumb Context */}
       <div className={styles.breadcrumbBox}>
         {renderBreadcrumb()}
@@ -219,16 +174,6 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
         </Link>
 
         <AdminPaletteMenu isAr={isAr} />
-
-        <button
-          type="button"
-          className={styles.iconBtn}
-          onClick={toggleTheme}
-          title={isAr ? (theme === 'dark' ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي') : (theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode')}
-          aria-label="Toggle Theme"
-        >
-          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
 
         <a
           href={`/${adminLocale}`}

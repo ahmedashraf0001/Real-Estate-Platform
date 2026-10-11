@@ -2,21 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getBaseLayerSpecs } from '../../mapCache';
 
-test('neon uses key-free Esri dark base and reference in a dedicated pane', () => {
-  const specs = getBaseLayerSpecs('neon');
-  assert.equal(specs.length, 2);
-  assert.deepEqual(specs.map(s => s.url.match(/Canvas\/([^/]+)/)?.[1]), ['World_Dark_Gray_Base', 'World_Dark_Gray_Reference']);
-  for (const spec of specs) {
-    assert.doesNotMatch(spec.url, /cartocdn|[?&](key|token|api_key)=/i);
-    assert.equal(spec.options.pane, 'neon-basemap');
-    assert.equal(spec.options.maxNativeZoom, 16);
-    assert.match(spec.options.attribution!, /Esri/);
-  }
+test('vector basemap follows site theme: key-free light and dark basemaps', () => {
+  const lightSpecs = getBaseLayerSpecs('map', 'light');
+  assert.equal(lightSpecs.length, 2);
+  assert.match(lightSpecs[0].url, /Canvas\/World_Light_Gray_Base\//);
+  assert.match(lightSpecs[1].url, /Canvas\/World_Light_Gray_Reference\//);
+  assert.equal(lightSpecs[0].options.maxZoom, 19);
+  assert.match(lightSpecs[0].options.attribution!, /Esri/);
+
+  const darkSpecs = getBaseLayerSpecs('map', 'dark');
+  assert.equal(darkSpecs.length, 2);
+  assert.match(darkSpecs[0].url, /Canvas\/World_Dark_Gray_Base\//);
+  assert.match(darkSpecs[1].url, /Canvas\/World_Dark_Gray_Reference\//);
+  assert.equal(darkSpecs[0].options.maxZoom, 19);
+  assert.match(darkSpecs[0].options.attribution!, /Esri/);
 });
 
-test('satellite contains imagery plus both reference layers', () => {
+test('satellite contains imagery only', () => {
   const specs = getBaseLayerSpecs('satellite');
-  assert.equal(specs.length, 3);
-  assert.deepEqual(specs.map(s => s.url.match(/services\/(.*?)\/MapServer/)?.[1]), ['World_Imagery', 'Reference/World_Transportation', 'Reference/World_Boundaries_and_Places']);
-  for (const spec of specs) assert.match(spec.options.attribution!, /Esri/);
+  assert.equal(specs.length, 1);
+  assert.deepEqual(specs.map(s => s.url.match(/services\/(.*?)\/MapServer/)?.[1]), ['World_Imagery']);
+  assert.doesNotMatch(specs[0].url, /Reference\/|Transportation|Canvas/);
+  assert.match(specs[0].options.attribution!, /Esri/);
 });

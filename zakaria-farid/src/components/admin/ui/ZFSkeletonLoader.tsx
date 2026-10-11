@@ -90,20 +90,6 @@ const GlobalSkeletonStyles: React.FC = () => (
       --zf-skel-gold: #2563EB;
     }
 
-    /* Dark Theme Specifics */
-    [data-theme="dark"] .zf-skeleton-root,
-    html[data-theme="dark"] .zf-skeleton-root,
-    body[data-theme="dark"] .zf-skeleton-root,
-    .zf-skeleton-root.dark {
-      --zf-skel-base: rgba(255, 255, 255, 0.05);
-      --zf-skel-highlight: rgba(255, 255, 255, 0.12);
-      --zf-skel-card-bg: rgba(16, 20, 29, 0.85);
-      --zf-skel-card-border: rgba(255, 255, 255, 0.08);
-      --zf-skel-card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      --zf-skel-subtle: rgba(255, 255, 255, 0.03);
-      --zf-skel-gold: #3B82F6;
-    }
-
     .zf-skeleton-shimmer {
       background: linear-gradient(
         90deg,
@@ -117,36 +103,6 @@ const GlobalSkeletonStyles: React.FC = () => (
   `}</style>
 );
 
-function useSkeletonTheme(): 'light' | 'dark' {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
-
-  React.useEffect(() => {
-    const getTheme = (): 'light' | 'dark' => {
-      if (typeof document === 'undefined') return 'light';
-      const attr = document.documentElement.getAttribute('data-theme');
-      if (attr === 'dark') return 'dark';
-      if (attr === 'light') return 'light';
-      const match = document.cookie.match(/(?:^|;\s*)zf_theme=([^;]*)/);
-      if (match && match[1] === 'dark') return 'dark';
-      return 'light';
-    };
-
-    setTheme(getTheme());
-
-    const observer = new MutationObserver(() => {
-      setTheme(getTheme());
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme', 'class'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return theme;
-}
 
 /* ==============================================================================
  * ZFSkeletonTable — Luxury Layout-Preserving Table Page Skeleton
@@ -163,10 +119,9 @@ export const ZFSkeletonTable: React.FC<ZFSkeletonTableProps> = ({
   rowsCount = 6,
   className = '',
 }) => {
-  const theme = useSkeletonTheme();
   return (
     <div
-      className={`zf-skeleton-root ${theme} ${className}`}
+      className={`zf-skeleton-root light ${className}`}
       dir={isAr ? 'rtl' : 'ltr'}
       style={{
         display: 'flex',
@@ -396,10 +351,9 @@ export const ZFSkeletonDashboard: React.FC<ZFSkeletonDashboardProps> = ({
   isAr = true,
   className = '',
 }) => {
-  const theme = useSkeletonTheme();
   return (
     <div
-      className={`zf-skeleton-root ${theme} ${className}`}
+      className={`zf-skeleton-root light ${className}`}
       dir={isAr ? 'rtl' : 'ltr'}
       style={{
         display: 'flex',
@@ -654,10 +608,9 @@ export const ZFSkeletonCards: React.FC<ZFSkeletonCardsProps> = ({
   cardsCount = 6,
   className = '',
 }) => {
-  const theme = useSkeletonTheme();
   return (
     <div
-      className={`zf-skeleton-root ${theme} ${className}`}
+      className={`zf-skeleton-root light ${className}`}
       dir={isAr ? 'rtl' : 'ltr'}
       style={{
         display: 'flex',

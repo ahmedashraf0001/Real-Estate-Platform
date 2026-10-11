@@ -355,7 +355,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .section-eyebrow-pill {
-          color: #8C6826;
+          color: var(--gold-text);
           background: rgba(184, 147, 74, 0.08);
           border-color: rgba(140, 104, 38, 0.22);
         }
@@ -394,7 +394,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .title-serif-accent {
-          color: #8C6826;
+          color: var(--gold-text, #96670e) !important;
         }
 
         .advisory-lead-text {
@@ -486,7 +486,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .plate-roman-seal {
-          color: #8C6826;
+          color: var(--gold-text);
         }
 
         .plate-metric-tag {
@@ -503,7 +503,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .plate-metric-tag {
-          color: #8C6826;
+          color: var(--gold-text);
           background: rgba(184, 147, 74, 0.08);
           border-color: rgba(184, 147, 74, 0.25);
         }
@@ -513,7 +513,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .tag-check {
-          color: #8C6826;
+          color: var(--gold-text);
         }
 
         .plate-title {
@@ -588,7 +588,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .monograph-seal-badge {
-          color: #8C6826;
+          color: var(--gold-text);
         }
 
         .seal-dot {
@@ -635,7 +635,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .mono-nav-btn:hover {
-          color: #8C6826;
+          color: var(--gold-text);
         }
 
         .mono-counter {
@@ -677,7 +677,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         }
 
         [data-theme="light"] .acquisition-tag {
-          color: #8C6826;
+          color: var(--gold-text);
           background: rgba(184, 147, 74, 0.08);
           border-color: rgba(140, 104, 38, 0.2);
         }

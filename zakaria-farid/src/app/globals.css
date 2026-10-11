@@ -134,6 +134,7 @@
   --bg-glass-card: linear-gradient(180deg, rgba(12, 15, 22, 0.30), rgba(12, 15, 22, 0.42));
   --bg-glass-hover: var(--bg-glass-card);
   --glass-strong: linear-gradient(180deg, rgba(12, 15, 22, 0.58), rgba(12, 15, 22, 0.70));
+  --glass-card-strong: linear-gradient(180deg, rgba(20, 25, 36, 0.38), rgba(12, 16, 24, 0.56));
   --glass-border: 1px solid rgba(255, 255, 255, 0.16);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.28);
   --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
@@ -148,6 +149,9 @@
   --gold-primary: #E5B869;
   --gold-light: #FFF0C2;
   --gold-dark: #B8934A;
+  --gold-text-light: #8A5B0A;
+  --glass-blur-thumbnails: blur(12px);
+  --gold-text: var(--gold-primary);
   --gold-border: rgba(229, 184, 105, 0.28);
   --gold-glow: rgba(229, 184, 105, 0.25);
 
@@ -230,16 +234,20 @@
   --bg-glass-card: linear-gradient(180deg, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0.42));
   --bg-glass-hover: var(--bg-glass-card);
   --glass-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.70));
+  --glass-card-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.88));
   --glass-border: 1px solid rgba(255, 255, 255, 0.60);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.80);
   --glass-shadow: 0 20px 50px rgba(30, 24, 16, 0.10);
   --glass-fallback: rgba(255, 255, 255, 0.86);
+  /* Dark text on light glass needs no edge; a dark shadow here smudges every glyph. */
+  --glass-text-shadow: none;
   --border-glass: rgba(255, 255, 255, 0.60);
   --border-glass-subtle: var(--border-glass);
 
   --gold-primary: #8C6826;
   --gold-light: #B8934A;
   --gold-dark: #6B4E1B;
+  --gold-text: var(--gold-text-light);
   --gold-surface: #FAF5E8;
   --gold-border: rgba(140, 104, 38, 0.28);
   --gold-glow: rgba(184, 147, 74, 0.18);
@@ -1211,4 +1219,93 @@ div[style*="background:#ffffff"] select {
 .app-root .modal-backdrop textarea::placeholder {
   color: var(--text-secondary) !important;
   opacity: 1;
+}
+
+/* Gradient-filled text (background-clip: text) shows any text-shadow through its transparent
+   fill, which turned the hero gold muddy brown. Gradient spans use drop-shadow instead. */
+.app-root :is(.name-serif-gold, .gold-text-span, .white-text-span) {
+  text-shadow: none !important;
+}
+
+/* The hero headline sits directly on the photo; the frosted box behind it read as a grey slab. */
+.app-root .home-view .hero-title-glass-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* The no-photo placeholders are dark images; in light theme render them as pale tiles. */
+[data-theme="light"] :is(img[src*="placeholder-property"], img[src*="no-photo"]) {
+  filter: invert(0.9) sepia(0.12) brightness(1.02);
+}
+
+/* ─── site-visual-4a overrides ─── */
+/* 1. Hero headline: same look in light and dark (line 1 white, line 2 dark gold, no halo, no card) */
+.app-root .home-view .hero-title-glass-card,
+[data-theme="light"] .app-root .home-view .hero-title-glass-card,
+[data-theme="dark"] .app-root .home-view .hero-title-glass-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-root .home-view .hero-pill-line-gold,
+[data-theme="light"] .app-root .home-view .hero-pill-line-gold,
+.app-root .home-view .hero-pill-line-gold .gold-text-span,
+[data-theme="light"] .app-root .home-view .hero-pill-line-gold .gold-text-span {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.app-root .home-view .hero-pill-line-white .white-text-span,
+[data-theme="light"] .app-root .home-view .hero-pill-line-white .white-text-span {
+  background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+/* 2. Top navbar: fully transparent on photo heroes (home and property detail) at scrollY 0 */
+.app-root .nav-glass-capsule.hero-blended,
+[data-theme="light"] .app-root .nav-glass-capsule.hero-blended,
+[data-theme="dark"] .app-root .nav-glass-capsule.hero-blended {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 4. Light theme gold text token enforcement (WCAG AA >= 4.5:1 on light background) */
+[data-theme="light"] :is(.title-serif-accent, .explore-catalog-btn, .section-eyebrow-pill, .stat-val) {
+  color: var(--gold-text, #96670e) !important;
+}
+
+/* 8. Saved properties drawer overlay: plain dim shade, no blur */
+.app-root .saved-portfolio-backdrop,
+[data-theme="light"] .app-root .saved-portfolio-backdrop,
+[data-theme="dark"] .app-root .saved-portfolio-backdrop {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .app-root .saved-portfolio-backdrop {
+  background: rgba(10, 12, 16, 0.35) !important;
+}
+
+[data-theme="dark"] .app-root .saved-portfolio-backdrop {
+  background: rgba(10, 12, 16, 0.55) !important;
 }

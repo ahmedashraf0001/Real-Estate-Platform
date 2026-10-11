@@ -204,16 +204,21 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               position: fixed;
               inset: 0;
               z-index: 99999;
-              background: var(--glass-strong);
-              backdrop-filter: var(--glass-blur);
-              -webkit-backdrop-filter: var(--glass-blur);
+              background: rgba(10, 12, 16, 0.55);
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
               display: flex;
               align-items: center;
               justify-content: flex-end;
               padding: 1.5rem;
-              border: var(--glass-border);
-              box-shadow: var(--shadow-glass);
-              text-shadow: var(--glass-text-shadow);
+              border: none;
+              box-shadow: none;
+            }
+
+            [data-theme="light"] .saved-portfolio-backdrop {
+              background: rgba(10, 12, 16, 0.35) !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
             }
 
             /* Drawer is anchored to the right edge in both languages
@@ -238,7 +243,8 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               flex-direction: column;
               overflow: hidden;
               transition: all var(--transition-smooth);
-              background: var(--bg-glass-card);
+              /* No blur inside the drawer, so a see-through fill showed the page as grey haze. */
+              background: var(--bg-surface);
               border: var(--glass-border);
               box-shadow: var(--shadow-glass);
               text-shadow: var(--glass-text-shadow);
@@ -288,7 +294,7 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
             }
 
             [data-theme="light"] .drawer-eyebrow {
-              color: #8C6826;
+              color: var(--gold-text);
             }
 
             [data-theme="light"] .drawer-header {
@@ -323,7 +329,7 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
             }
 
             [data-theme="light"] .gold-icon {
-              color: #8C6826;
+              color: var(--gold-text);
             }
 
             .drawer-title {
@@ -611,7 +617,7 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
             }
 
             [data-theme="light"] .drawer-prop-district {
-              color: #8C6826;
+              color: var(--gold-text);
             }
 
             .drawer-remove-item-btn {
@@ -668,7 +674,7 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
             }
 
             [data-theme="light"] .drawer-prop-price {
-              color: #8C6826;
+              color: var(--gold-text);
               text-shadow: var(--glass-text-shadow);
             }
 

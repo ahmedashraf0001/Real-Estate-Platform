@@ -4413,338 +4413,6 @@
 /* --------------------------------------------------------------------------
    4. ENFORCE MINIMAL ENTERPRISE THEME (NO DARK MODE OR GOLD BLEED)
    -------------------------------------------------------------------------- */
-:global([data-theme="dark"]) .shell {
-  background: var(--erp-bg-canvas, #f8fafc) !important;
-  color: var(--erp-text-title, #0f172a) !important;
-}
-
-:global([data-theme="dark"]) .header {
-  background: #ffffff !important;
-  border-bottom: 1px solid var(--erp-border, #e2e8f0) !important;
-  color: var(--erp-text-title, #0f172a) !important;
-  box-shadow: none !important;
-}
-
-:global([data-theme="dark"]) .sidebar {
-  background: #ffffff !important;
-  border-color: var(--erp-border, #e2e8f0) !important;
-}
-
-:global([data-theme="dark"]) .card,
-:global([data-theme="dark"]) .unifiedStatCard,
-:global([data-theme="dark"]) .chartCard,
-:global([data-theme="dark"]) .dataTableCard,
-:global([data-theme="dark"]) .canonicalTableCard,
-:global([data-theme="dark"]) .widgetCard,
-:global([data-theme="dark"]) .quickActionsCard,
-:global([data-theme="dark"]) .quickActionsHeaderCard {
-  background: #ffffff !important;
-  border-color: var(--erp-border, #e2e8f0) !important;
-  color: var(--erp-text-title, #0f172a) !important;
-  box-shadow: none !important;
-}
-
-:global([data-theme="dark"]) .userBadge {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.10);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .userBadge:hover {
-  background: #263248;
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.22);
-}
-
-:global([data-theme="dark"]) .dockHeader {
-  display: none !important;
-}
-
-:global([data-theme="dark"]) .dockHeaderToggleBtn {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.10);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .dockHeaderToggleBtn:hover {
-  background: #263248;
-  border-color: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .dockAdminReturnBtn {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.10);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .dockAdminReturnBtn:hover {
-  background: #263248;
-  border-color: var(--erp-accent);
-  color: var(--erp-accent);
-}
-
-:global([data-theme="dark"]) .dock {
-  background: #141a27;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .dockGroupTitle,
-:global([data-theme="dark"]) .dockFirstGroupHeader span {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .dockItem {
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .dockItem:hover {
-  background: #263248;
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .dockItemActive {
-  background: #222c40 !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
-}
-
-:global([data-theme="dark"]) .dockItemIcon {
-  color: #8a99ad;
-}
-
-:global([data-theme="dark"]) .dockItem:hover .dockItemIcon,
-:global([data-theme="dark"]) .dockItemActive .dockItemIcon {
-  color: var(--erp-accent);
-}
-
-:global([data-theme="dark"]) .dockBadge {
-  background: #222c40;
-  color: #cbd5e1;
-  border-color: rgba(255, 255, 255, 0.10);
-}
-
-:global([data-theme="dark"]) .dockBadgeGold {
-  background: color-mix(in srgb, var(--erp-accent) 18%, transparent);
-  color: var(--erp-accent-hover);
-  border-color: color-mix(in srgb, var(--erp-accent) 35%, transparent);
-}
-
-:global([data-theme="dark"]) .dockBadgeEmerald {
-  background: rgba(16, 185, 129, 0.18);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.35);
-}
-
-:global([data-theme="dark"]) .academyBtn {
-  background: color-mix(in srgb, var(--erp-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--erp-accent) 30%, transparent);
-  color: var(--erp-accent-hover);
-}
-
-:global([data-theme="dark"]) .academyBtn:hover {
-  background: color-mix(in srgb, var(--erp-accent) 22%, transparent);
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .dockFooter {
-  border-top-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .dockStatusBox {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .dockStatusTitle {
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .dockStatusSub {
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .stage {
-  background: #111622;
-}
-
-:global([data-theme="dark"]) .card {
-  background: #1a2232;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
-}
-
-:global([data-theme="dark"]) .cardTitle {
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .cardSubtitle {
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .btnPrimary {
-  background: var(--erp-accent);
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .btnPrimary:hover {
-  background: var(--erp-accent-hover);
-}
-
-:global([data-theme="dark"]) .btnSecondary {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .btnSecondary:hover {
-  background: #263248;
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .kpiCard {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-  color: #f1f5f9;
-}
-
-:global([data-theme="dark"]) .kpiCard:hover {
-  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
-}
-
-:global([data-theme="dark"]) .flagshipCard {
-  background: linear-gradient(135deg, #1e2638 0%, #182030 100%);
-  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
-}
-
-:global([data-theme="dark"]) .doubleBezelCard {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .doubleBezelInner {
-  background: #182030;
-}
-
-:global([data-theme="dark"]) .doubleBezelCard:hover {
-  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
-}
-
-:global([data-theme="dark"]) .doubleBezelCard.flagshipCard {
-  background: linear-gradient(135deg, #1e2638 0%, #182030 100%);
-  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
-}
-
-:global([data-theme="dark"]) .flagshipCard .doubleBezelInner {
-  background: transparent;
-}
-
-:global([data-theme="dark"]) .compactTelemetryCard {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .compactTelemetryCard:hover {
-  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
-}
-
-:global([data-theme="dark"]) .kpiLabel {
-  color: #8a99ad;
-}
-
-:global([data-theme="dark"]) .flagshipLabel {
-  color: var(--erp-accent-hover);
-}
-
-:global([data-theme="dark"]) .kpiValue {
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .kpiCurrency {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .kpiBadge {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.10);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .kpiFooter {
-  border-top-color: rgba(255, 255, 255, 0.07);
-  color: #8a99ad;
-}
-
-:global([data-theme="dark"]) .kpiFooterSubtle {
-  border-top-color: rgba(255, 255, 255, 0.07);
-}
-
-:global([data-theme="dark"]) .kpiProgressTrack {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-:global([data-theme="dark"]) .tabBar {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .tabBtn {
-  color: #8a99ad;
-}
-
-:global([data-theme="dark"]) .tabBtn:hover {
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .tabBtnActive {
-  background: #222c40 !important;
-  color: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-:global([data-theme="dark"]) .tableWrapper {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .table th {
-  background: #141a27;
-  color: #8a99ad;
-  border-bottom-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .table td {
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-  color: #e2e8f0;
-}
-
-:global([data-theme="dark"]) .table tbody tr:hover {
-  background: #1c263a;
-}
-
-:global([data-theme="dark"]) .inspectorDrawer {
-  background: #141a27;
-  border-color: rgba(255, 255, 255, 0.10);
-}
-
-:global([data-theme="dark"]) .inspectorHeader {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .inspectorContent {
-  background: #0f131d;
-}
-
-:global([data-theme="dark"]) .inspectorFooter {
-  background: #182030;
-  border-top-color: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
-}
-
-:global([data-theme="dark"]) .inspectorBackdrop {
-  background: rgba(0, 0, 0, 0.55);
-}
 
 /* --------------------------------------------------------------------------
    SLIDE-OVER INSPECTOR DRAWER (V2 LIGHT ARCHITECTURAL)
@@ -5350,12 +5018,6 @@
   transform: none;
 }
 
-:global([data-theme="dark"]) .settleBtn {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  border-color: #14532d;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
 /* --------------------------------------------------------------------------
    EXECUTIVE LIGHT MODAL SYSTEM
    -------------------------------------------------------------------------- */
@@ -5493,36 +5155,6 @@
   display: inline-flex;
   align-items: center;
   color: var(--erp-accent);
-}
-
-:global([data-theme="dark"]) .stageBreadcrumb .breadcrumbBrand,
-:global([data-theme="dark"]) .stageBreadcrumb > span:first-child {
-  color: var(--erp-accent-hover);
-  background: color-mix(in srgb, var(--erp-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--erp-accent) 32%, transparent);
-}
-
-:global([data-theme="dark"]) .stageBreadcrumb .breadcrumbDivider,
-:global([data-theme="dark"]) .stageBreadcrumb > span:nth-child(2) {
-  color: #64748b;
-}
-
-:global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSection,
-:global([data-theme="dark"]) .stageBreadcrumb > span:last-child {
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSection:hover,
-:global([data-theme="dark"]) .stageBreadcrumb > span:last-child:hover {
-  color: var(--erp-accent-hover);
-}
-
-:global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSubSection {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .stageBreadcrumb .breadcrumbSubSection:hover {
-  color: var(--erp-accent-hover);
 }
 
 .stageTitle {
@@ -5847,12 +5479,6 @@
   flex-wrap: wrap;
 }
 
-:global([data-theme="dark"]) .deskMiniTelemetry {
-  background: #0f172a;
-  border-color: #334155;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.3);
-}
-
 .deskMiniItem {
   display: flex;
   align-items: center;
@@ -5871,15 +5497,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-:global([data-theme="dark"]) .deskMiniItem {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-:global([data-theme="dark"]) .deskMiniItem:hover {
-  background: #334155;
-}
-
 .deskMiniIconBadge {
   width: 22px;
   height: 22px;
@@ -5896,19 +5513,11 @@
   font-size: 0.68rem;
 }
 
-:global([data-theme="dark"]) .deskMiniLabel {
-  color: #94a3b8;
-}
-
 .deskMiniVal {
   color: #0f172a;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
-}
-
-:global([data-theme="dark"]) .deskMiniVal {
-  color: #f8fafc;
 }
 
 .deskMiniValAlert {
@@ -5935,20 +5544,10 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-:global([data-theme="dark"]) .radarAlertCard {
-  background: #1e293b;
-  border-color: #334155;
-  box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.3);
-}
-
 .radarAlertCard:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
   border-color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .radarAlertCard:hover {
-  border-color: #475569;
 }
 
 .radarAlertLeadingEdge {
@@ -6005,27 +5604,6 @@
   box-shadow: 0 4px 14px rgba(153, 27, 27, 0.35) !important;
 }
 
-:global([data-theme="dark"]) .radarAlertButton {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: transparent;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-}
-
-:global([data-theme="dark"]) .radarAlertButton:hover {
-  background: #ffffff;
-}
-
-:global([data-theme="dark"]) .radarAlertButtonCrit {
-  background: #991b1b !important;
-  color: #ffffff !important;
-  border-color: rgba(153, 27, 27, 0.5) !important;
-}
-
-:global([data-theme="dark"]) .radarAlertButtonCrit:hover {
-  background: #b91c1c !important;
-}
-
 .radarAlertButtonIcon {
   width: 20px;
   height: 20px;
@@ -6036,10 +5614,6 @@
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.2s ease;
-}
-
-:global([data-theme="dark"]) .radarAlertButtonIcon {
-  background: rgba(15, 23, 42, 0.12);
 }
 
 .radarAlertButton:hover .radarAlertButtonIcon {
@@ -6060,11 +5634,6 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   box-sizing: border-box;
-}
-
-:global([data-theme="dark"]) .pulseRibbon {
-  background: #111827;
-  border-color: #374151;
 }
 
 .pulseTrack {
@@ -6103,28 +5672,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-:global([data-theme="dark"]) .pulseValue {
-  color: #f9fafb;
-}
-
 .pulseLabel {
   font-size: 0.68rem;
   font-weight: 600;
   color: #64748b;
 }
 
-:global([data-theme="dark"]) .pulseLabel {
-  color: #9ca3af;
-}
-
 .pulseDivider {
   width: 1px;
   height: 14px;
   background: #e2e8f0;
-}
-
-:global([data-theme="dark"]) .pulseDivider {
-  background: #374151;
 }
 
 /* ─── Executive Daily Action Hub ─── */
@@ -6139,12 +5696,6 @@
   gap: 1.1rem;
   box-sizing: border-box;
   transition: all 0.2s ease;
-}
-
-:global([data-theme="dark"]) .opsActionHub {
-  background: #111827;
-  border-color: #1f2937;
-  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.25);
 }
 
 .opsActionGrid {
@@ -6176,21 +5727,12 @@
   transition: all 0.2s ease;
 }
 
-:global([data-theme="dark"]) .opsDomainColumn {
-  background: #1e293b;
-  border-color: #334155;
-}
-
 .opsDomainHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 0.55rem;
   border-bottom: 1px solid #f1f5f9;
-}
-
-:global([data-theme="dark"]) .opsDomainHeader {
-  border-color: #334155;
 }
 
 .opsDomainDot {
@@ -6205,10 +5747,6 @@
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.01em;
-}
-
-:global([data-theme="dark"]) .opsDomainTitle {
-  color: #f1f5f9;
 }
 
 .opsDomainList {
@@ -6236,12 +5774,6 @@
   min-height: 78px;
 }
 
-:global([data-theme="dark"]) .opsActionBtn {
-  background: #1e293b;
-  border-color: #334155;
-  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.2);
-}
-
 .opsActionBtn:hover {
   transform: translateY(-2px);
   border-color: var(--erp-accent) !important;
@@ -6262,11 +5794,6 @@
   background: var(--erp-accent-subtle) !important;
 }
 
-:global([data-theme="dark"]) .opsActionBtnActive {
-  background: color-mix(in srgb, var(--erp-accent) 15%, transparent) !important;
-  border-color: var(--erp-accent) !important;
-}
-
 /* Radar Recessed Bay */
 .radarRecessedBay {
   background: #f8fafc;
@@ -6277,11 +5804,6 @@
   grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
   gap: 0.8rem;
   box-sizing: border-box;
-}
-
-:global([data-theme="dark"]) .radarRecessedBay {
-  background: #0b1120;
-  border-color: #334155;
 }
 
 /* Architectural Pillar Bay (Recessed bay inside launchpad) */
@@ -6295,11 +5817,6 @@
   gap: 0.85rem;
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-:global([data-theme="dark"]) .pillarBay {
-  background: #0f172a;
-  border-color: #334155;
 }
 
 .pillarHeader {
@@ -6333,19 +5850,11 @@
   letter-spacing: -0.01em;
 }
 
-:global([data-theme="dark"]) .pillarTitle {
-  color: #f8fafc;
-}
-
 .pillarSubtitle {
   font-size: 0.72rem;
   color: #64748b;
   margin-top: 0.15rem;
   display: block;
-}
-
-:global([data-theme="dark"]) .pillarSubtitle {
-  color: #94a3b8;
 }
 
 .pillarBadge {
@@ -6392,18 +5901,10 @@
   line-height: 1.35;
 }
 
-:global([data-theme="dark"]) .opsActionLabel {
-  color: #f8fafc;
-}
-
 .opsActionSub {
   font-size: 0.68rem;
   color: #64748b;
   line-height: 1.35;
-}
-
-:global([data-theme="dark"]) .opsActionSub {
-  color: #94a3b8;
 }
 
 /* Audited Balance Ribbon (General Ledger) */
@@ -6514,47 +6015,6 @@
 }
 
 /* Dark Mode Overrides for Audited Balance Ribbon */
-:global([data-theme="dark"]) .auditedBalanceRibbon {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border: 1px solid #334155;
-  border-top: 3px solid var(--erp-accent);
-  color: #ffffff;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-}
-
-:global([data-theme="dark"]) .auditedBalanceLabel {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .auditedBalanceValue {
-  color: #ffffff;
-}
-
-:global([data-theme="dark"]) .auditedBalanceCurrency {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .auditedBalanceSubtext {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .auditedCashHighlight {
-  color: #34d399;
-}
-
-:global([data-theme="dark"]) .auditedEquityValue {
-  color: var(--erp-accent-hover);
-}
-
-:global([data-theme="dark"]) .auditedStampBadge {
-  background: color-mix(in srgb, var(--erp-accent) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--erp-accent) 40%, transparent);
-  color: var(--erp-accent-hover);
-}
-
-:global([data-theme="dark"]) .auditedEntryCount {
-  color: #94a3b8;
-}
 
 /* Tactile Island Action Buttons (Button-in-Button Architecture) */
 .islandActionBtn {
@@ -7013,56 +6473,6 @@
 }
 
 /* Dark Mode Overrides for Pagination & QoL Controls */
-:global([data-theme="dark"]) .paginationBar {
-  background: #182030;
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-:global([data-theme="dark"]) .paginationInfo {
-  color: #8a99ad;
-}
-
-:global([data-theme="dark"]) .pageBtn {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.10);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .pageBtn:hover:not(:disabled) {
-  background: #263248;
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-:global([data-theme="dark"]) .pageBtn:disabled {
-  color: #475569;
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-:global([data-theme="dark"]) .pageIndicator {
-  color: #f1f5f9;
-}
-
-:global([data-theme="dark"]) .pageSizeSelect,
-:global([data-theme="dark"]) .sortSelect {
-  background: #222c40;
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .sortSelect:focus {
-  border-color: var(--erp-accent);
-}
-
-:global([data-theme="dark"]) .resetFilterBtn {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #f87171;
-}
-
-:global([data-theme="dark"]) .resetFilterBtn:hover {
-  background: rgba(239, 68, 68, 0.25);
-}
 
 /* --------------------------------------------------------------------------
    CALCULATOR STUDIO ENHANCEMENTS
@@ -7091,11 +6501,6 @@
   transition: all 0.2s ease;
 }
 
-:global([data-theme="dark"]) .calcSubCard {
-  background: #182030;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-}
-
 .calcInputField {
   width: 100%;
   background: #ffffff;
@@ -7113,17 +6518,6 @@
 .calcInputField:focus {
   border-color: var(--erp-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--erp-accent) 14%, transparent);
-}
-
-:global([data-theme="dark"]) .calcInputField {
-  background: #1e2638;
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
-}
-
-:global([data-theme="dark"]) .calcInputField:focus {
-  border-color: var(--erp-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--erp-accent) 25%, transparent);
 }
 
 .calcPresetPill {
@@ -7145,10 +6539,6 @@
   border-radius: 999px;
   overflow: hidden;
   margin-top: 0.4rem;
-}
-
-:global([data-theme="dark"]) .calcMicroTrack {
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .calcMicroFill {
@@ -7267,44 +6657,6 @@
   width: 100%;
 }
 
-:global([data-theme="dark"]) .studioDeckContainer {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-:global([data-theme="dark"]) .studioHeader {
-  border-bottom-color: #334155;
-}
-
-:global([data-theme="dark"]) .studioTitle {
-  color: #f8fafc;
-}
-
-:global([data-theme="dark"]) .studioSubtitle {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .lensSegmentedControl {
-  background: #0f172a;
-  border-color: #334155;
-}
-
-:global([data-theme="dark"]) .lensBtn {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .lensBtn:hover {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-:global([data-theme="dark"]) .lensBtnActive {
-  background: #1e293b;
-  border-color: #475569;
-  color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
 /* ─── Compact Scrollable List for Cockpit Operational Cards ─── */
 .cockpitScrollableList {
   display: flex;
@@ -7334,14 +6686,6 @@
   background: rgba(148, 163, 184, 0.7);
 }
 
-:global([data-theme="dark"]) .cockpitScrollableList {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-:global([data-theme="dark"]) .cockpitScrollableList::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-}
-
 .cockpitScrollableList > div {
   border: 1px solid var(--zf2-border-subtle, #e2e8f0) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -7350,14 +6694,6 @@
 .cockpitScrollableList > div:hover {
   border-color: #cbd5e1 !important;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-}
-
-:global([data-theme="dark"]) .cockpitScrollableList > div {
-  border-color: rgba(255, 255, 255, 0.16) !important;
-}
-
-:global([data-theme="dark"]) .cockpitScrollableList > div:hover {
-  border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 /* --------------------------------------------------------------------------

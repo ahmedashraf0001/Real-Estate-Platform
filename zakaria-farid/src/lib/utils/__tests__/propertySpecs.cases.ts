@@ -42,4 +42,16 @@ test('adapter retains persisted units and calendar, never invents finishing', ()
   assert.equal(adapted.finishing, undefined);
   assert.equal(buildPropertySpecs(adapted, 'ar').find(c => c.id === 'units')?.value, '2 وحدات');
 });
+test('building without recorded units falls back to its unit count and shows construction status', () => {
+  const cards = buildPropertySpecs({ type: 'building', sqm: 350, total_units_count: 1, completion_status: 'ready' }, 'ar');
+  assert.deepEqual(cards.map(c => c.id), ['units', 'area', 'status', 'type']);
+  assert.equal(cards[0].value, '1 وحدات');
+  assert.equal(cards[2].value, 'جاهز للاستلام');
+});
+test('building floors come from its recorded units, ground floor included', () => {
+  const units = [{ floor: 1 }, { floor: 1 }, { floor: 2 }, { floor: 2 }] as never;
+  const cards = buildPropertySpecs({ type: 'building', building_units: units }, 'en');
+  assert.equal(cards.find(c => c.id === 'floors')?.value, '3 floors');
+  assert.equal(cards.find(c => c.id === 'units')?.value, '4 units');
+});
 }

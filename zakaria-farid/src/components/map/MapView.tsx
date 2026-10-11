@@ -7,8 +7,6 @@ if (typeof window !== 'undefined') {
   L = require('leaflet');
 }
 import { 
-  Moon, 
-  Sun, 
   Search, 
   Plus, 
   Minus, 
@@ -24,7 +22,9 @@ import {
   Bath,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Map as MapIcon,
+  Globe
 } from 'lucide-react';
 import { Property } from '@/types';
 import { createCachedTileLayer, getBaseLayerSpecs } from '@/lib/mapCache';
@@ -59,6 +59,28 @@ export const MapView: React.FC<MapViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarClosing, setIsSidebarClosing] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const readTheme = () => {
+      const theme = document.documentElement.getAttribute('data-theme');
+      setCurrentTheme(theme === 'light' ? 'light' : 'dark');
+    };
+    readTheme();
+    const observer = new MutationObserver(readTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-map-sidebar', isSidebarOpen ? 'open' : 'closed');
+    return () => {
+      document.documentElement.removeAttribute('data-map-sidebar');
+    };
+  }, [isSidebarOpen]);
+
   const closeSidebar = () => {
     setIsSidebarClosing(true);
     setTimeout(() => {
@@ -109,8 +131,6 @@ export const MapView: React.FC<MapViewProps> = ({
       attributionControl: true
     });
 
-    map.createPane('neon-basemap');
-    map.getPane('neon-basemap')!.style.zIndex = '200';
     const attribution = map.attributionControl.getContainer();
     if (attribution) attributionContainerRef.current?.appendChild(attribution);
     const resizeObserver = new ResizeObserver(() => map.invalidateSize({ pan: false }));
@@ -171,15 +191,15 @@ export const MapView: React.FC<MapViewProps> = ({
     });
   }, [selectedPropertyId, allPropertiesList]);
 
-  // Switch between Dark Neon Vector Map & Real High-Res Satellite Imagery
+  // Switch between Theme-Following Vector Map & Real High-Res Satellite Imagery
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
     const map = mapInstanceRef.current;
-    const layers = getBaseLayerSpecs(isSatelliteMode ? 'satellite' : 'neon')
+    const layers = getBaseLayerSpecs(isSatelliteMode ? 'satellite' : 'map', currentTheme)
       .map(spec => createCachedTileLayer(spec.url, spec.options).addTo(map));
     return () => { layers.forEach(layer => map.removeLayer(layer)); };
-  }, [isSatelliteMode]);
+  }, [isSatelliteMode, currentTheme]);
 
   // Handle Card Click -> Pan & Zoom Map Close to Property
   const handleSelectCard = (property: Property) => {
@@ -250,9 +270,10 @@ export const MapView: React.FC<MapViewProps> = ({
           className="map-mode-pill-btn"
           onClick={() => setIsSatelliteMode(!isSatelliteMode)}
           type="button"
+          title={isSatelliteMode ? (locale === 'ar' ? 'التحويل إلى الخريطة' : 'Switch to Vector Map') : (locale === 'ar' ? 'التحويل إلى الأقمار الصناعية' : 'Switch to Satellite')}
         >
-          {isSatelliteMode ? <Sun size={14} className="mode-gold-icon" /> : <Moon size={14} className="mode-gold-icon" />}
-          <span>{isSatelliteMode ? (locale === 'ar' ? 'نمط النيون' : 'Neon View') : (locale === 'ar' ? 'الأقمار الصناعية' : 'Satellite')}</span>
+          {isSatelliteMode ? <MapIcon size={14} className="mode-gold-icon" /> : <Globe size={14} className="mode-gold-icon" />}
+          <span>{isSatelliteMode ? (locale === 'ar' ? 'الخريطة' : 'Map') : (locale === 'ar' ? 'الأقمار الصناعية' : 'Satellite')}</span>
         </button>
       </div>
 
@@ -575,6 +596,9 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         .map-view-page {
+          --map-glass-blur-dark: blur(24px) saturate(160%);
+          --map-glass-blur-light: blur(24px) saturate(180%);
+          --map-glass-blur-card: blur(16px) saturate(160%);
           position: relative;
           width: 100vw;
           height: 100dvh;
@@ -588,10 +612,6 @@ export const MapView: React.FC<MapViewProps> = ({
           width: 100%;
           height: 100%;
           z-index: 1;
-        }
-
-        .map-view-page .leaflet-neon-basemap-pane {
-          filter: grayscale(1) contrast(2.2) brightness(0.95) sepia(1) saturate(2.6) hue-rotate(-12deg);
         }
 
         .map-view-page .leaflet-control-attribution {
@@ -625,12 +645,13 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="dark"] .map-selected-preview-card,
         [data-theme="dark"] .floating-sidebar-trigger,
         [data-theme="dark"] .floating-glass-directory {
-          background: var(--glass-strong) !important;
-          backdrop-filter: var(--glass-blur) !important;
-          -webkit-backdrop-filter: var(--glass-blur) !important;
-          border: var(--glass-border) !important;
-          box-shadow: var(--shadow-glass) !important;
+          background: rgba(20, 24, 35, 0.58) !important;
+          backdrop-filter: var(--map-glass-blur-dark) !important;
+          -webkit-backdrop-filter: var(--map-glass-blur-dark) !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
           text-shadow: var(--glass-text-shadow);
+          color: #FFFFFF !important;
         }
 
         [data-theme="light"] .map-glass-ctrl-pill,
@@ -638,12 +659,13 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="light"] .map-selected-preview-card,
         [data-theme="light"] .floating-sidebar-trigger,
         [data-theme="light"] .floating-glass-directory {
-          background: var(--glass-strong) !important;
-          backdrop-filter: var(--glass-blur) !important;
-          -webkit-backdrop-filter: var(--glass-blur) !important;
-          border: var(--glass-border) !important;
-          box-shadow: var(--shadow-glass) !important;
-          text-shadow: var(--glass-text-shadow);
+          background: rgba(255, 255, 255, 0.72) !important;
+          backdrop-filter: var(--map-glass-blur-light) !important;
+          -webkit-backdrop-filter: var(--map-glass-blur-light) !important;
+          border: 1px solid rgba(255, 255, 255, 0.65) !important;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+          text-shadow: none !important;
+          color: #0D1117 !important;
         }
 
         /* Keyframe entrance animations */
@@ -714,7 +736,7 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         .map-floating-controls-row.sidebar-is-open {
-          right: calc(420px + 2.5rem);
+          right: calc(420px + 2rem);
           left: auto;
         }
 
@@ -726,7 +748,7 @@ export const MapView: React.FC<MapViewProps> = ({
         .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-open,
         [dir="rtl"] .map-floating-controls-row.sidebar-is-open {
           right: auto;
-          left: calc(420px + 2.5rem);
+          left: calc(420px + 2rem);
         }
 
         .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-closed,
@@ -1166,7 +1188,7 @@ export const MapView: React.FC<MapViewProps> = ({
         /* 3. Floating Sidebar Open Trigger */
         .floating-sidebar-trigger {
           position: absolute;
-          top: calc(var(--map-navbar-bottom, 0px) + 1.5rem);
+          top: 1.5rem;
           right: 1.5rem;
           z-index: 1000;
           display: inline-flex;
@@ -1184,7 +1206,7 @@ export const MapView: React.FC<MapViewProps> = ({
         .map-view-page[dir="rtl"] .floating-sidebar-trigger,
         [dir="rtl"] .floating-sidebar-trigger {
           right: auto;
-          left: 1.5rem;
+          left: 1.25rem;
         }
 
         [data-theme="dark"] .floating-sidebar-trigger {
@@ -1209,13 +1231,13 @@ export const MapView: React.FC<MapViewProps> = ({
         /* 4. Floating Frosted Crystal Glass Directory Dock */
         .floating-glass-directory {
           position: absolute;
-          top: calc(var(--map-navbar-bottom, 0px) + 1.5rem);
-          bottom: 1.5rem;
-          right: 1.5rem;
+          top: 0.75rem;
+          bottom: 0.75rem;
+          right: 1rem;
           left: auto;
-          width: min(420px, calc(100vw - 3rem));
+          width: min(420px, calc(100vw - 2rem));
           z-index: 50;
-          border-radius: 28px;
+          border-radius: 24px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -1225,7 +1247,7 @@ export const MapView: React.FC<MapViewProps> = ({
         .map-view-page[dir="rtl"] .floating-glass-directory,
         [dir="rtl"] .floating-glass-directory {
           right: auto;
-          left: 1.5rem;
+          left: 1rem;
           animation: sidebarSlideInRTL 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
@@ -1446,45 +1468,48 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="dark"] .floating-estate-card {
-          background: var(--glass-strong);
-          border: var(--glass-border);
-          box-shadow: var(--shadow-glass);
+          background: rgba(255, 255, 255, 0.07) !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+          color: #FFFFFF !important;
         }
 
         [data-theme="light"] .floating-estate-card {
-          background: var(--glass-strong);
-          backdrop-filter: var(--glass-blur);
-          -webkit-backdrop-filter: var(--glass-blur);
-          border: var(--glass-border);
-          box-shadow: var(--shadow-glass);
-          text-shadow: var(--glass-text-shadow);
+          background: rgba(255, 255, 255, 0.72) !important;
+          backdrop-filter: var(--map-glass-blur-card) !important;
+          -webkit-backdrop-filter: var(--map-glass-blur-card) !important;
+          border: 1px solid rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+          text-shadow: none !important;
+          color: #0D1117 !important;
         }
 
         .floating-estate-card:hover {
-          border-color: var(--gold-primary);
+          border-color: var(--gold-primary) !important;
           transform: translateY(-2px);
         }
 
         [data-theme="dark"] .floating-estate-card:hover {
-          background: var(--glass-strong);
-          box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
         }
 
         [data-theme="light"] .floating-estate-card:hover {
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+          background: rgba(255, 255, 255, 0.85) !important;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
         }
 
         .floating-estate-card.active-pin {
-          border-color: var(--gold-primary);
-          box-shadow: var(--shadow-glass);
+          border-color: var(--gold-primary) !important;
+          box-shadow: 0 0 0 1px var(--gold-primary) !important;
         }
 
         [data-theme="dark"] .floating-estate-card.active-pin {
-          background: var(--glass-strong);
+          background: rgba(255, 255, 255, 0.14) !important;
         }
 
         [data-theme="light"] .floating-estate-card.active-pin {
-          background: var(--glass-strong);
+          background: rgba(255, 255, 255, 0.88) !important;
         }
 
         .estate-thumb-wrap {
@@ -1794,29 +1819,30 @@ export const MapView: React.FC<MapViewProps> = ({
 
         @media (max-width: 768px) {
           .floating-glass-directory {
-            top: auto !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100% !important;
-            max-height: min(74dvh, calc(100dvh - var(--map-navbar-bottom, 0px) - 5rem)) !important;
-            border-radius: 24px 24px 0 0 !important;
-            border-bottom: none !important;
-            animation: sidebarSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            top: 0.75rem !important;
+            bottom: 0.75rem !important;
+            left: 0.75rem !important;
+            right: 0.75rem !important;
+            width: auto !important;
+            max-width: calc(100vw - 1.5rem) !important;
+            max-height: none !important;
+            z-index: 2005 !important;
+            border-radius: 24px !important;
+            animation: sidebarSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+          }
+
+          .map-view-page[dir="rtl"] .floating-glass-directory,
+          [dir="rtl"] .floating-glass-directory {
+            animation: sidebarSlideInRTL 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
           }
 
           .floating-glass-directory.closing {
-            animation: sidebarSlideDown 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            animation: sidebarSlideOut 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
           }
 
-          /* Lighter, clearer glass on mobile */
-          [data-theme="dark"] .floating-glass-directory {
-            background: var(--glass-strong) !important;
-            backdrop-filter: var(--glass-blur) !important;
-            -webkit-backdrop-filter: var(--glass-blur) !important;
-            border: var(--glass-border);
-            box-shadow: var(--shadow-glass);
-            text-shadow: var(--glass-text-shadow);
+          .map-view-page[dir="rtl"] .floating-glass-directory.closing,
+          [dir="rtl"] .floating-glass-directory.closing {
+            animation: sidebarSlideOutRTL 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
           }
 
           .glass-directory-header {

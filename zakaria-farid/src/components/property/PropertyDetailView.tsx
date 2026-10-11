@@ -8,6 +8,7 @@ if (typeof window !== 'undefined') {
 import { Property } from '@/types';
 import { fetchRoute, estimateRoute, formatDuration } from '@/lib/geo/routing';
 import { buildPropertySpecs, getSpecGridColumns } from '@/lib/utils/propertySpecs';
+import { shouldRenderThumbnailStrip, formatThumbnailCounter, toArabicNumerals } from '@/lib/utils/specGrid';
 import { createFrameScheduler } from '@/lib/utils/frameScheduler';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
@@ -218,11 +219,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     builtYear: rawProperty.builtYear || rawProperty.year_built || undefined,
     featured: rawProperty.featured ?? rawProperty.is_featured ?? false,
     listing_status: rawProperty.listing_status,
-    images: (rawProperty.images && rawProperty.images.length > 0) 
-      ? rawProperty.images 
-      : (rawProperty.property_images && rawProperty.property_images.length > 0)
-        ? rawProperty.property_images.map((img: any) => typeof img === 'string' ? img : img.url)
-        : [],
+    images: (rawProperty.images && rawProperty.images.length > 0)
+      ? rawProperty.images
+      : (rawProperty.property_images || []).map((img: any) => typeof img === 'string' ? img : img.url),
     narrative: cleanNarrative,
     amenities: rawProperty.amenities || [],
     mapCoordinates: rawProperty.mapCoordinates || (rawProperty.latitude && rawProperty.longitude ? { x: 38, y: 44, lat: Number(rawProperty.latitude), lng: Number(rawProperty.longitude) } : { x: 0, y: 0, lat: 0, lng: 0 }),
@@ -271,7 +270,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     sqm: property.sqm,
     builtYear: property.builtYear,
   }, locale);
-  const specIcons = { floors: Building2, units: Building2, bedrooms: Bed, bathrooms: Bath, area: Maximize2, year: Calendar, finishing: CheckCircle, type: Building2 };
+  const specIcons = { floors: Building2, units: Building2, bedrooms: Bed, bathrooms: Bath, area: Maximize2, year: Calendar, finishing: CheckCircle, status: CheckCircle, type: Building2 };
   const [pageUrl, setPageUrl] = useState('');
   useEffect(() => { setPageUrl(window.location.href); }, [locale, property.slug]);
   const contactPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
@@ -292,6 +291,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const lightboxTouchX = useRef<number | null>(null);
+  const activeThumbRef = useRef<HTMLButtonElement>(null);
 
   // Pinch-zoom / pan state for the fullscreen single-image view
   const [zoomView, setZoomView] = useState({ scale: 1, x: 0, y: 0 });
@@ -661,6 +661,19 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     }
   }, [property.images]);
 
+  // Keep active thumbnail scrolled into view inside the in-photo strip
+  useEffect(() => {
+    if (activeThumbRef.current) {
+      const thumb = activeThumbRef.current;
+      const scroller = thumb.parentElement;
+      if (scroller) {
+        const item = thumb.getBoundingClientRect();
+        const frame = scroller.getBoundingClientRect();
+        scroller.scrollBy({ left: item.left + item.width / 2 - frame.left - frame.width / 2, behavior: 'smooth' });
+      }
+    }
+  }, [activeImageIndex, mediaMode]);
+
   // Price per SQM calculation
   const pricePerSqm = property.sqm && property.sqm > 0 
     ? Math.round(property.price / property.sqm).toLocaleString() 
@@ -804,6 +817,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         {/* 3. Cinematic Unified Gallery Stage (Photos & Video Tour in One Component) */}
         <div className="gallery-section">
+          <div className="gallery-media-frame">
           {mediaMode === 'videos' && propertyVideos.length > 0 ? (
             /* 🎬 Video Tour Mode Stage */
             <div className="gallery-video-showcase-stage">
@@ -896,7 +910,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   />
                 </AnimatePresence>
 
-                <div className="gallery-stage-overlay">
+                <div className={`gallery-stage-overlay ${shouldRenderThumbnailStrip(property.images.length, propertyVideos.length) ? 'has-thumb-strip' : ''}`}>
                   <div className="gallery-counter-pill">
                     <span dir="ltr" className="tabular-nums">{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
                     <span className="counter-vista-label"> • ARCHITECTURAL VISTA</span>
@@ -952,71 +966,84 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 >
                   <ChevronRight size={20} />
                 </button>
+
+
               </div>
             </>
           )}
-
-          {/* Unified Thumbnails Strip (Photos + Video Tour) */}
-          <div className="thumbnails-strip">
-            {propertyVideos.length > 0 && (
-              <motion.div
-                className={`thumb-item thumb-video-item ${mediaMode === 'videos' ? 'active' : ''}`}
-                onClick={() => setMediaMode('videos')}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                title={isAr ? 'مشاهدة جولة الفيديو' : 'Watch Video Tour'}
-              >
-                {propertyVideos[0].thumbnail ? (
-                  <img src={propertyVideos[0].thumbnail} alt="" className="thumb-img" />
-                ) : (
-                  <video
-                    className="thumb-img"
-                    src={`${propertyVideos[0].url}#t=0.5`}
-                    preload="metadata"
-                    muted
-                    playsInline
-                    aria-hidden="true"
-                  />
-                )}
-                <div className="thumb-video-inner">
-                  <div className="thumb-play-circle">
-                    <Play size={14} fill="currentColor" />
-                  </div>
-                  <span className="thumb-video-label">
-                    {isAr ? 'فيديو' : 'Video'}
-                    {propertyVideos.length > 1 ? ` · ${propertyVideos.length}` : ''}
-                  </span>
-                </div>
-              </motion.div>
-            )}
-
-            {property.images.map((imgUrl, idx) => (
-              <motion.div 
-                key={idx}
-                className={`thumb-item ${mediaMode === 'photos' && activeImageIndex === idx ? 'active' : ''}`}
-                onClick={() => {
-                  setMediaMode('photos');
-                  goToImage(idx);
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="thumb-img" />
-                {idx === 2 && property.images.length > 3 && (
-                  <button
-                    type="button"
-                    className="thumb-more-overlay"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsLightboxOpen(true);
-                    }}
-                    title={isAr ? 'عرض كل الصور' : 'View all photos'}
+                {/* A2 In-Photo Thumbnail Strip */}
+                {shouldRenderThumbnailStrip(property.images.length, propertyVideos.length) && (
+                  <div
+                    className="in-photo-thumbnails-bar"
+                    role="region"
+                    aria-label={isAr ? 'معرض الصور المصغرة' : 'Image thumbnails gallery'}
                   >
-                    +{property.images.length - 3}
-                  </button>
+                    <div className="in-photo-thumbnails-scroll">
+                      {propertyVideos.length > 0 && (
+                        <button
+                          type="button"
+                          className={`in-photo-thumb-btn thumb-video-btn ${mediaMode === 'videos' ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMediaMode('videos');
+                          }}
+                          aria-label={isAr ? 'مشاهدة جولة الفيديو' : 'Watch Video Tour'}
+                          aria-current={mediaMode === 'videos' ? 'true' : undefined}
+                          ref={mediaMode === 'videos' ? activeThumbRef : undefined}
+                          title={isAr ? 'مشاهدة جولة الفيديو' : 'Watch Video Tour'}
+                        >
+                          {propertyVideos[0].thumbnail ? (
+                            <img src={propertyVideos[0].thumbnail} alt="" className="in-photo-thumb-img" />
+                          ) : (
+                            <video
+                              className="in-photo-thumb-img"
+                              src={`${propertyVideos[0].url}#t=0.5`}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              aria-hidden="true"
+                            />
+                          )}
+                          <div className="in-photo-video-play" aria-hidden="true">
+                            <Play size={12} fill="currentColor" />
+                          </div>
+                        </button>
+                      )}
+
+                      {property.images.map((imgUrl, idx) => {
+                        const isActive = mediaMode === 'photos' && activeImageIndex === idx;
+                        const total = property.images.length;
+                        const label = isAr
+                          ? `صورة ${toArabicNumerals(idx + 1)} من ${toArabicNumerals(total)}`
+                          : `Image ${idx + 1} of ${total}`;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            className={`in-photo-thumb-btn ${isActive ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMediaMode('photos');
+                              goToImage(idx);
+                            }}
+                            aria-label={label}
+                            aria-current={isActive ? 'true' : undefined}
+                            title={label}
+                            ref={isActive ? activeThumbRef : undefined}
+                          >
+                            <img src={imgUrl} alt="" className="in-photo-thumb-img" />
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="in-photo-counter" aria-live="polite">
+                      <span className="tabular-nums" dir="ltr">
+                        {formatThumbnailCounter(mediaMode === 'videos' ? 1 : activeImageIndex + 1 + (propertyVideos.length > 0 ? 1 : 0), property.images.length + (propertyVideos.length > 0 ? 1 : 0), isAr ? 'ar' : 'en')}
+                      </span>
+                    </div>
+                  </div>
                 )}
-              </motion.div>
-            ))}
           </div>
         </div>
 
@@ -1700,7 +1727,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           font-weight: 600;
           background: transparent;
           border: none;
@@ -1722,7 +1749,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .badge-gold-icon {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .property-main-title {
@@ -1753,12 +1780,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.8125rem;
           font-weight: 600;
           white-space: nowrap;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           margin-inline-start: 8px;
         }
 
         .verified-trust-inline svg {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           flex-shrink: 0;
         }
 
@@ -1804,13 +1831,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 2.25rem;
           font-weight: 800;
           line-height: 1.1;
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .price-currency {
           font-size: 1.15rem;
           font-weight: 700;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           opacity: 1;
           margin-left: 4px;
         }
@@ -1871,7 +1898,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .header-icon-btn:hover {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-primary);
         }
 
@@ -1935,7 +1962,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         [data-theme="light"] .gallery-mode-tab.active {
           background: var(--glass-strong);
           border-color: #A87A28;
-          color: #8C6826;
+          color: var(--gold-text);
         }
 
         .tab-video-icon {
@@ -2110,6 +2137,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           opacity: 0.20;
         }
 
+        .gallery-media-frame { position: relative; margin-bottom: 1.25rem; }
+        .gallery-media-frame .gallery-video-showcase-stage { padding-bottom: 72px; }
         .main-image-frame {
           position: relative;
           z-index: 1;
@@ -2118,7 +2147,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           border-radius: 24px;
           overflow: hidden;
           border: 1px solid rgba(255, 255, 255, 0.2);
-          margin-bottom: 1.25rem;
+          margin-bottom: 0;
           box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
           background: #080A0E;
         }
@@ -2152,6 +2181,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           z-index: 2;
           pointer-events: none;
         }
+
+        .gallery-stage-overlay.has-thumb-strip {
+          bottom: 6rem;
+        }
+
+        [data-theme="light"] .gallery-counter-pill { color: var(--gold-text); }
 
         .gallery-counter-pill {
           background: var(--glass-strong);
@@ -2236,7 +2271,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .ambient-sparkle-icon {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .ambient-dot-pulse {
@@ -2369,80 +2404,112 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .arrow-left { left: 1.25rem; }
         .arrow-right { right: 1.25rem; }
 
-        .thumbnails-strip {
-          position: relative;
-          z-index: 5;
+        /* A2 In-Photo Floating Glass Thumbnail Strip */
+        .in-photo-thumbnails-bar {
+          position: absolute;
+          bottom: 12px;
+          left: 12px;
+          right: 12px;
+          z-index: 10;
           display: flex;
-          gap: 0.75rem;
+          align-items: center;
+          gap: 8px;
+          background: rgba(12, 15, 22, 0.38);
+          backdrop-filter: var(--glass-blur-thumbnails);
+          -webkit-backdrop-filter: var(--glass-blur-thumbnails);
+          border-radius: 12px;
+          padding: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+          pointer-events: auto;
+          box-sizing: border-box;
+        }
+
+        [data-theme="light"] .in-photo-thumbnails-bar {
+          background: rgba(12, 15, 22, 0.38) !important;
+          backdrop-filter: var(--glass-blur-thumbnails) !important;
+          -webkit-backdrop-filter: var(--glass-blur-thumbnails) !important;
+          border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .in-photo-thumbnails-scroll {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px;
           overflow-x: auto;
-          padding: 2px 2px 6px;
-          scrollbar-width: thin;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
           scroll-snap-type: x proximity;
+          flex: 1;
+          min-width: 0;
         }
 
-        .thumb-item {
-          position: relative;
-          flex: 0 0 auto;
-          width: 132px;
-          aspect-ratio: 4 / 3;
-          border-radius: 14px;
-          overflow: hidden;
-          border: 2px solid transparent;
-          cursor: pointer;
-          transition: opacity var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
-          opacity: 0.6;
-          background: #0E121A;
-          scroll-snap-align: start;
-        }
-
-        /* "+N" overlay is only used by the old mobile grid; the strip now scrolls. */
-        .thumb-more-overlay {
+        .in-photo-thumbnails-scroll::-webkit-scrollbar {
           display: none;
         }
 
-        .thumb-item:hover {
+        .in-photo-thumb-btn {
+          position: relative;
+          flex: 0 0 56px;
+          width: 56px;
+          height: 40px;
+          border-radius: 7px;
+          overflow: hidden;
+          border: 2px solid transparent;
+          padding: 0;
+          margin: 0;
+          background: #0E121A;
+          opacity: 0.75;
+          cursor: pointer;
+          scroll-snap-align: center;
+          transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .in-photo-thumb-btn:hover {
           opacity: 0.95;
         }
 
-        .thumb-item.active {
-          border-color: var(--gold-primary);
+        .in-photo-thumb-btn:focus-visible {
+          outline: 2px solid #E5B869;
+          outline-offset: 2px;
+        }
+
+        .in-photo-thumb-btn.active {
           opacity: 1;
-          box-shadow: 0 0 18px var(--gold-glow);
+          border-color: #E5B869;
+          box-shadow: 0 0 12px rgba(229, 184, 105, 0.45);
         }
 
-        .thumb-video-item {
-          opacity: 0.9;
+        .in-photo-thumb-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
 
-        .thumb-video-inner {
+        .in-photo-video-play {
           position: absolute;
           inset: 0;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          background: linear-gradient(180deg, rgba(8, 10, 14, 0.15) 0%, rgba(8, 10, 14, 0.65) 100%);
+          background: rgba(0, 0, 0, 0.4);
+          color: #FFFFFF;
         }
 
-        .thumb-play-circle {
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.92);
-          color: #0A0C10;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding-inline-start: 2px;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-        }
+        .in-photo-counter .tabular-nums { direction: ltr; unicode-bidi: bidi-override; }
 
-        .thumb-video-label {
-          font-size: 0.7rem;
+        .in-photo-counter {
+          flex-shrink: 0;
+          padding: 0 8px;
+          font-family: var(--font-heading);
+          font-size: 0.75rem;
           font-weight: 700;
           color: #FFFFFF;
-          text-shadow: var(--glass-text-shadow);
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.05em;
+          white-space: nowrap;
         }
 
         .gallery-video-play-btn {
@@ -2645,21 +2712,21 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.75rem;
           font-weight: 800;
           letter-spacing: 0.12em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
         }
 
         [data-theme="light"] .lightbox-dossier-tag {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .tag-gold-icon {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           flex-shrink: 0;
         }
 
         [data-theme="light"] .tag-gold-icon {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .lightbox-counter-pill {
@@ -2671,13 +2738,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.75rem;
           font-weight: 700;
           letter-spacing: 0.08em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         [data-theme="light"] .lightbox-counter-pill {
           background: rgba(184, 134, 11, 0.12);
           border-color: rgba(184, 134, 11, 0.35);
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .lightbox-close-btn {
@@ -2708,7 +2775,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .lightbox-close-btn:hover {
           background: rgba(221, 167, 82, 0.25);
           border-color: var(--gold-primary);
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         /* Carousel Cards Deck */
@@ -2725,14 +2792,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .carousel-card-slot {
           position: absolute;
-          width: 72vw;
-          max-width: 960px;
-          height: 58vh;
-          max-height: 600px;
+          width: min(88vw, 1320px);
+          height: 100%;
+          max-height: 100%;
           border-radius: 24px;
           overflow: hidden;
           will-change: transform, opacity;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           transition: border-color var(--transition-fast), box-shadow var(--transition-smooth), opacity var(--transition-fast);
         }
 
@@ -2764,9 +2833,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .carousel-card-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+          width: auto;
+          height: auto;
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
           display: block;
         }
 
@@ -2892,13 +2963,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .dock-estate,
         .dock-district {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           font-weight: 600;
         }
 
         [data-theme="light"] .dock-estate,
         [data-theme="light"] .dock-district {
-          color: #B8860B;
+          color: var(--gold-text);
           font-weight: 700;
         }
 
@@ -3046,14 +3117,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.6875rem;
           font-weight: 800;
           letter-spacing: 0.16em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
           display: block;
           margin-bottom: 0.35rem;
         }
 
         [data-theme="light"] .section-eyebrow {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .section-subtitle {
@@ -3077,20 +3148,55 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           line-height: 1.75;
         }
 
-        /* Key Specification Cards Matrix (Reference Layout) */
+        /* Key Specification Cards Matrix (Zero empty slots for 1-9 items at all viewports) */
         .property-spec-matrix-grid {
           display: grid;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 0.85rem;
           margin-bottom: 2rem;
           padding-bottom: 1.75rem;
           border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
         }
 
-        .spec-columns-1 .spec-stat-card { grid-column: span 6; }
-        .spec-columns-2 .spec-stat-card { grid-column: span 3; }
-        .spec-columns-3 .spec-stat-card { grid-column: span 2; }
-        .spec-count-5 .spec-stat-card:nth-child(4) { grid-column: 2 / span 2; }
+        /* Default / Medium desktop (1280px) */
+        .property-spec-matrix-grid.spec-count-1 { grid-template-columns: 1fr; }
+        .property-spec-matrix-grid.spec-count-1 .spec-stat-card { grid-column: 1 / -1; }
+
+        .property-spec-matrix-grid.spec-count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-2 .spec-stat-card { grid-column: auto; }
+
+        .property-spec-matrix-grid.spec-count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-3 .spec-stat-card { grid-column: auto; }
+
+        .property-spec-matrix-grid.spec-count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-4 .spec-stat-card { grid-column: auto; }
+
+        /* Count 5 on desktop: 3 + 2 filling 6 columns (items 1-3 span 2, items 4-5 span 3 -> full rows) */
+        .property-spec-matrix-grid.spec-count-5 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-5 .spec-stat-card:nth-child(-n+3) { grid-column: span 2; }
+        .property-spec-matrix-grid.spec-count-5 .spec-stat-card:nth-child(n+4) { grid-column: span 3; }
+
+        .property-spec-matrix-grid.spec-count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-6 .spec-stat-card { grid-column: auto; }
+
+        /* Count 7 on desktop: 4 + 3 filling 12 columns (items 1-4 span 3, items 5-7 span 4 -> full rows) */
+        .property-spec-matrix-grid.spec-count-7 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-7 .spec-stat-card:nth-child(-n+4) { grid-column: span 3; }
+        .property-spec-matrix-grid.spec-count-7 .spec-stat-card:nth-child(n+5) { grid-column: span 4; }
+
+        .property-spec-matrix-grid.spec-count-8 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-8 .spec-stat-card { grid-column: auto; }
+
+        .property-spec-matrix-grid.spec-count-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .property-spec-matrix-grid.spec-count-9 .spec-stat-card { grid-column: auto; }
+
+        /* Wide screens (1440px / 1920px): 5 items on single row, 6 items on single row */
+        @media (min-width: 1400px) {
+          .property-spec-matrix-grid.spec-count-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+          .property-spec-matrix-grid.spec-count-5 .spec-stat-card { grid-column: auto !important; }
+
+          .property-spec-matrix-grid.spec-count-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+          .property-spec-matrix-grid.spec-count-6 .spec-stat-card { grid-column: auto !important; }
+        }
 
         .spec-stat-card {
           display: flex;
@@ -3172,7 +3278,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-stat-icon {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .spec-stat-info {
@@ -3199,7 +3305,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-stat-label {
-          color: var(--gold-dark);
+          color: var(--gold-text);
         }
 
         .spec-stat-value {
@@ -3233,19 +3339,20 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold .gold-val {
-          color: #8C6826;
+          color: var(--gold-text);
         }
 
         @media (max-width: 768px) {
           .property-spec-matrix-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 0.65rem;
             margin-bottom: 1.5rem;
             padding-bottom: 1.25rem;
           }
-          .property-spec-matrix-grid .spec-stat-card:nth-child(n) { grid-column: auto; }
-          .property-spec-matrix-grid .spec-stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+          .property-spec-matrix-grid .spec-stat-card { grid-column: auto !important; }
+          .property-spec-matrix-grid.spec-count-1 .spec-stat-card { grid-column: 1 / -1 !important; }
+          .property-spec-matrix-grid .spec-stat-card:last-child:nth-child(odd) { grid-column: 1 / -1 !important; }
           .spec-stat-card {
             padding: 0.95rem 0.85rem 0.85rem;
             min-height: 96px;
@@ -3291,7 +3398,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-feature-pill .spec-pill-icon {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         [data-theme="light"] .spec-feature-pill.pill-highlight-gold {
@@ -3305,7 +3412,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="light"] .spec-feature-pill.pill-highlight-gold .spec-pill-icon-gold {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         /* Specification Matrix */
@@ -3371,7 +3478,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .spec-check-gold {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           flex-shrink: 0;
           margin-top: 2px;
         }
@@ -3436,7 +3543,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .calc-toggle-btn.active {
           background: rgba(197, 142, 54, 0.2);
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border: 1px solid var(--gold-border);
         }
 
@@ -3462,14 +3569,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .calc-val-badge {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           font-weight: 700;
           font-size: 0.8125rem;
         }
 
         .calc-range-slider {
           width: 100%;
-          accent-color: var(--gold-primary);
+          accent-color: var(--gold-text);
           cursor: pointer;
         }
 
@@ -3546,7 +3653,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .calc-stat-value.gold-text {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .calc-stat-value.sub-val {
@@ -3592,7 +3699,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-family: var(--font-heading);
           font-size: 2rem;
           font-weight: 800;
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .cash-benefits-badge {
@@ -3605,11 +3712,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           padding: 0.45rem 1.15rem;
           font-size: 0.8125rem;
           font-weight: 700;
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .gold-check {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .cash-terms-grid {
@@ -3675,7 +3782,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           padding: 0.45rem 1rem;
           font-size: 0.75rem;
           font-weight: 700;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           cursor: pointer;
           transition: all var(--transition-fast);
         }
@@ -3771,7 +3878,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.6875rem;
           font-weight: 800;
           letter-spacing: 0.1em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
         }
 
@@ -3867,7 +3974,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a {
           background: var(--glass-strong) !important;
-          color: var(--gold-primary) !important;
+          color: var(--gold-text) !important;
           border: var(--glass-border) !important;
         }
 
@@ -4067,14 +4174,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.6875rem;
           font-weight: 800;
           letter-spacing: 0.14em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
           display: block;
           margin-bottom: 0.2rem;
         }
 
         [data-theme="light"] .radar-stack-eyebrow {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .radar-stack-title {
@@ -4164,7 +4271,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           height: 38px;
           border-radius: 10px;
           background: rgba(197, 142, 54, 0.15);
-          color: var(--gold-primary);
+          color: var(--gold-text);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -4173,7 +4280,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         [data-theme="light"] .poi-icon-box {
           background: rgba(184, 134, 11, 0.1);
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .poi-info {
@@ -4202,11 +4309,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-family: var(--font-heading);
           font-size: 0.9rem;
           font-weight: 800;
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         [data-theme="light"] .poi-time-val {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .poi-sub-detail {
@@ -4228,12 +4335,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .compass-icon {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           flex-shrink: 0;
         }
 
         [data-theme="light"] .compass-icon {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         /* Sidebar Styles */
@@ -4323,7 +4430,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .broker-role {
           font-size: 0.8125rem;
           font-weight: 600;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           display: block;
         }
 
@@ -4458,7 +4565,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .calendar-eyebrow {
           font-size: 0.625rem;
           font-weight: 800;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
           letter-spacing: 0.12em;
           display: block;
@@ -4503,7 +4610,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.6875rem;
           font-weight: 800;
           letter-spacing: 0.14em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
           display: block;
           margin-bottom: 0.25rem;
@@ -4599,7 +4706,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .slot-check {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .viewing-input-wrap {
@@ -4612,7 +4719,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .viewing-input-wrap .input-icon {
           position: absolute;
           left: 14px;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           pointer-events: none;
           z-index: 2;
         }
@@ -4666,7 +4773,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .booked-check-icon {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .booked-title {
@@ -4717,13 +4824,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.75rem;
           font-weight: 800;
           letter-spacing: 0.16em;
-          color: var(--gold-primary);
+          color: var(--gold-text);
           text-transform: uppercase;
           display: inline-block;
         }
 
         [data-theme="light"] .eyebrow-gold {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         [data-theme="dark"] .eyebrow-gold {
@@ -4900,8 +5007,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             min-width: 0;
             flex: 1;
           }
-          .thumb-item {
-            width: 96px;
+          .in-photo-thumbnails-bar {
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+            padding: 4px;
+            gap: 6px;
+            border-radius: 10px;
+          }
+          .in-photo-thumb-btn {
+            flex: 0 0 44px;
+            width: 44px;
+            height: 32px;
+            border-radius: 6px;
+          }
+          .in-photo-counter {
+            font-size: 0.7rem;
+            padding: 0 4px;
+          }
+          .gallery-stage-overlay.has-thumb-strip {
+            bottom: 5rem;
           }
           .detail-sidebar-col {
             grid-template-columns: 1fr;
@@ -4942,6 +5067,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             gap: 0;
             justify-content: center;
             border-radius: 50%;
+          }
+          .carousel-card-slot {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            border-radius: 16px !important;
           }
           .dock-title-group {
             display: none;
@@ -4999,7 +5131,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           --glass-blur-nav: none;
         }
         [data-theme="light"] .mobile-bottom-lead-bar .price-value {
-          color: var(--gold-dark);
+          color: var(--gold-text);
         }
       `}</style>
     </div>

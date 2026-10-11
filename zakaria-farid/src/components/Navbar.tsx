@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { createFrameScheduler } from '@/lib/utils/frameScheduler';
+import { getNavbarSurfaceState } from '@/lib/utils/navbarScroll';
 
 interface NavbarProps {
   currentView?: 'home' | 'properties' | 'detail' | 'about' | 'contact' | 'map' | 'admin' | 'maintenance' | 'not-found';
@@ -33,6 +34,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' ? window.innerWidth > 992 : true);
+  const [isMapSidebarOpen, setIsMapSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncSidebar = () => {
+      const state = document.documentElement.getAttribute('data-map-sidebar');
+      setIsMapSidebarOpen(state !== 'closed');
+    };
+    syncSidebar();
+    const observer = new MutationObserver(syncSidebar);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-map-sidebar'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Determine current view from pathname if not explicitly passed
   let currentView = propCurrentView;
@@ -88,7 +102,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     let scrolled = false;
     const scrollFrame = createFrameScheduler(() => {
-      const next = window.scrollY > 30;
+      const surface = getNavbarSurfaceState(window.scrollY);
+      const next = surface === 'glass';
       if (next !== scrolled) {
         scrolled = next;
         setIsScrolled(next);
@@ -136,7 +151,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'contact', label: locale === 'ar' ? 'اتصل بنا' : 'Contact' }
   ];
 
-  const isBlendedMode = currentView === 'home' && !isScrolled;
+  const isHeroTopPage = currentView === 'home' || currentView === 'detail';
+  const isBlendedMode = isHeroTopPage && !isScrolled;
   const isMapMode = currentView === 'map' && !isLoading;
 
   return (
@@ -148,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           initial={false}
           animate={{
             x: 0,
-            maxWidth: isMapMode && isDesktop ? 1040 : 1280,
+            maxWidth: isMapMode && isDesktop ? (isMapSidebarOpen ? 780 : 880) : 1280,
           }}
           transition={{
             type: 'spring',
@@ -285,7 +301,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           width: 100%;
           z-index: 2000;
           pointer-events: none;
-          transition: top 350ms cubic-bezier(0.16, 1, 0.3, 1);
+          transition: top 350ms cubic-bezier(0.16, 1, 0.3, 1),
+                      left 320ms cubic-bezier(0.16, 1, 0.3, 1),
+                      right 320ms cubic-bezier(0.16, 1, 0.3, 1),
+                      width 320ms cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .nav-capsule-container {
@@ -298,12 +317,61 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         @media (min-width: 993px) {
-          .map-glass-capsule {
-            padding: 0 1.35rem;
+          .nav-glass-capsule.map-glass-capsule {
+            padding: 0 1rem;
+            width: auto;
+            max-width: fit-content;
+            height: 56px;
+            gap: 0.75rem;
           }
 
           .map-glass-capsule .desktop-nav {
-            gap: 1.25rem;
+            gap: 0.75rem;
+            flex-shrink: 0;
+          }
+
+          .map-glass-capsule .nav-link {
+            padding: 0.35rem 0.3rem;
+            font-size: 0.88rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+          }
+
+          .map-glass-capsule .luxury-brand-logo {
+            flex-shrink: 0;
+          }
+
+          .map-glass-capsule .nav-controls {
+            gap: 0.5rem;
+            flex-shrink: 0;
+          }
+
+          /* While sidebar is open on map page: */
+          /* RTL: sidebar is on the left. Inline-start edge sits after the sidebar. */
+          html[data-map-sidebar="open"][dir="rtl"] .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] [dir="rtl"] .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] .navbar-wrapper[dir="rtl"]:has(.map-glass-capsule) {
+            left: calc(420px + 2rem);
+            right: 0;
+            width: auto;
+          }
+
+          /* LTR: sidebar is on the right. Navbar sits in the remaining width. */
+          html[data-map-sidebar="open"]:not([dir="rtl"]) .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] [dir="ltr"] .navbar-wrapper:has(.map-glass-capsule),
+          html[data-map-sidebar="open"] .navbar-wrapper[dir="ltr"]:has(.map-glass-capsule) {
+            left: 0;
+            right: calc(420px + 2rem);
+            width: auto;
+          }
+
+          .navbar-wrapper:has(.map-glass-capsule) .nav-capsule-container {
+            justify-content: center;
+          }
+
+          .navbar-wrapper[dir="rtl"]:has(.map-glass-capsule) .nav-capsule-container,
+          [dir="rtl"] .navbar-wrapper:has(.map-glass-capsule) .nav-capsule-container {
+            justify-content: center;
           }
         }
 
@@ -322,22 +390,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
         }
 
-        /* 2. Strong tint over hero imagery; retain the existing no-blur state. */
-        .nav-glass-capsule.hero-blended {
-          background: var(--glass-strong) !important;
-          backdrop-filter: none !important;
-          -webkit-backdrop-filter: none !important;
-          border: var(--glass-border) !important;
-          box-shadow: var(--shadow-glass) !important;
+        @media (prefers-reduced-motion: reduce) {
+          .nav-glass-capsule {
+            transition: none !important;
+          }
         }
 
+        /* 2. Transparent top state over hero imagery; glass appears on scroll. */
+        .nav-glass-capsule.hero-blended,
         [data-theme="dark"] .nav-glass-capsule.hero-blended,
         [data-theme="light"] .nav-glass-capsule.hero-blended {
-          background: var(--glass-strong) !important;
-          border: var(--glass-border) !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          border: none !important;
+          border-color: transparent !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
-          box-shadow: var(--shadow-glass) !important;
+          box-shadow: none !important;
         }
 
         /* 3. Scrolled / Separated State */
@@ -386,8 +455,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .nav-glass-capsule.hero-blended .blended-pill {
-          background: transparent !important;
-          color: var(--text-primary) !important;
+          background: rgba(0, 0, 0, 0.25) !important;
+          color: #FFFFFF !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        [data-theme="light"] .nav-glass-capsule.hero-blended .blended-pill {
+          background: rgba(255, 255, 255, 0.85) !important;
+          color: #0D1117 !important;
+          border-color: rgba(30, 24, 16, 0.16) !important;
         }
 
         .nav-glass-capsule.separated-glass.detail-glass-capsule { background: var(--glass-strong); }
@@ -416,14 +492,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           text-shadow: var(--glass-text-shadow);
         }
 
+        [data-theme="light"] .hero-blended .nav-link {
+          color: #0D1117 !important;
+          font-weight: 700;
+          text-shadow: none;
+        }
+
         .nav-link:hover,
         .nav-link.active {
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .hero-blended .nav-link:hover,
         .hero-blended .nav-link.active {
-          color: var(--gold-primary);
+          color: var(--gold-text);
+        }
+
+        [data-theme="light"] .hero-blended .nav-link:hover,
+        [data-theme="light"] .hero-blended .nav-link.active {
+          color: var(--gold-text) !important;
         }
 
         .nav-indicator {
@@ -465,13 +552,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .lang-btn:hover {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           transform: translateY(-1px);
         }
 
         .active-lang {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           font-weight: 800;
         }
 
@@ -497,7 +584,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         .bookmark-nav-btn.has-favorites {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           background: rgba(229, 184, 105, 0.12);
         }
@@ -521,7 +608,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         .theme-btn:hover,
         .bookmark-nav-btn:hover {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           transform: translateY(-1px);
         }
@@ -618,12 +705,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         .mobile-nav-link:hover {
           background: rgba(229, 184, 105, 0.12);
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .mobile-nav-link.active {
           background: rgba(229, 184, 105, 0.18);
-          color: var(--gold-primary);
+          color: var(--gold-text);
         }
 
         .mobile-active-dot {
@@ -695,7 +782,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
         [data-theme="light"] .nav-glass-capsule .nav-link.active,
         [data-theme="light"] .nav-glass-capsule .active-lang {
-          color: var(--gold-dark);
+          color: var(--gold-text);
         }
       `}</style>
     </header>

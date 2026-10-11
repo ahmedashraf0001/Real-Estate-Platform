@@ -504,7 +504,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           .action-pill-btn:hover {
-            color: var(--gold-primary);
+            color: var(--gold-text);
             border-color: var(--gold-border);
             transform: translateY(-2px);
           }
@@ -547,7 +547,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           [data-theme="light"] .gold-type {
-            color: #B8860B;
+            color: var(--gold-text);
           }
 
           .list-card-title {
@@ -607,7 +607,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           [data-theme="light"] .list-spec-icon {
-            color: #B8860B;
+            color: var(--gold-text);
             filter: none;
           }
 
@@ -723,7 +723,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           [data-theme="light"] .list-price-val {
-            color: #8C6826;
+            color: var(--gold-text);
             text-shadow: var(--glass-text-shadow);
           }
 
@@ -882,7 +882,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             ) : (
               <div className="card-price" dir="ltr">
                 <span className="price-amount tabular-nums">{formattedPrice}</span>
-                <span className="currency-unit" style={{ color: 'var(--text-secondary)' }}>{isAr ? 'ج.م' : property.currency}</span>
+                <span className="currency-unit">{isAr ? 'ج.م' : property.currency}</span>
               </div>
             )}
 
@@ -923,6 +923,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           display: flex;
           flex-direction: column;
           transition: all var(--transition-smooth);
+        }
+
+        [data-theme="light"] .card-image-wrapper {
+          background: #ECE6DA;
         }
 
         [data-theme="light"] .property-card {
@@ -1005,7 +1009,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .badge-pin {
-          color: #B8860B;
+          color: var(--gold-text);
         }
 
         .card-top-actions {
@@ -1043,7 +1047,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         .action-pill-btn:hover {
-          color: var(--gold-primary);
+          color: var(--gold-text);
           border-color: var(--gold-border);
           transform: translateY(-2px);
         }
@@ -1061,7 +1065,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           z-index: 3;
           margin: 0 0.85rem;
           padding: 1.35rem 1.35rem 1.15rem;
-          background: var(--glass-strong);
+          background: var(--glass-card-strong);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);
@@ -1073,12 +1077,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         /* Frosted Crystal Glass (Light Mode) */
         [data-theme="light"] .card-content-overlay {
-          background: var(--glass-strong);
+          background-color: rgba(255, 255, 255, 0.85) !important;
+          background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.90)) !important;
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
-          border: var(--glass-border);
-          box-shadow: var(--shadow-glass);
-          text-shadow: var(--glass-text-shadow);
+          border: 1px solid rgba(255, 255, 255, 0.85);
+          box-shadow: 0 16px 36px rgba(30, 24, 16, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+          text-shadow: none;
         }
 
         .card-title {
@@ -1100,7 +1105,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         [data-theme="light"] .card-title {
           color: #0F172A !important;
-          text-shadow: var(--glass-text-shadow) !important;
+          text-shadow: none !important;
         }
 
         .card-price-row {
@@ -1129,8 +1134,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .price-amount {
-          color: var(--gold-dark) !important;
-          text-shadow: var(--glass-text-shadow) !important;
+          color: var(--gold-text, #96670e) !important;
+          text-shadow: none !important;
         }
 
         .currency-unit {
@@ -1143,8 +1148,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .currency-unit {
-          color: var(--text-secondary) !important;
-          text-shadow: var(--glass-text-shadow) !important;
+          color: #1E293B !important;
+          text-shadow: none !important;
         }
 
         .card-cta-btn {
@@ -1179,7 +1184,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .card-cta-btn {
-          color: var(--gold-dark);
+          color: var(--gold-text);
           background: var(--bg-glass-card);
           border-color: rgba(184, 147, 74, 0.3);
         }
@@ -1225,7 +1230,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .spec-icon {
-          color: #B8860B;
+          color: var(--gold-text);
           filter: none;
         }
 
@@ -1252,7 +1257,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         [data-theme="light"] .spec-label {
-          color: #334155 !important;
+          color: #1E293B !important;
           text-shadow: var(--glass-text-shadow) !important;
         }
 

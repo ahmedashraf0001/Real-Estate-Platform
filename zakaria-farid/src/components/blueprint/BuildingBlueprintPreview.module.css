@@ -17,6 +17,9 @@
 .planColumn { min-width: 0; }
 .floorPlan { display: grid; grid-template-columns: minmax(0,1fr) minmax(90px,.65fr) minmax(0,1fr); border: 3px solid var(--bp-gold); gap: 5px; padding: 9px; min-height: 410px; }
 .unitStack, .core { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.floorPlan.noUnits { display: flex; flex-direction: column; justify-content: center; min-height: 410px; gap: 12px; }
+.floorPlan.noUnits .core { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; width: 100%; }
+.floorPlan.noUnits .core .element { min-height: 90px; padding: 14px 10px; }
 .root .unit { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; flex: 1; padding: 24px 8px; position: relative; background: var(--bg-primary, #0E1117); }
 .unit strong { font-size: 20px; font-weight: 600; }
 .unit>span:not(.door) { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
@@ -54,3 +57,176 @@
 .photoSlot { border: 1px dashed var(--bp-line); padding: 25px 10px; text-align: center; }
 @media(max-width:1100px) { .workspace { grid-template-columns: 125px minmax(0,1fr); gap: 16px; } .detail { grid-column: 2; border-inline-start: 0; border-top: 1px solid var(--bp-line); padding: 20px 0 0; } }
 @media(max-width:600px) { .root { padding: 14px; } .workspace { display: flex; flex-direction: column; gap: 18px; } .floors { flex-direction: row; overflow-x: auto; width: 100%; padding: 4px 0 8px; } .floors button { flex: 0 0 125px; } .planColumn, .detail { width: 100%; } .floorPlan { grid-template-columns: minmax(0,1fr) 82px minmax(0,1fr); gap: 4px; padding: 5px; min-height: 390px; } .root .unit { padding: 15px 4px; gap: 13px; } .unit strong { font-size: 16px; } .unit>span { font-size: 12px; } .root .element { padding: 15px 4px; font-size: 12px; } .path .back { margin-inline-start: 0; } .facts { gap: 18px; } .summary { gap: 10px; } .roomPlan { gap: 4px; padding: 5px; } .root .room { padding: 10px 4px; } }
+/* Apartment plan: balconies along the front, living side and private side; tile size follows area. */
+.roomPlan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; align-items: stretch; min-height: 420px; }
+.aptFront { grid-column: 1 / -1; display: flex; gap: 6px; }
+.aptFront > * { flex: 1; }
+.aptFront .room { min-height: 90px; }
+.aptSide { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.aptSide .room, .aptSide .tileWrap { flex-basis: 0; min-height: 110px; }
+.root .room { flex-grow: 1; }
+.dims { font-size: 12px; color: var(--text-secondary, #B0B4BE); }
+.planAdd { grid-column: 1 / -1; display: flex; justify-content: center; }
+/* Admin edit layer */
+.tileWrap { position: relative; display: flex; flex-direction: column; min-width: 0; flex: 1; transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease; }
+.tileWrap[draggable="true"] { cursor: grab; }
+.tileWrap[draggable="true"]:active { cursor: grabbing; }
+.tileWrap.isDragging { opacity: .4; filter: grayscale(30%); }
+.tileWrap.dropTarget {
+  outline: 2px dashed var(--bp-gold);
+  outline-offset: 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bp-gold) 15%, transparent) !important;
+  box-shadow: 0 0 14px rgba(229, 184, 105, .35);
+}
+.tileWrap > button:first-child { flex: 1; padding-bottom: 44px; width: 100%; }
+.tileActions { position: absolute; inset-inline: 6px; bottom: 6px; display: flex; justify-content: center; gap: 3px; opacity: .6; transition: opacity .15s; }
+.tileWrap:hover .tileActions, .tileWrap:focus-within .tileActions { opacity: 1; }
+.root .tileActions button { min-height: 28px; min-width: 28px; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; background: var(--bg-card, #16171C); }
+.root .tileActions .dangerIcon:hover:not(:disabled) { border-color: #E5734A; color: #E5734A; }
+.renameInput { margin: auto 8px 44px; padding: 8px; background: var(--bg-card, #16171C); color: inherit; border: 1px solid var(--bp-gold); border-radius: 6px; font: inherit; text-align: center; min-height: 60px; }
+.root .addSlot { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-style: dashed; color: var(--accent-blue, #3B82F6); font-weight: 600; }
+.root .addSlot:hover { border-color: var(--accent-blue, #3B82F6); background: color-mix(in srgb, var(--accent-blue, #3B82F6) 8%, transparent); }
+.planAdd .addSlot { min-width: 200px; }
+.floorRow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px; }
+.root .kebab { min-width: 34px; min-height: 34px; height: 34px; padding: 0 6px; margin-top: 6px; border-color: transparent; color: var(--text-secondary, #B0B4BE); }
+.floorMenu, .typeMenu { position: absolute; z-index: 20; display: flex; flex-direction: column; padding: 4px; background: var(--bg-card, #16171C); border: 1px solid var(--bp-line); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.35); max-height: 280px; overflow: auto; }
+.floorMenu { inset-inline-end: 0; top: calc(100% + 4px); min-width: 190px; }
+.typeMenu { inset-inline: 6px; bottom: 40px; }
+.root .floorMenu button, .root .typeMenu button { border: 0; text-align: start; min-height: 36px; padding: 6px 10px; font-size: 13px; }
+.root .floorMenu button:hover, .root .typeMenu button:hover { background: color-mix(in srgb, var(--bp-gold) 10%, transparent); }
+.root .typeMenu button[aria-checked="true"] { color: var(--bp-gold); }
+.root .dangerText { color: #E5734A; }
+.confirm { position: absolute; z-index: 15; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 12px; border-radius: 6px; background: color-mix(in srgb, var(--bg-card, #16171C) 96%, #E5734A); border: 1px solid #E5734A; font-size: 13px; text-align: center; }
+.floorConfirm { position: static; grid-column: 1 / -1; }
+.confirm div { display: flex; justify-content: center; gap: 6px; }
+.root .confirm button { min-height: 34px; padding: 4px 12px; }
+.root .dangerSolid { background: #E5734A; border-color: #E5734A; color: #fff; }
+.addFloors { display: flex; flex-wrap: wrap; gap: 6px; }
+.root .addFloors button { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; min-height: 34px; padding: 4px 10px; border-style: dashed; color: var(--accent-blue, #3B82F6); font-size: 13px; }
+.picker { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid var(--accent-blue, #3B82F6); border-radius: 10px; background: var(--bg-card, #16171C); }
+.picker header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.root .chips button { min-height: 34px; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+.custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.custom label { font-size: 12px; color: var(--text-secondary, #B0B4BE); width: 100%; }
+.custom input { flex: 1 1 200px; min-height: 40px; padding: 8px 10px; background: var(--bg-primary, #0E1117); color: inherit; border: 1px solid var(--bp-line); border-radius: 6px; font: inherit; }
+.root .custom button { background: var(--accent-blue, #3B82F6); border-color: var(--accent-blue, #3B82F6); color: #fff; }
+.floorPlanNoUnits { display: flex; flex-direction: column; gap: 10px; grid-template-columns: none; min-height: 220px; }
+.compactCore { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); gap: 8px; width: 100%; }
+.compactCore .tileWrap, .compactCore .element { min-height: 100px; }
+.compactCore .addSlot { min-height: 100px; }
+@media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } .compactCore { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; } }
+.workspace.noDetail { grid-template-columns: 150px minmax(0,1fr); }
+.workspaceFacade { grid-template-columns: minmax(0, 1fr) 255px !important; }
+@media(max-width:900px) { .workspaceFacade { grid-template-columns: 1fr !important; } }
+
+/* Tile photo cover */
+.tileWithPhoto { position: relative !important; overflow: hidden !important; }
+.tilePhotoCover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.tilePhotoScrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%); z-index: 2; pointer-events: none; }
+.tilePhotoContent { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%; color: #FFFFFF !important; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.tilePhotoContent strong { color: #FFFFFF !important; }
+.tilePhotoContent span { color: rgba(255, 255, 255, 0.92) !important; }
+
+/* Real Ground Floor Plan */
+.groundPlanContainer { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }
+.groundBuildingFrame { border: 3px solid var(--bp-gold); border-radius: 8px; background: var(--bg-primary, #0E1117); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 320px; }
+.groundFrameHeader { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px; border-bottom: 1px solid var(--bp-line); }
+.groundFrameBadge { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--bp-gold); text-transform: uppercase; }
+.groundUpperGrid { display: flex; gap: 8px; align-items: stretch; flex: 1; min-height: 200px; }
+.groundGarageCol { flex: 1.4; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.groundGarageCol > *, .groundGarageCol .element, .groundGarageCol .tileWrap { flex: 1; min-height: 150px; }
+.groundCoreCol { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.groundCoreCol > *, .groundCoreCol .element, .groundCoreCol .tileWrap { flex: 1; min-height: 80px; }
+.groundServicesCol { flex: 1.1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.groundServicesCol > *, .groundServicesCol .element, .groundServicesCol .tileWrap { flex: 1; min-height: 70px; }
+.groundFrontStrip { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+.groundFrontStrip > *, .groundFrontStrip .element, .groundFrontStrip .tileWrap { flex: 1; min-height: 75px; }
+
+/* Gate & Wall under frame, centred, dashed */
+.groundGateBoundary { display: flex; justify-content: center; margin: 10px auto 4px; width: 100%; max-width: 440px; }
+.groundGateWall { width: 100%; border: 2px dashed var(--bp-gold); border-radius: 8px; padding: 6px; display: flex; justify-content: center; gap: 8px; background: color-mix(in srgb, var(--bp-gold) 6%, transparent); }
+.groundGateWall > *, .groundGateWall .element, .groundGateWall .tileWrap { flex: 1; min-height: 60px; }
+
+/* Street */
+.groundStreet { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; margin-top: 4px; background: color-mix(in srgb, var(--bp-line) 50%, transparent); border-top: 2px solid var(--bp-line); border-bottom: 2px solid var(--bp-line); border-radius: 4px; }
+.groundStreetDashes { flex: 1; border-top: 2px dashed color-mix(in srgb, var(--text-secondary, #B0B4BE) 40%, transparent); }
+.groundStreetLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-secondary, #B0B4BE); white-space: nowrap; text-transform: uppercase; }
+
+.floorsAdminCompact { border: 1px dashed var(--bp-gold); border-radius: 8px; padding: 8px; }
+
+@media(max-width:600px) {
+  .groundUpperGrid {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    min-height: 150px;
+    align-items: stretch;
+  }
+  .groundGarageCol {
+    flex: 1.3;
+    gap: 4px;
+    min-width: 0;
+  }
+  .groundGarageCol > *, .groundGarageCol .element, .groundGarageCol .tileWrap {
+    min-height: 110px;
+    padding: 6px 3px;
+  }
+  .groundCoreCol {
+    flex: 1;
+    gap: 4px;
+    min-width: 0;
+  }
+  .groundCoreCol > *, .groundCoreCol .element, .groundCoreCol .tileWrap {
+    min-height: 52px;
+    padding: 4px 2px;
+  }
+  .groundServicesCol {
+    flex: 1.1;
+    gap: 4px;
+    min-width: 0;
+  }
+  .groundServicesCol > *, .groundServicesCol .element, .groundServicesCol .tileWrap {
+    min-height: 48px;
+    padding: 4px 2px;
+  }
+  .groundUpperGrid .element strong {
+    font-size: 11px;
+    line-height: 1.2;
+    word-break: break-word;
+    text-align: center;
+  }
+  .groundUpperGrid .element span,
+  .groundUpperGrid .element small {
+    font-size: 10px;
+  }
+  .groundUpperGrid .element svg {
+    width: 20px;
+    height: 20px;
+  }
+  .groundFrontStrip {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .groundFrontStrip > *, .groundFrontStrip .element, .groundFrontStrip .tileWrap {
+    min-height: 50px;
+    padding: 6px 6px;
+  }
+  .groundFrontStrip .element strong {
+    font-size: 11px;
+  }
+  .groundGateBoundary {
+    margin: 6px auto 2px;
+  }
+  .groundGateWall > *, .groundGateWall .element, .groundGateWall .tileWrap {
+    min-height: 46px;
+    padding: 4px 6px;
+  }
+  .groundStreet {
+    padding: 6px 8px;
+  }
+}
+

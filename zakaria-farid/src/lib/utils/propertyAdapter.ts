@@ -158,6 +158,7 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
       ? Math.max(...property.building_units.map(unit => unit.floor).filter(Number.isFinite)) + 1
       : undefined,
     building_units: property.building_units,
+    total_units_count: property.total_units_count,
     calcom_event_link: property.calcom_event_link,
     featured: property.is_featured,
     is_featured: property.is_featured,

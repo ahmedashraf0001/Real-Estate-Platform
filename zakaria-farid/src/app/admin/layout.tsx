@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import Script from 'next/script';
 import '@/app/globals.css';
 import { Toaster } from 'sonner';
@@ -17,32 +16,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const themeCookie = cookieStore.get('zf_theme')?.value;
-  const initialTheme = (themeCookie === 'light' || themeCookie === 'dark') ? themeCookie : 'dark';
-
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme={initialTheme} suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
         <Script
           id="admin-theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function() {
-  try {
-    var cookieMatch = document.cookie.match(/(?:^|;\\s*)zf_theme=([^;]*)/);
-    var cookieTheme = cookieMatch ? cookieMatch[1] : null;
-    var saved = localStorage.getItem('zf_theme') || cookieTheme;
-    var theme = (saved === 'light' || saved === 'dark') ? saved : '${initialTheme}';
-    document.documentElement.setAttribute('data-theme', theme);
-    if (saved && (!cookieTheme || cookieTheme !== theme)) {
-      document.cookie = 'zf_theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax';
-    }
-  } catch(e) {
-    document.documentElement.setAttribute('data-theme', '${initialTheme}');
-  }
-})();`,
+            __html: `document.documentElement.setAttribute('data-theme', 'light');`,
           }}
         />
       </head>
