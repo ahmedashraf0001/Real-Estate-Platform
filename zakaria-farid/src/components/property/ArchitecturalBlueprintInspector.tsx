@@ -318,11 +318,16 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   const [mounted, setMounted] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hoveredFloor, setHoveredFloor] = useState<string | null>(null);
+  const fullscreenButtonRef = useRef<HTMLButtonElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const [bldView, updateBldView] = useState<BlueprintView>({ mode: 'elevation' });
   const setBldView = (view: BlueprintView) => {
     updateBldView(view);
-    setIsFullscreen(false);
     setSelectedZoneId(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setHoveredFloor(null);
     if (edit) return;
     const url = new URL(window.location.href);
     url.searchParams.set('bp', serializeBlueprintView(view));
@@ -370,20 +375,56 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     return () => observer.disconnect();
   }, []);
 
-  // Lock body scroll when fullscreen or modal is open to prevent page scrolling behind
+  // RTL fixed-position geometry follows the root's scrollbar gutter. Remove it
+  // while locked (stable reserved 8px even after the scrollbar disappeared).
   useEffect(() => {
-    if (isFullscreen || activeModalZone) {
-      document.documentElement.classList.add('cad-fullscreen-locked');
-      document.body.classList.add('cad-fullscreen-locked');
-      document.body.style.setProperty('overflow', 'hidden', 'important');
-      document.body.style.setProperty('touch-action', 'none', 'important');
-      return () => {
-        document.documentElement.classList.remove('cad-fullscreen-locked');
-        document.body.classList.remove('cad-fullscreen-locked');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('touch-action');
-      };
+    if (!isFullscreen && !activeModalZone) return;
+    const x = window.scrollX, y = window.scrollY;
+    const lenis = window.__masrLenis;
+    const restartLenis = lenis && !lenis.isStopped;
+    lenis?.stop();
+    const properties = ['overflow', 'scrollbar-gutter', 'touch-action', 'scroll-behavior'];
+    const saved = [document.documentElement, document.body].map(element => ({ element,
+      values: properties.map(name => [name, element.style.getPropertyValue(name), element.style.getPropertyPriority(name)]),
+    }));
+    for (const { element } of saved) {
+      element.classList.add('cad-fullscreen-locked');
+      element.style.setProperty('overflow', 'hidden', 'important');
+      element.style.setProperty('scrollbar-gutter', 'auto', 'important');
+      element.style.setProperty('touch-action', 'auto', 'important');
+      element.style.setProperty('scroll-behavior', 'auto', 'important');
     }
+    window.scrollTo(0, y);
+    return () => {
+      for (const { element, values } of saved) {
+        element.classList.remove('cad-fullscreen-locked');
+        for (const [name, value, priority] of values) {
+          if (value) element.style.setProperty(name, value, priority);
+          else element.style.removeProperty(name);
+        }
+      }
+      window.scrollTo(x, y);
+      if (restartLenis) { lenis.scrollTo(y, { immediate: true }); lenis.start(); }
+    };
+  }, [isFullscreen, activeModalZone]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const overlay = overlayRef.current;
+    overlay?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || activeModalZone) return;
+      const buttons = Array.from(overlay?.querySelectorAll<HTMLElement>('button:not(:disabled), [tabindex="0"]') ?? [])
+        .filter(e => e.getClientRects().length > 0);
+      const first = buttons[0], last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    overlay?.addEventListener('keydown', trap);
+    return () => {
+      overlay?.removeEventListener('keydown', trap);
+      fullscreenButtonRef.current?.focus({ preventScroll: true });
+    };
   }, [isFullscreen, activeModalZone]);
 
   // Keyboard shortcut (Escape to exit fullscreen or modal)
@@ -735,18 +776,11 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     return keys.map(key => {
       const onFloor = processedZones.filter(z => z.floorKey === key);
       const flats = onFloor.filter(z => z.templateId === 'bld.unit');
-      const shared = onFloor.filter(z => !z.unitLabel);
-      const leaves = onFloor.filter(z => z.templateId !== 'bld.unit');
-      const allMeasured = leaves.length > 0 && leaves.every(z => z.measured);
       return {
         key,
         rank: rank(key),
-        labelEn: key === 'bld_ground' ? 'Ground Floor' : key === 'bld_roof' ? 'Roof' : key === 'bld_basement' ? 'Basement' : key,
-        labelAr: floorLabel(key, true),
         flats: flats.map(f => isAr ? f.zoneTitleAr : f.zoneTitle),
-        sharedCount: shared.length,
         templates: onFloor.map(z => z.templateId),
-        sqm: allMeasured ? leaves.reduce((sum, z) => sum + z.sqm, 0) : null,
       };
     }).sort((a, b) => b.rank - a.rank);
   }, [processedZones, propertyType, isAr]);
@@ -776,31 +810,18 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       const gradeY = groundY + (groundLevel ? groundH : 0);
       const height = gradeY + (basementLevel ? basementH : 0) + 30;
 
-      const summaryOf = (level: typeof buildingLevels[number]) => [
-        level.flats.length > 0
-          ? (isAr ? `${level.flats.length} ${level.flats.length === 1 ? 'شقة' : 'شقق'}` : `${level.flats.length} ${level.flats.length === 1 ? 'flat' : 'flats'}`)
-          : '',
-        level.sharedCount > 0 ? (isAr ? `${level.sharedCount} مساحات` : `${level.sharedCount} spaces`) : '',
-        level.sqm ? `${level.sqm.toFixed(0)} m²` : '',
-      ].filter(Boolean).join(' • ');
-
-      const infoCard = (level: typeof buildingLevels[number], y: number, strong = false) => (
-        <g transform={`translate(${bldRight + 16}, ${y})`} role="button" tabIndex={0}
-          aria-label={isAr ? `\u0639\u0631\u0636 ${level.labelAr}` : `View ${level.labelEn}`}
-          style={{ cursor: 'pointer' }} onClick={() => setBldView({ mode: 'floor', floorKey: level.key })}
-          onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setBldView({ mode: 'floor', floorKey: level.key }); } }}>
-          <rect width="150" height="34" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity={strong ? 0.6 : 0.3} strokeWidth={strong ? 1.2 : 1} />
-          <text x={isAr ? 142 : 8} y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
-            {isAr ? level.labelAr : level.labelEn}
-          </text>
-          <text x={isAr ? 142 : 8} y="26" fontSize="7.5" fill="var(--gold-primary)" textAnchor="start" style={{ direction: isAr ? 'rtl' : 'ltr', unicodeBidi: 'plaintext' }}>
-            {summaryOf(level)}
-          </text>
-          <text x={isAr ? 8 : 142} y="20" fontSize="8" fill="var(--gold-primary)" textAnchor={isAr ? 'start' : 'end'}>
-            {isAr ? '‹' : '›'}
-          </text>
-        </g>
-      );
+      const floorProps = (key: string) => ({
+        role: 'button', tabIndex: 0, 'data-floor-key': key,
+        'data-hovered': hoveredFloor === key || undefined,
+        'aria-label': isAr ? `عرض ${floorLabel(key, true)}` : `View ${floorLabel(key, false)}`,
+        onMouseEnter: () => setHoveredFloor(key), onMouseLeave: () => setHoveredFloor(null),
+        onFocus: () => setHoveredFloor(key), onBlur: () => setHoveredFloor(null),
+        onClick: () => setBldView({ mode: 'floor', floorKey: key }),
+        onKeyDown: (event: React.KeyboardEvent<SVGGElement>) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setBldView({ mode: 'floor', floorKey: key }); }
+        },
+      });
+      const hitBand = (y: number, h: number) => <rect data-floor-hit className="cad-floor-hit" x={bldX - 10} y={y} width={bldW + 20} height={h} />;
 
       // One facade bay per flat: big balcony window + smaller window, mirrored on the far side of the core.
       const renderBay = (flat: string, x: number, w: number, mirrored: boolean, y: number) => {
@@ -821,14 +842,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             <rect x={balX} y={floorH - 10} width={balW} height="4" fill="var(--gold-primary)" />
             <rect x={smallX} y="8" width={smallW} height={floorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
             <line x1={smallX + smallW / 2} y1="8" x2={smallX + smallW / 2} y2={floorH - 12} stroke="#7FB4D8" strokeWidth="1" />
-            <text x={w / 2} y="2" fontSize="6.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800" fontFamily="monospace">{flat}</text>
           </g>
         );
       };
 
       return (
         <svg
-          viewBox={`0 0 760 ${height}`}
+          viewBox={`110 0 520 ${height}`}
           className="cad-vector-svg fp-building-elevation"
           style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`, willChange: 'transform', transformOrigin: 'center center', direction: 'ltr' }}
           xmlns="http://www.w3.org/2000/svg"
@@ -863,22 +883,12 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           <rect width="760" height={height} fill="url(#pubElevGrid)" />
           <rect width="760" height={height} fill="url(#pubElevMajorGrid)" opacity="0.4" />
 
-          {/* Level lines on the left */}
-          {[roofY, ...typical.map((_, i) => roofY + (i + 1) * floorH)].map((y, i) => (
-            <g key={`datum-${i}`} className="fp-datum-group">
-              <line x1="20" y1={y} x2={bldX - 8} y2={y} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
-              <circle cx="34" cy={y} r="4" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
-              <line x1="30" y1={y} x2="38" y2={y} stroke="var(--gold-primary)" strokeWidth="1" />
-              <line x1="34" y1={y - 4} x2="34" y2={y + 4} stroke="var(--gold-primary)" strokeWidth="1" />
-            </g>
-          ))}
-
           {/* Building shell */}
           <rect x={bldX} y={roofY} width={bldW} height={gradeY - roofY} fill="rgba(255, 255, 255, 0.015)" stroke="var(--gold-primary)" strokeOpacity="0.55" strokeWidth="1.5" />
 
           {/* Roof crown */}
           {roofLevel && (
-            <g>
+            <g {...floorProps(roofLevel.key)}>
               {roofLevel.templates.includes('bld.roof_terrace') && (
                 <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
                   <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
@@ -905,7 +915,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               )}
               <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="var(--gold-primary)" />
               <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
-              {infoCard(roofLevel, roofY - 40)}
+              {hitBand(roofY - 40, 40)}
             </g>
           )}
 
@@ -919,7 +929,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             const leftW = leftCount > 0 ? sideW / leftCount : 0;
             const rightW = rightCount > 0 ? sideW / rightCount : 0;
             return (
-              <g key={level.key}>
+              <g key={level.key} {...floorProps(level.key)}>
                 <rect x={bldX} y={y} width={bldW} height={floorH} fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(221, 167, 82, 0.02)'} stroke="none" />
                 <rect x={bldX - 4} y={y + floorH - 3} width={bldW + 8} height="4" fill="var(--gold-primary)" opacity="0.9" />
 
@@ -934,14 +944,14 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
                 {level.flats.slice(leftCount).map((flat, b) => renderBay(flat, bldX + bldW / 2 + coreW / 2 + 4 + b * rightW, rightW, true, y))}
 
-                {infoCard(level, y + floorH / 2 - 17)}
+                {hitBand(y, floorH)}
               </g>
             );
           })}
 
           {/* Ground floor: lobby and entrance */}
           {groundLevel && (
-            <g>
+            <g {...floorProps(groundLevel.key)}>
               <rect x={bldX} y={groundY} width={bldW} height={groundH} fill="url(#pubElevLobbyGrad)" stroke="none" />
               <g transform={`translate(${bldX + bldW / 2 - 40}, ${groundY + 12})`}>
                 <rect x="0" y="0" width="80" height={groundH - 12} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
@@ -956,20 +966,19 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                 <rect width="130" height={groundH - 16} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
                 <line x1="65" y1="0" x2="65" y2={groundH - 16} stroke="#7FB4D8" strokeWidth="1" />
               </g>
-              {infoCard(groundLevel, groundY + groundH / 2 - 17, true)}
+              {hitBand(groundY, groundH)}
             </g>
           )}
 
           {/* Grade */}
           <rect x={bldX - 6} y={gradeY - 4} width={bldW + 12} height="5" fill="var(--gold-primary)" />
-          <line x1="20" y1={gradeY} x2={bldX - 8} y2={gradeY} stroke="var(--gold-primary)" strokeWidth="1.2" />
 
           {/* Basement, only when recorded */}
           {basementLevel && (
-            <g>
+            <g {...floorProps(basementLevel.key)}>
               <rect x={bldX - 10} y={gradeY + 1} width={bldW + 20} height={basementH} fill="url(#pubElevGroundHatch)" opacity="0.3" />
               <rect x={bldX} y={gradeY + 1} width={bldW} height={basementH} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="6 3" />
-              {infoCard(basementLevel, gradeY + 8)}
+              {hitBand(gradeY + 1, basementH)}
             </g>
           )}
         </svg>
@@ -1316,11 +1325,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         </button>}
 
         {/* Fullscreen Button (Only shown in inline mode) */}
-        {!inFullscreen && (
+        {inFullscreen ? (propertyType === 'building' ? <button type="button" className="cad-fullscreen-close-btn" aria-label={isAr ? 'إغلاق ملء الشاشة' : 'Exit Fullscreen'} onClick={() => setIsFullscreen(false)}><Minimize2 size={16} /><span>{isAr ? 'إغلاق' : 'Close'}</span></button> : null) : (
           <button
             type="button"
+            ref={fullscreenButtonRef}
             className="cad-fullscreen-toggle-btn"
             onClick={() => setIsFullscreen(true)}
+            aria-label={isAr ? 'ملء الشاشة' : 'Fullscreen'}
             title={isAr ? 'ملء الشاشة' : 'View fullscreen studio'}
           >
             <Maximize2 size={14} />
@@ -1333,13 +1344,20 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   const renderInlineStage = () => (
     <div className="studio-panoramic-stage">
-      {renderControlsBar(false)}
+      {propertyType !== 'building' && renderControlsBar(false)}
       <div className="stage-svg-wrapper" onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
         {renderVectorSvgContent()}
       </div>
     </div>
   );
+
+  const renderBuilding = (fullscreen = false) => <BuildingBlueprintPreview
+    zones={zones} inventory={inventory} view={bldView} onViewChange={setBldView}
+    selectedId={selectedZoneId} onSelect={setSelectedZoneId} isAr={isAr}
+    onRequestUnit={onRequestUnit ? unit => { setIsFullscreen(false); onRequestUnit(unit); } : undefined} edit={edit} onInspect={onInspect}
+    hoveredFloor={hoveredFloor} onHoverFloor={setHoveredFloor} fullscreen={fullscreen} zoom={zoom}
+    actions={renderControlsBar(fullscreen)} elevation={bldView.mode === 'elevation' ? renderInlineStage() : undefined} />;
 
   return (
     <div className="blueprint-studio-root" data-theme={currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
@@ -1383,16 +1401,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         ) : null}
       </div>
 
-      {propertyType === 'building' ? (
-        <BuildingBlueprintPreview zones={zones} inventory={inventory} view={bldView}
-          onViewChange={setBldView} selectedId={selectedZoneId} onSelect={setSelectedZoneId}
-          isAr={isAr} onRequestUnit={onRequestUnit} edit={edit} onInspect={onInspect}
-          elevation={bldView.mode === 'elevation' ? renderInlineStage() : undefined} />
-      ) : renderInlineStage()}
+      {propertyType === 'building' ? renderBuilding() : renderInlineStage()}
 
       {/* 3. DEDICATED FULLSCREEN STUDIO OVERLAY (PORTALED TO DOCUMENT.BODY) */}
       {mounted && isFullscreen && createPortal(
-        <div className="cad-fullscreen-portal-overlay" data-theme={currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
+        <div ref={overlayRef} role="dialog" aria-modal="true" aria-label={propertyTitle} data-lenis-prevent
+          className={`cad-fullscreen-portal-overlay ${propertyType === 'building' ? 'cad-building-fullscreen' : ''}`} data-theme={currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
+          {propertyType === 'building' ? <><h3 className="cad-building-title" title={propertyTitle}>{propertyTitle}</h3>{renderBuilding(true)}</> : <>
           <div className="cad-fullscreen-topbar">
             <div className="cad-fullscreen-meta-block">
               <span className="cad-fullscreen-badge">
@@ -1444,6 +1459,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               {renderVectorSvgContent()}
             </div>
           </div>
+          </>}
         </div>,
         document.body
       )}
@@ -2305,6 +2321,30 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             max-width: 99vw;
             max-height: calc(100dvh - 200px);
           }
+        }
+
+        .cad-floor-hit { fill: transparent; cursor: pointer; }
+        .fp-building-elevation g[role="button"]:focus { outline: none; }
+        .fp-building-elevation g[data-hovered="true"] > .cad-floor-hit,
+        .fp-building-elevation g[role="button"]:focus-visible > .cad-floor-hit {
+          fill: color-mix(in srgb, var(--gold-primary) 22%, transparent);
+          stroke: var(--gold-primary); stroke-width: 2;
+        }
+        [data-blueprint-drawing] .studio-panoramic-stage { height: 100%; border-radius: 10px; box-shadow: none; }
+        [data-blueprint-drawing] .stage-svg-wrapper { padding: 16px; min-height: 0; height: 100%; cursor: default; }
+        [data-blueprint-drawing] .cad-vector-svg { width: 100%; height: 100%; max-height: 640px; }
+        section .stage-controls-bar { position: static; pointer-events: auto; flex-shrink: 0; width: auto; gap: 8px; }
+        section .cad-zoom-btn, section .cad-zoom-val-btn, section .cad-fullscreen-toggle-btn,
+        section .cad-fullscreen-close-btn { min-height: 40px; min-width: 40px; padding: 8px; }
+        section .cad-zoom-controls { order: 0; }
+        section .cad-fullscreen-toggle-btn { order: 0; }
+        .cad-building-fullscreen { height: 100dvh; padding: 12px !important; gap: 8px; }
+        .cad-building-title { flex-shrink: 0; font-size: 14px; line-height: 1.5; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cad-building-fullscreen [data-blueprint-drawing] .cad-vector-svg { max-height: 100%; }
+        @media(max-width:600px) {
+          section .cad-fullscreen-toggle-btn span, section .cad-fullscreen-close-btn span { display: none; }
+          .cad-building-fullscreen { padding: 8px !important; }
+          [data-blueprint-drawing] .stage-svg-wrapper { padding: 8px; }
         }
 
         .pub-metric-cell {

@@ -1,0 +1,53 @@
+TASK blueprint-nav — building blueprint section ("المخطط المعماري التفاعلي وتوزيع المساحات"): new navigation layout + fullscreen fixes (branch feat/blueprint-nav, from main)
+
+WHY
+User review 2026-10-11 of the Gouna building section. Problems: floor titles are drawn INSIDE the SVG drawing (tiny, ~9px); the "واجهة المبنى" framed box under the drawing is badly placed (one tile in a large gold frame); navigation between building / floor / unit is not intuitive (chip + back buttons + side panel); floors in the drawing are not clickable; fullscreen is broken. The user approved a mockup [user-confirmed 2026-10-11]; implement it inside the site's existing look (dark/light themes, gold accents, glass) — no new visual language.
+
+FILES
+zakaria-farid/src/components/property/ArchitecturalBlueprintInspector.tsx (section shell, elevation SVG renderInlineStage, fullscreen portal, zoom), zakaria-farid/src/components/blueprint/BuildingBlueprintPreview.tsx + BuildingBlueprintPreview.module.css (breadcrumb, side lists, facade/floor/unit views, admin edit), zakaria-farid/src/lib/layering/buildingBlueprint.ts (BlueprintView). The same BuildingBlueprintPreview is used by the admin editor (step 3, edit prop) — admin must keep working.
+
+APPROVED LAYOUT (building = elevation view)
+1. Top bar of the section, one row: breadcrumb on the start side, actions on the end side.
+   - Breadcrumb: "المبنى ‹ الدور 3 ‹ شقة A" (EN "Building › Floor 3 › Unit A"). Every step except the current one is a button that navigates there. This breadcrumb is the ONLY navigation chrome: remove the separate "المبنى" chip, the "رجوع للدور / رجوع لواجهة المبنى" back buttons and any duplicate header navigation. Keep the bp URL param sync (publicBlueprint serialize) working.
+   - Actions: zoom − / % / + and "ملء الشاشة". They move OUT of the drawing (today they overlay the roof).
+2. Main row: drawing card (flexible width) + floor rail OUTSIDE the drawing card (fixed ~200px at desktop, on the inline-end side as in RTL mockup: drawing first, rail after).
+   - The floor rail is normal HTML (not SVG): one button per level top-to-bottom (السطح, الدور 5 … الدور 1, الدور الأرضي, القبو if present). Each shows the floor name (≥14px, weight 500) and a summary line (≥12px): units count · available count when availability is known; for non-unit floors their main spaces. Chevron on the end. Real data only (existing summaryOf / inventory logic).
+   - Remove the floor info cards drawn inside the SVG (infoCard) and the unlabeled ⊕ level markers. The SVG keeps only the building drawing.
+3. Floors in the drawing are clickable: each level is a <g role="button" tabIndex=0> with a full-width transparent hit band; hover/focus shows a gold tint band (theme tokens, visible in light and dark). Click / Enter / Space opens that floor. Hovering a floor in the drawing highlights its rail button and vice versa (shared hoveredFloor state).
+4. Info strip UNDER the drawing (replaces the "واجهة المبنى" framed box and the mostly-empty "اختر عنصراً لعرض بياناته" side panel):
+   - Building view: counts (floors, units, available) + "مرافق المبنى" as small tags (the building-level shared zones that today live in the facade box, e.g. المبنى / المرافق العامة, entrance, garage, elevator, roof tanks — real zones only), plus one muted hint line "اضغط على أي دور في الرسم أو في القائمة". Tags that are real zones stay clickable (open the zone detail the same way the facade tile does today).
+   - Floor view: floor name + summary, and two buttons "الدور الأعلى" / "الدور الأدنى" (disabled-looking only at the ends; better: hide the missing direction).
+   - Unit view: unit label, area, rooms, status, and the existing request-unit action (onRequestUnit). Existing unit detail content (rooms, photos) stays reachable.
+   - Remove the big gold-framed "واجهة المبنى" box. Remove the side detail column if it becomes empty; anything it still shows for floor/unit views moves into the info strip or stays where the floor/unit view already shows it — no lost information.
+5. Floor and unit views render in the SAME drawing card; the floor rail stays visible in all views with the current floor marked (aria-current). Clicking another floor in the rail switches directly. Unit tiles in a floor plan stay clickable as today. Prev/next unit buttons may stay inside the unit view.
+6. Legend (متاحة / مباعة / مساحات مشتركة / باب الشقة): keep, as one compact row under the info strip.
+
+TEXT INSIDE THE SVG
+7. Apartment labels in the elevation ("شقة A 5") currently render as reversed, unjoined letters (monospace font without Arabic glyphs + bidi). Fix: Arabic-capable font (the site's font family), direction/unicode-bidi correct, or drop them if the rail already says it — choose and report. No broken Arabic anywhere in the SVG.
+
+FULLSCREEN (.cad-fullscreen-portal-overlay, portaled to body)
+8. Overlay renders at x = -8 at 1440 and 390 (getBoundingClientRect left -8 with computed left 0, html has class "lenis"): the document is offset horizontally while fullscreen. Find the real cause (RTL horizontal page overflow / Lenis smooth scroll / scrollX) and fix it so overlay rect = [0,0,innerWidth,innerHeight]. Pause/stop Lenis while fullscreen and restore after.
+9. Fullscreen uses the same approved layout (breadcrumb + actions top bar, drawing + floor rail, info strip), all fitted inside the viewport: no element's rect outside the viewport (today the stage wrapper bottom is 921 in a 900 viewport and the rail cards are clipped at the right edge). The drawing scales to fit the available height (viewBox fit), with comfortable margins; no dead band under the top bar.
+10. 390 px fullscreen and inline: the rail becomes a horizontal scrollable chip row ABOVE the drawing (floor name + small count), drawing uses the full width, info strip below. Title in the fullscreen top bar must not be cut mid-word (ellipsis at most). Tap targets ≥ 40px.
+11. Escape and the close button exit fullscreen, body scroll lock removed, page scroll position restored. Keep keyboard focus sane (focus moves into the overlay on open and back to the fullscreen button on close).
+
+ADMIN
+12. Admin editor (edit prop) keeps: zone select/edit, add buttons, drag reorder, floor kebab/add-floor controls (they may live in the rail in edit mode). Verify with the existing admin SSR tests + new tests; you have no admin session — say so in the report.
+
+DO NOT
+- Change apartment/garage CAD plans, the ground-floor plan arrangement (arrangeGroundFloor), map, gallery, cards or other pages.
+- Remove any information. Remove any button except the ones replaced by the breadcrumb (item 1) and the in-SVG info cards / markers (item 2).
+- Hardcode or invent zones, counts, facilities or photos. Add dependencies. Write to the DB (Supabase PRODUCTION, read-only).
+- Nest a <form>; every button type="button".
+
+TESTS
+RED first: pure helpers you add (e.g. floor rail summary, prev/next floor, breadcrumb steps from BlueprintView). SSR tests of the real component: rail outside the SVG with all levels, in-SVG floor groups are role=button and call onViewChange, no infoCard text inside the SVG, facade box gone and facilities in the info strip, breadcrumb steps per view, admin edit controls still rendered. tsc exit 0. npm test: only the 7 known pre-existing failures.
+Capture script (scripts/capture-blueprint-nav.cjs, Playwright with channel 'msedge'; the bundled chromium is not installed) asserting: overlay rect exactly the viewport and every overlay descendant inside it (1440x900, 1280x800, 390x844); rail outside the SVG; floor click in the drawing changes view and breadcrumb; hover sync; Escape exit restores scroll; no horizontal overflow at 390; light and dark. Exit non-zero on failure.
+
+ACCEPTANCE (screenshots in <RUN_DIR>/shots, opened and inspected)
+Gouna public page /ar/properties/el-gouna-marina-residential-building-عمارة-شقق-بالجونة-bqycxm and /en/ same slug: building view, floor view (typical + ground), unit view, fullscreen of each; light + dark; 1440 and 390 (1280 for fullscreen). Before/after pair of the building view at 1440 dark.
+
+PROCESS
+Start any dev server or capture script in the foreground with a timeout, or stop it yourself before finishing. Never end your turn waiting on a background task. Delete any build dir you create for capture (e.g. .next-capture) or keep it gitignored.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Own dev server on a free port (not 51101-51104). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

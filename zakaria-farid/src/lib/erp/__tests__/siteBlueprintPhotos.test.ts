@@ -73,10 +73,10 @@ test('real admin blueprint photo tiles retain edit actions and drag wrappers', (
   assert.match(roomHtml, /class="tileActions"/);
 });
 
-test('real facade hides public duplicate list and retains compact admin floor controls', () => {
+test('real facade retains public HTML rail and compact admin floor controls', () => {
   const publicHtml = render([unit, shared], { mode: 'elevation' });
-  assert.doesNotMatch(publicHtml, /<aside class="floors/);
-  assert.match(publicHtml, /workspaceFacade/);
+  assert.match(publicHtml, /<aside class="floors/);
+  assert.match(publicHtml, /data-blueprint-info/);
   const adminHtml = render([unit, shared], { mode: 'elevation' }, true);
   assert.match(adminHtml, /floorsAdminCompact/);
   assert.match(adminHtml, /class="addFloors"/);

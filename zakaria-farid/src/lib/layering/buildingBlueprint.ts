@@ -1,7 +1,7 @@
 import type { BuildingUnitInstance, ZoneInstance } from './instances';
 import { getTradesForZone, ZONE_TEMPLATES } from './templates';
 import type { BuildingUnitItem } from '../supabase/types';
-import { unitCode } from './labels';
+import { unitCode, zoneLabel } from './labels';
 import { getZoneBadge } from './instances';
 
 export type BlueprintView = { mode: 'elevation' } | { mode: 'floor'; floorKey: string } | { mode: 'unit'; floorKey: string; unitId: string };
@@ -31,6 +31,17 @@ export function floorLabel(key: string, isAr: boolean): string {
 export function selectBuildingFloor(zones: ZoneInstance[], key: string) {
   const selected = zones.filter(z => buildingFloorKey(z) === key && z.zone_template_id !== 'bld.building');
   return { units: selected.filter(z => z.zone_template_id === 'bld.unit'), core: selected.filter(z => z.zone_template_id !== 'bld.unit') };
+}
+
+/** Rail and info-strip text derives only from recorded zones and ERP inventory. */
+export function blueprintFloorSummary(zones: ZoneInstance[], key: string, inventory: BuildingUnitItem[], isAr: boolean): string {
+  const { units, core } = selectBuildingFloor(zones, key);
+  if (!units.length) return core.map(z => zoneLabel(z, isAr)).join(' · ');
+  const statuses = units.map(z => resolveBlueprintUnit(z, inventory).status);
+  const count = `${units.length} ${isAr ? 'شقة' : 'units'}`;
+  return statuses.every(s => s !== undefined)
+    ? `${count} · ${statuses.filter(s => s === 'available').length} ${isAr ? 'متاحة' : 'available'}`
+    : count;
 }
 
 /** Pure dry run. Exact duplicate payloads are collapsed, differing recorded values are preserved. */

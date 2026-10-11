@@ -44,3 +44,6 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
+
+# Isolated blueprint navigation capture build
+.next-blueprint-nav/

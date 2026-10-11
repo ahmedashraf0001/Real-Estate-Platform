@@ -5,16 +5,20 @@
 .root button:hover { border-color: var(--bp-gold); }
 .root button { min-width: 44px; }
 .root button:disabled { opacity: .4; cursor: default; }
-.path { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 22px; border-bottom: 1px solid var(--bp-line); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--bp-line); }
+.path { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .path button, .legend span { display: inline-flex; align-items: center; gap: 8px; }
-.root [aria-current="page"], .activeChip { color: var(--bp-gold); border-color: var(--bp-gold); background: color-mix(in srgb, var(--bp-gold) 9%, transparent); }
-.activeChip { padding: 12px 14px; border-radius: 6px; }
-.path .back { margin-inline-start: auto; }
-.workspace { display: grid; grid-template-columns: 150px minmax(0,1fr) 255px; gap: 24px; margin-top: 24px; align-items: start; }
-.floors { display: flex; flex-direction: column; gap: 8px; }
-.floors button { display: flex; flex-direction: column; align-items: start; gap: 7px; text-align: start; }
+.root [aria-current="page"] { color: var(--bp-gold); border-color: var(--bp-gold); background: color-mix(in srgb, var(--bp-gold) 9%, transparent); }
+.workspace { display: grid; grid-template-columns: minmax(0,1fr) 200px; gap: 18px; margin-top: 16px; align-items: stretch; min-height: 0; }
+.floors { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.floors button { flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; gap: 7px; text-align: start; }
+.floors button > span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.floors strong { font-size: 14px; font-weight: 500; }
+.floors small { font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.floors [data-hovered="true"] { border-color: var(--bp-gold); background: color-mix(in srgb, var(--bp-gold) 15%, transparent); }
 .floors small, .detail p, .room span, .unit>span:not(.pill), .note { color: var(--text-secondary, #B0B4BE); line-height: 1.7; }
-.planColumn { min-width: 0; }
+.planColumn { min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--bp-line); border-radius: 10px; }
+.planDrawing { height: 100%; min-height: 0; transform-origin: center; }
 .floorPlan { display: grid; grid-template-columns: minmax(0,1fr) minmax(90px,.65fr) minmax(0,1fr); border: 3px solid var(--bp-gold); gap: 5px; padding: 9px; min-height: 410px; }
 .unitStack, .core { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .floorPlan.noUnits { display: flex; flex-direction: column; justify-content: center; min-height: 410px; gap: 12px; }
@@ -33,7 +37,7 @@
 .legend { display: flex; flex-wrap: wrap; gap: 18px; padding: 18px 0; font-size: 12px; color: var(--text-secondary, #B0B4BE); }
 .pill { display: inline-block; font-size: 12px; line-height: 1.5; white-space: nowrap; padding: 4px 9px; border-radius: 20px; background: color-mix(in srgb, currentColor 7%, transparent); border: 1px solid var(--bp-line); }
 .root .available { color: #65B98E; }
-.detail { border-inline-start: 1px solid var(--bp-line); padding-inline-start: 22px; min-width: 0; }
+.detail { border-top: 1px solid var(--bp-line); padding-top: 16px; margin-top: 16px; min-width: 0; }
 .detail h3 { margin: 16px 0 8px; font-size: 21px; }
 .detail h4 { font-size: 14px; font-weight: 500; padding-top: 14px; border-top: 1px solid var(--bp-line); }
 .iconTile { display: inline-flex; padding: 15px; border: 1px solid var(--bp-line); border-radius: 8px; }
@@ -48,15 +52,11 @@
 .root .request { background: var(--bp-gold); color: var(--bg-primary, #0E1117); }
 .roomPlan { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border: 3px solid var(--bp-gold); gap: 6px; padding: 10px; }
 .root .room { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; min-height: 150px; text-align: center; }
-.building { border: 3px solid var(--bp-gold); padding: 16px; }
-.building h3 { text-align: center; margin: 6px 0 20px; font-size: 22px; font-weight: 500; }
-.building>button { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 7px; min-height: 52px; border-radius: 0; }
 .empty { grid-column: 1/-1; text-align: center; }
 .photos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 .photos img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; }
 .photoSlot { border: 1px dashed var(--bp-line); padding: 25px 10px; text-align: center; }
-@media(max-width:1100px) { .workspace { grid-template-columns: 125px minmax(0,1fr); gap: 16px; } .detail { grid-column: 2; border-inline-start: 0; border-top: 1px solid var(--bp-line); padding: 20px 0 0; } }
-@media(max-width:600px) { .root { padding: 14px; } .workspace { display: flex; flex-direction: column; gap: 18px; } .floors { flex-direction: row; overflow-x: auto; width: 100%; padding: 4px 0 8px; } .floors button { flex: 0 0 125px; } .planColumn, .detail { width: 100%; } .floorPlan { grid-template-columns: minmax(0,1fr) 82px minmax(0,1fr); gap: 4px; padding: 5px; min-height: 390px; } .root .unit { padding: 15px 4px; gap: 13px; } .unit strong { font-size: 16px; } .unit>span { font-size: 12px; } .root .element { padding: 15px 4px; font-size: 12px; } .path .back { margin-inline-start: 0; } .facts { gap: 18px; } .summary { gap: 10px; } .roomPlan { gap: 4px; padding: 5px; } .root .room { padding: 10px 4px; } }
+@media(max-width:600px) { .root { padding: 14px; } .topbar { gap: 8px; flex-wrap: wrap; } .workspace { display: flex; flex-direction: column; gap: 12px; } .floors { order: -1; flex-direction: row; overflow-x: auto; width: 100%; padding: 4px 0 8px; } .floors button { flex: 0 0 140px; } .floors small { display: block; max-width: 140px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; } .planColumn, .detail { width: 100%; } .floorPlan { grid-template-columns: minmax(0,1fr) 82px minmax(0,1fr); gap: 4px; padding: 5px; min-height: 390px; } .root .unit { padding: 15px 4px; gap: 13px; } .unit strong { font-size: 16px; } .unit>span { font-size: 12px; } .root .element { padding: 15px 4px; font-size: 12px; } .facts { gap: 18px; } .summary { gap: 10px; } .roomPlan { gap: 4px; padding: 5px; } .root .room { padding: 10px 4px; } }
 /* Apartment plan: balconies along the front, living side and private side; tile size follows area. */
 .roomPlan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; align-items: stretch; min-height: 420px; }
 .aptFront { grid-column: 1 / -1; display: flex; gap: 6px; }
@@ -117,10 +117,6 @@
 .compactCore .tileWrap, .compactCore .element { min-height: 100px; }
 .compactCore .addSlot { min-height: 100px; }
 @media(max-width:600px) { .roomPlan { grid-template-columns: 1fr; min-height: 0; } .compactCore { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; } }
-.workspace.noDetail { grid-template-columns: 150px minmax(0,1fr); }
-.workspaceFacade { grid-template-columns: minmax(0, 1fr) 255px !important; }
-@media(max-width:900px) { .workspaceFacade { grid-template-columns: 1fr !important; } }
-
 /* Tile photo cover */
 .tileWithPhoto { position: relative !important; overflow: hidden !important; }
 .tilePhotoCover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
@@ -230,3 +226,46 @@
   }
 }
 
+
+.infoStrip { border-top: 1px solid var(--bp-line); margin-top: 16px; padding-top: 12px; min-height: 0; }
+.infoStrip h3 { font-size: 14px; font-weight: 500; margin: 12px 0 8px; }
+.infoStrip .summary { padding-top: 0; }
+.facilities { display: flex; flex-wrap: wrap; gap: 6px; }
+.facilities button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
+.facilities .tileWrap { flex: 0 1 200px; }
+.infoStrip .note { border: 0; padding-top: 10px; }
+.fullscreen { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px; overflow: hidden; }
+.fullscreen .workspace { flex: 1; min-height: 0; }
+.fullscreen .floors { overflow-y: auto; }
+.fullscreen .infoStrip { flex-shrink: 0; max-height: min(230px, 30dvh); overflow: auto; }
+.fullscreen .legend { padding: 10px 0 0; flex-shrink: 0; gap: 12px; }
+.fullscreen .floorPlan { height: 100%; min-height: 0; }
+.fullscreen .roomPlan { height: 100%; min-height: 0; }
+.fullscreen .room { min-height: 40px; }
+.fullscreen .groundPlanContainer { height: 100%; }
+.fullscreen .groundBuildingFrame { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr) auto; }
+.fullscreen .core > .element { flex: 1; min-height: 0; padding: 6px 4px; gap: 6px; }
+.fullscreen .aptSide .room, .fullscreen .aptFront .room { min-height: 44px; padding: 4px; gap: 4px; }
+.fullscreen .room svg { flex-shrink: 0; width: 18px; height: 18px; }
+.fullscreen .groundUpperGrid { min-height: 0; }
+.fullscreen .groundGarageCol > *, .fullscreen .groundCoreCol > *, .fullscreen .groundServicesCol > *,
+.fullscreen .groundFrontStrip > * { min-height: 0; padding: 6px 3px; gap: 6px; }
+.fullscreen .groundFrontStrip { flex: 0 0 auto; }
+.fullscreen .groundUpperGrid button { min-height: 40px; }
+.fullscreen .groundUpperGrid .element, .fullscreen .groundFrontStrip .element,
+.fullscreen .groundGateWall .element { min-height: 40px; padding: 4px 2px; gap: 2px; }
+.fullscreen .groundPlanContainer .element svg { flex-shrink: 0; width: 14px; height: 14px; }
+.fullscreen .groundPlanContainer .element strong { font-size: 11px; line-height: 1.2; }
+.fullscreen .groundGateBoundary { margin: 4px auto 0; }
+.fullscreen .groundStreet { padding: 4px 8px; margin-top: 0; }
+@media(max-width:600px) {
+  .fullscreen { padding: 8px; }
+  .fullscreen .workspace { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
+  .fullscreen .floors { order: -1; flex-direction: row; overflow-y: hidden; flex-shrink: 0; }
+  .fullscreen .planColumn { height: 100%; }
+  .fullscreen .infoStrip { max-height: 120px; }
+  .fullscreen .core .element { font-size: 11px; }
+  .fullscreen .core svg { flex-shrink: 0; width: 18px; height: 18px; }
+  .fullscreen .room { font-size: 12px; }
+  .fullscreen .roomPlan { grid-template-rows: minmax(0,.8fr) minmax(0,1.7fr) minmax(0,3fr); gap: 4px; }
+}
