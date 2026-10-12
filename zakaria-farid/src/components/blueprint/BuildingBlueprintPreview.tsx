@@ -1,5 +1,6 @@
 'use client';
 import ZoneMedia from './ZoneMedia';
+import { ZoneInspector } from '@/components/admin/ZoneInspector';
 
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Building2, DoorOpen, X } from 'lucide-react';
@@ -35,7 +36,7 @@ interface Props {
 
 export default function BuildingBlueprintPreview({ zones, inventory = [], view, onViewChange, selectedId, onSelect, onInspect, isAr, onRequestUnit, elevation, edit, actions, hoveredFloor, onHoverFloor, fullscreen = false, zoom = 1 }: Props) {
   const text = (ar: string, en: string) => isAr ? ar : en;
-  const ed = useBlueprintEditing({ edit, zones, inventory, isAr, view, onViewChange, onSelect });
+  const ed = useBlueprintEditing({ edit, zones, inventory, isAr, view, onViewChange, onSelect, selectedId });
   const keys = [...ed.floors].reverse();
   const floorKey = view.mode === 'elevation' ? undefined : view.floorKey;
   const floor = floorKey ? selectBuildingFloor(zones, floorKey) : { units: [], core: [] };
@@ -48,7 +49,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const wasOpen = useRef(false);
   const open = Boolean(selected);
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || edit) return;
     const drawing = rootRef.current?.querySelector<HTMLElement>('[data-blueprint-drawing]');
     const panel = panelRef.current;
     if (!drawing || !panel) return;
@@ -68,6 +69,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
     return () => { observer.disconnect(); window.removeEventListener('scroll', fit, true); window.removeEventListener('resize', fit); };
   }, [open, fullscreen]);
   useEffect(() => {
+    if (edit) return;
     if (open && !wasOpen.current) {
       triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       panelRef.current?.querySelector<HTMLButtonElement>('[data-detail-close]')?.focus({ preventScroll: true });
@@ -77,7 +79,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
     wasOpen.current = open;
   }, [open]);
   useEffect(() => {
-    if (!open) return;
+    if (!open || edit) return;
     const escape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || !rootRef.current?.contains(document.activeElement)) return;
       event.preventDefault(); event.stopImmediatePropagation(); onSelect(null);
@@ -111,7 +113,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const units = sortTiles(floor.units);
   const core = sortTiles(floor.core);
   const orderedRooms = sortTiles(rooms);
-  /** In the admin each tile carries its edit bar and drag handles; on the public page the tile renders alone. */
+  /** Edit tiles retain drag groups; public tiles retain their original contents. */
   const wrap = (z: ZoneInstance, list: ZoneInstance[], kind: 'shared' | 'room' | 'unit', groupKey: string, tile: React.ReactElement, style?: React.CSSProperties) => {
     if (!ed.editing) return tile;
     const drag = ed.tileDragProps(z, list, kind, groupKey);
@@ -120,6 +122,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         key={z.id}
         className={`${styles.tileWrap} ${drag.className || ''}`.trim()}
         style={style}
+        data-editor-tile={z.id}
         draggable={drag.draggable}
         data-drop-target={drag['data-drop-target']}
         data-is-dragging={drag['data-is-dragging']}
@@ -130,8 +133,12 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         onDrop={drag.onDrop}
         onDragEnd={drag.onDragEnd}
       >
-        {(selectedId === z.id ? null : ed.renameField(z)) ?? tile}
-        {selectedId !== z.id && ed.tileControls(z, list, kind)}
+        <button type="button" data-zone-id={z.id} data-zone-template={z.zone_template_id} aria-pressed={selectedId === z.id}
+          className={kind === 'unit' ? styles.unit : kind === 'room' ? styles.room : styles.element} onClick={() => onSelect(z.id)}>
+          {icon(z)}<strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
+          {kind === 'unit' && status(resolveBlueprintUnit(z, inventory).status)}
+        </button>
+        {ed.tileControls(z)}
       </div>
     );
   };
@@ -251,14 +258,14 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const availabilityKnown = allUnits.length > 0 && allUnits.every(z => resolveBlueprintUnit(z, inventory).status !== undefined);
   const facilities = groupBlueprintFacilities(zones, isAr);
   const floorIndex = floorKey ? keys.indexOf(floorKey) : -1;
-  return <section ref={rootRef} className={`${styles.root} ${fullscreen ? styles.fullscreen : ''}`} dir={isAr ? 'rtl' : 'ltr'} aria-label={text('معاينة مخطط المبنى', 'Building blueprint preview')}>
+  return <section ref={rootRef} tabIndex={ed.editing ? -1 : undefined} className={`${styles.root}${ed.editing ? ` ${styles.editor}` : ''} ${fullscreen ? styles.fullscreen : ''}`} data-blueprint-editor={ed.editing || undefined} onKeyDown={ed.editing ? ed.keyboard : undefined} onFocusCapture={ed.editing ? ed.beginField : undefined} onBlurCapture={ed.editing ? ed.endField : undefined} dir={isAr ? 'rtl' : 'ltr'} aria-label={text('معاينة مخطط المبنى', 'Building blueprint preview')}>
     <div className={styles.topbar}>
       <nav className={styles.path} aria-label={text('مسار المبنى', 'Building path')}>
         {view.mode === 'elevation' ? <span aria-current="page">{text('المبنى', 'Building')}</span> : <button type="button" onClick={() => navigate({ mode: 'elevation' })}>{text('المبنى', 'Building')}</button>}
-        {floorKey && <><span aria-hidden="true">{isAr ? '‹' : '›'}</span>{view.mode === 'floor' ? <span aria-current="page">{floorLabel(floorKey, isAr)}</span> : <button type="button" onClick={() => navigate({ mode: 'floor', floorKey })}>{floorLabel(floorKey, isAr)}</button>}</>}
+        {floorKey && <><span aria-hidden="true">{isAr ? '‹' : '›'}</span>{view.mode === 'floor' ? <span aria-current="page">{ed.editing ? ed.floorName(floorKey) : floorLabel(floorKey, isAr)}</span> : <button type="button" onClick={() => navigate({ mode: 'floor', floorKey })}>{ed.editing ? ed.floorName(floorKey) : floorLabel(floorKey, isAr)}</button>}</>}
         {unit && <><span aria-hidden="true">{isAr ? '‹' : '›'}</span><span aria-current="page"><bdi>{zoneLabel(unit, isAr)}</bdi></span></>}
       </nav>
-      {actions}
+      {ed.historyBar}{ed.topActions}{!ed.editing && actions}
     </div>
     <div className={styles.workspace}>
       <div className={styles.planColumn} data-blueprint-drawing>
@@ -338,17 +345,12 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           {ed.editing && <div className={styles.planAdd}>{ed.addSlot('unit', units)}</div>}
         </div>}
         </div>
-      {selected && <aside ref={panelRef} data-blueprint-detail data-lenis-prevent className={styles.detail} role="region" aria-label={text('تفاصيل العنصر', 'Element details')}>
+      {!ed.editing && selected && <aside ref={panelRef} data-blueprint-detail data-lenis-prevent className={styles.detail} role="region" aria-label={text('تفاصيل العنصر', 'Element details')}>
         <div className={styles.detailHeader}>
           <span className={styles.dragHandle} aria-hidden="true" />
           <button type="button" data-detail-close aria-label={text('إغلاق تفاصيل العنصر', 'Close element details')} onClick={() => onSelect(null)}><X size={20} /></button>
         </div>
         <div className={styles.detailBody}>
-          {ed.editing && <div className={styles.detailEditor}>
-            {ed.renameField(selected)}
-            {ed.tileControls(selected, rooms.includes(selected) ? orderedRooms : selected.zone_template_id === 'bld.unit' ? units : core.includes(selected) ? core : zones.filter(z => z.zone_template_id !== 'bld.unit'), rooms.includes(selected) ? 'room' : selected.zone_template_id === 'bld.unit' ? 'unit' : 'shared')}
-          </div>}
-          {edit?.renderDetails ? edit.renderDetails(selected.id) : <>
           <span className={styles.iconTile}>{icon(selected, 30)}</span><h3>{zoneLabel(selected, isAr)}</h3><p>{selectedLocation}</p>
           {onInspect && <button type="button" onClick={() => onInspect(selected.id)}>{text('تحرير بيانات العنصر', 'Edit element facts')}</button>}
           <dl className={styles.facts}>{selectedFacts.map(([label, value], i) => <div key={i}><dt>{label}</dt><dd><bdi>{value}</bdi></dd></div>)}</dl>
@@ -358,11 +360,14 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           <ZoneMedia zone={selected} isAr={isAr} />
         <p className={styles.note}>{text('الأعمال العامة للمبنى تظهر تحت «المبنى».', 'Building-wide work appears under “Building”.')}</p>
         {selected.zone_template_id === 'bld.unit' && onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(selected)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
-          </>}
         </div>
       </aside>}
       </div>
-      <aside className={`${styles.floors} ${ed.editing ? styles.floorsAdminCompact : ''}`} data-floor-rail aria-label={text('الأدوار', 'Floors')}>
+      {ed.editing && <aside data-blueprint-detail className={styles.editorInspector} aria-label={text('تفاصيل المساحة', 'Space inspector')}>
+        <ZoneInspector zoneInstances={zones} onZoneInstancesChange={ed.commit} selectedZoneId={selectedId}
+          buildingUnits={inventory} isAr={isAr} docked onCopy={ed.duplicate} onDelete={ed.remove} />
+      </aside>}
+      <aside className={`${styles.floors} ${ed.editing ? styles.floorsAdminCompact : ''}`} data-floor-rail data-floor-tree={ed.editing || undefined} aria-label={text('الأدوار', 'Floors')}>
         {keys.map(key => {
           const button = <button type="button" key={key} data-floor-key={key} data-hovered={hoveredFloor === key || undefined}
             aria-current={key === floorKey ? 'page' : undefined}
@@ -372,7 +377,15 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
             <span><strong>{floorLabel(key, isAr)}</strong><span aria-hidden="true">{isAr ? '‹' : '›'}</span></span>
             <small title={blueprintFloorSummary(zones, key, inventory, isAr)}>{blueprintFloorSummary(zones, key, inventory, isAr)}</small>
           </button>;
-          return ed.editing ? <div key={key} className={styles.floorRow}>{button}{ed.floorControls(key)}</div> : button;
+          return ed.editing ? <details key={key} className={styles.treeFloor} open={key === floorKey}>
+            <summary><div className={styles.floorRow}>
+              <button type="button" data-floor-key={key} aria-current={key === floorKey && view.mode === 'floor' ? 'page' : undefined} onClick={() => navigate({ mode: 'floor', floorKey: key })}>{ed.floorName(key)}</button>
+              {ed.floorControls(key)}
+            </div></summary>
+            <div className={styles.treeUnits}>{sortTiles(selectBuildingFloor(zones, key).units).map(z => <button type="button" key={z.id} data-tree-unit={z.id}
+              aria-current={view.mode === 'unit' && view.unitId === z.id ? 'page' : undefined}
+              onClick={() => navigate({ mode: 'unit', floorKey: key, unitId: z.id })}>{icon(z, 16)}<bdi>{zoneLabel(z, isAr)}</bdi></button>)}</div>
+          </details> : button;
         })}
         {!keys.length && <p>{text('لا توجد أدوار مسجلة.', 'No floors recorded.')}</p>}
         {ed.addFloors}

@@ -20,7 +20,8 @@ import {
   removeTradeFromZone,
   removeZone,
 } from '@/lib/layering';
-import { fallbackMetricFor } from '@/lib/layering/zoneMetrics';
+import { CEILING_TYPES, fallbackMetricFor, formatCeiling, parseCeiling, serializeCeiling } from '@/lib/layering/zoneMetrics';
+import { changeZoneType, ROOM_TEMPLATES, SHARED_SPACE_TEMPLATES, renameZone } from '@/lib/layering/blueprintEditor';
 
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
 import { buildingFloorKey, floorLabel, patchBlueprintZone, resolveBlueprintUnit } from '@/lib/layering/buildingBlueprint';
@@ -36,6 +37,9 @@ interface ZoneInspectorProps {
   declaredArea?: number;
   /** Figma-style flyout mode: hidden when nothing is selected, closable, offset beside the rooms rail. */
   nested?: boolean;
+  docked?: boolean;
+  onCopy?: (id: string) => void;
+  onDelete?: (id: string) => void;
   onClose?: () => void;
   isAr?: boolean;
 }
@@ -71,7 +75,7 @@ const TIER_STYLES: Record<string, { en: string; ar: string; color: string }> = {
   mixed: { en: 'Mixed', ar: 'مختلط', color: '#9FB3D9' },
 };
 
-export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, declaredArea, nested = false, onClose, isAr = false, buildingUnits = [] }: ZoneInspectorProps) {
+export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, declaredArea, nested = false, docked = false, onCopy, onDelete, onClose, isAr = false, buildingUnits = [] }: ZoneInspectorProps) {
   const [addTradeOpen, setAddTradeOpen] = useState(false);
 
   const zone = useMemo(
@@ -82,10 +86,10 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
   if (!zone) {
     if (nested) return null;
     return (
-      <aside className="zi-root" dir={isAr ? 'rtl' : 'ltr'}>
+      <aside className={`zi-root ${docked ? 'zi-docked' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
         <div className="zi-empty">
           <MousePointerClick size={28} className="zi-empty-icon" />
-          <h4 className="zi-empty-title">{isAr ? 'لم يتم تحديد غرفة' : 'No room selected'}</h4>
+          <h4 className="zi-empty-title">{isAr ? 'اختر مساحة لتعديلها' : 'Select a space to edit'}</h4>
           <p className="zi-empty-desc">
             {isAr
               ? 'اختر غرفة من المخطط أو القائمة لعرض أبعادها وتشطيباتها هنا.'
@@ -98,7 +102,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
   }
 
   return (
-    <aside className={`zi-root ${nested ? 'zi-nested' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
+    <aside className={`zi-root ${nested ? 'zi-nested' : ''} ${docked ? 'zi-docked' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
       <ZoneInspectorBody
         key={zone.id}
         zone={zone}
@@ -110,6 +114,8 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
         addTradeOpen={addTradeOpen}
         setAddTradeOpen={setAddTradeOpen}
         onClose={nested ? onClose : undefined}
+        onCopy={onCopy}
+        onDelete={onDelete}
       />
       <InspectorStyles />
     </aside>
@@ -126,11 +132,13 @@ interface BodyProps {
   addTradeOpen: boolean;
   setAddTradeOpen: (v: boolean) => void;
   onClose?: () => void;
+  onCopy?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 function ZoneInspectorBody({
   zone, zoneInstances, onZoneInstancesChange, declaredArea, isAr, buildingUnits,
-  addTradeOpen, setAddTradeOpen, onClose,
+  addTradeOpen, setAddTradeOpen, onClose, onCopy, onDelete,
 }: BodyProps) {
   const ElementIcon = BLUEPRINT_ICONS[zone.zone_template_id] ?? Building;
   const unitFacts = resolveBlueprintUnit(zone, buildingUnits);
@@ -219,7 +227,7 @@ function ZoneInspectorBody({
         <div className="zi-header-text">
           <h4 className="zi-title">{zoneLabel(zone, isAr)}</h4>
           <div className="zi-meta">
-            <span dir="ltr">{sqm} m²</span>
+            <bdi>{sqm} {isAr ? 'م²' : 'm²'}</bdi>
             {zone.level_label && <span className="zi-level">{floorLabel(buildingFloorKey(zone), isAr)}</span>}
           </div>
         </div>
@@ -239,6 +247,18 @@ function ZoneInspectorBody({
           </button>
         )}
       </header>
+
+      <section className="zi-section">
+        <label className="zi-ceiling"><span>{isAr ? 'الاسم' : 'Name'}</span><input data-inspector-name aria-label={isAr ? 'الاسم' : 'Name'} type="text" key={zoneLabel(zone, isAr)} defaultValue={zone.zone_template_id === 'bld.unit' ? zone.unit?.unit_code ?? zone.instance_label ?? '' : zoneLabel(zone, isAr)} onBlur={e => onZoneInstancesChange(renameZone(zoneInstances, zone.id, e.target.value))} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} /></label>
+        <label className="zi-ceiling"><span>{isAr ? 'النوع' : 'Type'}</span><select aria-label={isAr ? 'النوع' : 'Type'} value={zone.zone_template_id} disabled={zone.zone_template_id === 'bld.unit'} onChange={e => onZoneInstancesChange(changeZoneType(zoneInstances, zone.id, e.target.value))}>
+          {![...ROOM_TEMPLATES, ...SHARED_SPACE_TEMPLATES].some(t => t.id === zone.zone_template_id) && <option value={zone.zone_template_id}>{blueprintLabel('zone', zone.zone_template_id, isAr)}</option>}
+          {(zone.zone_template_id.startsWith('apt.') || zoneInstances.some(parent => parent.zone_template_id === 'bld.unit' && findZone(parent.children ?? [], zone.id)) ? ROOM_TEMPLATES : SHARED_SPACE_TEMPLATES).map(t => <option key={t.id} value={t.id}>{isAr ? t.label_ar : t.label_en}</option>)}
+        </select></label>
+        {(onCopy || onDelete) && <div className="zi-editor-actions">
+          {onCopy && <button type="button" onClick={() => onCopy(zone.id)}>{isAr ? 'نسخ' : 'Copy'}</button>}
+          {onDelete && <button type="button" disabled={unitFacts.status === 'sold' || unitFacts.status === 'reserved'} title={unitFacts.status === 'sold' || unitFacts.status === 'reserved' ? (isAr ? 'الشقة محجوزة أو مباعة ولا يمكن حذفها' : 'Reserved or sold units cannot be deleted') : undefined} onClick={() => onDelete(zone.id)}>{isAr ? 'حذف' : 'Delete'}</button>}
+        </div>}
+      </section>
 
       {onClose && (
         <button
@@ -304,7 +324,7 @@ function ZoneInspectorBody({
                 onBlur={e => commitDim('width_m', e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') commitDim('width_m', (e.target as HTMLInputElement).value); }}
               />
-              <em>m</em>
+              <em>{isAr ? 'م' : 'm'}</em>
             </span>
           </label>
           <label className="zi-dim">
@@ -318,28 +338,25 @@ function ZoneInspectorBody({
                 onBlur={e => commitDim('length_m', e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') commitDim('length_m', (e.target as HTMLInputElement).value); }}
               />
-              <em>m</em>
+              <em>{isAr ? 'م' : 'm'}</em>
             </span>
           </label>
         </div>
         <label className="zi-ceiling">
           <span>{isAr ? 'الارتفاع' : 'Ceiling'}</span>
-          <input
-            key={`ceil-${ceiling}`}
-            type="text"
-            dir="auto"
-            maxLength={30}
-            defaultValue={ceiling}
-            placeholder="e.g. 3.0m Flush"
-            onBlur={e => { const v = e.target.value.trim(); if (v && v !== ceiling) patchSpatial({ ceiling_height: v }); }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                const v = (e.target as HTMLInputElement).value.trim();
-                if (v && v !== ceiling) patchSpatial({ ceiling_height: v });
-              }
-            }}
-          />
+          <select aria-label={isAr ? 'الارتفاع' : 'Ceiling'} value={ceiling} onChange={e => patchSpatial({ ceiling_height: e.target.value })}>
+            <option value={ceiling}>{formatCeiling(parseCeiling(ceiling), isAr)}</option>
+            {[...new Set([
+              ...[2.8, 3, 3.2, 3.4, 3.6, 3.8, 4.4].map(height_m => serializeCeiling({ height_m, type: 'flush' })),
+              ...Object.keys(CEILING_TYPES).map(type => serializeCeiling({ height_m: type.startsWith('open') ? null : parseCeiling(ceiling).height_m ?? 3, type: type as keyof typeof CEILING_TYPES })),
+            ])].filter(value => value !== ceiling).map(value => <option key={value} value={value}>{formatCeiling(parseCeiling(value), isAr)}</option>)}
+          </select>
+        </label>
+        <label className="zi-ceiling"><span>{isAr ? 'ارتفاع مخصص (م)' : 'Custom height (m)'}</span>
+          <input type="number" min="0.1" step="0.1" key={ceiling} defaultValue={parseCeiling(ceiling).height_m ?? ''} onBlur={e => {
+            const height_m = e.target.valueAsNumber;
+            if (Number.isFinite(height_m) && height_m > 0 && height_m !== parseCeiling(ceiling).height_m) patchSpatial({ ceiling_height: serializeCeiling({ height_m, type: parseCeiling(ceiling).type === 'unknown' ? 'flush' : parseCeiling(ceiling).type }) });
+          }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
         </label>
       </section>
 
@@ -418,6 +435,7 @@ function ZoneInspectorBody({
                           className="zi-attr-val-input"
                           dir="auto"
                           placeholder={isAr ? 'اكتب المواصفة...' : 'Enter spec...'}
+                          key={val}
                           defaultValue={val}
                           onBlur={e => {
                             const next = e.target.value.trim();
@@ -559,6 +577,18 @@ function InspectorStyles() {
       [dir="rtl"].zi-root {
         box-shadow: 12px 0 32px var(--admin-card-shadow, rgba(0,0,0,0.06));
       }
+
+      .zi-root.zi-docked { position: static; width: 100%; height: auto; max-height: none; padding: 16px; border: 0; box-shadow: none; margin: 0; }
+      .zi-docked input, .zi-docked button { min-height: 44px; }
+      .zi-docked .zi-icon-btn, .zi-docked .zi-attr-del-btn { min-width: 44px; min-height: 44px; }
+      .zi-docked .zi-dim-field input { min-height: 32px; }
+      .zi-docked .zi-status-segmented-track { flex-wrap: wrap; }
+      .zi-docked .zi-status-seg-btn { min-width: 64px; flex: 1 1 90px; white-space: normal; line-height: 1.5; font-size: 0.75rem; }
+      .zi-docked .zi-attr-row { flex-wrap: wrap; }
+      .zi-docked .zi-attr-label { max-width: 100%; white-space: normal; }
+      .zi-docked .zi-tier { color: var(--admin-text-body) !important; border-color: var(--admin-card-border) !important; }
+      .zi-editor-actions { display: flex; gap: 8px; }
+      .zi-docked button:focus-visible, .zi-docked input:focus-visible, .zi-docked select:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: 2px; }
 
       .zi-root.zi-nested {
         inset-inline-end: 300px;

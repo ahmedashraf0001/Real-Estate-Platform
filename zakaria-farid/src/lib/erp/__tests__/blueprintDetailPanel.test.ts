@@ -9,7 +9,6 @@ const req = createRequire(import.meta.url);
 const css = req.extensions['.css'];
 req.extensions['.css'] = module => { module.exports = { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }; };
 const Blueprint = req('../../../components/blueprint/BuildingBlueprintPreview').default;
-const { ZoneInspector }: Pick<typeof import('../../../components/admin/ZoneInspector'), 'ZoneInspector'> = req('../../../components/admin/ZoneInspector');
 if (css) req.extensions['.css'] = css; else delete req.extensions['.css'];
 const zone = (id: string, floor: number): ZoneInstance => ({ id, zone_template_id: 'bld.staircase', floor_number: floor, sort_order: 1, trades: [] });
 const zones = [zone('stairs0', 0), zone('stairs1', 1), zone('stairs2', 2)];
@@ -36,9 +35,9 @@ test('selected detail is inside drawing before rail, absent from info strip, and
 test('admin selection renders real edit controls inside detail while retaining add and drag controls', () => {
  const html = render(true);
  const panel = html.slice(html.indexOf('data-blueprint-detail'), html.indexOf('data-floor-rail'));
- assert.match(panel, /aria-label="Rename"/);
- assert.match(panel, /aria-label="Change type"/);
- assert.match(panel, /aria-label="Delete"/);
+ assert.match(panel, /aria-label="Name"/);
+ assert.match(panel, /aria-label="Type"/);
+ assert.match(panel, />Delete<\/button>/);
  assert.match(html, /draggable="true"/);
  assert.match(html, /class="addSlot"/);
  assert.doesNotMatch(html, /<form/);
@@ -53,9 +52,7 @@ test('admin uses existing ZoneInspector inside drawing without duplicate public 
  const html = renderToStaticMarkup(React.createElement(Blueprint, {
   zones, view: { mode: 'floor', floorKey: 'Floor 1' }, selectedId: 'stairs1', isAr: false,
   onSelect() {}, onViewChange() {}, edit: {
-   onChange() {}, renderDetails: (id: string) => React.createElement(ZoneInspector, {
-    zoneInstances: zones, selectedZoneId: id, onZoneInstancesChange() {}, isAr: false,
-   }),
+   onChange() {},
   },
  }));
  const panel = html.slice(html.indexOf('data-blueprint-detail'), html.indexOf('data-floor-rail'));

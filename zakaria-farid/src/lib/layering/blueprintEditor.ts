@@ -5,6 +5,56 @@ import { buildingFloorKey, resolveBlueprintUnit } from './buildingBlueprint';
 import { unitCode } from './labels';
 import { getAttributesForTrade, getTradesForZone, ZONE_TEMPLATES, type ZoneTemplate } from './templates';
 
+export interface BlueprintHistory<T> {
+  past: T[];
+  present: T;
+  future: T[];
+  field?: string;
+  changes: number;
+}
+
+export function createBlueprintHistory<T>(present: T): BlueprintHistory<T> {
+  return { past: [], present, future: [], changes: 0 };
+}
+
+export function pushBlueprintHistory<T>(history: BlueprintHistory<T>, present: T, field?: string): BlueprintHistory<T> {
+  if (JSON.stringify(history.present) === JSON.stringify(present)) return history;
+  const coalesced = Boolean(field && field === history.field && history.past.length);
+  return { past: coalesced ? history.past : [...history.past, history.present].slice(-100), present, future: [], field,
+    changes: history.changes + (coalesced ? 0 : 1) };
+}
+
+export function sealBlueprintHistory<T>(history: BlueprintHistory<T>): BlueprintHistory<T> {
+  return { ...history, field: undefined };
+}
+
+export function undoBlueprintHistory<T>(history: BlueprintHistory<T>): BlueprintHistory<T> {
+  if (!history.past.length) return history;
+  return { past: history.past.slice(0, -1), present: history.past.at(-1)!, future: [history.present, ...history.future], changes: history.changes - 1 };
+}
+
+export function redoBlueprintHistory<T>(history: BlueprintHistory<T>): BlueprintHistory<T> {
+  if (!history.future.length) return history;
+  return { past: [...history.past, history.present].slice(-100), present: history.future[0], future: history.future.slice(1), changes: history.changes + 1 };
+}
+
+/** Inputs keep native editing shortcuts. This mapping is shared by the real editor handler and tests. */
+export function blueprintKeyboardCommand(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>, typing: boolean) {
+  if (typing || event.altKey) return null;
+  const key = event.key.toLowerCase();
+  if (event.ctrlKey || event.metaKey) {
+    if (key === 'z') return event.shiftKey ? 'redo' : 'undo';
+    if (key === 'y') return 'redo';
+    if (key === 'd') return 'duplicate';
+    return null;
+  }
+  if (key === 'delete') return 'delete';
+  if (key === 'enter') return 'inspect';
+  if (key === 'arrowleft' || key === 'arrowup') return 'previous';
+  if (key === 'arrowright' || key === 'arrowdown') return 'next';
+  return null;
+}
+
 /**
  * Pure edits for the building tile editor (admin). Buildings are layered as
  * floors → units (bld.unit containers holding apt.* rooms) + shared spaces on each floor,

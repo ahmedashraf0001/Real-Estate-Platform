@@ -62,12 +62,12 @@ test('real elevation has keyboard floor groups with full-width bands and no embe
  assert.doesNotMatch(svg, /<text|fp-datum-group/);
  assert.ok(html.indexOf('data-floor-rail') > html.indexOf('fp-building-elevation'));
 });
-test('admin retains floor controls, add slots, tile actions and drag wrappers', () => {
+test('admin retains floor controls, add slots, tile menus and drag wrappers', () => {
  const facade = render({ mode: 'elevation' }, true);
  assert.match(facade, /class="addFloors"/); assert.match(facade, /class="kebab"/);
- assert.match(facade, /class="tileActions"/);
+ assert.match(facade, /data-tile-menu/);
  const floor = render({ mode: 'floor', floorKey: 'Floor 2' }, true);
- assert.match(floor, /draggable="true"/); assert.match(floor, /class="tileActions"/); assert.match(floor, /class="addSlot"[^>]*>[\s\S]*?>Unit<\/button>/);
+ assert.match(floor, /draggable="true"/); assert.match(floor, /data-tile-menu/); assert.match(floor, /class="addSlot"[^>]*>[\s\S]*?>Unit<\/button>/);
  const room = render({ mode: 'unit', floorKey: 'Floor 2', unitId: '2a' }, true);
  assert.match(room, /draggable="true"/); assert.match(room, /class="addSlot"[^>]*>[\s\S]*?>Room<\/button>/);
  assert.doesNotMatch(floor, /<form/);

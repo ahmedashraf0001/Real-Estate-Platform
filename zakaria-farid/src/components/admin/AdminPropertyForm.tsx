@@ -1668,6 +1668,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       {currentStep === 4 && (
         <div className={styles.section} style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, backdropFilter: 'none' }}>
           <CADBlueprintBuilder
+            key={property?.id ?? 'new-property'}
             buildingUnits={property?.building_units}
             zoneInstances={zoneInstances}
             onZoneInstancesChange={setZoneInstances}

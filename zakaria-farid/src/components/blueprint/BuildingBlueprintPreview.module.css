@@ -41,11 +41,6 @@
 .detailHeader { display: flex; justify-content: flex-end; padding: 8px; flex-shrink: 0; }
 .detailBody { padding: 0 16px 16px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
 .dragHandle { display: none; }
-.detailEditor { position: relative; padding-bottom: 48px; }
-.detailEditor .tileActions { opacity: 1; flex-wrap: wrap; }
-.root .detailEditor .tileActions button { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
-.detailEditor .typeMenu { position: relative; inset: auto; }
-.detailEditor .renameInput { width: calc(100% - 16px); margin-bottom: 0; }
 .root .detail .detailBody :global(.zi-root) { position: static; width: 100%; max-height: none; height: auto; border: 0; box-shadow: none; border-radius: 0; }
 .detail .trades li { flex-wrap: wrap; }
 .detail .available { color: var(--text-primary); }
@@ -96,10 +91,6 @@
   box-shadow: 0 0 14px rgba(229, 184, 105, .35);
 }
 .tileWrap > button:first-child { flex: 1; padding-bottom: 44px; width: 100%; }
-.tileActions { position: absolute; inset-inline: 6px; bottom: 6px; display: flex; justify-content: center; gap: 3px; opacity: .6; transition: opacity .15s; }
-.tileWrap:hover .tileActions, .tileWrap:focus-within .tileActions { opacity: 1; }
-.root .tileActions button { min-height: 28px; min-width: 28px; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; background: var(--bg-card, #16171C); }
-.root .tileActions .dangerIcon:hover:not(:disabled) { border-color: #E5734A; color: #E5734A; }
 .renameInput { margin: auto 8px 44px; padding: 8px; background: var(--bg-card, #16171C); color: inherit; border: 1px solid var(--bp-gold); border-radius: 6px; font: inherit; text-align: center; min-height: 60px; }
 .root .addSlot { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-style: dashed; color: var(--accent-blue, #3B82F6); font-weight: 600; }
 .root .addSlot:hover { border-color: var(--accent-blue, #3B82F6); background: color-mix(in srgb, var(--accent-blue, #3B82F6) 8%, transparent); }
@@ -167,6 +158,83 @@
 .groundStreetLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-secondary, #B0B4BE); white-space: nowrap; text-transform: uppercase; }
 
 .floorsAdminCompact { border: 1px dashed var(--bp-gold); border-radius: 8px; padding: 8px; }
+
+/* Admin blueprint editor */
+.root.editor {
+  --bp-gold: var(--admin-accent);
+  --bp-line: var(--admin-card-border);
+  --bg-surface: var(--admin-card-bg);
+  --bg-primary: var(--admin-card-bg-subtle);
+  --bg-card: var(--admin-card-bg);
+  --text-primary: var(--admin-text-title);
+  --text-secondary: var(--admin-text-muted);
+  --accent-blue: var(--admin-accent);
+  background: var(--admin-card-bg);
+  color: var(--admin-text-body);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.editor .workspace { grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) 190px; grid-template-areas: 'inspector drawing tree'; gap: 12px; align-items: start; }
+.editor .planColumn { grid-area: drawing; overflow: visible; }
+.editor .floors { grid-area: tree; border: 1px solid var(--admin-card-border); padding: 8px; }
+.editorInspector { grid-area: inspector; min-width: 0; max-height: 760px; overflow-y: auto; border: 1px solid var(--admin-card-border); border-radius: 10px; background: var(--admin-card-bg); }
+.editor .topbar { flex-wrap: wrap; }
+.historyBar, .editorActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.historyBar button, .editorActions button { display: inline-flex; align-items: center; gap: 6px; }
+.historyBar span { font-size: 12px; color: var(--admin-text-muted); }
+.editor .primaryAction { background: var(--admin-accent); border-color: var(--admin-accent); color: var(--admin-text-on-accent, var(--admin-card-bg)); }
+.editor .primaryAction:hover { background: var(--admin-accent-hover); }
+.editor .tileWrap > button:first-child { padding: 18px 8px; min-height: 120px; gap: 10px; }
+.editor .tileWrap:has([aria-pressed='true']) { outline: 2px solid var(--admin-accent); outline-offset: 2px; border-radius: 6px; }
+.editor .tileWrap.dropTarget { background: var(--admin-accent-tint) !important; box-shadow: none; }
+.tileMenu { position: absolute; inset-inline-end: 4px; top: 4px; z-index: 5; }
+.tileMenu > button { opacity: 0; }
+.tileWrap:hover .tileMenu > button, .tileWrap:focus-within .tileMenu > button, .tileMenu:has([aria-expanded='true']) > button { opacity: 1; }
+.editor .kebab { min-width: 44px; min-height: 44px; margin: 0; color: var(--admin-text-muted); background: var(--admin-card-bg); }
+.editor .typeMenu { inset: auto; inset-inline-end: 0; top: 100%; min-width: 130px; background: var(--admin-card-bg); }
+.editor .typeMenu button { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.editor .floorMenu { background: var(--admin-card-bg); border-color: var(--admin-card-border); }
+.editor .floorMenu button, .editor .addFloors button, .editor .chips button { min-height: 44px; }
+.editor .dangerText { color: var(--admin-danger-text); }
+.editor .dangerSolid { background: var(--admin-danger-bg); border-color: var(--admin-danger-border); color: var(--admin-danger-text); }
+.editor .confirm { background: var(--admin-card-bg); border-color: var(--admin-danger-border); }
+.editor .renameInput { margin: 0; min-height: 44px; width: 100%; grid-column: 1 / -1; }
+.editor .picker { border-color: var(--admin-accent-border); background: var(--admin-card-bg); }
+.editor .floorPlan, .editor .roomPlan, .editor .groundBuildingFrame { border-width: 1px; border-color: var(--admin-card-border); min-height: 340px; }
+.editor .groundGateWall { border-color: var(--admin-accent-border); background: var(--admin-accent-tint); }
+.editor .groundStreet { background: var(--admin-card-bg-subtle); color: var(--admin-text-muted); }
+.editor .groundStreetDashes { background: var(--admin-card-border); }
+.editor .available { color: var(--admin-accent); }
+.editor .addSlot { color: var(--admin-accent); }
+.editor .custom button { color: var(--admin-card-bg); }
+.editor .legend { color: var(--admin-text-muted); }
+.treeFloor { position: relative; }
+.treeFloor summary { list-style: none; cursor: pointer; }
+.treeFloor summary::-webkit-details-marker { display: none; }
+.treeFloor summary::before { content: '+'; float: inline-start; padding-top: 12px; color: var(--admin-text-muted); }
+.treeFloor[open] summary::before { content: '−'; }
+.treeUnits { padding-inline-start: 12px; display: flex; flex-direction: column; gap: 4px; margin-block: 4px 8px; }
+.editor .treeUnits button { display: flex; flex-direction: row; gap: 6px; align-items: center; }
+@media (max-width: 1100px) {
+  .editor .workspace { grid-template-columns: minmax(0, 1fr) 180px; grid-template-areas: 'drawing tree' 'inspector inspector'; }
+  .editorInspector { max-height: none; }
+}
+@media (max-width: 600px) {
+  .root.editor { padding: 10px; }
+  .editor .workspace { display: flex; flex-direction: column; }
+  .editor .floors { order: -1; flex-direction: column; overflow: visible; width: 100%; }
+  .editor .floors button { flex: initial; }
+  .editorInspector { width: 100%; }
+  .editor .floorPlan { grid-template-columns: minmax(0, 1fr); }
+  .editor .unitStack, .editor .core { width: 100%; }
+  .editor .planAdd { flex-wrap: wrap; }
+  .editor .planAdd .addSlot { min-width: 0; }
+  .editor .groundUpperGrid { flex-wrap: wrap; }
+  .editor .groundUpperGrid > div { flex: 1 1 100%; }
+  .editor .groundFrontStrip { flex-wrap: wrap; }
+  .tileMenu > button { opacity: 1; }
+}
 
 @media(max-width:600px) {
   .groundUpperGrid {

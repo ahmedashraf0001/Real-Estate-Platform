@@ -61,16 +61,24 @@ test('real blueprint falls back to icons for unit/shared/room zones without phot
   }
 });
 
-test('real admin blueprint photo tiles retain edit actions and drag wrappers', () => {
+test('real admin blueprint uses icon/name tiles with menus and drag, retaining photos in public mode', () => {
   const html = render([unit, shared], { mode: 'floor', floorKey: 'Floor 2' }, true);
-  photo(tile(html, 'unit'), '/unit-first.jpg', '/unit-second.jpg');
-  photo(tile(html, 'element'), '/shared-first.jpg', '/shared-second.jpg');
+  for (const result of [tile(html, 'unit'), tile(html, 'element')]) {
+    assert.match(result.content, /<svg/);
+    assert.match(result.content, /<strong>/);
+    assert.doesNotMatch(result.content, /<img|tilePhotoCover|View unit plan/);
+  }
   assert.match(html, /draggable="true"/);
-  assert.match(html, /class="tileActions"/);
-  for (const label of ['Rename', 'Change type', 'Duplicate', 'Move earlier', 'Move later', 'Delete']) assert.ok(html.includes(`aria-label="${label}"`), `${label} remains reachable`);
+  assert.match(html, /data-tile-menu/);
+  assert.match(html, /aria-label="Space options"/);
+  assert.doesNotMatch(html, /tileActions|Move earlier|Move later/);
   const roomHtml = render([unit], { mode: 'unit', floorKey: 'Floor 2', unitId: 'unit' }, true);
-  photo(tile(roomHtml, 'room'), '/room-first.jpg', '/room-second.jpg');
-  assert.match(roomHtml, /class="tileActions"/);
+  const room = tile(roomHtml, 'room');
+  assert.match(room.content, /<svg/);
+  assert.match(room.content, /<strong>/);
+  assert.doesNotMatch(room.content, /<img/);
+  assert.match(roomHtml, /data-tile-menu/);
+  assert.match(roomHtml, /draggable="true"/);
 });
 
 test('real facade retains public HTML rail and compact admin floor controls', () => {

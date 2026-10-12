@@ -1,0 +1,31 @@
+TASK admin-bp-editor — admin blueprint editor (wizard step "المخططات والتشطيب"): undo/redo, clean drag-and-drop tiles, side inspector, floor/apartment tree, admin color scheme, no English in Arabic UI (branch feat/blueprint-nav, after media-manager)
+
+WHY
+User review 2026-10-12, mockup approved [user-confirmed 2026-10-12]. Today: every tile carries a 6-button toolbar (edit, settings, duplicate, ‹ ›, delete) — clunky; arrows are redundant with drag-and-drop; no undo/redo; navigation between floors and apartments is unclear; the editor uses the public site's gold palette instead of the admin scheme; Arabic UI shows English ("3.0m Flush", unit "m").
+
+FILES
+BuildingBlueprintPreview.tsx/.module.css (edit prop), useBlueprintEditing.tsx, ZoneInspector.tsx, lib/layering/blueprintEditor.ts, lib/layering/zoneMetrics.ts, admin CSS tokens in src/app/admin/admin.module.css. Public rendering of BuildingBlueprintPreview (no edit prop) must stay exactly as after blueprint-detail-panel.
+
+REQUIRED
+1. Undo / redo: a history stack over the blueprint zones state (add, delete, duplicate, move/reorder, rename, resize, type change, field edits — text edits coalesced per field blur). Buttons in the editor top bar (تراجع / إعادة, icon + tooltip), disabled at the ends, change counter ("3 تغييرات"). Shortcuts Ctrl+Z / Ctrl+Y and Ctrl+Shift+Z (Cmd on mac), ignored while typing in an input. History limit 100. Pure, unit-tested history helper. History resets when the wizard loads a property; it never auto-saves to the DB.
+2. Tiles: icon + name only (plus unit status for apartments). Remove the per-tile toolbar and the ‹ › move arrows. Click selects (blue ring), drag-and-drop reorders within its group (existing drag logic), keyboard: arrow keys move selection, Del = delete (with undo, no confirm dialog), Ctrl+D = duplicate, Enter = focus inspector name. A small "⋯" menu on hover/focus offers تعديل / نسخ / حذف for discoverability.
+3. Inspector side panel (the same panel pattern as blueprint-detail-panel, docked inside the editor): name, type, length/width (م), height as a select ("3.0 م · سقف مستوٍ" etc.), finishing systems, media (MediaManager from media-manager task), copy and delete buttons. Empty state "اختر مساحة لتعديلها".
+4. Navigation: left column = tree: floors (top to bottom), each floor expandable to its apartments; clicking a floor/apartment opens it; "+ دور" at the bottom (existing add-floor/basement actions, incl. بدروم). Breadcrumb at the top (المبنى ‹ الدور 2 ‹ شقة 2A). Top bar actions "+ مساحة" (primary) and "+ شقة" act on the current floor. Floor kebab actions (rename, duplicate, delete) move into a "⋯" on the tree row.
+5. Colors: the editor uses the admin tokens (--admin-accent, --admin-accent-hover, -subtle, -tint, -border, admin surfaces/text) only — no site gold (--gold-*) in edit mode. It follows the admin palette switcher. The public site keeps its own palette.
+6. No English in the Arabic UI of the editor and inspector: units "م", "م²"; ceiling values shown/selected in Arabic. Ceiling height becomes a structured value (number in m + type: مستوٍ / معلق / جبس بورد …) shown as "3.0 م · سقف مستوٍ"; existing stored strings like "3.0m Flush" / "3.6m Flush" are parsed for display (pure helper, tested), not rewritten in the DB. Sweep every string the editor/inspector renders in AR mode and report the list you fixed. English UI keeps English.
+
+DO NOT
+- Change public site rendering, wizard step order, save payload shape, or DB (Supabase PRODUCTION). Migrations. Add dependencies.
+- Nest a <form> in AdminPropertyForm; every button type="button" (implicit submit saves to PRODUCTION). Never press final save/publish.
+- Remove any capability: everything the per-tile toolbar did must be reachable (inspector, ⋯ menu, shortcuts).
+
+TESTS
+RED first: history helper (push/undo/redo/limit/coalesce), ceiling parse/format helper (legacy strings, AR/EN), keyboard handler mapping, SSR of edit mode (no per-tile toolbar, no arrows, ⋯ menu, inspector fields, tree with apartments, admin tokens not --gold in edit mode), public mode unchanged (snapshot of key structure). tsc exit 0. npm test: only the 7 known pre-existing failures.
+
+ACCEPTANCE
+Admin needs the user's session (you have none): verify via SSR/unit tests and an unauthenticated test harness render of the editor if feasible (screenshots 1440 AR light, tile selected, ⋯ menu open). Report what is verified and how.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105).
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

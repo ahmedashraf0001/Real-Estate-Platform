@@ -4,6 +4,40 @@
 // the public ArchitecturalBlueprintInspector, so the two always show the same
 // numbers for the same property.
 
+export const CEILING_TYPES = {
+  flush: { en: 'Flush', ar: 'مستوٍ' }, suspended: { en: 'Suspended', ar: 'معلق' },
+  gypsum: { en: 'Gypsum board', ar: 'جبس بورد' }, 'double-height': { en: 'Double-Height', ar: 'مزدوج الارتفاع' },
+  atrium: { en: 'Atrium', ar: 'بهو مرتفع' }, coffered: { en: 'Coffered', ar: 'مقسم' },
+  ambient: { en: 'Ambient', ar: 'إضاءة محيطية' }, 'tray cove': { en: 'Tray Cove', ar: 'غائر بإضاءة مخفية' },
+  lightwell: { en: 'Lightwell', ar: 'منور' }, linear: { en: 'Linear', ar: 'خطي' },
+  panoramic: { en: 'Panoramic', ar: 'بانورامي' }, epoxy: { en: 'Epoxy', ar: 'إيبوكسي' },
+  acoustic: { en: 'Acoustic', ar: 'عازل للصوت' }, cove: { en: 'Cove', ar: 'إضاءة مخفية' },
+  low: { en: 'Low', ar: 'منخفض' }, 'open sky': { en: 'Open Sky', ar: 'مفتوح' },
+  'open sky pergola': { en: 'Open Sky Pergola', ar: 'مفتوح · برجولا' },
+  'open roof': { en: 'Open Roof', ar: 'سطح مفتوح' }, 'open duct': { en: 'Open Duct', ar: 'منور مفتوح' },
+  'open balcony': { en: 'Open Balcony', ar: 'شرفة مفتوحة' },
+} as const;
+export interface CeilingValue { height_m: number | null; type: keyof typeof CEILING_TYPES | 'unknown' }
+
+export function parseCeiling(raw: string): CeilingValue {
+  const match = raw.trim().match(/^(\d+(?:\.\d+)?)\s*(?:m|م)\s*[·:.-]?\s*(.*)$/i);
+  const name = (match ? match[2] : raw).trim().replace(/^سقف\s*/, '').toLowerCase();
+  const type = Object.entries(CEILING_TYPES).find(([key, labels]) => key === name || labels.en.toLowerCase() === name || labels.ar === name)?.[0] as CeilingValue['type'] | undefined;
+  return { height_m: match ? Number(match[1]) : null, type: type ?? 'unknown' };
+}
+
+export function formatCeiling(value: CeilingValue, isAr: boolean): string {
+  const label = value.type === 'unknown' ? (isAr ? 'غير محدد' : 'Unspecified') : CEILING_TYPES[value.type][isAr ? 'ar' : 'en'];
+  if (value.height_m === null) return value.type === 'unknown' ? (isAr ? 'سقف غير محدد' : 'Unspecified ceiling') : label;
+  return `${value.height_m.toFixed(1)} ${isAr ? 'م · سقف' : 'm ·'} ${label}${isAr ? '' : ' ceiling'}`;
+}
+
+/** Serialize only an explicit edit; the persisted field remains the existing string. */
+export function serializeCeiling(value: CeilingValue): string {
+  const label = value.type === 'unknown' ? '' : CEILING_TYPES[value.type].en;
+  return value.height_m === null ? label : `${value.height_m.toFixed(1)}m ${label}`;
+}
+
 export interface FallbackZoneMetric {
   length_m: number;
   width_m: number;

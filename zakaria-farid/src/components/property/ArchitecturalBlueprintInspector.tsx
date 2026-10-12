@@ -834,15 +834,15 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         const balW = bigW + 12;
         return (
           <g key={flat} transform={`translate(${x}, ${y + 4})`}>
-            <rect x={bigX} y="4" width={bigW} height={floorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-            <line x1={bigX + bigW / 2} y1="4" x2={bigX + bigW / 2} y2={floorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
-            <rect x={balX} y={floorH - 22} width={balW} height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
+            <rect x={bigX} y="4" width={bigW} height={floorH - 12} fill="url(#pubElevGlassGrad)" stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1" />
+            <line x1={bigX + bigW / 2} y1="4" x2={bigX + bigW / 2} y2={floorH - 8} stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1.2" />
+            <rect x={balX} y={floorH - 22} width={balW} height="12" fill="url(#pubElevBalconyGrad)" stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1" />
             {[0.25, 0.5, 0.75].map(f => (
-              <line key={f} x1={balX + balW * f} y1={floorH - 22} x2={balX + balW * f} y2={floorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+              <line key={f} x1={balX + balW * f} y1={floorH - 22} x2={balX + balW * f} y2={floorH - 10} stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1" />
             ))}
-            <rect x={balX} y={floorH - 10} width={balW} height="4" fill="var(--gold-primary)" />
-            <rect x={smallX} y="8" width={smallW} height={floorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
-            <line x1={smallX + smallW / 2} y1="8" x2={smallX + smallW / 2} y2={floorH - 12} stroke="#7FB4D8" strokeWidth="1" />
+            <rect x={balX} y={floorH - 10} width={balW} height="4" fill={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} />
+            <rect x={smallX} y="8" width={smallW} height={floorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1" />
+            <line x1={smallX + smallW / 2} y1="8" x2={smallX + smallW / 2} y2={floorH - 12} stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1" />
           </g>
         );
       };
@@ -862,21 +862,21 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               <path d="M 60 0 L 0 0 0 60" fill="none" stroke="var(--cad-grid-color)" strokeOpacity="0.8" strokeWidth="0.8" />
             </pattern>
             <pattern id="pubElevGroundHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="0" x2="0" y2="8" stroke="var(--gold-primary)" strokeOpacity="0.35" strokeWidth="1" />
+              <line x1="0" y1="0" x2="0" y2="8" stroke={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} strokeOpacity="0.35" strokeWidth="1" />
             </pattern>
             <linearGradient id="pubElevGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(127, 180, 216, 0.35)" />
-              <stop offset="40%" stopColor="rgba(127, 180, 216, 0.15)" />
-              <stop offset="60%" stopColor="rgba(221, 167, 82, 0.08)" />
-              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.25)" />
+              <stop offset="0%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.35)'} />
+              <stop offset="40%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.15)'} />
+              <stop offset="60%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(221, 167, 82, 0.08)'} />
+              <stop offset="100%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.25)'} />
             </linearGradient>
             <linearGradient id="pubElevBalconyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="rgba(127, 180, 216, 0.28)" />
-              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.06)" />
+              <stop offset="0%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.28)'} />
+              <stop offset="100%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.06)'} />
             </linearGradient>
             <linearGradient id="pubElevLobbyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="rgba(221, 167, 82, 0.22)" />
-              <stop offset="100%" stopColor="rgba(221, 167, 82, 0.04)" />
+              <stop offset="0%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(221, 167, 82, 0.22)'} />
+              <stop offset="100%" stopColor={edit ? 'var(--admin-accent-tint)' : 'rgba(221, 167, 82, 0.04)'} />
             </linearGradient>
           </defs>
 
@@ -885,23 +885,23 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           <rect width="760" height={height} fill="url(#pubElevMajorGrid)" opacity="0.4" />
 
           {/* Building shell */}
-          <rect x={bldX} y={roofY} width={bldW} height={gradeY - roofY} fill="rgba(255, 255, 255, 0.015)" stroke="var(--gold-primary)" strokeOpacity="0.55" strokeWidth="1.5" />
+          <rect x={bldX} y={roofY} width={bldW} height={gradeY - roofY} fill={edit ? 'var(--admin-accent-tint)' : 'rgba(255, 255, 255, 0.015)'} stroke={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} strokeOpacity="0.55" strokeWidth="1.5" />
 
           {/* Roof crown */}
           {roofLevel && (
             <g {...floorProps(roofLevel.key)}>
               {roofLevel.templates.includes('bld.roof_terrace') && (
                 <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
-                  <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+                  <rect width="140" height="24" fill={edit ? 'var(--admin-accent-tint)' : 'rgba(221, 167, 82, 0.08)'} stroke={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} strokeWidth="1.2" />
                   {[20, 40, 60, 80, 100, 120].map(px => (
                     <line key={`perg-${px}`} x1={px} y1="0" x2={px} y2="24" stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeWidth="1" />
                   ))}
-                  <line x1="0" y1="0" x2="140" y2="0" stroke="var(--gold-primary)" strokeWidth="2" />
+                  <line x1="0" y1="0" x2="140" y2="0" stroke={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} strokeWidth="2" />
                 </g>
               )}
               {(roofLevel.templates.includes('bld.roof_service') || roofLevel.templates.includes('bld.staircase')) && (
                 <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
-                  <rect width="80" height="32" rx="2" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                  <rect width="80" height="32" rx="2" fill="var(--cad-core-bg)" stroke={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} strokeWidth="1.5" />
                   <line x1="20" y1="10" x2="60" y2="10" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
                   <line x1="20" y1="16" x2="60" y2="16" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
                   <line x1="20" y1="22" x2="60" y2="22" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
@@ -909,13 +909,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               )}
               {roofLevel.templates.includes('bld.roof_service') && (
                 <g transform={`translate(${bldRight - 110}, ${roofY - 22})`}>
-                  <rect x="0" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
-                  <rect x="42" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
-                  <line x1="34" y1="13" x2="42" y2="13" stroke="#7FB4D8" strokeWidth="1.5" />
+                  <rect x="0" y="4" width="34" height="18" rx="3" fill={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.15)'} stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1.2" />
+                  <rect x="42" y="4" width="34" height="18" rx="3" fill={edit ? 'var(--admin-accent-tint)' : 'rgba(127, 180, 216, 0.15)'} stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1.2" />
+                  <line x1="34" y1="13" x2="42" y2="13" stroke={edit ? 'var(--admin-accent-border)' : '#7FB4D8'} strokeWidth="1.5" />
                 </g>
               )}
-              <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="var(--gold-primary)" />
-              <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
+              <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill={edit ? 'var(--admin-accent)' : 'var(--gold-primary)'} />
+              <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke={edit ? 'var(--admin-accent-border)' : 'rgba(127, 180, 216, 0.6)'} strokeWidth="1" strokeDasharray="6 3" />
               {hitBand(roofY - 40, 40)}
             </g>
           )}
@@ -1361,7 +1361,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     actions={renderControlsBar(fullscreen)} elevation={bldView.mode === 'elevation' ? renderInlineStage() : undefined} />;
 
   return (
-    <div className="blueprint-studio-root" data-theme={currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="blueprint-studio-root" data-blueprint-admin={Boolean(edit) || undefined} data-theme={edit ? undefined : currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
       
       {/* 1. Header Bar with Metrology & Navigation */}
       <div className="studio-top-header">
@@ -2509,6 +2509,24 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           transform: translateY(-1px);
           box-shadow: 0 8px 24px rgba(221, 167, 82, 0.45);
         }
+        .blueprint-studio-root[data-blueprint-admin] {
+          --gold-primary: var(--admin-accent);
+          --cad-stage-bg: var(--admin-card-bg);
+          --cad-grid-color: var(--admin-card-border-subtle);
+          --cad-text-primary: var(--admin-text-title);
+          --cad-text-muted: var(--admin-text-muted);
+          --cad-dims-color: var(--admin-accent);
+          --cad-core-bg: var(--admin-card-bg-subtle);
+          --text-primary: var(--admin-text-title);
+          --text-secondary: var(--admin-text-muted);
+          --border-subtle: var(--admin-card-border);
+          --bg-primary: var(--admin-card-bg-subtle);
+          --bg-surface: var(--admin-card-bg);
+        }
+        .blueprint-studio-root[data-blueprint-admin] .studio-top-header { border-color: var(--admin-card-border); }
+        .blueprint-studio-root[data-blueprint-admin] .studio-eyebrow,
+        .blueprint-studio-root[data-blueprint-admin] .sparkle-gold { color: var(--admin-accent); }
+        .blueprint-studio-root[data-blueprint-admin] .studio-panoramic-stage { background: var(--admin-card-bg); border-color: var(--admin-card-border); box-shadow: none; border-radius: 10px; }
       `}</style>
     </div>
   );

@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Copy, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { Copy, MoreHorizontal, Pencil, Plus, Redo2, Trash2, Undo2 } from 'lucide-react';
 import type { ZoneInstance } from '@/lib/layering/instances';
 import type { BuildingUnitItem } from '@/lib/supabase/types';
 import { zoneLabel } from '@/lib/layering/labels';
 import { buildingFloorKey, floorLabel, type BlueprintView } from '@/lib/layering/buildingBlueprint';
 import {
-  changeZoneType, createUnit, createZone, deleteFloor, duplicateFloor, duplicateZone, insertZone, isUnitLocked,
-  listFloorKeys, lockedUnitsOnFloor, moveIdToTarget, moveInList, nextFloorKey, nextUnitCode, removeZoneById, renameZone, reorderZones,
+  blueprintKeyboardCommand, createBlueprintHistory, pushBlueprintHistory, sealBlueprintHistory, undoBlueprintHistory, redoBlueprintHistory, findZone, createUnit, createZone, deleteFloor, duplicateFloor, duplicateZone, insertZone, isUnitLocked,
+  listFloorKeys, lockedUnitsOnFloor, moveIdToTarget, nextFloorKey, nextUnitCode, removeZoneById, reorderZones,
   ROOM_TEMPLATES, SHARED_SPACE_TEMPLATES,
 } from '@/lib/layering/blueprintEditor';
 import type { ZoneTemplate } from '@/lib/layering/templates';
@@ -16,7 +16,6 @@ import styles from './BuildingBlueprintPreview.module.css';
 
 export interface BlueprintEditing {
   onChange: (zones: ZoneInstance[]) => void;
-  renderDetails?: (id: string) => React.ReactNode;
 }
 
 type TileKind = 'shared' | 'room' | 'unit';
@@ -29,26 +28,85 @@ interface Args {
   view: BlueprintView;
   onViewChange: (view: BlueprintView) => void;
   onSelect: (id: string | null) => void;
+  selectedId: string | null;
 }
 
 const nextOrder = (list: ZoneInstance[]) => list.reduce((max, z) => Math.max(max, z.sort_order), 0) + 1;
 
 /** Admin edit controls layered on the shared building drawing. Inert when `edit` is absent (public page). */
-export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onViewChange, onSelect }: Args) {
+export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onViewChange, onSelect, selectedId }: Args) {
   const text = (ar: string, en: string) => isAr ? ar : en;
-  const [pending, setPending] = useState<string[]>([]);
+  const [history, setHistory] = useState(() => createBlueprintHistory({ zones, pending: [] as string[] }));
+  const historyRef = useRef(history);
+  const expected = useRef(zones);
+  const field = useRef<string | undefined>(undefined);
+  const focusSequence = useRef(0);
+  const pending = history.present.pending;
+  useLayoutEffect(() => {
+    if (!edit || zones === expected.current) return;
+    expected.current = zones;
+    const fresh = createBlueprintHistory({ zones, pending: [] as string[] });
+    historyRef.current = fresh; setHistory(fresh);
+    setPicker(null); setTileMenu(null); setFloorMenu(null); setConfirm(null); setDragState(null); setDropOverId(null); setCustomName(''); endField(); onSelect(null);
+  }, [zones, edit, onSelect]);
+  const publish = (next: typeof history) => {
+    historyRef.current = next; setHistory(next); expected.current = next.present.zones;
+    edit?.onChange(next.present.zones);
+  };
+  const beginField = (event: React.FocusEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.matches('input, textarea') || target.isContentEditable) field.current = `field-${++focusSequence.current}`;
+  };
+  const endField = () => { field.current = undefined; historyRef.current = sealBlueprintHistory(historyRef.current); };
+  const undo = () => { endField(); publish(undoBlueprintHistory(historyRef.current)); };
+  const redo = () => { endField(); publish(redoBlueprintHistory(historyRef.current)); };
   const floors = listFloorKeys(zones, edit ? pending : []);
   const [picker, setPicker] = useState<{ kind: 'shared' | 'room'; list: ZoneInstance[]; parentId?: string } | null>(null);
   const [customName, setCustomName] = useState('');
-  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
-  const [typeMenu, setTypeMenu] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{ kind: 'zone' | 'floor'; id: string } | null>(null);
+  const [tileMenu, setTileMenu] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: 'floor'; id: string } | null>(null);
   const [floorMenu, setFloorMenu] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ id: string; kind: TileKind; groupKey: string } | null>(null);
   const [dropOverId, setDropOverId] = useState<string | null>(null);
   const floorKey = view.mode === 'elevation' ? undefined : view.floorKey;
 
-  const commit = (next: ZoneInstance[]) => { edit?.onChange(next); setConfirm(null); setTypeMenu(null); };
+  const commit = (next: ZoneInstance[], nextPending = historyRef.current.present.pending) => {
+    publish(pushBlueprintHistory(historyRef.current, { zones: next, pending: nextPending }, field.current));
+    setConfirm(null); setTileMenu(null);
+  };
+  const floorName = (key: string) => floorLabel(key, isAr);
+  const remove = (id: string) => {
+    const zone = findZone(zones, id);
+    if (!zone || isUnitLocked(zone, inventory)) return;
+    (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-blueprint-editor]')?.focus();
+    commit(removeZoneById(zones, id)); onSelect(null);
+  };
+  const duplicate = (id: string) => commit(duplicateZone(zones, id));
+  const focusName = (root?: HTMLElement | null) => (root ?? document.querySelector<HTMLElement>('[data-blueprint-editor]'))?.querySelector<HTMLInputElement>('[data-inspector-name]')?.focus();
+  const keyboard = (event: React.KeyboardEvent) => {
+    const target = event.target as HTMLElement;
+    const command = blueprintKeyboardCommand(event, Boolean(target.closest('input, textarea, select, [contenteditable=true]')));
+    if (!command) return;
+    if (command === 'undo' || command === 'redo') { event.preventDefault(); event.stopPropagation(); command === 'undo' ? undo() : redo(); return; }
+    if (target.closest('[data-tile-menu]')) return;
+    const wrapper = target.closest<HTMLElement>('[data-editor-tile]');
+    const id = wrapper?.dataset.editorTile ?? selectedId;
+    if (!id || (!wrapper && (command === 'inspect' || command === 'previous' || command === 'next'))) return;
+    event.preventDefault(); event.stopPropagation();
+    if (command === 'delete') remove(id);
+    if (command === 'duplicate') duplicate(id);
+    if (command === 'inspect') { onSelect(id); requestAnimationFrame(() => focusName(target.closest<HTMLElement>('[data-blueprint-editor]'))); }
+    if (wrapper && (command === 'previous' || command === 'next')) {
+      const tiles = [...wrapper.closest('[data-blueprint-drawing], [data-blueprint-info]')!.querySelectorAll<HTMLElement>('[data-editor-tile]')];
+      const next = tiles[Math.max(0, Math.min(tiles.length - 1, tiles.indexOf(wrapper) + (command === 'next' ? 1 : -1)))];
+      onSelect(next.dataset.editorTile!); next.querySelector<HTMLButtonElement>('button')?.focus();
+    }
+  };
+  const historyBar = !edit ? null : <div className={styles.historyBar}>
+    <button type="button" disabled={!history.past.length} title={text('تراجع', 'Undo')} onClick={undo}><Undo2 size={16} />{text('تراجع', 'Undo')}</button>
+    <button type="button" disabled={!history.future.length} title={text('إعادة', 'Redo')} onClick={redo}><Redo2 size={16} />{text('إعادة', 'Redo')}</button>
+    <span aria-live="polite">{history.changes} {text('تغييرات', 'changes')}</span>
+  </div>;
 
   const add = (template?: ZoneTemplate) => {
     if (!picker) return;
@@ -62,47 +120,25 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
   const addFloor = (kind: 'upper' | 'ground' | 'basement' | 'roof') => {
     const key = nextFloorKey(floors, kind);
     if (!key) return;
-    setPending(p => [...p, key]);
+    commit(zones, [...pending, key]);
     onViewChange({ mode: 'floor', floorKey: key });
   };
 
-  const saveRename = () => { if (renaming) commit(renameZone(zones, renaming.id, renaming.value)); setRenaming(null); };
-
-  /** Rename field shown in place of a tile's content while renaming. */
-  const renameField = (z: ZoneInstance) => renaming?.id !== z.id ? null : (
-    <input className={styles.renameInput} autoFocus aria-label={text('الاسم الجديد', 'New name')} value={renaming.value}
-      onChange={e => setRenaming({ id: z.id, value: e.target.value })} onBlur={saveRename}
-      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveRename(); } if (e.key === 'Escape') setRenaming(null); }} />
-  );
-
-  const tileControls = (z: ZoneInstance, list: ZoneInstance[], kind: TileKind) => {
-    if (!edit) return null;
-    const index = list.indexOf(z);
-    const locked = isUnitLocked(z, inventory);
-    const templates = kind === 'room' ? ROOM_TEMPLATES : SHARED_SPACE_TEMPLATES;
-    const move = (delta: -1 | 1) => commit(reorderZones(zones, moveInList(list.map(x => x.id), z.id, delta)));
-    return <>
-      <div className={styles.tileActions}>
-        <button type="button" title={text('إعادة التسمية', 'Rename')} aria-label={text('إعادة التسمية', 'Rename')} onClick={() => setRenaming({ id: z.id, value: kind === 'unit' ? (z.unit?.unit_code ?? z.instance_label ?? '') : zoneLabel(z, isAr) })}><Pencil size={13} /></button>
-        {kind !== 'unit' && <button type="button" title={text('تغيير النوع', 'Change type')} aria-label={text('تغيير النوع', 'Change type')} aria-expanded={typeMenu === z.id} onClick={() => setTypeMenu(typeMenu === z.id ? null : z.id)}><Settings2 size={13} /></button>}
-        <button type="button" title={text('تكرار', 'Duplicate')} aria-label={text('تكرار', 'Duplicate')} onClick={() => commit(duplicateZone(zones, z.id))}><Copy size={13} /></button>
-        <button type="button" title={text('نقل للأمام', 'Move earlier')} aria-label={text('نقل للأمام', 'Move earlier')} disabled={index <= 0} onClick={() => move(-1)}>{isAr ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}</button>
-        <button type="button" title={text('نقل للخلف', 'Move later')} aria-label={text('نقل للخلف', 'Move later')} disabled={index >= list.length - 1} onClick={() => move(1)}>{isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}</button>
-        <button type="button" className={styles.dangerIcon} disabled={locked}
-          title={locked ? text('الشقة محجوزة أو مباعة ولا يمكن حذفها', 'Reserved or sold units cannot be deleted') : text('حذف', 'Delete')}
-          aria-label={text('حذف', 'Delete')} onClick={() => setConfirm({ kind: 'zone', id: z.id })}><Trash2 size={13} /></button>
-      </div>
-      {typeMenu === z.id && <div className={styles.typeMenu} role="menu">
-        {templates.map(t => <button type="button" role="menuitemradio" aria-checked={t.id === z.zone_template_id} key={t.id} onClick={() => commit(changeZoneType(zones, z.id, t.id))}>{isAr ? t.label_ar : t.label_en}</button>)}
-      </div>}
-      {confirm?.kind === 'zone' && confirm.id === z.id && <div className={styles.confirm} role="alertdialog" aria-label={text('تأكيد الحذف', 'Confirm delete')}>
-        <span>{kind === 'unit' && (z.children?.length ?? 0) > 0
-          ? text(`حذف «${zoneLabel(z, true)}» وغرفها (${z.children!.length})؟`, `Delete "${zoneLabel(z, false)}" and its ${z.children!.length} rooms?`)
-          : text(`حذف «${zoneLabel(z, true)}»؟`, `Delete "${zoneLabel(z, false)}"?`)}</span>
-        <div><button type="button" className={styles.dangerSolid} onClick={() => commit(removeZoneById(zones, z.id))}>{text('حذف', 'Delete')}</button><button type="button" onClick={() => setConfirm(null)}>{text('إلغاء', 'Cancel')}</button></div>
-      </div>}
-    </>;
-  };
+  const tileControls = (z: ZoneInstance) => !edit ? null : <div className={styles.tileMenu} data-tile-menu>
+    <button type="button" className={styles.kebab} aria-label={text('خيارات المساحة', 'Space options')} aria-expanded={tileMenu === z.id} onClick={() => setTileMenu(tileMenu === z.id ? null : z.id)}><MoreHorizontal size={16} /></button>
+    {tileMenu === z.id && <div className={styles.typeMenu} role="menu" onKeyDown={e => {
+      if (e.key === 'Escape') { e.stopPropagation(); setTileMenu(null); e.currentTarget.parentElement?.querySelector<HTMLButtonElement>('button')?.focus(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); e.stopPropagation();
+        const items = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+        items[(items.indexOf(e.target as HTMLButtonElement) + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+      }
+    }}>
+      <button type="button" role="menuitem" autoFocus onClick={e => { const root = e.currentTarget.closest<HTMLElement>('[data-blueprint-editor]'); onSelect(z.id); setTileMenu(null); requestAnimationFrame(() => focusName(root)); }}><Pencil size={14} />{text('تعديل', 'Edit')}</button>
+      <button type="button" role="menuitem" onClick={() => duplicate(z.id)}><Copy size={14} />{text('نسخ', 'Copy')}</button>
+      <button type="button" role="menuitem" disabled={isUnitLocked(z, inventory)} title={isUnitLocked(z, inventory) ? text('الشقة محجوزة أو مباعة ولا يمكن حذفها', 'Reserved or sold units cannot be deleted') : undefined} onClick={() => remove(z.id)}><Trash2 size={14} />{text('حذف', 'Delete')}</button>
+    </div>}
+  </div>;
 
   const tileDragProps = (z: ZoneInstance, list: ZoneInstance[], kind: TileKind, groupKey: string) => {
     if (!edit) return {};
@@ -115,7 +151,7 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
       'data-is-dragging': isDragging ? 'true' : undefined,
       onDragStart: (e: React.DragEvent) => {
         const target = e.target as HTMLElement | null;
-        if (target?.closest?.(`.${styles.tileActions}`) || target?.closest?.(`.${styles.renameInput}`)) {
+        if (target?.closest?.('[data-tile-menu], input')) {
           e.preventDefault();
           return;
         }
@@ -191,7 +227,7 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
       {floorMenu === key && <div className={styles.floorMenu} role="menu">
         <button type="button" role="menuitem" onClick={() => {
           const target = nextFloorKey(floors, 'upper')!;
-          commit(duplicateFloor(zones, key, target)); setFloorMenu(null); onViewChange({ mode: 'floor', floorKey: target });
+          commit(duplicateFloor(zones, key, target), [...pending, target]); setFloorMenu(null); onViewChange({ mode: 'floor', floorKey: target });
         }}>{text('تكرار كدور جديد', 'Duplicate as new floor')}</button>
         <button type="button" role="menuitem" className={styles.dangerText} onClick={() => { setConfirm({ kind: 'floor', id: key }); setFloorMenu(null); }}>{text('حذف الدور…', 'Delete floor…')}</button>
       </div>}
@@ -201,8 +237,7 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
           : text(`حذف ${floorLabel(key, true)} وكل ما عليه (${count} عنصر)؟`, `Delete ${floorLabel(key, false)} and its ${count} items?`)}</span>
         <div>
           {locked.length === 0 && <button type="button" className={styles.dangerSolid} onClick={() => {
-            setPending(p => p.filter(k => k !== key));
-            commit(deleteFloor(zones, key));
+            commit(deleteFloor(zones, key), pending.filter(k => k !== key));
             onViewChange({ mode: 'elevation' });
           }}>{text('حذف', 'Delete')}</button>}
           <button type="button" onClick={() => setConfirm(null)}>{locked.length ? text('حسنًا', 'OK') : text('إلغاء', 'Cancel')}</button>
@@ -213,12 +248,20 @@ export function useBlueprintEditing({ edit, zones, inventory, isAr, view, onView
 
   const addFloors = !edit ? null : (
     <div className={styles.addFloors}>
-      <button type="button" onClick={() => addFloor('upper')}><Plus size={14} />{text('دور علوي', 'Upper floor')}</button>
+      <button type="button" onClick={() => addFloor('upper')}><Plus size={14} />{text('دور', 'Floor')}</button>
       {!floors.includes('bld_ground') && <button type="button" onClick={() => addFloor('ground')}><Plus size={14} />{text('الدور الأرضي', 'Ground floor')}</button>}
       {!floors.includes('bld_basement') && <button type="button" onClick={() => addFloor('basement')}><Plus size={14} />{text('بدروم', 'Basement')}</button>}
       {!floors.includes('bld_roof') && <button type="button" onClick={() => addFloor('roof')}><Plus size={14} />{text('سطح', 'Roof')}</button>}
     </div>
   );
 
-  return { editing: !!edit, floors, renameField, tileControls, tileDragProps, addSlot, pickerPanel, floorControls, addFloors };
+  const topActions = !edit || !floorKey ? null : <div className={styles.editorActions}>
+    <button type="button" className={styles.primaryAction} onClick={() => {
+      setPicker({ kind: 'shared', list: zones.filter(z => buildingFloorKey(z) === floorKey && z.zone_template_id !== 'bld.unit') });
+    }}><Plus size={16} />{text('مساحة', 'Space')}</button>
+    <button type="button" onClick={() => commit([...zones, createUnit(floorKey, nextUnitCode(zones, floorKey), nextOrder(zones.filter(z => buildingFloorKey(z) === floorKey)))])}><Plus size={16} />{text('شقة', 'Unit')}</button>
+  </div>;
+  return { editing: !!edit, floors, floorName, tileControls, tileDragProps, addSlot, pickerPanel, floorControls, addFloors,
+    commit, remove, duplicate, keyboard, beginField, endField, historyBar, topActions };
+
 }

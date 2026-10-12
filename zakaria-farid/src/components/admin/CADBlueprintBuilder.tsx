@@ -49,7 +49,6 @@ import { buildingFloorKey, floorLabel, selectBuildingFloor, patchBlueprintZone }
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
 import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
 import type { BuildingUnitItem } from '@/lib/supabase/types';
-import { ZoneInspector } from './ZoneInspector';
 
 interface CADBlueprintBuilderProps {
   buildingUnits?: BuildingUnitItem[];
@@ -832,6 +831,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       const target = e.target as HTMLElement;
+      if (target?.closest('[data-blueprint-editor]')) return;
       if (!rootRef.current?.contains(target)) return;
       const tag = target?.tagName?.toUpperCase();
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
@@ -1735,6 +1735,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     if (!groupAddOpen) return;
     const onDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      if (target?.closest('[data-blueprint-editor]')) return;
       if (!target.closest('.fp-group-addwrap')) setGroupAddOpen(null);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setGroupAddOpen(null); };
@@ -3688,7 +3689,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       )}
 
       {propertyType === 'building' ? (
-        <ArchitecturalBlueprintInspector zones={zoneInstances} propertyTitle="" locale={isAr ? 'ar' : 'en'} propertyType="building" inventory={buildingUnits} edit={{ onChange: onZoneInstancesChange, renderDetails: id => <ZoneInspector buildingUnits={buildingUnits} zoneInstances={zoneInstances} onZoneInstancesChange={onZoneInstancesChange} selectedZoneId={id} isAr={isAr} /> }} />
+        <ArchitecturalBlueprintInspector zones={zoneInstances} propertyTitle="" locale={isAr ? 'ar' : 'en'} propertyType="building" inventory={buildingUnits} edit={{ onChange: onZoneInstancesChange }} />
       ) : (
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
 
