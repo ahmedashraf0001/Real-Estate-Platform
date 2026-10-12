@@ -1,0 +1,42 @@
+TASK admin-wizard-split — admin property wizard: split step 2 into "الموقع" and "الوصف والوسائط"; fix map search going outside Egypt (branch feat/blueprint-nav, after blueprint-detail-panel)
+
+WHY
+User review 2026-10-12 [user-confirmed]: step 2 "الموقع والوسائط" mixes description/amenities, cover+gallery photos, video tours and the map, so it is long and the map is below the fold. And searching the map for "شارع مستشفى العاصمة, منيا القمح" (a hospital street in Minya El Qamh, Sharqia, Egypt) jumped to Sanaa, Yemen (15.36019 N, 44.19289 E).
+
+FILES
+zakaria-farid/src/components/admin/AdminPropertyForm.tsx (+ .module.css, wizard step definitions/footer stepper), the location/map picker component it uses, zakaria-farid/src/app/api/admin/geocode/route.ts.
+
+REQUIRED — WIZARD
+1. Steps become 5, in this order:
+   1 بيانات المبنى والشركاء (unchanged)
+   2 الموقع — location name / district (required), map search, quick-jump chips, map picker + coordinates
+   3 الوصف والوسائط — description AR/EN, amenities, cover + gallery photos, video tours
+   4 المخططات والتشطيب (unchanged)
+   5 المراجعة والنشر (unchanged)
+   English labels: Location / Description & media. Bottom stepper shows all 5 with numbers.
+2. Pure move: same fields, same state, same save payload and DB columns. No data/schema change. Edit mode of existing properties opens with all values in the right steps.
+3. Per-step validation: "الخطوة التالية" checks only the current step's required fields and shows the existing inline errors; going back never loses input. Any step-index logic elsewhere (deep links ?step=, review step "edit" jumps, draft restore) is updated to the new indices — search for every use.
+4. The review step lists sections in the new order and its edit links jump to the right step.
+
+REQUIRED — MAP SEARCH (geocode/route.ts + picker)
+5. Results must be inside Egypt. Photon (B) has only a proximity bias: add Photon bbox for Egypt (minLon 24.7, minLat 22.0, maxLon 36.9, maxLat 31.7) and drop every candidate from ANY engine (Google Places, Nominatim, Photon, ArcGIS, pasted Google Maps URL excepted) whose lat/lon falls outside that box. Google Places: keep region=eg and also filter by the box.
+6. Ranking: when the query names an Egyptian city/district (e.g. "منيا القمح"), candidates whose display name/address contains that place rank first. Implement as a pure, unit-tested helper (e.g. rankGeocodeCandidates(query, candidates)).
+7. "بحث وانتقال" must not silently jump to result #1 when there are several: show a compact result list (name + address, up to 8) under the search field; picking one moves the pin. Single result: jump directly. No results: inline message "لا توجد نتائج داخل مصر — جرّب اسم المدينة أو اسحب الدبوس".
+8. Do not commit any API key; keep the existing env handling.
+
+DO NOT
+- Change steps 1, 4, 5 content, the property save logic, the public site, or the blueprint files being changed by the previous task.
+- Nest a <form> in AdminPropertyForm; every button type="button" (an implicit submit saves to PRODUCTION).
+- Press final save/publish anywhere. Write to the DB (Supabase PRODUCTION, read-only). Add dependencies.
+
+TESTS
+RED first: Egypt-box filter (Sanaa 15.36,44.19 dropped; Minya El Qamh ~30.51,31.35 kept), ranking helper (city-name match first), step map (5 steps, field->step mapping, validation per step), review edit-link targets. tsc exit 0. npm test: only the 7 known pre-existing failures.
+Live geocode check (read-only HTTP): call the route handler or the engines for "شارع مستشفى العاصمة, منيا القمح" and "مستشفى منيا القمح العام" and report the top 3 results with coordinates; all inside Egypt.
+
+ACCEPTANCE (screenshots in <RUN_DIR>/shots, opened and inspected)
+Admin wizard needs the user's session; you have none. Verify through SSR/unit tests of the real components plus screenshots of any public-renderable parts; say so in the report. If you can render the wizard without auth in a test harness, capture steps 2 and 3 at 1440 and 390, AR, light (admin is light-only), plus the search result list.
+
+PROCESS
+Run dev servers / tests in the foreground with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105).
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

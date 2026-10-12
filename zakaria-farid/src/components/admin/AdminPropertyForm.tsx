@@ -17,6 +17,7 @@ import { repairBuildingTradeScopes } from '@/lib/layering/buildingBlueprint';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
+import { propertyWizardSteps, requiredFieldsForStep } from '@/lib/propertyWizardSteps';
 import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
 import styles from './AdminPropertyForm.module.css';
 import { saveProperty, uploadMediaFile } from '@/app/actions/properties';
@@ -296,11 +297,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       const s = sp.get('step');
       if (s) {
         const parsed = Number(s);
-        if (parsed >= 1 && parsed <= 4) {
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 5) {
           setCurrentStep(parsed);
-        } else if (parsed === 5) {
-          setCurrentStep(4);
-          setIsSaved(true);
         }
       }
       if (sp.get('saved') === 'true') {
@@ -324,32 +322,27 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   };
 
   const handleNextStep = async () => {
-    if (currentStep === 1) {
-      const valid = await trigger(['title_en', 'title_ar', 'price_egp', 'area_sqm']);
-      if (!valid) return;
-    } else if (currentStep === 2) {
-      const valid = await trigger(['location']);
-      if (!valid) return;
-      // Prompt user before entering step 3 if apartment has no rooms yet
-      if (selectedType === 'apartment' && zoneInstances.length === 0) {
-        setStep3PromptOpen(true);
-        return;
-      }
+    const fields = requiredFieldsForStep(currentStep);
+    if (fields.length && !await trigger(fields)) return;
+    // Prompt only before entering the blueprint step.
+    if (currentStep === 3 && selectedType === 'apartment' && zoneInstances.length === 0) {
+      setStep3PromptOpen(true);
+      return;
     }
-    goToStep(Math.min(currentStep + 1, 4));
+    goToStep(Math.min(currentStep + 1, 5));
   };
 
   const handleChooseWizard = () => {
     setStep3PromptOpen(false);
     setAutoOpenWizard(true);
-    goToStep(3);
+    goToStep(4);
   };
 
   const handleChooseGroundZero = () => {
     setStep3PromptOpen(false);
     setAutoOpenWizard(false);
     setZoneInstances([]);
-    goToStep(3);
+    goToStep(4);
   };
 
   const handlePrevStep = () => {
@@ -474,7 +467,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         return property.type === 'building' ? repairBuildingTradeScopes(property.spec_layers as ZoneInstance[]).zones : property.spec_layers as ZoneInstance[];
       }
     }
-    // For new properties, start with empty array so Step 3 prompts the user with the Wizard vs Ground Zero choice
+    // New apartments choose the wizard or Ground Zero before the blueprint step.
     return [];
   });
 
@@ -522,7 +515,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   // Buildings open the details rail only when a tile is inspected; it starts closed instead of empty.
   useEffect(() => { if (selectedType === 'building') setRailOpen(false); }, [selectedType]);
   useEffect(() => {
-    if (currentStep === 3 && railOpen) {
+    if (currentStep === 4 && railOpen) {
       document.body.setAttribute('data-rail-open', 'true');
     } else {
       document.body.removeAttribute('data-rail-open');
@@ -546,16 +539,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   };
   const photoCount = previewUrls.length;
 
-  const steps = [
-    { 
-      num: 1, 
-      title_en: selectedType === 'building' ? 'Building & Partners' : 'Property Details', 
-      title_ar: selectedType === 'building' ? 'بيانات المبنى والشركاء' : 'بيانات العقار الأساسية' 
-    },
-    { num: 2, title_en: 'Location & Media', title_ar: 'الموقع والوسائط' },
-    { num: 3, title_en: 'Floor Plan & Finishes', title_ar: 'المخططات والتشطيب' },
-    { num: 4, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
-  ];
+  const steps = propertyWizardSteps.map(step => step.num === 1 && selectedType !== 'building'
+    ? { ...step, title_en: 'Property Details', title_ar: 'بيانات العقار الأساسية' }
+    : step);
 
   const confirmRebuild = () => {
     if (zoneInstances.length === 0) return true;
@@ -819,7 +805,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       toast.success(isAr ? (isEditing ? 'تم تحديث العقار بنجاح!' : 'تم إنشاء العقار بنجاح!') : (isEditing ? 'Property updated!' : 'Property created!'));
       setSavedSlug(res.slug || property?.slug || null);
       setIsSaved(true);
-      setCurrentStep(4);
+      setCurrentStep(5);
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.set('step', '5');
@@ -891,7 +877,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 ? (railOpen ? 'form-step-3-with-rail' : 'form-step-3-full') : ''}`} onKeyDown={(e) => {
+    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 4 ? (railOpen ? 'form-step-3-with-rail' : 'form-step-3-full') : ''}`} onKeyDown={(e) => {
       if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
         e.preventDefault();
       }
@@ -1480,8 +1466,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       </div>
       )}
 
-      {/* ─── STEP 2: Location, Media & Description ─── */}
-      {currentStep === 2 && (
+      {/* ─── STEPS 2 & 3: Location / Description & Media ─── */}
+      {(currentStep === 2 || currentStep === 3) && (
         <div className="step2-vertical-layout">
           <style>{`
             .step2-vertical-layout {
@@ -1660,7 +1646,44 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             }
           `}</style>
 
-          {/* Top Row: Media Gallery & Rich Description */}
+          {currentStep === 2 && (
+          <div className="step2-card" style={{ width: '100%' }}>
+            <div className="step2-card-head">
+              <div className="step2-card-icon">
+                <MapPin size={16} />
+              </div>
+              <h2 className="step2-card-title">
+                {isAr ? 'الموقع الجغرافي وتحديد الإحداثيات على الخريطة' : 'Property Location & Coordinates'}
+              </h2>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>{isAr ? 'اسم الموقع / الحي والمنطقة *' : 'Location / Area & Neighborhood *'}</label>
+              <input
+                className={`${styles.input} ${errors.location ? styles.err : ''}`}
+                {...register('location')}
+                placeholder={isAr ? "مثال: بيفرلي هيلز، الشيخ زايد" : "e.g. Beverly Hills, Sheikh Zayed"}
+              />
+              {errors.location && <p className={styles.errMsg}>{errors.location.message}</p>}
+            </div>
+
+            <div className={styles.field} style={{ marginTop: '4px' }}>
+              <label className={styles.label}>{isAr ? 'حدد الموقع الدقيق على الخريطة التفاعلية' : 'Pinpoint Location on Map'}</label>
+              <DynamicMapPicker
+                latitude={watch('latitude')}
+                longitude={watch('longitude')}
+                onChange={(lat, lng) => {
+                  setValue('latitude', lat, { shouldValidate: true });
+                  setValue('longitude', lng, { shouldValidate: true });
+                  clearErrors('latitude');
+                }}
+                isAr={isAr}
+              />
+              {errors.latitude && <p className={styles.errMsg} role="alert">{errors.latitude.message}</p>}
+            </div>
+          </div>
+          )}
+          {currentStep === 3 && (<>
           <div className="step2-top-row">
             {/* Overview Photos */}
             <div className="step2-card">
@@ -1935,48 +1958,14 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             )}
           </div>
 
-          {/* Full-Width Bottom Section: Location & Interactive Map */}
-          <div className="step2-card" style={{ width: '100%' }}>
-            <div className="step2-card-head">
-              <div className="step2-card-icon">
-                <MapPin size={16} />
-              </div>
-              <h2 className="step2-card-title">
-                {isAr ? 'الموقع الجغرافي وتحديد الإحداثيات على الخريطة' : 'Property Location & Coordinates'}
-              </h2>
-            </div>
 
-            <div className={styles.field}>
-              <label className={styles.label}>{isAr ? 'اسم الموقع / الحي والمنطقة *' : 'Location / Area & Neighborhood *'}</label>
-              <input 
-                className={`${styles.input} ${errors.location ? styles.err : ''}`} 
-                {...register('location')} 
-                placeholder={isAr ? "مثال: بيفرلي هيلز، الشيخ زايد" : "e.g. Beverly Hills, Sheikh Zayed"} 
-              />
-              {errors.location && <p className={styles.errMsg}>{errors.location.message}</p>}
-            </div>
-
-            <div className={styles.field} style={{ marginTop: '4px' }}>
-              <label className={styles.label}>{isAr ? 'حدد الموقع الدقيق على الخريطة التفاعلية' : 'Pinpoint Location on Map'}</label>
-              <DynamicMapPicker 
-                latitude={watch('latitude')} 
-                longitude={watch('longitude')} 
-                onChange={(lat, lng) => {
-                  setValue('latitude', lat, { shouldValidate: true });
-                  setValue('longitude', lng, { shouldValidate: true });
-                  clearErrors('latitude');
-                }}
-                isAr={isAr}
-              />
-              {errors.latitude && <p className={styles.errMsg} role="alert">{errors.latitude.message}</p>}
-            </div>
-          </div>
+          </>)}
 
         </div>
       )}
 
-      {/* ─── STEP 3: CAD Blueprint Studio + Rooms Rail + Nested Inspector ─── */}
-      {currentStep === 3 && (
+      {/* ─── STEP 4: CAD Blueprint Studio + Rooms Rail + Nested Inspector ─── */}
+      {currentStep === 4 && (
         <div className={styles.section} style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, backdropFilter: 'none' }}>
           <CADBlueprintBuilder
             buildingUnits={property?.building_units}
@@ -2205,8 +2194,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       )}
 
-      {/* ─── STEP 4: Full Pre-Save Specification & Property Summary Review ─── */}
-      {currentStep === 4 && (
+      {/* ─── STEP 5: Full Pre-Save Specification & Property Summary Review ─── */}
+      {currentStep === 5 && (
         <div className={styles.section}>
           {isSaved && (
             <div style={{
@@ -2282,12 +2271,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           )}
 
-          {/* ─── Step 4 Header ─── */}
+          {/* ─── Step 5 Header ─── */}
           <div className={styles.reviewHeader}>
             <div>
               <div className={styles.reviewBadge}>
                 <Sparkles size={13} />
-                <span>{isAr ? 'الخطوة ٤: مراجعة العقار والنشر النهائي' : 'STEP 4: FINAL SPECIFICATION REVIEW'}</span>
+                <span>{isAr ? 'الخطوة ٥: مراجعة العقار والنشر النهائي' : 'STEP 5: FINAL SPECIFICATION REVIEW'}</span>
               </div>
               <h2 className={styles.reviewTitle}>
                 {isAr ? 'مراجعة ملخص العقار والمواصفات المعمارية' : 'Review Property & CAD Specs Summary'}
@@ -2491,6 +2480,24 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           )}
 
+          <section className={styles.reviewBreakdownBox} aria-label={isAr ? 'الموقع' : 'Location'}>
+            <div className={styles.reviewBreakdownHead}>
+              <h3 className={styles.reviewBreakdownTitle}>{isAr ? 'الموقع' : 'Location'}</h3>
+              <button type="button" className={styles.btnPrev} onClick={() => goToStep(2)}>{isAr ? 'تعديل الموقع' : 'Edit location'}</button>
+            </div>
+            <p>{watch('location') || '—'}</p>
+            <p dir="ltr">{currentLat ?? '—'}, {currentLng ?? '—'}</p>
+          </section>
+          <section className={styles.reviewBreakdownBox} aria-label={isAr ? 'الوصف والوسائط' : 'Description & media'}>
+            <div className={styles.reviewBreakdownHead}>
+              <h3 className={styles.reviewBreakdownTitle}>{isAr ? 'الوصف والوسائط' : 'Description & media'}</h3>
+              <button type="button" className={styles.btnPrev} onClick={() => goToStep(3)}>{isAr ? 'تعديل الوصف والوسائط' : 'Edit description & media'}</button>
+            </div>
+            <p>{isAr ? editorAr?.getText() : editorEn?.getText()}</p>
+            <p>{amenities.join('، ') || '—'}</p>
+            <p>{photoCount} {isAr ? 'صور' : 'photos'} · {videos.length} {isAr ? 'فيديو' : 'videos'}</p>
+          </section>
+
           {/* ─── Categorized Human-Readable Zones Breakdown ─── */}
           <div className={styles.reviewBreakdownBox}>
             <div className={styles.reviewBreakdownHead}>
@@ -2500,6 +2507,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   {isAr ? 'توزيع الغرف والمواصفات المسجلة' : 'Registered Finishing & Zone Breakdown'}
                 </h3>
               </div>
+              <button type="button" className={styles.btnPrev} onClick={() => goToStep(4)}>{isAr ? 'تعديل المخططات والتشطيب' : 'Edit floor plan & finishes'}</button>
               <span className={styles.reviewBreakdownCount}>
                 {flattenLeafZones(zoneInstances).length} {isAr ? 'غرفة جاهزة' : 'Zones Configured'}
               </span>
@@ -2678,7 +2686,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 <button
                   type="button"
                   onClick={() => {
-                    if (st.num === 3 && currentStep !== 3 && selectedType === 'apartment' && zoneInstances.length === 0) {
+                    if (st.num === 4 && currentStep !== 4 && selectedType === 'apartment' && zoneInstances.length === 0) {
                       setStep3PromptOpen(true);
                       return;
                     }
@@ -2691,7 +2699,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   title={isAr ? st.title_ar : st.title_en}
                 >
                   <div className={styles.saveBarStepBadge}>
-                    {isCompleted ? <Check size={13} strokeWidth={2.5} /> : st.num}
+                    {st.num}
                   </div>
                   <div className={styles.saveBarStepText}>
                     <span className={styles.saveBarStepNum}>{isAr ? `الخطوة ${st.num}` : `Step ${st.num}`}</span>
@@ -2742,7 +2750,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 </button>
               )}
 
-              {currentStep < 4 ? (
+              {currentStep < 5 ? (
                 <button type="button" className={styles.btnNext} onClick={handleNextStep}>
                   <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
                   {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -2772,14 +2780,14 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       </div>
 
-      {/* ─── Modal Choice Before Step 3: Wizard vs Ground Zero ─── */}
+      {/* ─── Modal Choice Before Step 4: Wizard vs Ground Zero ─── */}
       {step3PromptOpen && (
         <div className={styles.promptOverlay} role="dialog" aria-modal="true">
           <div className={styles.promptModal}>
             <div className={styles.promptHeader}>
               <div className={styles.promptBadge}>
                 <Sparkles size={14} />
-                <span>{isAr ? 'إعداد المخطط المعماري (الخطوة ٣)' : 'STEP 3: BLUEPRINT SETUP'}</span>
+                <span>{isAr ? 'إعداد المخطط المعماري (الخطوة ٤)' : 'STEP 4: BLUEPRINT SETUP'}</span>
               </div>
               <button type="button" className={styles.promptClose} onClick={() => setStep3PromptOpen(false)}>
                 <X size={16} />

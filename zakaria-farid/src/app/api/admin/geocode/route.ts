@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isInsideEgypt, rankGeocodeCandidates } from '@/lib/geocodeCandidates';
 
 export const runtime = 'nodejs';
 
@@ -53,7 +54,7 @@ function extractCoordsFromUrl(url: string): { lat: number; lng: number; title?: 
     if (rawMatch) {
       const lat = parseFloat(rawMatch[1]);
       const lng = parseFloat(rawMatch[2]);
-      if (lat >= 20 && lat <= 33 && lng >= 24 && lng <= 37) {
+      if (isInsideEgypt(lat, lng)) {
         return { lat, lng };
       }
     }
@@ -122,15 +123,15 @@ export async function POST(req: NextRequest) {
     const apiKey = customApiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
 
     // ─── 1. Check if the query is a Google Maps URL or Raw Coordinates ─────────
-    const isMapsUrl = query.includes('maps.app.goo.gl') || 
+    const isGoogleMapsUrl = query.includes('maps.app.goo.gl') ||
                       query.includes('goo.gl/maps') || 
                       query.includes('google.com/maps') || 
-                      query.includes('maps.google.com') ||
-                      /@?-?\d{1,2}\.\d+[,\s]+-?\d{1,3}\.\d+/.test(query);
+                      query.includes('maps.google.com');
+    const isMapsUrl = isGoogleMapsUrl || /@?-?\d{1,2}\.\d+[,\s]+-?\d{1,3}\.\d+/.test(query);
 
     if (isMapsUrl) {
       const urlCoords = await resolveGoogleMapsUrl(query);
-      if (urlCoords) {
+      if (urlCoords && (isGoogleMapsUrl || isInsideEgypt(urlCoords.lat, urlCoords.lng))) {
         return NextResponse.json({
           isUrl: true,
           resolved: true,
@@ -161,7 +162,7 @@ export async function POST(req: NextRequest) {
         const gData = await gRes.json();
 
         if (gData.status === 'OK' && Array.isArray(gData.results) && gData.results.length > 0) {
-          const googleItems: GeocodeResult[] = gData.results.map((p: any) => ({
+          const googleItems: GeocodeResult[] = rankGeocodeCandidates(query, gData.results.map((p: any) => ({
             place_id: `google-${p.place_id}`,
             lat: String(p.geometry.location.lat),
             lon: String(p.geometry.location.lng),
@@ -169,9 +170,9 @@ export async function POST(req: NextRequest) {
             type: p.types?.[0] || 'establishment',
             source: 'google_places',
             rating: p.rating,
-          }));
+          })).filter((item: GeocodeResult) => isInsideEgypt(item.lat, item.lon))) as GeocodeResult[];
 
-          return NextResponse.json({
+          if (googleItems.length > 0) return NextResponse.json({
             provider: 'google_places',
             results: googleItems,
             total: googleItems.length,
@@ -190,7 +191,7 @@ export async function POST(req: NextRequest) {
     const addCandidate = (item: GeocodeResult) => {
       const latNum = parseFloat(item.lat);
       const lonNum = parseFloat(item.lon);
-      if (isNaN(latNum) || isNaN(lonNum)) return;
+      if (!isInsideEgypt(item.lat, item.lon)) return;
 
       // Cluster coordinates within ~150 meters
       const coordKey = `${latNum.toFixed(3)},${lonNum.toFixed(3)}`;
@@ -217,7 +218,7 @@ export async function POST(req: NextRequest) {
         for (const d of data) {
           const streetName = d.address?.road || d.name;
           const townOrCity = d.address?.city || d.address?.town || d.address?.suburb || d.address?.state || '';
-          const fullLabel = townOrCity ? `${streetName} — ${townOrCity}` : d.display_name;
+          const fullLabel = townOrCity ? `${streetName || d.display_name} — ${d.display_name}` : d.display_name;
           addCandidate({
             place_id: `nom-${d.place_id}`,
             lat: String(d.lat),
@@ -234,7 +235,7 @@ export async function POST(req: NextRequest) {
     try {
       const lat = biasLat || 30.5155;
       const lon = biasLng || 31.3463;
-      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQ)}&lat=${lat}&lon=${lon}&limit=8`;
+      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQ)}&lat=${lat}&lon=${lon}&bbox=24.7,22.0,36.9,31.7&limit=8`;
       const pRes = await fetch(photonUrl, { signal: AbortSignal.timeout(4000) });
       const pData = await pRes.json();
       if (pData?.features?.length > 0) {
@@ -279,7 +280,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       provider: 'google_maps_engine',
       hasGoogleApiKey: Boolean(apiKey),
-      results: collected,
+      results: rankGeocodeCandidates(query, collected),
       total: collected.length,
     });
   } catch (err: any) {

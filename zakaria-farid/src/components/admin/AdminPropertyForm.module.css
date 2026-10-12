@@ -699,7 +699,7 @@
   background: var(--admin-accent);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1600px) {
   .saveBarStepNum { display: none; }
   .saveBarStepItem:not(.saveBarStepItemActive) .saveBarStepText { display: none; }
 }
@@ -815,7 +815,11 @@
   }
   .saveBarStepper {
     min-width: 0;
+    gap: 4px;
   }
+  .saveBarStepItem { padding: 4px; }
+  .saveBarStepLine { min-width: 4px; }
+  .saveBarStepTitle { font-size: 10px; }
   .saveBarControls {
     flex-wrap: wrap;
   }

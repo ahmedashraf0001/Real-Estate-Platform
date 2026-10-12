@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
+import { isInsideEgypt, rankGeocodeCandidates } from '@/lib/geocodeCandidates';
 
 const sanctumIcon = (label: string) => divIcon({
   html: `
@@ -103,23 +104,6 @@ const QUICK_DISTRICTS: QuickDistrict[] = [
   { id: 'mq-banha-rd', nameEn: 'Banha Entrance Rd', nameAr: 'طريق بنها', lat: 30.5080, lng: 31.3400 },
 ];
 
-const EGYPT_PRESET_LOCATIONS: Record<string, { lat: number; lng: number; nameAr: string; nameEn: string }> = {
-  'منيا القمح': { lat: 30.5180, lng: 31.3521, nameAr: 'مدينة منيا القمح، الشرقية', nameEn: 'Minya El Qamh City, Al Sharqia' },
-  'شارع سعد زغلول': { lat: 30.5185, lng: 31.3515, nameAr: 'شارع سعد زغلول، مدينة منيا القمح', nameEn: 'Saad Zaghloul St, Minya El Qamh' },
-  'شارع وجيه اباظة': { lat: 30.5160, lng: 31.3480, nameAr: 'شارع وجيه أباظة (الكورنيش)، منيا القمح', nameEn: 'Wagih Abaza St (Corniche), Minya El Qamh' },
-  'شارع وجيه أباظة': { lat: 30.5160, lng: 31.3480, nameAr: 'شارع وجيه أباظة (الكورنيش)، منيا القمح', nameEn: 'Wagih Abaza St (Corniche), Minya El Qamh' },
-  'الكورنيش': { lat: 30.5160, lng: 31.3480, nameAr: 'كورنيش بحر مويس، منيا القمح', nameEn: 'Corniche Bahr Moweis, Minya El Qamh' },
-  'شارع الحرية': { lat: 30.5170, lng: 31.3540, nameAr: 'شارع الحرية، منيا القمح', nameEn: 'El Horreya St, Minya El Qamh' },
-  'مستشفى منيا القمح': { lat: 30.5220, lng: 31.3580, nameAr: 'مستشفى منيا القمح المركزي/العام', nameEn: 'Minya El Qamh Central Hospital' },
-  'مستشفى العاصمة': { lat: 30.5220, lng: 31.3580, nameAr: 'مستشفى العاصمة، منيا القمح', nameEn: 'Capital Hospital, Minya El Qamh' },
-  'ميدان الشهداء': { lat: 30.5190, lng: 31.3500, nameAr: 'ميدان الشهداء (مجلس المدينة)، منيا القمح', nameEn: 'El Shohada Sq (City Council), Minya El Qamh' },
-  'حي الصاغة': { lat: 30.5175, lng: 31.3530, nameAr: 'حي الصاغة، منيا القمح', nameEn: 'El Sagha District, Minya El Qamh' },
-  'المحطة': { lat: 30.5180, lng: 31.3521, nameAr: 'محطة قطار منيا القمح / وسط البلد', nameEn: 'Minya El Qamh Train Station' },
-  'الزقازيق': { lat: 30.5877, lng: 31.5020, nameAr: 'مدينة الزقازيق، الشرقية', nameEn: 'Zagazig City, Al Sharqia' },
-  'بلبيس': { lat: 30.4194, lng: 31.5647, nameAr: 'بلبيس، الشرقية', nameEn: 'Belbeis, Al Sharqia' },
-  'الشرقية': { lat: 30.5877, lng: 31.5020, nameAr: 'محافظة الشرقية', nameEn: 'Al Sharqia Governorate' },
-};
-
 interface SearchResultItem {
   place_id: number | string;
   lat: string;
@@ -152,6 +136,8 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
   const [isLocating, setIsLocating] = useState(false);
   
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchRequest = useRef(0);
+  useEffect(() => () => { searchRequest.current++; }, []);
 
   useEffect(() => {
     if (latitude && longitude) {
@@ -173,10 +159,12 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
   const executeSearch = useCallback(async (queryToSearch: string) => {
     const rawQuery = queryToSearch.trim();
     if (!rawQuery) return;
+    const request = ++searchRequest.current;
 
     setIsSearching(true);
     setSearchNotFoundMsg(null);
     setShowResultsDropdown(false);
+    setSearchResults([]);
 
     try {
       // 1. Direct Coordinates Regex Check (e.g. 30.5180, 31.3521)
@@ -184,7 +172,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
       if (coordMatch && !rawQuery.includes('http')) {
         const lat = parseFloat(coordMatch[1]);
         const lon = parseFloat(coordMatch[2]);
-        if (lat >= 20 && lat <= 33 && lon >= 24 && lon <= 37) {
+        if (isInsideEgypt(lat, lon)) {
           setTargetCenter([lat, lon]);
           onChange(lat, lon);
           setIsSearching(false);
@@ -192,10 +180,6 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           return;
         }
       }
-
-      // Check Preset Egyptian shortcuts
-      const cleanQ = rawQuery.replace(/[،,]/g, ' ').replace(/\s+/g, ' ').trim();
-      const presetMatch = EGYPT_PRESET_LOCATIONS[cleanQ];
 
       // Call backend geocoding endpoint
       const response = await fetch('/api/admin/geocode', {
@@ -208,7 +192,9 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         }),
       });
 
+      if (!response.ok) throw new Error(`Geocode HTTP ${response.status}`);
       const data = await response.json();
+      if (request !== searchRequest.current) return;
 
       if (data.isUrl && data.results && data.results.length > 0) {
         // Instant Pin from Google Maps link
@@ -223,49 +209,36 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         return;
       }
 
-      const results: SearchResultItem[] = data.results || [];
-
-      // Append preset location at top if exact match found
-      if (presetMatch) {
-        const exists = results.some(r => Math.abs(parseFloat(r.lat) - presetMatch.lat) < 0.01);
-        if (!exists) {
-          results.unshift({
-            place_id: `preset-${cleanQ}`,
-            lat: String(presetMatch.lat),
-            lon: String(presetMatch.lng),
-            display_name: isAr ? presetMatch.nameAr : presetMatch.nameEn,
-            type: 'district',
-            source: 'preset'
-          });
-        }
-      }
+      const results = rankGeocodeCandidates(rawQuery, ((data.results || []) as SearchResultItem[])
+        .filter(item => isInsideEgypt(item.lat, item.lon))).slice(0, 8);
 
       if (results.length > 0) {
         setSearchResults(results);
-        setShowResultsDropdown(true);
+        setShowResultsDropdown(results.length > 1);
         setSearchNotFoundMsg(null);
 
-        // Auto fly to top match
-        const topLat = parseFloat(results[0].lat);
-        const topLon = parseFloat(results[0].lon);
-        setTargetCenter([topLat, topLon]);
-        onChange(topLat, topLon);
-
-        toast.success(isAr ? `تم تحديد الموقع بدقة: ${results[0].display_name.split('—')[0]}` : `Location pinned: ${results[0].display_name.split('—')[0]}`);
+        if (results.length === 1) {
+          const lat = parseFloat(results[0].lat);
+          const lon = parseFloat(results[0].lon);
+          setTargetCenter([lat, lon]);
+          onChange(lat, lon);
+          toast.success(isAr ? 'تم تثبيت الموقع على الخريطة' : 'Location pinned');
+        }
       } else {
         setSearchResults([]);
         setShowResultsDropdown(false);
         const notFoundText = isAr
-          ? `لم يتم العثور على "${rawQuery}". يمكنك فتح Google Maps بالزر المرفق ونسخ رابط المكان ولصقه هنا مباشرة.`
-          : `No exact matches for "${rawQuery}". You can open Google Maps with the button above and paste the place link here!`;
+          ? 'لا توجد نتائج داخل مصر — جرّب اسم المدينة أو اسحب الدبوس'
+          : 'No results inside Egypt — try the city name or drag the pin';
         setSearchNotFoundMsg(notFoundText);
       }
     } catch (err) {
+      if (request !== searchRequest.current) return;
       console.error('Search error:', err);
       const errText = isAr ? 'تعذر إتمام البحث حالياً، تأكد من اتصال الإنترنت' : 'Could not complete location search';
       setSearchNotFoundMsg(errText);
     } finally {
-      setIsSearching(false);
+      if (request === searchRequest.current) setIsSearching(false);
     }
   }, [isAr, onChange, targetCenter]);
 
@@ -365,18 +338,19 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
             <Search size={15} className="search-input-icon" />
             <input 
               type="text" 
+              aria-label={isAr ? 'البحث عن موقع داخل مصر' : 'Search for a location inside Egypt'}
               placeholder={isAr 
                 ? "ابحث عن شارع، مستشفى، كمبوند، أو الصق رابط Google Maps مباشرة..." 
                 : "Search street, hospital, compound, or paste Google Maps link..."} 
               value={searchQuery}
               onChange={(e) => {
                 const val = e.target.value;
+                searchRequest.current++;
+                setIsSearching(false);
                 setSearchQuery(val);
                 if (searchNotFoundMsg) setSearchNotFoundMsg(null);
-                if (!val.trim()) {
-                  setShowResultsDropdown(false);
-                  setSearchResults([]);
-                }
+                setShowResultsDropdown(false);
+                setSearchResults([]);
                 // Automatic trigger when pasting Google Maps link
                 if (val.includes('maps.app.goo.gl') || val.includes('goo.gl/maps') || val.includes('google.com/maps')) {
                   executeSearch(val);
@@ -394,7 +368,10 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
               <button 
                 type="button" 
                 className="clear-search-btn"
+                aria-label={isAr ? 'مسح البحث' : 'Clear search'}
                 onClick={() => {
+                  searchRequest.current++;
+                  setIsSearching(false);
                   setSearchQuery('');
                   setSearchNotFoundMsg(null);
                   setShowResultsDropdown(false);
@@ -418,11 +395,11 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
           {/* Autocomplete Search Dropdown */}
           {showResultsDropdown && searchResults.length > 0 && (
-            <div className="search-dropdown-menu">
+            <div className="search-dropdown-menu" aria-label={isAr ? 'نتائج البحث' : 'Search results'}>
               <div className="dropdown-header">
                 <span>{isAr ? 'المواقع المطابقة:' : 'Matching Locations:'}</span>
                 <span className="google-badge">
-                  <Globe size={11} /> Google Maps
+                  <Globe size={11} /> {isAr ? 'نتائج البحث' : 'Search results'}
                 </span>
               </div>
               {searchResults.map((item) => (
@@ -478,7 +455,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
       {/* Prominent In-Place Location Notice Banner */}
       {searchNotFoundMsg && (
-        <div className="sanctum-location-alert">
+        <div className="sanctum-location-alert" role="status">
           <div className="alert-badge">📍</div>
           <div className="alert-content">
             <div className="alert-heading">{isAr ? 'لم يتم العثور على المكان بالاسم المكتوب' : 'Location Refinement Needed'}</div>
@@ -634,6 +611,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
       <style>{`
         .sanctum-map-picker-root {
+          isolation: isolate;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -651,6 +629,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
         .sanctum-search-wrap {
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
           gap: 8px;
           flex: 1;
@@ -797,10 +776,9 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
         /* Search Dropdown */
         .search-dropdown-menu {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0;
-          right: 0;
+          position: relative;
+          flex-basis: 100%;
+          width: 100%;
           background: var(--admin-card-bg);
           border: 1px solid var(--admin-card-border);
           border-radius: 14px;
@@ -938,6 +916,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         }
 
         .alert-content {
+          min-width: 0;
           display: flex;
           flex-direction: column;
           gap: 6px;
