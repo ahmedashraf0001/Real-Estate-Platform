@@ -1,3 +1,4 @@
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
 // emailService.ts — Brevo (Sendinblue) HTTP API
 // Uses pure fetch — fully compatible with Cloudflare Workers edge runtime.
 
@@ -31,6 +32,8 @@ function buildPropertyAlertHtml(
     ? `${siteUrl}/en/properties/${property.slug}`
     : siteUrl;
   const price = property.price_egp ? formatEGP(property.price_egp) : null;
+  const description = stripMarkdown(property.description_en || '');
+  const escapeText = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const greeting = recipientName ? `Dear ${recipientName}, a` : "A";
 
   const specsHtml = [
@@ -101,8 +104,8 @@ function buildPropertyAlertHtml(
             </table>
 
             ${
-              property.description_en
-                ? `<p style="margin:0 0 24px;font-size:14px;color:#8A9BB0;line-height:1.7;">${property.description_en.substring(0, 240)}${property.description_en.length > 240 ? "..." : ""}</p>`
+              description
+                ? `<p style="margin:0 0 24px;font-size:14px;color:#8A9BB0;line-height:1.7;">${escapeText(description.substring(0, 240))}${description.length > 240 ? "..." : ""}</p>`
                 : ""
             }
 

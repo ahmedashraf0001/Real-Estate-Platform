@@ -83,6 +83,6 @@ test('edit token block uses admin surfaces and accents without public gold', () 
  assert.match(block, /--admin-accent/); assert.match(block, /--admin-card-bg/);
  assert.doesNotMatch(block, /var\(--gold-|#[\da-f]{3,8}\b/i);
 });
-test('public preview exact SSR structure stays unchanged', () => {
- assert.equal(createHash('sha256').update(render(false)).digest('hex'), '3a9e8ed8af2864e4fbd04a5d0276ae1ca9484e859d3f6a512182c4f390aa6294');
+test('public preview SSR snapshot includes approved sold and reserved legend badges', () => {
+ assert.equal(createHash('sha256').update(render(false)).digest('hex'), 'bdf90054173915ea676d3a51f9c556c33141fd0f92d44be454d4b91665f4ca66');
 });

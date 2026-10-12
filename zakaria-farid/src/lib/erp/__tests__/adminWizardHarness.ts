@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { createRequire } from 'node:module';
+import * as legacyMarkdown from '../../markdown/legacyHtmlToMarkdown';
+import * as markdown from '../../markdown/miniMarkdown';
 import * as steps from '../../propertyWizardSteps';
 import * as geocode from '../../geocodeCandidates';
 import * as partners from '../partnersDirectory';
@@ -76,6 +78,7 @@ export function adminHarness(file: 'AdminPropertyForm' | 'MapPicker' | 'media/Me
     './media/MediaManager': { default: 'MediaManager' },
     '@/components/admin/erp/v2/common/ZFModalShell': { ZFModalShell: 'Modal' },
     './MediaManager.module.css': { default: new Proxy({}, { get: (_t, key) => String(key) }) },
+    './MarkdownDescriptionEditor': { default: 'MarkdownDescriptionEditor' }, '@/lib/markdown/miniMarkdown': markdown, '@/lib/markdown/legacyHtmlToMarkdown': legacyMarkdown,
     './CADBlueprintBuilder': { default: 'CADBlueprintBuilder' }, './ZoneInspector': { default: 'ZoneInspector' },
     './DynamicMapPicker': { default: 'DynamicMapPicker' }, '@/components/video/LuxuryAmbientVideoPlayer': { default: 'VideoPlayer', parseVideoUrl },
     './AdminPropertyForm.module.css': { default: new Proxy({}, { get: (_t, key) => String(key) }) },

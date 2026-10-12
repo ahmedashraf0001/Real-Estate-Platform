@@ -1,3 +1,5 @@
+import { legacyHtmlToMarkdown } from '@/lib/markdown/legacyHtmlToMarkdown';
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
 import type { Property as SupabaseProperty } from '@/lib/supabase/types';
 import type { Property } from '@/types';
 
@@ -117,8 +119,8 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
   const locationStr = decodeHtmlEntities(property.location || 'New Cairo, Egypt');
   const districtName = locationStr.split(',')[0].trim() || 'New Cairo';
 
-  const descEn = cleanHtmlToPlainText(property.description_en || '');
-  const descAr = cleanHtmlToPlainText(property.description_ar || '');
+  const descEn = legacyHtmlToMarkdown(property.description_en || '');
+  const descAr = legacyHtmlToMarkdown(property.description_ar || '');
 
   const narrativeText = isAr ? (descAr || descEn) : (descEn || descAr);
 
@@ -141,10 +143,10 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     location: locationStr,
     district: decodeHtmlEntities(districtName),
     estateName: decodeHtmlEntities(districtName),
-    description: narrativeText,
+    description: stripMarkdown(narrativeText),
     description_en: descEn,
     description_ar: descAr,
-    narrative: narrativeText,
+    narrative: stripMarkdown(narrativeText),
     price: property.price_egp || 0,
     price_egp: property.price_egp || 0,
     currency: isAr ? 'ج.م' : 'EGP',

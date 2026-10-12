@@ -1,3 +1,4 @@
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
 import { notFound } from 'next/navigation';
 import { getPropertyBySlug, getAllProperties } from '@/lib/supabase/queries';
 import { adaptProperty, adaptProperties } from '@/lib/utils/propertyAdapter';
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = (locale === 'ar' ? property.title_ar : property.title_en) || 'Luxury Masterpiece';
   const rawDesc = locale === 'ar' ? property.description_ar : property.description_en;
-  const description = rawDesc ? rawDesc.replace(/<[^>]*>/g, '').slice(0, 160) : '';
+  const description = stripMarkdown(rawDesc || '').slice(0, 160);
   const coverImage = property.property_images?.[0]?.url;
 
   return {
@@ -75,7 +76,7 @@ export default async function PropertyDetailPage({ params }: Props) {
   const uiSimilar = adaptProperties(similar, locale as 'en' | 'ar');
 
   const title = locale === 'ar' ? property.title_ar : property.title_en;
-  const cleanDescription = (locale === 'ar' ? property.description_ar : property.description_en)?.replace(/<[^>]*>/g, '') || '';
+  const cleanDescription = stripMarkdown((locale === 'ar' ? property.description_ar : property.description_en) || '');
 
   // JSON-LD structured data
   const jsonLd = {

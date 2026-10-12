@@ -12,6 +12,7 @@ import { buildingFloorKey, blueprintFloorSummary, groupBlueprintFacilities, floo
 import { blueprintElementDetail } from '@/lib/layering/publicBlueprint';
 import { arrangeGroundFloor, arrangeUnitRooms, roomWeight, sortTiles } from '@/lib/layering/blueprintEditor';
 import { useBlueprintEditing, type BlueprintEditing } from './useBlueprintEditing';
+import { PublicStatusBadge } from '../property/PublicStatusBadge';
 import styles from './BuildingBlueprintPreview.module.css';
 
 interface Props {
@@ -104,7 +105,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   }, [floorKey, fullscreen]);
   const navigate = (next: BlueprintView) => { onSelect(null); onViewChange(next); };
   const icon = (z: ZoneInstance, size = 22) => { const Icon = BLUEPRINT_ICONS[z.zone_template_id] ?? Building2; return <Icon size={size} aria-hidden="true" />; };
-  const status = (value?: string) => value ? <span className={`${styles.pill} ${value === 'available' || value === 'Finished' || value === 'Installed' ? styles.available : ''}`}>{blueprintLabel('status', value ?? '', isAr)}</span> : null;
+  const status = (value?: string) => !edit && (value === 'sold' || value === 'reserved') ? <PublicStatusBadge status={value} isAr={isAr} /> : value ? <span className={`${styles.pill} ${value === 'available' || value === 'Finished' || value === 'Installed' ? styles.available : ''}`}>{blueprintLabel('status', value ?? '', isAr)}</span> : null;
   const dimensions = (z: ZoneInstance) => z.spatial && z.spatial.length_m > 0 && z.spatial.width_m > 0 ? `${z.spatial.length_m} × ${z.spatial.width_m} ${text('م', 'm')} · ${z.spatial.sqm || Number((z.spatial.length_m * z.spatial.width_m).toFixed(2))} ${text('م²', 'm²')}` : null;
   const unitFacts = (z: ZoneInstance) => {
     const facts = resolveBlueprintUnit(z, inventory);
@@ -145,7 +146,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const unitTile = (z: ZoneInstance) => {
     const hasPhoto = Boolean(z.images?.length && z.images[0]);
     return wrap(z, units, 'unit', floorKey ?? 'elevation', (
-      <button type="button" key={z.id} className={`${styles.unit} ${hasPhoto ? styles.tileWithPhoto : ''}`} onClick={() => navigate({ mode: 'unit', floorKey: buildingFloorKey(z), unitId: z.id })}>
+      <button type="button" key={z.id} className={`${styles.unit} ${hasPhoto ? styles.tileWithPhoto : ''} ${!edit && resolveBlueprintUnit(z, inventory).status === 'sold' ? 'public-sold-media' : ''}`} onClick={() => navigate({ mode: 'unit', floorKey: buildingFloorKey(z), unitId: z.id })}>
         {hasPhoto ? (
           <>
             <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
@@ -351,7 +352,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           <button type="button" data-detail-close aria-label={text('إغلاق تفاصيل العنصر', 'Close element details')} onClick={() => onSelect(null)}><X size={20} /></button>
         </div>
         <div className={styles.detailBody}>
-          <span className={styles.iconTile}>{icon(selected, 30)}</span><h3>{zoneLabel(selected, isAr)}</h3><p>{selectedLocation}</p>
+          <span className={styles.iconTile}>{icon(selected, 30)}</span><h3>{zoneLabel(selected, isAr)}</h3><p>{selectedLocation}</p>{!edit && selected.zone_template_id === 'bld.unit' && status(resolveBlueprintUnit(selected, inventory).status)}
           {onInspect && <button type="button" onClick={() => onInspect(selected.id)}>{text('تحرير بيانات العنصر', 'Edit element facts')}</button>}
           <dl className={styles.facts}>{selectedFacts.map(([label, value], i) => <div key={i}><dt>{label}</dt><dd><bdi>{value}</bdi></dd></div>)}</dl>
           <h4>{text('حالة التنفيذ لهذا العنصر', 'Execution status for this element')}</h4>
@@ -426,6 +427,6 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
     {unit && !ed.editing && Boolean(unit.videos?.length || unit.images?.length) && <ZoneMedia zone={unit} isAr={isAr} />}
 
     </div>
-    <div className={styles.legend}><span className={styles.available}>{text('متاحة', 'Available')}</span><span>{text('مباعة / محجوزة', 'Sold / Reserved')}</span><span>{text('مساحات مشتركة', 'Shared spaces')}</span><span><DoorOpen size={15} />{text('باب الشقة', 'Unit door')}</span></div>
+    <div className={styles.legend}><span className={styles.available}>{text('متاحة', 'Available')}</span>{edit ? <span>{text('مباعة / محجوزة', 'Sold / Reserved')}</span> : <><PublicStatusBadge status="sold" isAr={isAr} /><PublicStatusBadge status="reserved" isAr={isAr} /></>}<span>{text('مساحات مشتركة', 'Shared spaces')}</span><span><DoorOpen size={15} />{text('باب الشقة', 'Unit door')}</span></div>
   </section>;
 }

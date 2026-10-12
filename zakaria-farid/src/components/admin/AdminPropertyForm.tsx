@@ -6,9 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
+import { legacyHtmlToMarkdown } from '@/lib/markdown/legacyHtmlToMarkdown';
+import MarkdownDescriptionEditor from './MarkdownDescriptionEditor';
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
@@ -514,22 +514,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     }
   };
 
-  // Tiptap editors for English and Arabic descriptions
-  const editorEn = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: 'Write luxury property architectural brief in English...' }),
-    ],
-    content: property?.description_en ?? '',
-  });
-
-  const editorAr = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: 'اكتب الوصف المعماري والتسويقي الفاخر للعقار باللغة العربية...' }),
-    ],
-    content: property?.description_ar ?? property?.description_en ?? '',
-  });
+  const [descriptionEn, setDescriptionEn] = useState(() => legacyHtmlToMarkdown(property?.description_en ?? ''));
+  const [descriptionAr, setDescriptionAr] = useState(() => legacyHtmlToMarkdown(property?.description_ar ?? property?.description_en ?? ''));
 
   const [descTab, setDescTab] = useState<'en' | 'ar'>(isAr ? 'ar' : 'en');
 
@@ -684,8 +670,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         is_featured: data.is_featured,
         view: data.view || null,
         floor_number: (data.floor_number === '' || data.floor_number === null || data.floor_number === undefined) ? null : Number(data.floor_number),
-        description_en: editorEn?.getHTML() ?? '',
-        description_ar: editorAr?.getHTML() ?? '',
+        description_en: descriptionEn,
+        description_ar: descriptionAr,
         spec_layers: zoneInstances,
         videos: videos,
         video_url: videos[0]?.url || null,
@@ -1621,13 +1607,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   </div>
                 </div>
 
-                <div className={styles.tiptap} dir={descTab === 'ar' ? 'rtl' : 'ltr'}>
-                  {descTab === 'en' ? (
-                    <EditorContent editor={editorEn} />
-                  ) : (
-                    <EditorContent editor={editorAr} />
-                  )}
-                </div>
+                <MarkdownDescriptionEditor key={descTab} language={descTab} isAr={isAr}
+                  value={descTab === 'ar' ? descriptionAr : descriptionEn}
+                  onChange={descTab === 'ar' ? setDescriptionAr : setDescriptionEn} />
               </div>
 
               <div className={styles.field}>
@@ -2194,7 +2176,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <h3 className={styles.reviewBreakdownTitle}>{isAr ? 'الوصف والوسائط' : 'Description & media'}</h3>
               <button type="button" className={styles.btnPrev} onClick={() => goToStep(3)}>{isAr ? 'تعديل الوصف والوسائط' : 'Edit description & media'}</button>
             </div>
-            <p>{isAr ? editorAr?.getText() : editorEn?.getText()}</p>
+            <p>{stripMarkdown(isAr ? descriptionAr : descriptionEn)}</p>
             <p>{amenities.join('، ') || '—'}</p>
             <p>{photoCount} {isAr ? 'صور' : 'photos'} · {videos.length} {isAr ? 'فيديو' : 'videos'}</p>
           </section>

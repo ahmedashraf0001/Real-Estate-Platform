@@ -12,7 +12,9 @@ import { shouldRenderThumbnailStrip, formatThumbnailCounter, toArabicNumerals } 
 import { createFrameScheduler } from '@/lib/utils/frameScheduler';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
-import { cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
+import { miniMarkdown, stripMarkdown } from '@/lib/markdown/miniMarkdown';
+import { PublicStatusBadge } from './PublicStatusBadge';
+import { decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
 import { unitCode } from '@/lib/layering/labels';
 import ArchitecturalBlueprintInspector from './ArchitecturalBlueprintInspector';
@@ -199,9 +201,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     ? (rawProperty?.description_ar || rawProperty?.narrative || rawProperty?.description_en || '')
     : (rawProperty?.description_en || rawProperty?.narrative || rawProperty?.description_ar || '');
 
-  // Strip raw HTML tags cleanly from narrative and decode all HTML entities
-  // Only what the admin wrote; no invented marketing copy.
-  const cleanNarrative = cleanHtmlToPlainText(rawNarrative);
+  const cleanNarrative = rawNarrative;
   const hasCoordinates = !!(rawProperty?.mapCoordinates || (rawProperty?.latitude && rawProperty?.longitude));
 
   const property: Property = rawProperty ? {
@@ -578,7 +578,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       "@context": "https://schema.org",
       "@type": "SingleFamilyResidence",
       "name": property.title,
-      "description": property.narrative,
+      "description": stripMarkdown(property.narrative),
       "address": {
         "@type": "PostalAddress",
         "addressLocality": property.district,
@@ -744,35 +744,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
               <div className="top-action-group">
                 {isSold ? (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '9px 18px',
-                    borderRadius: '8px',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
-                    color: '#ef4444',
-                    fontWeight: 700,
-                    fontSize: '13px'
-                  }}>
-                    <span>{isAr ? 'مباع' : 'Sold'}</span>
-                  </div>
+                  <PublicStatusBadge status="sold" isAr={isAr} />
                 ) : (
                   <>
                     {isUnderOffer && (
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '6px 14px',
-                        borderRadius: '8px',
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        border: '1px solid rgba(245, 158, 11, 0.35)',
-                        color: '#f59e0b',
-                        fontWeight: 700,
-                        fontSize: '12px'
-                      }}>
-                        <span>{isAr ? 'تحت العرض' : 'Under offer'}</span>
-                      </div>
+                      <PublicStatusBadge status="under_offer" isAr={isAr} />
                     )}
                     <button 
                       className="btn-gold top-inquire-btn"
@@ -1308,10 +1284,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     <span className="section-eyebrow">{isAr ? 'الملف المعماري الحصري' : 'CURATED MONOGRAPH'}</span>
                     <h3 className="section-subtitle">{isAr ? 'عن هذا الصرح' : 'About this Estate'}</h3>
                   </div>
-                  <div className="narrative-text">
-                    {property.narrative.split('\n\n').map((paragraph, i) => (
-                      <p key={i} className="narrative-para">{paragraph}</p>
-                    ))}
+                  <div className="narrative-text mini-markdown">
+                    {miniMarkdown(property.narrative)}
                   </div>
                 </>
               )}
@@ -1353,33 +1327,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               )}
               <div className="broker-action-stack">
                 {isSold ? (
-                  <div style={{
-                    padding: '14px 16px',
-                    borderRadius: '10px',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                    color: '#ef4444',
-                    textAlign: 'center',
-                    fontWeight: 700,
-                    fontSize: '13.5px'
-                  }}>
-                    <span>{isAr ? 'تم بيع هذه الوحدة المعمارية (مباع)' : 'This unit has been sold (Sold)'}</span>
-                  </div>
+                  <PublicStatusBadge status="sold" isAr={isAr}>{isAr ? 'تم بيع هذه الوحدة المعمارية (مباع)' : 'This unit has been sold (Sold)'}</PublicStatusBadge>
                 ) : (
                   <>
                     {isUnderOffer && (
-                      <div style={{
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        background: 'rgba(245, 158, 11, 0.1)',
-                        border: '1px solid rgba(245, 158, 11, 0.25)',
-                        color: '#f59e0b',
-                        textAlign: 'center',
-                        fontWeight: 600,
-                        fontSize: '12px'
-                      }}>
-                        <span>{isAr ? 'العقار قيد التفاوض / تحت العرض' : 'Under offer — Inquiries still open'}</span>
-                      </div>
+                      <PublicStatusBadge status="under_offer" isAr={isAr}>{isAr ? 'العقار قيد التفاوض / تحت العرض' : 'Under offer — Inquiries still open'}</PublicStatusBadge>
                     )}
                     <button
                       type="button"
@@ -1592,35 +1544,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         </div>
         <div className="top-action-group">
           {isSold ? (
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '9px 18px',
-              borderRadius: '8px',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              color: '#ef4444',
-              fontWeight: 700,
-              fontSize: '13px'
-            }}>
-              <span>{isAr ? 'مباع' : 'Sold'}</span>
-            </div>
+            <PublicStatusBadge status="sold" isAr={isAr} />
           ) : (
             <>
               {isUnderOffer && (
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
-                  color: '#f59e0b',
-                  fontWeight: 700,
-                  fontSize: '12px'
-                }}>
-                  <span>{isAr ? 'تحت العرض' : 'Under offer'}</span>
-                </div>
+                <PublicStatusBadge status="under_offer" isAr={isAr} />
               )}
               <button
                 className="btn-gold top-inquire-btn"
@@ -3097,7 +3025,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             font-size: 0.625rem;
             letter-spacing: 0.12em;
           }
-          .narrative-para {
+          .narrative-text :global(p) {
             font-size: 0.875rem;
             line-height: 1.65;
           }
@@ -3137,7 +3065,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           gap: 1.25rem;
         }
 
-        .narrative-para {
+        .narrative-text :global(p) {
           font-size: 1rem;
           color: var(--text-secondary);
           line-height: 1.75;

@@ -27,7 +27,7 @@ test('real wizard location/media steps hydrate edit values, validate only locati
   try {
     let tree = h.render(props);
     assert.ok(nodes(tree).some(n => n.type === 'DynamicMapPicker' && n.props.latitude === 30.51));
-    assert.ok(!nodes(tree).some(n => n.type === 'EditorContent'));
+    assert.ok(!nodes(tree).some(n => n.type === 'MarkdownDescriptionEditor'));
     const location = nodes(tree).find(n => n.type === 'input' && n.props.name === 'location');
     assert.equal(location.props.defaultValue, 'منيا القمح');
     location.props.onChange({ target: { value: '' } });
@@ -40,7 +40,7 @@ test('real wizard location/media steps hydrate edit values, validate only locati
     tree = h.render(props);
     assert.deepEqual(h.validationCalls, [['location'], ['location']]);
     assert.equal(new URL(h.location.href).searchParams.get('step'), '3');
-    assert.ok(nodes(tree).some(n => n.type === 'EditorContent' && n.props.editor.getText() === 'وصف محفوظ'));
+    assert.ok(nodes(tree).some(n => n.type === 'MarkdownDescriptionEditor' && n.props.value === 'وصف محفوظ'));
     assert.ok(!nodes(tree).some(n => n.type === 'DynamicMapPicker'));
     assert.equal(nodes(tree).find(n => n.type === 'MediaManager').props.videos[0].url, 'https://youtu.be/test-only');
     assert.ok(nodes(tree).some(n => n.type === 'img' && n.props.src === '/test-only-cover.jpg'));

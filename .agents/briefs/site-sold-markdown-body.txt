@@ -1,0 +1,31 @@
+TASK site-sold-markdown — premium "sold" state on the public site + limited Markdown in property descriptions (branch feat/blueprint-nav, after admin-bp-editor 807e156)
+
+WHY
+User decisions 2026-10-12 [user-confirmed]:
+A) The sold state ("مباع") is shown in red, which reads as an error. Approved option A: graphite pill with a thin gold hairline, gold text, rosette icon, label "تم البيع" / "Sold". Dark: background #1a1d24, border rgba(229,184,105,.55), text #E5B869. Light: background #fff, border rgba(138,91,10,.5), text #8A5B0A (the site's AA light gold). Pill radius. Put the colors in theme tokens (globals.css), not literals in components.
+B) Property descriptions support a limited Markdown subset.
+
+REQUIRED — SOLD STATE (public site only)
+1. Every public place that shows sold/مباع uses the new badge: property detail header pill (PropertyDetailView ~l.763, ~l.1611), the sold banner (~l.1371 "تم بيع هذه الوحدة المعمارية (مباع)" -> keep the message, restyle: graphite/gold, no red), property cards and catalog if they show status, blueprint unit tiles/legend/detail panel status (BuildingBlueprintPreview: legend "مباعة / محجوزة", unit status pills). Find every sold/reserved status render on public pages (grep sold, مباع, مباعة, reserved, محجوز).
+2. Sold cards/tiles: photo slightly desaturated (e.g. filter: saturate(.6) brightness(.92)); price and details stay readable (AA).
+3. Reserved/محجوز keeps a distinct but calm style (not red): e.g. muted amber outline. Available/متاحة unchanged (green).
+4. Admin/ERP screens unchanged.
+
+REQUIRED — MARKDOWN DESCRIPTIONS
+5. Pure renderer src/lib/markdown/miniMarkdown.ts (no new dependency): input text -> React nodes (or a safe token tree rendered by a component). Supported: **bold**, *italic*, unordered lists (- or *), ordered lists (1.), headings ### and #### only (rendered as h3/h4 styled as section titles), paragraphs and single line breaks. Everything else is plain text. Raw HTML is NEVER interpreted (render as text); no dangerouslySetInnerHTML. Links: not supported (render as text). Works with Arabic RTL and mixed Arabic/English (dir="auto" per block).
+6. Public: PropertyDetailView description (AR and EN) renders via the renderer, styled with site typography in light/dark. Any short excerpt (cards, catalog, search results, email, map popups) uses a stripMarkdown() helper -> plain text, no stray ** or #.
+7. SEO: generateMetadata in app/[locale]/properties/[slug]/page.tsx (and any OG/JSON-LD description) uses stripMarkdown().
+8. Admin (AdminPropertyForm, step "الوصف والوسائط", AR and EN tabs): small toolbar above the textarea — B (bold), I (italic), list, numbered list, heading — inserting/wrapping Markdown at the selection; a "معاينة" / "Preview" toggle showing the same public renderer; one short help line "يدعم: **عريض**، *مائل*، القوائم، العناوين". Buttons type="button". Stored value stays plain text (Markdown) in the same columns; existing descriptions render unchanged (plain text is valid Markdown).
+
+DO NOT
+- Add dependencies. Change DB/schema (Supabase PRODUCTION, read-only). Nest a <form> in AdminPropertyForm; every button type="button". Press save/publish.
+- Change blueprint navigation/editor, wizard order, or ERP screens.
+
+TESTS
+RED first: miniMarkdown (bold/italic/lists/headings/line breaks, Arabic, nested markers, HTML-looking input stays text, "<script>" never rendered as element, unmatched ** stays literal), stripMarkdown, sold badge component/classes SSR (detail header, card if applicable, blueprint legend/status), admin toolbar insert helpers (pure), metadata uses stripped text. tsc exit 0. npm test: only the 7 known pre-existing failures.
+Capture script: sold badge + desaturated sold card/tile, reserved style, description with Markdown, light and dark, 1440 and 390, AR and EN; computed-style assertions for badge colors and AA contrast; no horizontal overflow at 390. Use real sold properties if any exist (read-only); otherwise a capture-only fixture route that never writes.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105) and a separate gitignored build dir; restore tsconfig.json/next-env.d.ts.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

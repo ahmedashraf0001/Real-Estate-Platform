@@ -42,7 +42,7 @@ for (const type of ['building', 'apartment']) {
       view: 'Sea', floor_number: 2, total_floors: 4, units_per_floor: 2,
     };
     const payload = mapForm('payloadBase', {
-      data, editorEn: null, editorAr: null, zoneInstances: [], videos: [], partnerSplits: [],
+      data, descriptionEn: '**English**', descriptionAr: '*عربي*', zoneInstances: [], videos: [], partnerSplits: [],
     });
     let stored: any;
     const client = { from(table: string) {
@@ -64,6 +64,8 @@ for (const type of ['building', 'apartment']) {
     const result = await loadSaveProperty(client)(payload, false);
     assert.equal(result.success, true);
     assert.equal(stored.area_sqm, 400);
+    assert.equal(stored.description_en, '**English**');
+    assert.equal(stored.description_ar, '*عربي*');
 
     // Execute the production edit-page loader, including its row-to-form wiring.
     const pageFile = 'src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/properties/[id]/edit/page.tsx';

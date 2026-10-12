@@ -419,37 +419,6 @@
   background-color: #FFFFFF;
 }
 
-/* ─── Tiptap Rich Text Editor ─────────────────────────── */
-.tiptap {
-  border: 1px solid var(--admin-input-border);
-  border-radius: 12px;
-  min-height: 160px;
-  padding: 14px 16px;
-  background: var(--admin-input-bg);
-  color: var(--admin-text-title);
-  transition: all 0.2s ease;
-}
-
-.tiptap:focus-within {
-  border-color: var(--admin-accent);
-  box-shadow: 0 0 0 3px var(--admin-accent-tint);
-}
-
-.tiptap :global(.ProseMirror) {
-  outline: none;
-  font-size: 14px;
-  line-height: 1.6;
-  min-height: 120px;
-}
-
-.tiptap :global(.ProseMirror p.is-editor-empty:first-child::before) {
-  content: attr(data-placeholder);
-  color: var(--admin-text-dim);
-  pointer-events: none;
-  float: left;
-  height: 0;
-}
-
 /* ─── Dropzone ────────────────────────────────────────── */
 .dropzone {
   border: 2px dashed var(--admin-dropzone-border);
@@ -1518,3 +1487,12 @@
   margin: 0;
   line-height: 1.45;
 }
+
+.markdownEditor { min-width: 0; }
+.markdownToolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.markdownToolbar button { min-width: 40px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--admin-card-border); border-radius: 8px; background: var(--admin-card-bg); color: var(--admin-text-title); cursor: pointer; }
+.markdownToolbar button:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: 2px; }
+.markdownToolbar button:disabled { opacity: .5; cursor: default; }
+.markdownPreview { min-height: 180px; padding: 12px; border: 1px solid var(--admin-card-border); border-radius: 8px; color: var(--admin-text-body); }
+.markdownPreview h3, .markdownPreview h4 { color: var(--admin-text-title); }
+.markdownHelp { font-size: .75rem; color: var(--admin-text-muted); margin-top: 6px; }

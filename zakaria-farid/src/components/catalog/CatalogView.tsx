@@ -1,4 +1,5 @@
 'use client';
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -310,7 +311,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           (p.location || '').toLowerCase().includes(query) ||
           (p.estateName || '').toLowerCase().includes(query) ||
           (p.propertyType || p.type || '').toLowerCase().includes(query) ||
-          (p.narrative || p.description_en || '').toLowerCase().includes(query) ||
+          stripMarkdown(p.narrative || p.description_en || '').toLowerCase().includes(query) ||
           (p.amenities || []).some((a: any) => (a.title || '').toLowerCase().includes(query)) ||
           (p.property_amenities || []).some((a: any) => (a.amenity_en || '').toLowerCase().includes(query));
         if (!matches) return false;
@@ -414,9 +415,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           JSON.stringify(p.amenities || []) + ' ' +
           JSON.stringify(p.property_amenities || []) + ' ' +
           JSON.stringify(p.spec_layers || []) + ' ' +
-          (p.narrative || '') + ' ' +
-          (p.description_en || '') + ' ' +
-          (p.description_ar || '') + ' ' +
+          stripMarkdown(p.narrative || '') + ' ' +
+          stripMarkdown(p.description_en || '') + ' ' +
+          stripMarkdown(p.description_ar || '') + ' ' +
           (p.title_en || '') + ' ' +
           (p.title_ar || '') + ' ' +
           (p.location || '') + ' ' +

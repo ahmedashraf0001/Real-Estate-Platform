@@ -146,6 +146,12 @@
   --glass-blur-nav: blur(14px) saturate(140%);
 
   /* Unified Egyptian Champagne Gold System */
+  --sold-bg: #1a1d24;
+  --sold-border: rgba(229, 184, 105, .55);
+  --sold-text: #E5B869;
+  --reserved-bg: #242018;
+  --reserved-border: rgba(213, 180, 126, .55);
+  --reserved-text: #D5B47E;
   --gold-primary: #E5B869;
   --gold-light: #FFF0C2;
   --gold-dark: #B8934A;
@@ -244,6 +250,12 @@
   --border-glass: rgba(255, 255, 255, 0.60);
   --border-glass-subtle: var(--border-glass);
 
+  --sold-bg: #fff;
+  --sold-border: rgba(138, 91, 10, .5);
+  --sold-text: #8A5B0A;
+  --reserved-bg: #FFF9EF;
+  --reserved-border: rgba(118, 84, 26, .5);
+  --reserved-text: #76541A;
   --gold-primary: #8C6826;
   --gold-light: #B8934A;
   --gold-dark: #6B4E1B;
@@ -1309,3 +1321,26 @@ div[style*="background:#ffffff"] select {
 [data-theme="dark"] .app-root .saved-portfolio-backdrop {
   background: rgba(10, 12, 16, 0.55) !important;
 }
+
+/* Public listing availability; admin blueprint keeps its own status rendering. */
+.public-status-badge {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid; border-radius: 999px; padding: 6px 12px;
+  font-size: .8125rem; font-weight: 700; line-height: 1.5;
+  max-width: 100%; overflow-wrap: anywhere; text-shadow: none;
+}
+.public-status-badge.public-status-sold { background: var(--sold-bg); border-color: var(--sold-border); color: var(--sold-text); }
+.public-status-badge.public-status-reserved { background: var(--reserved-bg); border-color: var(--reserved-border); color: var(--reserved-text); }
+.public-status-badge svg { flex-shrink: 0; color: inherit; }
+.public-sold-media img { filter: saturate(.6) brightness(.92); }
+.mini-markdown { color: var(--text-secondary); line-height: 1.85; overflow-wrap: anywhere; }
+.mini-markdown p { margin: 0 0 1em; }
+.mini-markdown h3, .mini-markdown h4 { color: var(--text-primary); font-weight: 700; margin: 1.25em 0 .5em; line-height: 1.5; }
+.mini-markdown h3 { font-size: 1.25rem; }
+.mini-markdown h4 { font-size: 1.0625rem; }
+.mini-markdown ul, .mini-markdown ol { padding-inline-start: 1.5em; margin: 0 0 1em; }
+.mini-markdown ul { list-style: disc; }
+.mini-markdown ol { list-style: decimal; }
+.mini-markdown li { margin-block: .25em; }
+.mini-markdown strong { font-weight: 700; }
+.mini-markdown em { font-style: italic; }

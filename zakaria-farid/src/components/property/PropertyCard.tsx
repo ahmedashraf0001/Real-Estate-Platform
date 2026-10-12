@@ -1,9 +1,11 @@
 'use client';
 import React from 'react';
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
+import { PublicStatusBadge } from './PublicStatusBadge';
 import { Property } from '@/types';
 import { Bed, Bath, Maximize2, MapPin, Bookmark, ArrowUpRight, Calendar, Scale } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
-import { decodeHtmlEntities, cleanHtmlToPlainText } from '@/lib/utils/propertyAdapter';
+import { decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 
@@ -206,10 +208,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const rawType = property.propertyType || property.type || '';
   const formattedType = isAr ? (TYPE_AR_MAP[rawType] || rawType) : rawType;
 
-  const formattedNarrative = cleanHtmlToPlainText(
+  const formattedNarrative = stripMarkdown(
     (isAr ? (property.description_ar || property.narrative || property.description) : (property.description_en || property.narrative || property.description)) || ''
   ) || (isAr ? 'صرح معماري استثنائي يجمع بين الفخامة الإنشائية والإطلالات البانورامية الخلابة.' : 'An exceptional luxury residence exhibiting bespoke architectural craftsmanship and panoramic landscaped vistas.');
   
+  const status = property.listing_status;
+  const statusBadge = status === 'sold' || status === 'under_offer' ? <PublicStatusBadge status={status} isAr={isAr} /> : null;
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
   const pricePerSqm = new Intl.NumberFormat('en-US').format(Math.round(property.price / (property.sqm || 1)));
 
@@ -234,7 +238,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   if (viewMode === 'list') {
     return (
       <motion.div
-        className="property-card-list"
+        className={`property-card-list ${status === 'sold' ? 'public-sold-media' : ''}`}
         onClick={() => onSelect(property.id)}
         variants={cardVariants}
         initial="hidden"
@@ -286,6 +290,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <span className="gold-type">{formattedType}</span>
           </div>
 
+          {statusBadge}
           <h3 className="list-card-title">{formattedTitle}</h3>
 
           <p className="list-narrative">
@@ -812,7 +817,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   // Default: Gallery Grid Card
   return (
     <motion.div 
-      className={`property-card ${viewMode === 'compact' ? 'compact-card' : ''}`}
+      className={`property-card ${status === 'sold' ? 'public-sold-media' : ''} ${viewMode === 'compact' ? 'compact-card' : ''}`}
       onClick={() => onSelect(property.id)}
       variants={cardVariants}
       initial="hidden"
@@ -872,6 +877,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         {/* Floating Frosted Liquid Glass Panel */}
         <div className="card-content-overlay" dir={isAr ? 'rtl' : 'ltr'}>
+          {statusBadge}
           <h3 className="card-title" title={formattedTitle}>{formattedTitle}</h3>
 
           <div className="card-price-row">

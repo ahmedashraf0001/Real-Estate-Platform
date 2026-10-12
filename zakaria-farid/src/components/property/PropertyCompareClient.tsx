@@ -1,4 +1,5 @@
 'use client';
+import { PublicStatusBadge } from './PublicStatusBadge';
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -266,7 +267,7 @@ export default function PropertyCompareClient({ properties = [], allAvailablePro
       label: isAr ? 'حالة القيد في السوق' : 'Listing Status',
       icon: <CheckCircle2 size={15} />,
       getValue: (p: Property) => (
-        <span className={styles.highlightPill}>
+        p.listing_status === 'sold' || p.listing_status === 'under_offer' ? <PublicStatusBadge status={p.listing_status} isAr={isAr} /> : <span className={styles.highlightPill}>
           {statusLabel[p.listing_status] ?? p.listing_status}
         </span>
       ),

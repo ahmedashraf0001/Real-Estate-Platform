@@ -1,3 +1,4 @@
+import { stripMarkdown } from '@/lib/markdown/miniMarkdown';
 /**
  * Utilities for Smart, Flexible, and Cross-Lingual Real Estate Search
  */
@@ -157,8 +158,8 @@ export function matchesSmartQuery(property: any, rawQuery: string): boolean {
     property.title_en || '',
     property.title_ar || '',
     property.location || '',
-    property.description_en || '',
-    property.description_ar || '',
+    stripMarkdown(property.description_en || ''),
+    stripMarkdown(property.description_ar || ''),
     property.type || '',
   ];
 
