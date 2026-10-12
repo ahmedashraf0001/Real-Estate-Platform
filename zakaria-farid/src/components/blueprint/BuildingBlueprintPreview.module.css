@@ -243,6 +243,8 @@
 }
 
 
+.zoneMedia { min-width: 0; width: 100%; }
+.zoneMedia h4 { font-size: 14px; margin-block: 12px 8px; }
 .infoStrip { border-top: 1px solid var(--bp-line); margin-top: 16px; padding-top: 12px; min-height: 0; }
 .infoStrip h3 { font-size: 14px; font-weight: 500; margin: 12px 0 8px; }
 .infoStrip .summary { padding-top: 0; }

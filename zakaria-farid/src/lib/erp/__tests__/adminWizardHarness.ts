@@ -8,6 +8,8 @@ import * as partners from '../partnersDirectory';
 import * as layering from '../../layering';
 import * as blueprint from '../../layering/buildingBlueprint';
 import * as metrics from '../../layering/zoneMetrics';
+import * as media from '../../media';
+import { parseVideoUrl } from '../../../components/video/LuxuryAmbientVideoPlayer';
 
 const requireActual = createRequire(import.meta.url);
 export function nodes(tree: any): any[] {
@@ -21,7 +23,7 @@ export function textOf(tree: any): string {
 
 // Run complete production components with hook state and explicit dependency adapters.
 // Effects clean up on changed dependencies and unmount. No real network or DB writes.
-export function adminHarness(file: 'AdminPropertyForm' | 'MapPicker', search = '?step=2', fetchImpl: any = () => { throw new Error('Unexpected network'); }) {
+export function adminHarness(file: 'AdminPropertyForm' | 'MapPicker' | 'media/MediaManager', search = '?step=2', fetchImpl: any = () => { throw new Error('Unexpected network'); }, adapters: Record<string, any> = {}) {
   const slots: any[] = [];
   let index = 0, dirty = false;
   let pending: Array<() => void> = [];
@@ -70,8 +72,12 @@ export function adminHarness(file: 'AdminPropertyForm' | 'MapPicker', search = '
     '@/lib/propertyWizardSteps': steps, '@/lib/geocodeCandidates': geocode,
     '@/lib/erp/partnersDirectory': partners, '@/lib/layering': layering,
     '@/lib/layering/buildingBlueprint': blueprint, '@/lib/layering/zoneMetrics': metrics,
+    '@/lib/media': media,
+    './media/MediaManager': { default: 'MediaManager' },
+    '@/components/admin/erp/v2/common/ZFModalShell': { ZFModalShell: 'Modal' },
+    './MediaManager.module.css': { default: new Proxy({}, { get: (_t, key) => String(key) }) },
     './CADBlueprintBuilder': { default: 'CADBlueprintBuilder' }, './ZoneInspector': { default: 'ZoneInspector' },
-    './DynamicMapPicker': { default: 'DynamicMapPicker' }, '@/components/video/LuxuryAmbientVideoPlayer': { default: 'VideoPlayer' },
+    './DynamicMapPicker': { default: 'DynamicMapPicker' }, '@/components/video/LuxuryAmbientVideoPlayer': { default: 'VideoPlayer', parseVideoUrl },
     './AdminPropertyForm.module.css': { default: new Proxy({}, { get: (_t, key) => String(key) }) },
     'react-leaflet': { MapContainer: 'MapContainer', TileLayer: 'TileLayer', Marker: 'Marker' },
     leaflet: { divIcon: () => ({}) }, 'leaflet/dist/leaflet.css': {},
@@ -80,9 +86,10 @@ export function adminHarness(file: 'AdminPropertyForm' | 'MapPicker', search = '
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const exports: any = {};
   vm.runInNewContext(code, { exports, console, URL, URLSearchParams, fetch: fetchImpl,
-    window: { location, history: { replaceState: (_a: any, _b: any, url: string) => { location.href = url; location.search = new URL(url).search; } } },
+    crypto: globalThis.crypto,
+    window: { location, confirm: () => true, history: { replaceState: (_a: any, _b: any, url: string) => { location.href = url; location.search = new URL(url).search; } } },
     document: { body: { setAttribute() {}, removeAttribute() {} }, addEventListener() {}, removeEventListener() {} },
-    require(id: string) { if (id in imports) return imports[id]; throw new Error(`Unexpected import ${id}`); },
+    require(id: string) { if (id in adapters) return adapters[id]; if (id in imports) return imports[id]; throw new Error(`Unexpected import ${id}`); },
   }, { filename: file });
   return { location, validationCalls, get form() { return form; },
     render(props: any) {

@@ -42,7 +42,7 @@ test('real wizard location/media steps hydrate edit values, validate only locati
     assert.equal(new URL(h.location.href).searchParams.get('step'), '3');
     assert.ok(nodes(tree).some(n => n.type === 'EditorContent' && n.props.editor.getText() === 'وصف محفوظ'));
     assert.ok(!nodes(tree).some(n => n.type === 'DynamicMapPicker'));
-    assert.match(textOf(tree), /https:\/\/youtu.be\/test-only/);
+    assert.equal(nodes(tree).find(n => n.type === 'MediaManager').props.videos[0].url, 'https://youtu.be/test-only');
     assert.ok(nodes(tree).some(n => n.type === 'img' && n.props.src === '/test-only-cover.jpg'));
     await button(tree, 'السابق').props.onClick();
     tree = h.render(props);

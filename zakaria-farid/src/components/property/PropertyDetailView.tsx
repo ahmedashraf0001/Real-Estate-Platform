@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
+import { autoVideoTitle, propertyMediaVideos } from '@/lib/media';
 import type { PropertyVideo } from '@/lib/supabase/types';
 
 interface PropertyDetailViewProps {
@@ -464,17 +465,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
   const rawPropVideos: PropertyVideo[] = (rawProperty as any)?.videos || (property as any)?.videos || [];
   const propertyVideos: PropertyVideo[] = useMemo(() => {
-    if (rawPropVideos && rawPropVideos.length > 0) return rawPropVideos;
-    if (property?.video_url) {
-      return [{
-        id: 'v-primary',
-        url: property.video_url,
-        title_en: property.title,
-        title_ar: (property as any).title_ar || property.title,
-        category: 'tour',
-      }];
-    }
-    return [];
+    return propertyMediaVideos(rawPropVideos, property?.video_url).map((video, index) => ({
+      ...video,
+      title_ar: video.title_ar || video.title_en || autoVideoTitle(property.title, index + 1, true),
+      title_en: video.title_en || video.title_ar || autoVideoTitle(property.title, index + 1, false),
+    }));
   }, [rawPropVideos, property]);
   
   // Live User Geolocation & Distance State

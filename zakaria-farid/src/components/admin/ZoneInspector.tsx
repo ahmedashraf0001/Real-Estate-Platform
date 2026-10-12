@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Building, Plus, Trash2, ImagePlus, Loader2, X, MousePointerClick, Zap, Droplets, Wind, DoorOpen, Paintbrush, Hammer, Wrench, Film, Play, Video as VideoIcon } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
+import { Building, Plus, Trash2, X, MousePointerClick, Zap, Droplets, Wind, DoorOpen, Paintbrush, Hammer, Wrench } from 'lucide-react';
+import MediaManager from './media/MediaManager';
 import {
   ZoneInstance,
   ZoneSpatialLayout,
-  ZoneVideo,
   TradeTemplate,
   ZONE_TEMPLATES,
   TRADE_TEMPLATES,
@@ -18,10 +16,6 @@ import {
   updateTradeStatus,
   updateAttributeValue,
   removeAttributeFromTrade,
-  addZoneImage,
-  removeZoneImage,
-  addZoneVideo,
-  removeZoneVideo,
   addTradeToZone,
   removeTradeFromZone,
   removeZone,
@@ -78,9 +72,7 @@ const TIER_STYLES: Record<string, { en: string; ar: string; color: string }> = {
 };
 
 export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, declaredArea, nested = false, onClose, isAr = false, buildingUnits = [] }: ZoneInspectorProps) {
-  const [uploading, setUploading] = useState(false);
   const [addTradeOpen, setAddTradeOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const zone = useMemo(
     () => (selectedZoneId ? findZone(zoneInstances, selectedZoneId) : null),
@@ -115,11 +107,8 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
         onZoneInstancesChange={onZoneInstancesChange}
         declaredArea={declaredArea}
         isAr={isAr}
-        uploading={uploading}
-        setUploading={setUploading}
         addTradeOpen={addTradeOpen}
         setAddTradeOpen={setAddTradeOpen}
-        fileRef={fileRef}
         onClose={nested ? onClose : undefined}
       />
       <InspectorStyles />
@@ -134,17 +123,14 @@ interface BodyProps {
   onZoneInstancesChange: (updated: ZoneInstance[]) => void;
   declaredArea?: number;
   isAr: boolean;
-  uploading: boolean;
-  setUploading: (v: boolean) => void;
   addTradeOpen: boolean;
   setAddTradeOpen: (v: boolean) => void;
-  fileRef: React.RefObject<HTMLInputElement | null>;
   onClose?: () => void;
 }
 
 function ZoneInspectorBody({
   zone, zoneInstances, onZoneInstancesChange, declaredArea, isAr, buildingUnits,
-  uploading, setUploading, addTradeOpen, setAddTradeOpen, fileRef, onClose,
+  addTradeOpen, setAddTradeOpen, onClose,
 }: BodyProps) {
   const ElementIcon = BLUEPRINT_ICONS[zone.zone_template_id] ?? Building;
   const unitFacts = resolveBlueprintUnit(zone, buildingUnits);
@@ -225,54 +211,6 @@ function ZoneInspectorBody({
   ).map(a => a.id));
   const existingTradeIds = new Set(zone.trades.map(t => t.trade_template_id));
   const addableTrades = (zoneTpl ? getTradesForZone(zoneTpl) : TRADE_TEMPLATES).filter(t => !existingTradeIds.has(t.id));
-
-  const handleUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setUploading(true);
-    try {
-      const supabase = createClient();
-      const urls: string[] = [];
-      for (const file of Array.from(files)) {
-        const ext = file.name.split('.').pop() || 'jpg';
-        const path = `zone-photos/${zone.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-        const { error } = await supabase.storage.from('property-images').upload(path, file);
-        if (error) throw error;
-        const { data } = supabase.storage.from('property-images').getPublicUrl(path);
-        if (data?.publicUrl) urls.push(data.publicUrl);
-      }
-      let next = zoneInstances;
-      for (const url of urls) next = addZoneImage(next, zone.id, url);
-      onZoneInstancesChange(next);
-      toast.success(isAr ? `تم رفع ${urls.length} صورة` : `${urls.length} photo(s) uploaded`);
-    } catch {
-      toast.error(isAr ? 'فشل رفع الصور' : 'Photo upload failed');
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
-
-  const [videoUrlInput, setVideoUrlInput] = useState('');
-  const [videoTitleInput, setVideoTitleInput] = useState('');
-  const [activeZoneVideoPreview, setActiveZoneVideoPreview] = useState<ZoneVideo | null>(null);
-
-  const handleAddZoneVideo = () => {
-    if (!videoUrlInput.trim()) {
-      toast.error(isAr ? 'يرجى إدخال رابط الفيديو' : 'Please enter video URL');
-      return;
-    }
-    const newVid: ZoneVideo = {
-      id: `zvid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      url: videoUrlInput.trim(),
-      title_en: videoTitleInput.trim() || `${zoneLabel(zone, false)} Walkthrough`,
-      title_ar: videoTitleInput.trim() || `معاينة ${zoneLabel(zone, true)}`,
-      category: 'spec',
-    };
-    onZoneInstancesChange(addZoneVideo(zoneInstances, zone.id, newVid));
-    setVideoUrlInput('');
-    setVideoTitleInput('');
-    toast.success(isAr ? 'تمت إضافة فيديو المعاينة للمنطقة' : 'Zone demo video added');
-  };
 
   return (
     <>
@@ -586,191 +524,10 @@ function ZoneInspectorBody({
       </section>
 
       <section className="zi-section">
-        <div className="zi-section-head">
-          <span className="zi-section-label">{isAr ? 'صور المنطقة' : 'ZONE PHOTOS'}</span>
-          <span className="zi-count">{zone.images?.length ?? 0}</span>
-        </div>
-        {(zone.images?.length ?? 0) > 0 && (
-          <div className="zi-photos">
-            {zone.images!.map((url, i) => (
-              <div key={`${url}-${i}`} className="zi-photo">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={`Zone photo ${i + 1}`} />
-                <button
-                  type="button"
-                  className="zi-photo-x"
-                  aria-label={isAr ? 'حذف الصورة' : 'Remove photo'}
-                  onClick={() => onZoneInstancesChange(removeZoneImage(zoneInstances, zone.id, i))}
-                >
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <button type="button" className="zi-add-btn" disabled={uploading} onClick={() => fileRef.current?.click()}>
-          {uploading ? <Loader2 size={12} className="zi-spin" /> : <ImagePlus size={12} />}
-          <span>{isAr ? 'رفع صور' : 'Upload photos'}</span>
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={e => handleUpload(e.target.files)} />
+        <MediaManager contextLabel={zoneLabel(zone, isAr)} videos={zone.videos ?? []} photos={zone.images ?? []}
+          storagePathPrefix={`zone-photos/${zone.id}-`} isAr={isAr}
+          onChange={media => patchZone({ videos: media.videos, images: media.photos })} />
       </section>
-
-      {/* ─── ZONE VIDEO TOUR ─── */}
-      <section className="zi-section">
-        <div className="zi-section-head">
-          <span className="zi-section-label">{isAr ? 'جولة الفيديو داخل المنطقة' : 'ZONE VIDEO TOUR'}</span>
-          <span className="zi-count">{zone.videos?.length ?? 0}</span>
-        </div>
-
-        {/* Existing Videos List */}
-        {(zone.videos?.length ?? 0) > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-            {zone.videos!.map((v, i) => (
-              <div
-                key={v.id || i}
-                style={{
-                  background: 'var(--admin-card-bg-subtle, #f8fafc)',
-                  border: '1px solid var(--admin-card-border, #cbd5e1)',
-                  borderRadius: 8,
-                  padding: '8px 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                  <Film size={13} color="var(--admin-accent)" />
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--admin-text-title, #0f172a)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {isAr ? (v.title_ar || v.title_en) : (v.title_en || v.title_ar)}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveZoneVideoPreview(v)}
-                    style={{
-                      background: 'var(--admin-accent-subtle, #eff6ff)',
-                      border: 'none',
-                      color: 'var(--admin-accent, #2563eb)',
-                      borderRadius: 4,
-                      padding: '3px 6px',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                    }}
-                  >
-                    <Play size={9} fill="currentColor" />
-                    <span>{isAr ? 'مشاهدة' : 'Play'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="zi-icon-btn danger"
-                    onClick={() => onZoneInstancesChange(removeZoneVideo(zoneInstances, zone.id, v.id || i))}
-                    title={isAr ? 'حذف الفيديو' : 'Remove video'}
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Add Video Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--admin-input-bg, #ffffff)', border: '1px solid var(--admin-input-border, #cbd5e1)', padding: 8, borderRadius: 8 }}>
-          <input
-            type="url"
-            className="zi-attr-val-input"
-            dir="ltr"
-            placeholder={isAr ? 'رابط الفيديو (MP4 / CDN)...' : 'Video URL (MP4 / CDN)...'}
-            value={videoUrlInput}
-            onChange={(e) => setVideoUrlInput(e.target.value)}
-            style={{ width: '100%', fontSize: '11px', height: 30 }}
-          />
-          <div style={{ display: 'flex', gap: 4 }}>
-            <input
-              type="text"
-              className="zi-attr-val-input"
-              dir="auto"
-              placeholder={isAr ? 'عنوان الفيديو...' : 'Video title...'}
-              value={videoTitleInput}
-              onChange={(e) => setVideoTitleInput(e.target.value)}
-              style={{ flex: 1, fontSize: '11px', height: 28 }}
-            />
-            <button
-              type="button"
-              className="zi-add-btn"
-              style={{ padding: '4px 10px', fontSize: '11px', height: 28 }}
-              onClick={handleAddZoneVideo}
-            >
-              <Plus size={11} />
-              <span>{isAr ? 'إضافة' : 'Add'}</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Active Zone Video Preview Modal */}
-      {activeZoneVideoPreview && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.92)',
-            backdropFilter: 'blur(16px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            boxSizing: 'border-box',
-          }}
-          onClick={() => setActiveZoneVideoPreview(null)}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '800px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>
-                {isAr ? (activeZoneVideoPreview.title_ar || activeZoneVideoPreview.title_en) : (activeZoneVideoPreview.title_en || activeZoneVideoPreview.title_ar)}
-              </span>
-              <button
-                type="button"
-                onClick={() => setActiveZoneVideoPreview(null)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid var(--admin-accent-border, rgba(255, 255, 255, 0.2))',
-                  color: '#FFF',
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <LuxuryAmbientVideoPlayer video={activeZoneVideoPreview} autoPlay={true} isAr={isAr} />
-          </div>
-        </div>
-      )}
     </>
   );
 }
@@ -1101,22 +858,8 @@ function InspectorStyles() {
       .zi-add-btn:hover:not(:disabled) { background: var(--admin-accent-subtle, #eff6ff); }
       .zi-add-btn:disabled { opacity: 0.6; cursor: default; }
 
-      .zi-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-      .zi-photo {
-        position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-        border: 1px solid var(--admin-card-border, #cbd5e1);
-      }
-      .zi-photo img { width: 100%; height: 100%; object-fit: cover; }
-      .zi-photo-x {
-        position: absolute; top: 3px; inset-inline-end: 3px;
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 16px; height: 16px; border-radius: 999px;
-        background: var(--admin-input-bg, #ffffff); border: 1px solid var(--admin-card-border, #cbd5e1); color: var(--admin-text-muted, #64748b); cursor: pointer;
-      }
-      .zi-photo-x:hover { color: var(--admin-danger-text, #dc2626); }
 
-      .zi-spin { animation: ziSpin 0.9s linear infinite; }
-      @keyframes ziSpin { to { transform: rotate(360deg); } }
+
     `}</style>
   );
 }

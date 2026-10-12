@@ -1,0 +1,39 @@
+TASK media-manager — one shared media manager (videos + photos) for building, apartment, apartment parts and utility zones; apartment overview video on the public site (branch feat/blueprint-nav, after admin-wizard-split)
+
+WHY
+User review 2026-10-12, mockup approved [user-confirmed 2026-10-12]:
+- Building "فيديوهات الجولة داخل العقار" (AdminPropertyForm): three empty inputs up front (AR title, EN title, URL) plus separate "رفع ملف فيديو" / "إضافة جولة الفيديو" buttons; unclear when to use URL vs upload; clicking add with an empty URL shows the toast "يرجى إدخال رابط الفيديو".
+- Zone panel "جولة الفيديو داخل المنطقة" (ZoneInspector.tsx ~l.620): URL only, no upload.
+- Apartments (bld.unit zones) have no overview video/photos section in the admin, and the public unit view shows none.
+Data already supports all of it: property.videos: PropertyVideo[] and zone.videos: ZoneVideo[] (lib/layering/instances.ts, same shape {id,url,title_ar,title_en,thumbnail,duration,category}); zone.images for photos. NO schema/migration change.
+
+REQUIRED — SHARED COMPONENT (e.g. src/components/admin/media/MediaManager.tsx)
+1. Props: context label (e.g. "المبنى", "شقة 5A", "صالة شقة 5A", "الأسانسير"), videos, photos (optional), onChange, storage path prefix. Used in: building step "الوصف والوسائط" (replaces the video tours card; the existing cover/gallery uploader may stay as is or use the photos part — choose and report), ZoneInspector for every zone type incl. units, rooms and utilities (replaces "جولة الفيديو داخل المنطقة" and the zone photo uploader "صور المنطقة").
+2. Add video: two buttons only — "رفع فيديو من الجهاز" (file picker, accept video/mp4,video/webm,video/quicktime; size limit = the existing upload limit or 200 MB, checked BEFORE upload with an inline error) and "إضافة رابط (يوتيوب / MP4)" which reveals one URL field + "إضافة"; URL validated (https://…) with inline error, never a toast for empty input.
+3. Upload reuses the existing Supabase storage logic (bucket property-images, videos/ prefix; zone uploads under their existing path) and shows a progress bar per item; failure shows an inline retry. No new bucket, no policy change.
+4. Title auto-filled "<context> — فيديو N" (EN "<context> — video N" for title_en), editable inline on the card. Category kept (default 'tour').
+5. Cards: thumbnail (video first frame / YouTube thumbnail / icon fallback), title, source line (مرفوع · size, يوتيوب, رابط), preview (existing ambient player), delete (with confirm), drag reorder. First video = "تعريفي" badge (overview); help line "أول فيديو هو الفيديو التعريفي ويظهر أولاً للعميل".
+6. Photos section in the same component: upload (existing compression path), grid with remove and reorder.
+7. Apartment (bld.unit) zone panel in the admin shows the MediaManager (overview video + photos) like any zone.
+
+REQUIRED — PUBLIC SITE
+8. Unit view and the zone detail side panel (from blueprint-detail-panel) show the zone's first video (overview) with the existing player and the photos; building overview video unchanged. YouTube links render as embeds (existing behaviour if present; otherwise a privacy-friendly youtube-nocookie embed).
+
+COMPATIBILITY
+9. Existing data keeps working: property.video_url legacy fallback, existing videos without titles get the auto title only at display time (do not rewrite stored data), existing zone videos/photos display unchanged.
+
+DO NOT
+- Migrations, storage policy changes, or writes to the DB (Supabase PRODUCTION). Uploading test files to production storage is forbidden: test the upload path with mocks/unit tests only.
+- Nest a <form> in AdminPropertyForm; every button type="button" (implicit submit saves to PRODUCTION). Never press final save/publish.
+- Change blueprint navigation, wizard step order, or unrelated pages. Add dependencies.
+
+TESTS
+RED first: auto-title helper, URL validation, file type/size validation, reorder + overview = first, MediaManager SSR (two add buttons, no empty title/url inputs before choosing link), ZoneInspector renders MediaManager for unit/room/utility zones, public unit view renders overview video when zone.videos[0] exists, legacy video_url fallback. tsc exit 0. npm test: only the 7 known pre-existing failures.
+
+ACCEPTANCE
+Admin needs the user's session (you have none): verify via SSR/unit tests and report so. Public: screenshots of Gouna unit view / zone panel with an overview video ONLY if real data has one; do not add data. If none exists, prove with SSR fixture tests and say so.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105).
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

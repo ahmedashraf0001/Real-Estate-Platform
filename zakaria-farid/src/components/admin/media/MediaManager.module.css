@@ -1,0 +1,20 @@
+.root { width: 100%; min-width: 0; color: var(--admin-text-body); font-family: inherit; }
+.root h3, .root h4 { color: var(--admin-text-title); font-size: .88rem; font-weight: 700; margin: 0 0 12px; }
+.root h4 { margin-top: 20px; }
+.root p, .root small { color: var(--admin-text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-block: 8px; }
+.root button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; border: 1px solid var(--admin-card-border); background: var(--admin-card-bg); color: var(--admin-text-body); border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+.root button:disabled { opacity: .5; cursor: default; }
+.root button:focus-visible, .root input:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: 2px; }
+.root input:not([type=file]) { min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px; background: var(--admin-input-bg); border: 1px solid var(--admin-input-border); color: var(--admin-text-body); border-radius: 6px; font: inherit; font-size: 13px; }
+.actions > input { flex: 1 1 180px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; margin-top: 12px; }
+.card { min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--admin-card-border); border-radius: 12px; background: var(--admin-card-bg); }
+.card label { display: block; font-size: 12px; }
+.thumbnail { position: relative; aspect-ratio: 16/9; display: grid; place-items: center; overflow: hidden; background: var(--admin-card-bg-subtle); border-radius: 6px; }
+.thumbnail img, .thumbnail video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photo { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; }
+.badge { align-self: flex-start; color: var(--admin-accent); font-size: 12px; font-weight: 700; }
+.url { overflow-wrap: anywhere; }
+.root .error { color: var(--admin-danger-text); }
+.root progress { width: 100%; accent-color: var(--admin-accent); }
