@@ -9,6 +9,11 @@ interface GeocodeResult {
   lon: string;
   display_name: string;
   type?: string;
+  types?: string[];
+  class?: string;
+  osm_key?: string;
+  osm_value?: string;
+  Addr_type?: string;
   source?: string;
   rating?: number;
 }
@@ -168,6 +173,7 @@ export async function POST(req: NextRequest) {
             lon: String(p.geometry.location.lng),
             display_name: `${p.name}${p.formatted_address ? ' — ' + p.formatted_address : ''}`,
             type: p.types?.[0] || 'establishment',
+            types: p.types,
             source: 'google_places',
             rating: p.rating,
           })).filter((item: GeocodeResult) => isInsideEgypt(item.lat, item.lon))) as GeocodeResult[];
@@ -185,21 +191,18 @@ export async function POST(req: NextRequest) {
 
     // ─── 3. High-Precision Egyptian Geocoder (Prioritizing Exact City & Streets) ───
     const collected: GeocodeResult[] = [];
-    const seenCoordinates = new Set<string>();
-    const seenTitles = new Set<string>();
+    const seenCandidates = new Set<string>();
 
     const addCandidate = (item: GeocodeResult) => {
       const latNum = parseFloat(item.lat);
       const lonNum = parseFloat(item.lon);
       if (!isInsideEgypt(item.lat, item.lon)) return;
 
-      // Cluster coordinates within ~150 meters
-      const coordKey = `${latNum.toFixed(3)},${lonNum.toFixed(3)}`;
-      const mainTitle = item.display_name.split(/[,—]/)[0].trim().toLowerCase();
+      // Do not discard nearby POIs in favor of an earlier street candidate.
+      const key = `${item.display_name.split(/[,—]/)[0].trim().toLowerCase()},${latNum},${lonNum},${item.type}`;
       
-      if (!seenCoordinates.has(coordKey) && !seenTitles.has(mainTitle)) {
-        seenCoordinates.add(coordKey);
-        seenTitles.add(mainTitle);
+      if (!seenCandidates.has(key)) {
+        seenCandidates.add(key);
         collected.push(item);
       }
     };
@@ -225,6 +228,7 @@ export async function POST(req: NextRequest) {
             lon: String(d.lon),
             display_name: fullLabel,
             type: d.type || d.class || 'street',
+            class: d.class,
             source: 'osm',
           });
         }
@@ -248,6 +252,8 @@ export async function POST(req: NextRequest) {
             lon: String(f.geometry.coordinates[0]),
             display_name: fullTitle || p.name,
             type: p.osm_value || p.type || 'place',
+            osm_key: p.osm_key,
+            osm_value: p.osm_value,
             source: 'photon',
           });
         }
@@ -270,6 +276,7 @@ export async function POST(req: NextRequest) {
               lon: String(c.location.x),
               display_name: sub ? `${title} — ${sub}` : title,
               type: c.attributes?.Type || c.attributes?.Addr_type || 'landmark',
+              Addr_type: c.attributes?.Addr_type,
               source: 'arcgis',
             });
           }

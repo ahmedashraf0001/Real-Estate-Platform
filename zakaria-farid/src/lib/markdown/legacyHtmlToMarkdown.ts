@@ -1,4 +1,4 @@
-const legacyTag = /<\/?(?:p|h[1-6]|ul|ol|li|strong|b|em|i|br|blockquote|script|style|iframe)\b[^>]*>/i;
+const legacyTag = /<\/?(?:p|h[1-6]|hr|ul|ol|li|strong|b|em|i|br|blockquote|script|style|iframe)\b[^>]*>/i;
 
 function decodeEntities(text: string): string {
   const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
@@ -53,7 +53,9 @@ export function legacyHtmlToMarkdown(input: string): string {
     else if (tag === 'br') result = result.replace(/[ \t]+$/, '') + '\n';
     else if (/^h[1-6]$/.test(tag)) {
       breakLine(2);
-      if (!closing) result += Number(tag[1]) <= 3 ? '### ' : '#### ';
+      if (!closing) result += Number(tag[1]) <= 2 ? '## ' : Number(tag[1]) === 3 ? '### ' : '#### ';
+    } else if (tag === 'hr' && !closing) {
+      breakLine(2); result += '---'; breakLine(2);
     } else if (tag === 'ul' || tag === 'ol') {
       breakLine(itemDepth ? 1 : 2);
       if (closing) lists.pop(); else lists.push(tag);

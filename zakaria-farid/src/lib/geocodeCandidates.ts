@@ -9,10 +9,17 @@ function normalizePlace(text: string): string {
     .replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-// Locality/address phrases outweigh a matching establishment name. Derive phrases
-// from provider labels rather than a partial hardcoded registry of Egyptian cities.
-export function rankGeocodeCandidates<T extends { display_name: string }>(query: string, candidates: readonly T[]): T[] {
+type PlaceCandidate = { display_name: string; type?: string; types?: string[]; class?: string; osm_key?: string; osm_value?: string; Addr_type?: string };
+
+// Provider metadata distinguishes named establishments from address/area matches.
+export function rankGeocodeCandidates<T extends PlaceCandidate>(query: string, candidates: readonly T[]): T[] {
   const normalizedQuery = ` ${normalizePlace(query)} `;
+  const placeQuery = /(?:مستشفي|مسجد|مدرسه|جامعه|عياده|شارع|طريق|hospital|mosque|school|clinic|university|street|road)/.test(normalizedQuery);
+  const kind = (candidate: T) => {
+    const metadata = [candidate.type, ...(candidate.types ?? []), candidate.class, candidate.osm_key, candidate.osm_value, candidate.Addr_type].filter(Boolean).join(' ').toLowerCase();
+    const poi = /\b(?:poi|establishment|point_of_interest|amenity|hospital|clinic|school|mosque|place_of_worship|university|shop|tourism|healthcare)\b/.test(metadata);
+    return placeQuery ? Number(poi) : 0;
+  };
   const score = (candidate: T) => {
     const parts = candidate.display_name.split(/[,،—]/);
     const words = normalizePlace(parts.length > 1 ? parts.slice(1).join(' ') : parts[0]).split(' ');
@@ -25,6 +32,6 @@ export function rankGeocodeCandidates<T extends { display_name: string }>(query:
     }
     return best;
   };
-  return candidates.map((item, index) => ({ item, index, score: score(item) }))
-    .sort((a, b) => b.score - a.score || a.index - b.index).map(({ item }) => item);
+  return candidates.map((item, index) => ({ item, index, kind: kind(item), score: score(item) }))
+    .sort((a, b) => b.kind - a.kind || b.score - a.score || a.index - b.index).map(({ item }) => item);
 }

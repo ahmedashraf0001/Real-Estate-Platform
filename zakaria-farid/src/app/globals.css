@@ -360,6 +360,10 @@ body {
 }
 
 /* Arabic RTL typography */
+/* Horizontal clipping must not create a body scroll container above public
+   blueprint sticky details. Fullscreen's inline scroll lock still wins. */
+body:has(.blueprint-studio-root:not([data-blueprint-admin])) { overflow-x: clip; }
+
 [dir="rtl"] body,
 [lang="ar"] body {
   font-family: var(--font-arabic);
@@ -1333,9 +1337,11 @@ div[style*="background:#ffffff"] select {
 .public-status-badge.public-status-reserved { background: var(--reserved-bg); border-color: var(--reserved-border); color: var(--reserved-text); }
 .public-status-badge svg { flex-shrink: 0; color: inherit; }
 .public-sold-media img { filter: saturate(.6) brightness(.92); }
-.mini-markdown { color: var(--text-secondary); line-height: 1.85; overflow-wrap: anywhere; }
+.mini-markdown { color: var(--text-secondary); line-height: 1.85; overflow-wrap: anywhere; text-align: start; }
 .mini-markdown p { margin: 0 0 1em; }
-.mini-markdown h3, .mini-markdown h4 { color: var(--text-primary); font-weight: 700; margin: 1.25em 0 .5em; line-height: 1.5; }
+.mini-markdown h2, .mini-markdown h3, .mini-markdown h4 { color: var(--text-primary); font-weight: 700; margin: 1.25em 0 .5em; line-height: 1.5; }
+.mini-markdown h2 { font-size: 1.375rem; }
+.mini-markdown hr { border: 0; border-block-start: 1px solid var(--border-subtle); margin-block: 1.5em; }
 .mini-markdown h3 { font-size: 1.25rem; }
 .mini-markdown h4 { font-size: 1.0625rem; }
 .mini-markdown ul, .mini-markdown ol { padding-inline-start: 1.5em; margin: 0 0 1em; }

@@ -1,0 +1,44 @@
+TASK review-fixes-1013 — fixes from the user's review on the dev server (branch feat/blueprint-nav, after fbb6769)
+
+WHY [user-confirmed 2026-10-13, screenshots]
+1. Public blueprint (BuildingBlueprintPreview, zone detail side panel from blueprint-detail-panel): the zone panel OVERLAYS the plan and hides tiles (e.g. apartment 1B: the panel covers the left half of the tiles). It is also stuck inside the plan box: it scrolls with its own inner scrollbar and is cut off when the page scrolls.
+2. Admin map search (MapPicker + api/admin/geocode): searching "مستشفى العاصمة منيا القمح" puts the pin about 300 m away from the hospital that Google Maps shows on the same map (مستشفى العاصمة التخصصي). The pin "overshoots": it lands on a street/area match, not the named place.
+3. Admin "موقعي الحالي" (MapPicker.tsx ~l.287): the user is in Minya El Qamh; the button moved the pin to Cairo (30.06263, 31.24967) and the toast said "تم تحديد موقعك الحالي بدقة عبر GPS". A desktop PC has no GPS; the browser returned a coarse IP/Wi-Fi position, and the code accepts any accuracy.
+4. Markdown (miniMarkdown.ts and the editor preview): real descriptions use "#" and "##" headings and "---" rules; these show as literal text. In the RTL page, English paragraphs and lists are right-aligned with bullets detached on the left.
+
+REQUIRED
+A. Blueprint zone panel (public only; admin editor unchanged)
+ 1. Desktop/tablet (>= 900px): the panel never covers tiles. Layout = floor rail | plan | panel as columns. When a zone is selected, the plan column shrinks (or the plan scales to fit) so that every tile stays fully visible. Closing the panel restores the full width. Keep the transition short (<= 200 ms, respect prefers-reduced-motion).
+ 2. The panel is sticky within the blueprint section (position: sticky, top below the site header; max-height: viewport minus the header) so it stays in view while the page scrolls through the blueprint. Its own scroll is only for content longer than that height. It is not clipped by the plan box.
+ 3. Phone (< 900px): keep the bottom sheet. The selected tile must stay visible above the sheet (scroll it into view if needed).
+ 4. Fullscreen mode: the same no-overlap rule.
+B. Map search accuracy
+ 5. When the query names a place (hospital, mosque, school, street + city), prefer POI/establishment candidates over street/area ones in rankGeocodeCandidates (src/lib/geocodeCandidates.ts). Use the engine's type/class field (Google Places types, Nominatim class/type, Photon osm_key/osm_value, ArcGIS Addr_type).
+ 6. The pin goes exactly to the chosen candidate's coordinates. Check that the map flyTo/setView does not apply an offset and that the marker anchor is on the point.
+ 7. Report the top 3 results with coordinates and types for "مستشفى العاصمة منيا القمح" and "شارع مستشفى العاصمة, منيا القمح" (live read-only HTTP to the route or engines).
+C. موقعي الحالي
+ 8. Use position.coords.accuracy. If accuracy <= 1500 m: move the pin and say "تم تحديد موقعك (±N م)". Otherwise do NOT move the pin: show an inline notice "موقعك من المتصفح تقريبي (±N كم) — ابحث باسم المكان أو اسحب الدبوس" with a secondary button "انقل الدبوس رغم ذلك". Never claim GPS. On error: inline message with the reason (permission denied / unavailable / timeout), and no silent jump to a fallback city. Review resolveWithNetwork (~l.250-285): an IP lookup is coarse, so apply the same rule. The Minya El Qamh fallback must not silently set the pin either.
+D. Markdown
+ 9. Headings: "#", "##", "###" and "####" are all supported. In descriptions, map # and ## to h2/h3 styled as section titles, ### to h3 and #### to h4. Keep the visual hierarchy calm: no giant h1.
+ 10. "---", "***" or "___" alone on a line render as an <hr> styled as a thin hairline.
+ 11. Direction: each block (p, heading, li, list) gets dir="auto" AND text-align: start, so English blocks are left-aligned with bullets on the left, and Arabic blocks are right-aligned. Lists set their direction from their first item. This applies to the public description, the editor preview, and light and dark themes.
+ 12. Update the toolbar help line to include "عناوين (#)" and "خط فاصل (---)". The legacy HTML converter maps h1-h2 to ## and hr to ---.
+ 13. Still no links, no raw HTML, no tables (a pipe line stays text).
+
+DO NOT
+- Change the DB (Supabase PRODUCTION, read-only), migrations, or dependencies. Press save/publish. Nest a <form> in AdminPropertyForm; every button type="button".
+- Change the admin blueprint editor, the wizard order, or the media manager.
+
+TESTS
+RED first:
+ - miniMarkdown: # / ## / --- / dir+start alignment classes; the user's sample (Price | Beds line, ## Overview, ---, bullets with **bold:**) renders with no literal # or ---.
+ - rankGeocodeCandidates: POI over street when the query names a hospital.
+ - geolocation decision helper (pure): accuracy thresholds, error reasons, no fallback pin.
+ - blueprint SSR/CSS contract: the panel is a layout column (not absolute over the plan) and sticky.
+Gates: tsc exit 0. npm test: only the 7 known baseline failures (1044+ total).
+Capture: public blueprint with a zone selected at 1440, 1024 and 390, AR, dark and light. Assert in the browser that no tile's bounding box intersects the panel's box at 1440/1024. Show the sticky panel after scrolling 400 px. Show the description with the user's sample in AR and EN pages.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105) and a separate gitignored build dir; restore tsconfig.json/next-env.d.ts.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

@@ -2,7 +2,7 @@ import { legacyHtmlToMarkdown } from './legacyHtmlToMarkdown';
 import { createElement as h, Fragment, type ReactNode } from 'react';
 
 type Inline = string | { tag: 'strong' | 'em'; children: Inline[] };
-type Block = { tag: 'p' | 'h3' | 'h4' | 'ul' | 'ol'; lines: Inline[][] };
+type Block = { tag: 'p' | 'h2' | 'h3' | 'h4' | 'ul' | 'ol' | 'hr'; lines: Inline[][] };
 
 function inline(text: string): Inline[] {
   function parse(start: number, stop?: string): { nodes: Inline[]; end: number; closed: boolean } {
@@ -37,32 +37,44 @@ function blocks(text: string): Block[] {
   const result: Block[] = [];
   for (const line of legacyHtmlToMarkdown(text).replace(/\r\n?/g, '\n').split('\n')) {
     if (!line.trim()) { result.push({ tag: 'p', lines: [] }); continue; }
-    const heading = line.match(/^(#{3,4})\s+(.+)$/);
+    if (/^\s*(?:---|\*\*\*|___)\s*$/.test(line)) { result.push({ tag: 'hr', lines: [] }); continue; }
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
     const list = line.match(/^\s*(?:([-*])\s+|(\d+)\.\s+)(.*)$/);
-    const tag = heading ? heading[1].length === 3 ? 'h3' : 'h4' : list ? list[1] ? 'ul' : 'ol' : 'p';
+    const tag = heading ? heading[1].length === 1 ? 'h2' : heading[1].length === 4 ? 'h4' : 'h3' : list ? list[1] ? 'ul' : 'ol' : 'p';
     const content = inline(heading ? heading[2] : list ? list[3] : line);
     const previous = result[result.length - 1];
     if (previous?.tag === tag && previous.lines.length && (tag === 'p' || tag === 'ul' || tag === 'ol')) previous.lines.push(content);
     else result.push({ tag, lines: [content] });
   }
-  return result.filter(b => b.lines.length);
+  return result.filter(b => b.lines.length || b.tag === 'hr');
 }
 
 function renderInline(nodes: Inline[]): ReactNode[] {
   return nodes.map((node, key) => typeof node === 'string' ? node : h(node.tag, { key }, renderInline(node.children)));
 }
 
+function plainInline(nodes: Inline[]): string {
+  return nodes.map(node => typeof node === 'string' ? node : plainInline(node.children)).join('');
+}
+
+// dir=auto skips descendants with their own dir attribute. Lists therefore
+// use the first item's first strong character for the marker side as well.
+function firstDirection(nodes: Inline[]): 'rtl' | 'ltr' | undefined {
+  const text = plainInline(nodes);
+  const first = text.match(/\p{L}/u)?.[0];
+  return first ? /[\u0590-\u08ff]/u.test(first) ? 'rtl' : 'ltr' : undefined;
+}
+
 /** Safe, limited Markdown: React escapes every literal, including raw HTML. */
 export function miniMarkdown(text: string): ReactNode[] {
-  return blocks(text).map((block, key) => h(block.tag, { key, dir: 'auto' },
+  return blocks(text).map((block, key) => block.tag === 'hr' ? h('hr', { key }) : h(block.tag, { key, dir: 'auto', style: { textAlign: 'start', ...(block.tag === 'ul' || block.tag === 'ol' ? { direction: firstDirection(block.lines[0]) } : {}) } },
     block.tag === 'ul' || block.tag === 'ol'
-      ? block.lines.map((line, i) => h('li', { key: i, dir: 'auto' }, renderInline(line)))
+      ? block.lines.map((line, i) => h('li', { key: i, dir: 'auto', style: { textAlign: 'start' } }, renderInline(line)))
       : block.lines.flatMap((line, i) => [...(i ? [h('br', { key: `br-${i}` })] : []), h(Fragment, { key: i }, renderInline(line))])
   ));
 }
 
 /** Same grammar as the renderer; unsupported syntax remains plain text. */
 export function stripMarkdown(text: string): string {
-  const plain = (nodes: Inline[]): string => nodes.map(n => typeof n === 'string' ? n : plain(n.children)).join('');
-  return blocks(text).flatMap(b => b.lines.map(plain)).join(' ').replace(/\s+/g, ' ').trim();
+  return blocks(text).flatMap(b => b.lines.map(plainInline)).join(' ').replace(/\s+/g, ' ').trim();
 }

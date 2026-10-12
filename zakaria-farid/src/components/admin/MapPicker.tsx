@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 import { isInsideEgypt, rankGeocodeCandidates } from '@/lib/geocodeCandidates';
+import { locationDecision, locationError } from '@/lib/geolocationDecision';
 
 const sanctumIcon = (label: string) => divIcon({
   html: `
@@ -33,7 +34,7 @@ const sanctumIcon = (label: string) => divIcon({
   `,
   className: 'sanctum-custom-marker',
   iconSize: [220, 50],
-  iconAnchor: [110, 25],
+  iconAnchor: [110, 8],
 });
 
 function MapResizer() {
@@ -110,6 +111,11 @@ interface SearchResultItem {
   lon: string;
   display_name: string;
   type?: string;
+  types?: string[];
+  class?: string;
+  osm_key?: string;
+  osm_value?: string;
+  Addr_type?: string;
   source?: string;
   rating?: number;
 }
@@ -134,6 +140,8 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
   const [showResultsDropdown, setShowResultsDropdown] = useState(false);
   const [searchNotFoundMsg, setSearchNotFoundMsg] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  const [coarseLocation, setCoarseLocation] = useState<[number, number] | null>(null);
   
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchRequest = useRef(0);
@@ -258,51 +266,31 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
     toast.success(isAr ? 'تم تثبيت الموقع المختار على الخريطة' : 'Location pinned successfully');
   };
 
-  const handleLocateMe = async () => {
+  const handleLocateMe = () => {
     setIsLocating(true);
-    setSearchNotFoundMsg(null);
-
-    const resolveWithNetwork = async () => {
-      try {
-        const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3000) });
-        const data = await res.json();
-        if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-          setTargetCenter([data.latitude, data.longitude]);
-          onChange(data.latitude, data.longitude);
-          toast.info(isAr 
-            ? `تم تحديد النطاق التقريبي (${data.city || 'الشرقية / مصر'}).` 
-            : `Located near ${data.city || 'Egypt'}.`);
-          return true;
-        }
-      } catch {}
-
-      setTargetCenter([30.5180, 31.3521]);
-      onChange(30.5180, 31.3521);
-      toast.info(isAr 
-        ? 'تم توجيه الخريطة لمدينة منيا القمح. اسحب الدبوس للموقع المحدد.' 
-        : 'Centered on Minya El Qamh City. Drag the pin to your property location.');
-      return true;
-    };
-
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude: lat, longitude: lon } = position.coords;
-          setTargetCenter([lat, lon]);
-          onChange(lat, lon);
-          setIsLocating(false);
-          toast.success(isAr ? 'تم تحديد موقعك الحالي بدقة عبر GPS' : 'Current location pinned via GPS');
-        },
-        async () => {
-          await resolveWithNetwork();
-          setIsLocating(false);
-        },
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
-      );
-    } else {
-      await resolveWithNetwork();
+    setLocationNotice(null);
+    setCoarseLocation(null);
+    if (!('geolocation' in navigator)) {
+      setLocationNotice(locationError(2, isAr));
       setIsLocating(false);
+      return;
     }
+    navigator.geolocation.getCurrentPosition(position => {
+      const { latitude: lat, longitude: lon, accuracy } = position.coords;
+      const decision = locationDecision(accuracy, isAr);
+      if (decision.move) {
+        setTargetCenter([lat, lon]);
+        onChange(lat, lon);
+        toast.success(decision.message);
+      } else {
+        setLocationNotice(decision.message);
+        setCoarseLocation([lat, lon]);
+      }
+      setIsLocating(false);
+    }, error => {
+      setLocationNotice(locationError(error.code, isAr));
+      setIsLocating(false);
+    }, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
   };
 
   const handleQuickDistrictJump = (district: QuickDistrict) => {
@@ -331,6 +319,17 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
   return (
     <div className="sanctum-map-picker-root">
+      {locationNotice && <div className="sanctum-location-alert" role="status">
+        <div className="alert-content">
+          <p className="alert-text">{locationNotice}</p>
+          {coarseLocation && <button type="button" className="sanctum-map-locate-btn" onClick={() => {
+            setTargetCenter(coarseLocation);
+            onChange(coarseLocation[0], coarseLocation[1]);
+            setCoarseLocation(null);
+            setLocationNotice(null);
+          }}>{isAr ? 'انقل الدبوس رغم ذلك' : 'Move the pin anyway'}</button>}
+        </div>
+      </div>}
       {/* Top Search & Location Toolbar */}
       <div className="sanctum-map-toolbar">
         <div className="sanctum-search-wrap" ref={searchContainerRef}>

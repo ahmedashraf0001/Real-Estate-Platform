@@ -6,6 +6,7 @@ import * as legacyMarkdown from '../../markdown/legacyHtmlToMarkdown';
 import * as markdown from '../../markdown/miniMarkdown';
 import * as steps from '../../propertyWizardSteps';
 import * as geocode from '../../geocodeCandidates';
+import * as geolocation from '../../geolocationDecision';
 import * as partners from '../partnersDirectory';
 import * as layering from '../../layering';
 import * as blueprint from '../../layering/buildingBlueprint';
@@ -92,7 +93,8 @@ export function adminHarness(file: 'AdminPropertyForm' | 'MapPicker' | 'media/Me
     crypto: globalThis.crypto,
     window: { location, confirm: () => true, history: { replaceState: (_a: any, _b: any, url: string) => { location.href = url; location.search = new URL(url).search; } } },
     document: { body: { setAttribute() {}, removeAttribute() {} }, addEventListener() {}, removeEventListener() {} },
-    require(id: string) { if (id in adapters) return adapters[id]; if (id in imports) return imports[id]; throw new Error(`Unexpected import ${id}`); },
+    navigator: adapters.navigator ?? {},
+    require(id: string) { if (id === '@/lib/geolocationDecision') return geolocation; if (id in adapters) return adapters[id]; if (id in imports) return imports[id]; throw new Error(`Unexpected import ${id}`); },
   }, { filename: file });
   return { location, validationCalls, get form() { return form; },
     render(props: any) {

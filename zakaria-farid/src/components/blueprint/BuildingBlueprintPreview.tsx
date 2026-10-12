@@ -50,25 +50,25 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const wasOpen = useRef(false);
   const open = Boolean(selected);
   useLayoutEffect(() => {
-    if (!open || edit) return;
-    const drawing = rootRef.current?.querySelector<HTMLElement>('[data-blueprint-drawing]');
+    if (!open || edit || window.innerWidth >= 900) return;
+    const tile = rootRef.current?.querySelector<HTMLElement>('[data-blueprint-drawing] [aria-pressed="true"]');
     const panel = panelRef.current;
-    if (!drawing || !panel) return;
+    if (!tile || !panel) return;
     const fit = () => {
-      const rect = drawing.getBoundingClientRect();
-      const navbarBottom = fullscreen ? 0 : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-navbar-bottom')) || 0;
-      const top = Math.max(rect.top + drawing.clientTop, navbarBottom ? navbarBottom + 8 : 0);
-      const bottom = Math.min(rect.bottom - drawing.clientTop, window.innerHeight);
-      panel.style.setProperty('--bp-detail-top', `${Math.max(0, top - rect.top - drawing.clientTop)}px`);
-      panel.style.setProperty('--bp-detail-height', `${Math.max(0, bottom - top)}px`);
+      const box = tile.getBoundingClientRect();
+      const sheet = panel.getBoundingClientRect();
+      if (box.bottom > sheet.top - 12) {
+        const delta = box.bottom - sheet.top + 12;
+        const scroller = fullscreen ? rootRef.current?.querySelector<HTMLElement>('[data-blueprint-drawing]') : null;
+        if (scroller) scroller.scrollTop += delta;
+        else window.scrollBy({ top: delta, behavior: 'instant' });
+      }
     };
     fit();
     const observer = new ResizeObserver(fit);
-    observer.observe(drawing);
-    window.addEventListener('scroll', fit, true);
-    window.addEventListener('resize', fit);
-    return () => { observer.disconnect(); window.removeEventListener('scroll', fit, true); window.removeEventListener('resize', fit); };
-  }, [open, fullscreen]);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [open, selectedId, fullscreen, edit]);
   useEffect(() => {
     if (edit) return;
     if (open && !wasOpen.current) {
@@ -268,9 +268,9 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
       </nav>
       {ed.historyBar}{ed.topActions}{!ed.editing && actions}
     </div>
-    <div className={styles.workspace}>
+    <div className={`${styles.workspace} ${!ed.editing ? styles.publicWorkspace : ''} ${!ed.editing && open ? styles.withDetail : ''}`}>
       <div className={styles.planColumn} data-blueprint-drawing>
-        <div className={styles.planDrawing} style={view.mode === 'elevation' ? undefined : { transform: `scale(${zoom})` }}>
+        <div className={styles.planDrawing} style={view.mode === 'elevation' ? undefined : { transform: `scale(${!ed.editing && open ? Math.min(zoom, 1) : zoom})` }}>
         {view.mode === 'elevation' ? elevation ?? <p className={styles.empty}>{text('اختر دوراً من القائمة.', 'Choose a floor from the rail.')}</p> : view.mode === 'unit' ? <div className={styles.roomPlan}>
           {apartment.front.length > 0 && <div className={styles.aptFront}>{apartment.front.map(roomTile)}</div>}
           <div className={styles.aptSide}>{apartment.social.map(roomTile)}</div>
@@ -346,6 +346,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           {ed.editing && <div className={styles.planAdd}>{ed.addSlot('unit', units)}</div>}
         </div>}
         </div>
+      </div>
       {!ed.editing && selected && <aside ref={panelRef} data-blueprint-detail data-lenis-prevent className={styles.detail} role="region" aria-label={text('تفاصيل العنصر', 'Element details')}>
         <div className={styles.detailHeader}>
           <span className={styles.dragHandle} aria-hidden="true" />
@@ -363,7 +364,6 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         {selected.zone_template_id === 'bld.unit' && onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(selected)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
         </div>
       </aside>}
-      </div>
       {ed.editing && <aside data-blueprint-detail className={styles.editorInspector} aria-label={text('تفاصيل المساحة', 'Space inspector')}>
         <ZoneInspector zoneInstances={zones} onZoneInstancesChange={ed.commit} selectedZoneId={selectedId}
           buildingUnits={inventory} isAr={isAr} docked onCopy={ed.duplicate} onDelete={ed.remove} />

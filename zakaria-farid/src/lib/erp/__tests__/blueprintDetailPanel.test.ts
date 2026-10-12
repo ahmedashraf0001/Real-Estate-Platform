@@ -21,10 +21,11 @@ test('facility grouping retains first real zone and counts distinct floors by di
  assert.equal(groups[0].zone.id, 'stairs0');
  assert.equal(groups[0].count, 3);
 });
-test('selected detail is inside drawing before rail, absent from info strip, and retains empty states', () => {
+test('selected detail is a sibling after drawing before rail, absent from info strip, and retains empty states', () => {
  const html = render();
  const panel = html.indexOf('data-blueprint-detail');
  assert.ok(panel > html.indexOf('data-blueprint-drawing') && panel < html.indexOf('data-floor-rail'));
+ assert.match(html.slice(0, panel), /<\/div><\/div><aside[^>]*$/);
  assert.equal((html.match(/data-blueprint-detail/g) ?? []).length, 1);
  assert.doesNotMatch(html.slice(html.indexOf('data-blueprint-info')), /Element photos|Execution status for this element/);
  assert.match(html, /No photos added yet/);

@@ -37,14 +37,14 @@
 .legend { display: flex; flex-wrap: wrap; gap: 18px; padding: 18px 0; font-size: 12px; color: var(--text-secondary, #B0B4BE); }
 .pill { display: inline-block; font-size: 12px; line-height: 1.5; white-space: nowrap; padding: 4px 9px; border-radius: 20px; background: color-mix(in srgb, currentColor 7%, transparent); border: 1px solid var(--bp-line); }
 .root .available { color: #65B98E; }
-.detail { position: absolute; z-index: 25; top: var(--bp-detail-top, 0); height: var(--bp-detail-height, 100%); inset-inline-end: 0; width: min(340px, 40%); min-width: 0; display: flex; flex-direction: column; overflow: hidden; border-inline-start: 1px solid var(--bp-line); background: var(--bg-surface); color: var(--text-primary); backdrop-filter: blur(20px); }
+.detail { position: sticky; top: calc(var(--map-navbar-bottom, 100px) + 8px); align-self: start; max-height: calc(100dvh - var(--map-navbar-bottom, 100px) - 16px); min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--bp-line); border-radius: 10px; background: var(--bg-surface); color: var(--text-primary); }
 .detailHeader { display: flex; justify-content: flex-end; padding: 8px; flex-shrink: 0; }
 .detailBody { padding: 0 16px 16px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
 .dragHandle { display: none; }
 .root .detail .detailBody :global(.zi-root) { position: static; width: 100%; max-height: none; height: auto; border: 0; box-shadow: none; border-radius: 0; }
 .detail .trades li { flex-wrap: wrap; }
 .detail .available { color: var(--text-primary); }
-@media(max-width:768px) {
+@media(max-width:899px) {
   .root .detail { position: fixed; inset: auto 0 0; width: 100%; height: auto; max-height: 60dvh; border: 1px solid var(--bp-line); border-radius: 12px 12px 0 0; z-index: 15000; }
   .detailHeader { position: relative; padding-top: 18px; }
   .dragHandle { display: block; position: absolute; top: 8px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 4px; background: var(--text-secondary); }
@@ -357,4 +357,23 @@
   .fullscreen .core svg { flex-shrink: 0; width: 18px; height: 18px; }
   .fullscreen .room { font-size: 12px; }
   .fullscreen .roomPlan { grid-template-rows: minmax(0,.8fr) minmax(0,1.7fr) minmax(0,3fr); gap: 4px; }
+}
+
+/* Public details occupy a separate track; the editor retains its own grid. */
+.publicWorkspace { grid-template-columns: 160px minmax(0,1fr); grid-template-areas: 'floors plan'; }
+.publicWorkspace > .floors { grid-area: floors; }
+.publicWorkspace > .planColumn { grid-area: plan; }
+.publicWorkspace > .detail { grid-area: detail; }
+.withDetail { grid-template-columns: 140px minmax(0,1fr) minmax(220px, 28%); grid-template-areas: 'floors plan detail'; }
+.fullscreen .detail { top: 0; max-height: 100%; }
+@media(max-width:899px) {
+  .publicWorkspace, .fullscreen .publicWorkspace { display: flex; flex-direction: column; }
+  .fullscreen .detail { top: auto; max-height: 50dvh; }
+  .publicWorkspace > .floors { order: -1; flex-direction: row; overflow-x: auto; }
+  .publicWorkspace > .floors button { flex: 0 0 140px; }
+  .fullscreen .publicWorkspace > .planColumn { overflow-y: auto; }
+  .publicWorkspace.withDetail > .planColumn { margin-bottom: 60dvh; }
+  .fullscreen .publicWorkspace.withDetail > .planColumn { margin-bottom: 0; }
+  .fullscreen .publicWorkspace.withDetail .planDrawing { height: auto; padding-bottom: 60dvh; }
+  .fullscreen .publicWorkspace.withDetail .roomPlan { height: auto; min-height: 420px; grid-template-rows: auto; }
 }

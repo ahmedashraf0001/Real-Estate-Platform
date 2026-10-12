@@ -26,6 +26,6 @@ export default function MarkdownDescriptionEditor({ value, onChange, language, i
     </div>
     {preview ? <div className={`mini-markdown ${styles.markdownPreview}`} aria-live="polite">{miniMarkdown(value)}</div>
       : <textarea ref={textarea} className={styles.input} rows={8} dir={language === 'ar' ? 'rtl' : 'ltr'} aria-label={language === 'ar' ? 'الوصف بالعربية' : 'English description'} value={value} onChange={e => onChange(e.target.value)} />}
-    <p className={styles.markdownHelp}>{isAr ? 'يدعم: **عريض**، *مائل*، القوائم، العناوين' : 'Supports: **bold**, *italic*, lists, headings'}</p>
+    <p className={styles.markdownHelp}>{isAr ? 'يدعم: **عريض**، *مائل*، القوائم، عناوين (#)، خط فاصل (---)' : 'Supports: **bold**, *italic*, lists, headings (#), horizontal rule (---)'}</p>
   </div>;
 }

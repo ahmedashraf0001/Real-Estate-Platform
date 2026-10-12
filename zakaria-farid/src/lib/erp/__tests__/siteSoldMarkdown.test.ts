@@ -9,11 +9,11 @@ import { PublicStatusBadge } from '../../../components/property/PublicStatusBadg
 const html = (text: string) => renderToStaticMarkup(createElement('div', {}, miniMarkdown(text)));
 test('limited Markdown renders Arabic, nested emphasis, blocks and single breaks', () => {
   const out = html('### عنوان\n#### Details\n\nنص **عريض *مائل***\nEnglish\n\n- أول\n* ثان\n\n1. One\n2. Two');
-  assert.match(out, /<h3 dir="auto">عنوان<\/h3>/);
-  assert.match(out, /<h4 dir="auto">Details<\/h4>/);
+  assert.match(out, /<h3 dir="auto"[^>]*>عنوان<\/h3>/);
+  assert.match(out, /<h4 dir="auto"[^>]*>Details<\/h4>/);
   assert.match(out, /<strong>عريض <em>مائل<\/em><\/strong><br\/>English/);
-  assert.match(out, /<ul dir="auto"><li dir="auto">أول<\/li><li dir="auto">ثان<\/li><\/ul>/);
-  assert.match(out, /<ol dir="auto"><li dir="auto">One/);
+  assert.match(out, /<ul dir="auto"[^>]*><li dir="auto"[^>]*>أول<\/li><li dir="auto"[^>]*>ثان<\/li><\/ul>/);
+  assert.match(out, /<ol dir="auto"[^>]*><li dir="auto"[^>]*>One/);
   assert.match(html('*italic **bold***'), /<em>italic <strong>bold<\/strong><\/em>/);
 });
 test('unsupported Markdown, links and unmatched markers stay literal; dangerous HTML is discarded', () => {

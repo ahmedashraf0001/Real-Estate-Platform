@@ -84,5 +84,5 @@ test('edit token block uses admin surfaces and accents without public gold', () 
  assert.doesNotMatch(block, /var\(--gold-|#[\da-f]{3,8}\b/i);
 });
 test('public preview SSR snapshot includes approved sold and reserved legend badges', () => {
- assert.equal(createHash('sha256').update(render(false)).digest('hex'), 'bdf90054173915ea676d3a51f9c556c33141fd0f92d44be454d4b91665f4ca66');
+ assert.equal(createHash('sha256').update(render(false)).digest('hex'), '4e2ec856b32a2f49f38e3c6db93facc503ea3f37fafac00ce772aa874f7c104e');
 });

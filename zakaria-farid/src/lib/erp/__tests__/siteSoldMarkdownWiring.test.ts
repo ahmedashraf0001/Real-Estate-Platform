@@ -55,7 +55,7 @@ test('real detail header/banner and grid/list cards render sold badge and limite
   const detail = renderToStaticMarkup(React.createElement(Detail, { property, locale: 'en' }));
   assert.match(detail, /data-public-status="sold"/);
   assert.match(detail, /This unit has been sold \(Sold\)/);
-  assert.match(detail, /<h3 dir="auto">Heading<\/h3>/);
+  assert.match(detail, /<h3 dir="auto" style="text-align:start">Heading<\/h3>/);
   assert.match(detail, /<strong>Bold<\/strong> text/);
   for (const viewMode of ['grid', 'list']) {
     const card = renderToStaticMarkup(React.createElement(Card, { property, locale: 'en', viewMode, onSelect() {} }));
