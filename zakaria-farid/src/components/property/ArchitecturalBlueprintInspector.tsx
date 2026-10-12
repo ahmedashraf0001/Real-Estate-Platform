@@ -432,12 +432,13 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (activeModalZone) setActiveModalZone(null);
+        else if (selectedZoneId && propertyType === 'building') setSelectedZoneId(null);
         else if (isFullscreen) setIsFullscreen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeModalZone, isFullscreen]);
+  }, [activeModalZone, isFullscreen, selectedZoneId, propertyType]);
 
   // Non-passive touch event listeners to guarantee 100% smooth touch panning and pinch-to-zoom without page scroll
   useEffect(() => {
@@ -1354,7 +1355,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   const renderBuilding = (fullscreen = false) => <BuildingBlueprintPreview
     zones={zones} inventory={inventory} view={bldView} onViewChange={setBldView}
-    selectedId={selectedZoneId} onSelect={setSelectedZoneId} isAr={isAr}
+    selectedId={isFullscreen && !fullscreen ? null : selectedZoneId} onSelect={setSelectedZoneId} isAr={isAr}
     onRequestUnit={onRequestUnit ? unit => { setIsFullscreen(false); onRequestUnit(unit); } : undefined} edit={edit} onInspect={onInspect}
     hoveredFloor={hoveredFloor} onHoverFloor={setHoveredFloor} fullscreen={fullscreen} zoom={zoom}
     actions={renderControlsBar(fullscreen)} elevation={bldView.mode === 'elevation' ? renderInlineStage() : undefined} />;

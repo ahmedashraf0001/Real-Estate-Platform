@@ -17,7 +17,7 @@
 .floors small { font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .floors [data-hovered="true"] { border-color: var(--bp-gold); background: color-mix(in srgb, var(--bp-gold) 15%, transparent); }
 .floors small, .detail p, .room span, .unit>span:not(.pill), .note { color: var(--text-secondary, #B0B4BE); line-height: 1.7; }
-.planColumn { min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--bp-line); border-radius: 10px; }
+.planColumn { position: relative; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--bp-line); border-radius: 10px; }
 .planDrawing { height: 100%; min-height: 0; transform-origin: center; }
 .floorPlan { display: grid; grid-template-columns: minmax(0,1fr) minmax(90px,.65fr) minmax(0,1fr); border: 3px solid var(--bp-gold); gap: 5px; padding: 9px; min-height: 410px; }
 .unitStack, .core { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
@@ -37,7 +37,23 @@
 .legend { display: flex; flex-wrap: wrap; gap: 18px; padding: 18px 0; font-size: 12px; color: var(--text-secondary, #B0B4BE); }
 .pill { display: inline-block; font-size: 12px; line-height: 1.5; white-space: nowrap; padding: 4px 9px; border-radius: 20px; background: color-mix(in srgb, currentColor 7%, transparent); border: 1px solid var(--bp-line); }
 .root .available { color: #65B98E; }
-.detail { border-top: 1px solid var(--bp-line); padding-top: 16px; margin-top: 16px; min-width: 0; }
+.detail { position: absolute; z-index: 25; top: var(--bp-detail-top, 0); height: var(--bp-detail-height, 100%); inset-inline-end: 0; width: min(340px, 40%); min-width: 0; display: flex; flex-direction: column; overflow: hidden; border-inline-start: 1px solid var(--bp-line); background: var(--bg-surface); color: var(--text-primary); backdrop-filter: blur(20px); }
+.detailHeader { display: flex; justify-content: flex-end; padding: 8px; flex-shrink: 0; }
+.detailBody { padding: 0 16px 16px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+.dragHandle { display: none; }
+.detailEditor { position: relative; padding-bottom: 48px; }
+.detailEditor .tileActions { opacity: 1; flex-wrap: wrap; }
+.root .detailEditor .tileActions button { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+.detailEditor .typeMenu { position: relative; inset: auto; }
+.detailEditor .renameInput { width: calc(100% - 16px); margin-bottom: 0; }
+.root .detail .detailBody :global(.zi-root) { position: static; width: 100%; max-height: none; height: auto; border: 0; box-shadow: none; border-radius: 0; }
+.detail .trades li { flex-wrap: wrap; }
+.detail .available { color: var(--text-primary); }
+@media(max-width:768px) {
+  .root .detail { position: fixed; inset: auto 0 0; width: 100%; height: auto; max-height: 60dvh; border: 1px solid var(--bp-line); border-radius: 12px 12px 0 0; z-index: 15000; }
+  .detailHeader { position: relative; padding-top: 18px; }
+  .dragHandle { display: block; position: absolute; top: 8px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 4px; background: var(--text-secondary); }
+}
 .detail h3 { margin: 16px 0 8px; font-size: 21px; }
 .detail h4 { font-size: 14px; font-weight: 500; padding-top: 14px; border-top: 1px solid var(--bp-line); }
 .iconTile { display: inline-flex; padding: 15px; border: 1px solid var(--bp-line); border-radius: 8px; }
@@ -236,7 +252,10 @@
 .infoStrip .note { border: 0; padding-top: 10px; }
 .fullscreen { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px; overflow: hidden; }
 .fullscreen .workspace { flex: 1; min-height: 0; }
-.fullscreen .floors { overflow-y: auto; }
+.fullscreen .floors { position: relative; overflow-y: auto; gap: 4px; }
+.fullscreen .floors button { padding: 4px 10px; gap: 2px; min-height: 44px; line-height: 1.2; }
+.fullscreen .floors small { display: block; font-size: 11px; line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; }
+.fullscreen .floors strong { font-size: 13px; }
 .fullscreen .infoStrip { flex-shrink: 0; max-height: min(230px, 30dvh); overflow: auto; }
 .fullscreen .legend { padding: 10px 0 0; flex-shrink: 0; gap: 12px; }
 .fullscreen .floorPlan { height: 100%; min-height: 0; }

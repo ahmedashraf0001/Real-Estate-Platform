@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
-import { Building2, DoorOpen } from 'lucide-react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import { Building2, DoorOpen, X } from 'lucide-react';
 import type { ZoneInstance } from '@/lib/layering/instances';
 import type { BuildingUnitItem } from '@/lib/supabase/types';
 import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
-import { buildingFloorKey, blueprintFloorSummary, floorLabel, resolveBlueprintUnit, selectBuildingFloor, type BlueprintView } from '@/lib/layering/buildingBlueprint';
+import { buildingFloorKey, blueprintFloorSummary, groupBlueprintFacilities, floorLabel, resolveBlueprintUnit, selectBuildingFloor, type BlueprintView } from '@/lib/layering/buildingBlueprint';
 import { blueprintElementDetail } from '@/lib/layering/publicBlueprint';
 import { arrangeGroundFloor, arrangeUnitRooms, roomWeight, sortTiles } from '@/lib/layering/blueprintEditor';
 import { useBlueprintEditing, type BlueprintEditing } from './useBlueprintEditing';
@@ -41,6 +41,64 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
   const unit = view.mode === 'unit' ? floor.units.find(u => u.id === view.unitId) : undefined;
   const rooms = unit?.children?.flatMap(z => z.children?.length ? z.children : [z]) ?? [];
   const selected = [...zones, ...rooms].find(z => z.id === selectedId);
+  const rootRef = useRef<HTMLElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  const open = Boolean(selected);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const drawing = rootRef.current?.querySelector<HTMLElement>('[data-blueprint-drawing]');
+    const panel = panelRef.current;
+    if (!drawing || !panel) return;
+    const fit = () => {
+      const rect = drawing.getBoundingClientRect();
+      const navbarBottom = fullscreen ? 0 : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-navbar-bottom')) || 0;
+      const top = Math.max(rect.top + drawing.clientTop, navbarBottom ? navbarBottom + 8 : 0);
+      const bottom = Math.min(rect.bottom - drawing.clientTop, window.innerHeight);
+      panel.style.setProperty('--bp-detail-top', `${Math.max(0, top - rect.top - drawing.clientTop)}px`);
+      panel.style.setProperty('--bp-detail-height', `${Math.max(0, bottom - top)}px`);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(drawing);
+    window.addEventListener('scroll', fit, true);
+    window.addEventListener('resize', fit);
+    return () => { observer.disconnect(); window.removeEventListener('scroll', fit, true); window.removeEventListener('resize', fit); };
+  }, [open, fullscreen]);
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      panelRef.current?.querySelector<HTMLButtonElement>('[data-detail-close]')?.focus({ preventScroll: true });
+    } else if (!open && wasOpen.current) {
+      triggerRef.current?.focus({ preventScroll: true });
+    }
+    wasOpen.current = open;
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !rootRef.current?.contains(document.activeElement)) return;
+      event.preventDefault(); event.stopImmediatePropagation(); onSelect(null);
+    };
+    document.addEventListener('keydown', escape, true);
+    return () => document.removeEventListener('keydown', escape, true);
+  }, [open, onSelect]);
+  useEffect(() => {
+    const rail = rootRef.current?.querySelector<HTMLElement>('[data-floor-rail]');
+    const current = rail?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!rail || !current) return;
+    // Scroll only the rail: scrollIntoView would also move the page.
+    const row = current.getBoundingClientRect(), viewport = rail.getBoundingClientRect();
+    if (rail.scrollHeight > rail.clientHeight) {
+      if (row.top < viewport.top) rail.scrollTop += row.top - viewport.top;
+      else if (row.bottom > viewport.bottom) rail.scrollTop += row.bottom - viewport.bottom;
+    }
+    if (rail.scrollWidth > rail.clientWidth) {
+      if (row.left < viewport.left) rail.scrollLeft += row.left - viewport.left;
+      else if (row.right > viewport.right) rail.scrollLeft += row.right - viewport.right;
+    }
+  }, [floorKey, fullscreen]);
   const navigate = (next: BlueprintView) => { onSelect(null); onViewChange(next); };
   const icon = (z: ZoneInstance, size = 22) => { const Icon = BLUEPRINT_ICONS[z.zone_template_id] ?? Building2; return <Icon size={size} aria-hidden="true" />; };
   const status = (value?: string) => value ? <span className={`${styles.pill} ${value === 'available' || value === 'Finished' || value === 'Installed' ? styles.available : ''}`}>{blueprintLabel('status', value ?? '', isAr)}</span> : null;
@@ -71,8 +129,8 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         onDrop={drag.onDrop}
         onDragEnd={drag.onDragEnd}
       >
-        {ed.renameField(z) ?? tile}
-        {ed.tileControls(z, list, kind)}
+        {(selectedId === z.id ? null : ed.renameField(z)) ?? tile}
+        {selectedId !== z.id && ed.tileControls(z, list, kind)}
       </div>
     );
   };
@@ -103,14 +161,18 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
       </button>
     ));
   };
-  // Admin edits through its own side panel, so a click opens it directly.
-  const pick = (id: string) => { onSelect(id); if (ed.editing) onInspect?.(id); };
+  const pick = (id: string) => {
+    triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    onSelect(selectedId === id ? null : id);
+  };
   const coreButton = (z: ZoneInstance) => {
     const hasPhoto = Boolean(z.images?.length && z.images[0]);
     return (
       <button
         type="button"
         key={z.id}
+        data-zone-id={z.id}
+        data-zone-template={z.zone_template_id}
         aria-pressed={selectedId === z.id}
         className={`${styles.element} ${z.zone_template_id === 'bld.lightwell' ? styles.lightwell : ''} ${hasPhoto ? styles.tileWithPhoto : ''}`}
         onClick={() => pick(z.id)}
@@ -140,6 +202,8 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
       <button
         type="button"
         key={z.id}
+        data-zone-id={z.id}
+        data-zone-template={z.zone_template_id}
         className={`${styles.room} ${hasPhoto ? styles.tileWithPhoto : ''}`}
         style={ed.editing ? undefined : { flexGrow: roomWeight(z) }}
         aria-pressed={selectedId === z.id}
@@ -179,16 +243,14 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
     })() : []),
     ...(detail?.facts ?? []),
   ].filter(([, value]) => value != null && value !== '' && value !== '0' && !/^\s*\[.*\]\s*$/.test(value)) : [];
-  const selectedLocation = selected?.zone_template_id === 'bld.elevator' || selected?.zone_template_id === 'bld.staircase'
-    ? `${text('قلب المبنى', 'Building core')} · ${text('يخدم', 'Serves')} ${keys.map(k => floorLabel(k, isAr)).join(text('، ', ', '))}`
-    : floorKey ? floorLabel(floorKey, isAr) : text('المبنى', 'Building');
-
+  const selectedLocation = selected ? floorLabel(rooms.includes(selected) && floorKey ? floorKey : buildingFloorKey(selected), isAr) +
+    (['bld.elevator', 'bld.staircase'].includes(selected.zone_template_id)
+      ? ` · ${text('قلب المبنى', 'Building core')} · ${text('يخدم', 'Serves')} ${keys.map(k => floorLabel(k, isAr)).join(text('، ', ', '))}` : '') : '';
   const allUnits = zones.filter(z => z.zone_template_id === 'bld.unit');
   const availabilityKnown = allUnits.length > 0 && allUnits.every(z => resolveBlueprintUnit(z, inventory).status !== undefined);
-  const facilities = zones.filter(z => z.zone_template_id !== 'bld.unit' &&
-    ['building', 'bld_ground', 'bld_roof', 'bld_basement'].includes(buildingFloorKey(z)));
+  const facilities = groupBlueprintFacilities(zones, isAr);
   const floorIndex = floorKey ? keys.indexOf(floorKey) : -1;
-  return <section className={`${styles.root} ${fullscreen ? styles.fullscreen : ''}`} dir={isAr ? 'rtl' : 'ltr'} aria-label={text('معاينة مخطط المبنى', 'Building blueprint preview')}>
+  return <section ref={rootRef} className={`${styles.root} ${fullscreen ? styles.fullscreen : ''}`} dir={isAr ? 'rtl' : 'ltr'} aria-label={text('معاينة مخطط المبنى', 'Building blueprint preview')}>
     <div className={styles.topbar}>
       <nav className={styles.path} aria-label={text('مسار المبنى', 'Building path')}>
         {view.mode === 'elevation' ? <span aria-current="page">{text('المبنى', 'Building')}</span> : <button type="button" onClick={() => navigate({ mode: 'elevation' })}>{text('المبنى', 'Building')}</button>}
@@ -275,6 +337,30 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           {ed.editing && <div className={styles.planAdd}>{ed.addSlot('unit', units)}</div>}
         </div>}
         </div>
+      {selected && <aside ref={panelRef} data-blueprint-detail data-lenis-prevent className={styles.detail} role="region" aria-label={text('تفاصيل العنصر', 'Element details')}>
+        <div className={styles.detailHeader}>
+          <span className={styles.dragHandle} aria-hidden="true" />
+          <button type="button" data-detail-close aria-label={text('إغلاق تفاصيل العنصر', 'Close element details')} onClick={() => onSelect(null)}><X size={20} /></button>
+        </div>
+        <div className={styles.detailBody}>
+          {ed.editing && <div className={styles.detailEditor}>
+            {ed.renameField(selected)}
+            {ed.tileControls(selected, rooms.includes(selected) ? orderedRooms : selected.zone_template_id === 'bld.unit' ? units : core.includes(selected) ? core : zones.filter(z => z.zone_template_id !== 'bld.unit'), rooms.includes(selected) ? 'room' : selected.zone_template_id === 'bld.unit' ? 'unit' : 'shared')}
+          </div>}
+          {edit?.renderDetails ? edit.renderDetails(selected.id) : <>
+          <span className={styles.iconTile}>{icon(selected, 30)}</span><h3>{zoneLabel(selected, isAr)}</h3><p>{selectedLocation}</p>
+          {onInspect && <button type="button" onClick={() => onInspect(selected.id)}>{text('تحرير بيانات العنصر', 'Edit element facts')}</button>}
+          <dl className={styles.facts}>{selectedFacts.map(([label, value], i) => <div key={i}><dt>{label}</dt><dd><bdi>{value}</bdi></dd></div>)}</dl>
+          <h4>{text('حالة التنفيذ لهذا العنصر', 'Execution status for this element')}</h4>
+          <ul className={styles.trades}>{detail?.trades.map(t => <li key={t.id}><span>{blueprintLabel('trade', t.trade_template_id, isAr)}</span>{status(t.status)}</li>)}</ul>
+          {!detail?.trades.length && <p>{text('لم تسجل أعمال لهذا العنصر', 'No trades recorded for this element')}</p>}
+          <h4>{text('صور العنصر', 'Element photos')}</h4>
+          {selected.images?.length ? <div className={styles.photos}>{selected.images.map((url, i) => <img key={`${url}-${i}`} src={url} alt={`${zoneLabel(selected, isAr)} ${i + 1}`} />)}</div> : <p className={styles.photoSlot}>{text('لم تضاف صور بعد', 'No photos added yet')}</p>}
+        <p className={styles.note}>{text('الأعمال العامة للمبنى تظهر تحت «المبنى».', 'Building-wide work appears under “Building”.')}</p>
+        {selected.zone_template_id === 'bld.unit' && onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(selected)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
+          </>}
+        </div>
+      </aside>}
       </div>
       <aside className={`${styles.floors} ${ed.editing ? styles.floorsAdminCompact : ''}`} data-floor-rail aria-label={text('الأدوار', 'Floors')}>
         {keys.map(key => {
@@ -300,8 +386,8 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           {availabilityKnown && <span>{allUnits.filter(z => resolveBlueprintUnit(z, inventory).status === 'available').length} {text('متاحة', 'available')}</span>}
         </div>
         <h3>{text('مرافق المبنى', 'Building facilities')}</h3>
-        <div className={styles.facilities}>{facilities.map(z => wrap(z, facilities, 'shared', 'building',
-          <button type="button" key={z.id} data-facility-id={z.id} aria-pressed={selectedId === z.id} onClick={() => pick(z.id)}>{icon(z, 16)}{zoneLabel(z, isAr)}</button>))}</div>
+        <div className={styles.facilities}>{facilities.map(({ zone: z, count }) => wrap(z, facilities.map(f => f.zone), 'shared', 'building',
+          <button type="button" key={z.id} data-facility-id={z.id} aria-pressed={selectedId === z.id} onClick={() => pick(z.id)}>{icon(z, 16)}{zoneLabel(z, isAr)}{count > 1 && <small><bdi>×{count}</bdi></small>}</button>))}</div>
         <p className={styles.note}>{text('اضغط على أي دور في الرسم أو في القائمة', 'Click any floor in the drawing or the rail')}</p>
       </>}
       {view.mode === 'floor' && <div className={styles.summary}>
@@ -324,19 +410,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         {onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(unit)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
       </div>;
     })()}
-      {!ed.editing && selected && <aside className={styles.detail} aria-label={text('تفاصيل العنصر', 'Element details')}>
-        <>
-          <span className={styles.iconTile}>{icon(selected, 30)}</span><h3>{zoneLabel(selected, isAr)}</h3><p>{selectedLocation}</p>
-          {onInspect && <button type="button" onClick={() => onInspect(selected.id)}>{text('تحرير بيانات العنصر', 'Edit element facts')}</button>}
-          <dl className={styles.facts}>{selectedFacts.map(([label, value], i) => <div key={i}><dt>{label}</dt><dd><bdi>{value}</bdi></dd></div>)}</dl>
-          <h4>{text('حالة التنفيذ لهذا العنصر', 'Execution status for this element')}</h4>
-          <ul className={styles.trades}>{detail?.trades.map(t => <li key={t.id}><span>{blueprintLabel('trade', t.trade_template_id, isAr)}</span>{status(t.status)}</li>)}</ul>
-          {!detail?.trades.length && <p>{text('لم تسجل أعمال لهذا العنصر', 'No trades recorded for this element')}</p>}
-          <h4>{text('صور العنصر', 'Element photos')}</h4>
-          {selected.images?.length ? <div className={styles.photos}>{selected.images.map((url, i) => <img key={`${url}-${i}`} src={url} alt={`${zoneLabel(selected, isAr)} ${i + 1}`} />)}</div> : <p className={styles.photoSlot}>{text('لم تضاف صور بعد', 'No photos added yet')}</p>}
-        </>
-        <p className={styles.note}>{text('الأعمال العامة للمبنى تظهر تحت «المبنى».', 'Building-wide work appears under “Building”.')}</p>
-      </aside>}
+
     </div>
     <div className={styles.legend}><span className={styles.available}>{text('متاحة', 'Available')}</span><span>{text('مباعة / محجوزة', 'Sold / Reserved')}</span><span>{text('مساحات مشتركة', 'Shared spaces')}</span><span><DoorOpen size={15} />{text('باب الشقة', 'Unit door')}</span></div>
   </section>;

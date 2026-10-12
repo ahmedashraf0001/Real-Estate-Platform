@@ -49,6 +49,7 @@ import { buildingFloorKey, floorLabel, selectBuildingFloor, patchBlueprintZone }
 import { blueprintLabel, zoneLabel } from '@/lib/layering/labels';
 import { BLUEPRINT_ICONS } from '@/lib/layering/blueprintIcons';
 import type { BuildingUnitItem } from '@/lib/supabase/types';
+import { ZoneInspector } from './ZoneInspector';
 
 interface CADBlueprintBuilderProps {
   buildingUnits?: BuildingUnitItem[];
@@ -62,7 +63,6 @@ interface CADBlueprintBuilderProps {
   /** Optional controlled selection — lets a parent host an external inspector panel. */
   selectedZoneId?: string | null;
   onSelectedZoneIdChange?: (id: string | null) => void;
-  onInspectZone?: (id: string) => void;
   /** When provided, the room list renders into this element (Figma-style sidebar) instead of the workspace column. */
   listPortalTarget?: HTMLElement | null;
   /** Receives bedrooms/bathrooms/floor number chosen in the preset wizard so the host form can persist them. */
@@ -651,7 +651,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   declaredArea,
   selectedZoneId: controlledSelectedZoneId,
   onSelectedZoneIdChange,
-  onInspectZone,
   listPortalTarget = null,
   onPresetMeta,
   autoOpenWizardOnEmpty = false,
@@ -3689,7 +3688,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       )}
 
       {propertyType === 'building' ? (
-        <ArchitecturalBlueprintInspector zones={zoneInstances} propertyTitle="" locale={isAr ? 'ar' : 'en'} propertyType="building" inventory={buildingUnits} edit={{ onChange: onZoneInstancesChange }} onInspect={onInspectZone} />
+        <ArchitecturalBlueprintInspector zones={zoneInstances} propertyTitle="" locale={isAr ? 'ar' : 'en'} propertyType="building" inventory={buildingUnits} edit={{ onChange: onZoneInstancesChange, renderDetails: id => <ZoneInspector buildingUnits={buildingUnits} zoneInstances={zoneInstances} onZoneInstancesChange={onZoneInstancesChange} selectedZoneId={id} isAr={isAr} /> }} />
       ) : (
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
 

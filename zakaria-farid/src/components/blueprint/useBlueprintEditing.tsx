@@ -16,6 +16,7 @@ import styles from './BuildingBlueprintPreview.module.css';
 
 export interface BlueprintEditing {
   onChange: (zones: ZoneInstance[]) => void;
+  renderDetails?: (id: string) => React.ReactNode;
 }
 
 type TileKind = 'shared' | 'room' | 'unit';

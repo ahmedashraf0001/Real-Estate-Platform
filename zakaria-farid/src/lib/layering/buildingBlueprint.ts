@@ -44,6 +44,19 @@ export function blueprintFloorSummary(zones: ZoneInstance[], key: string, invent
     : count;
 }
 
+/** One facility tag per displayed name; the first recorded zone is the click target. */
+export function groupBlueprintFacilities(zones: ZoneInstance[], isAr: boolean) {
+  const groups = new Map<string, { zone: ZoneInstance; floors: Set<string> }>();
+  for (const zone of zones) {
+    if (zone.zone_template_id === 'bld.unit') continue;
+    const name = zoneLabel(zone, isAr).trim();
+    const group = groups.get(name);
+    if (group) group.floors.add(buildingFloorKey(zone));
+    else groups.set(name, { zone, floors: new Set([buildingFloorKey(zone)]) });
+  }
+  return [...groups.values()].map(({ zone, floors }) => ({ zone, count: floors.size }));
+}
+
 /** Pure dry run. Exact duplicate payloads are collapsed, differing recorded values are preserved. */
 export function repairBuildingTradeScopes(input: ZoneInstance[]) {
   const movedTrades: ZoneInstance['trades'] = [];

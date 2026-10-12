@@ -1991,7 +1991,6 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               setInspectorZoneId(id);
               if (id && selectedType !== 'building') setRailOpen(true);
             }}
-            onInspectZone={(id) => { setInspectorZoneId(id); setRailOpen(true); }}
             listPortalTarget={roomsRailEl}
             onPresetMeta={({ bedrooms, bathrooms, floorNumber }) => {
               setValue('bedrooms', bedrooms);

@@ -1,0 +1,32 @@
+TASK blueprint-detail-panel — zone details open in a side panel beside the drawing (branch feat/blueprint-nav, on top of 4564d05)
+
+WHY
+User review 2026-10-12: clicking a tile (room, shared space, facility tag) shows its details (icon, name, floor, "حالة التنفيذ لهذا العنصر", "صور العنصر", notes) BELOW the info strip, so the user must scroll to see them. User chose a side panel [user-confirmed 2026-10-12].
+
+REQUIRED
+1. Selecting a zone (tile in a floor plan, ground-plan tile, facility tag in the info strip, room in a unit) opens a detail PANEL inside the drawing card, docked on the side opposite the floor rail (RTL: drawing card's left edge; LTR: right edge), overlaying the drawing. Width ~340px desktop (max 40% of the card). Fully visible without scrolling: it never extends below the drawing card; its own content scrolls if long. The page must not scroll or jump when it opens.
+2. Panel content = the existing detail content, moved, not rewritten: icon, name, floor, execution status, element photos (gallery, "لم تضف صور بعد" empty state), notes, unit facts and request-unit action where they apply today. Remove the old below-strip detail block (no duplicate).
+3. Close: X button, Escape, clicking the selected tile again, or navigating (breadcrumb, rail, floor change). Selected tile keeps its highlighted state while the panel is open. Focus moves into the panel on open and returns to the tile on close.
+4. Selecting another tile swaps the panel content in place (no close/open flicker).
+5. Phone (<= 768px): bottom sheet over the lower part of the viewport (max 70vh, rounded top, drag handle look, X), drawing still visible above. No horizontal overflow at 390.
+6. Fullscreen: same panel behaviour inside the fullscreen layout, within the viewport.
+7. Light and dark themes with existing tokens/glass; text contrast AA.
+8. Admin edit mode: the panel also hosts the existing admin zone edit controls that today appear with the selected zone; editing, add and drag-reorder keep working.
+
+LEFTOVERS FROM 4564d05
+9. Fullscreen 1440x900: the floor rail hides the ground floor below the fold. Fit all levels: compact rail rows in fullscreen (smaller summary line, single line with ellipsis) so up to 8 levels fit at 900px height; beyond that the rail scrolls and the current floor is scrolled into view.
+10. Info strip facility tags show duplicate names (e.g. "السلم وبيت السلم" twice — same template on several floors). Group by name: one tag per name, with a small count (×2) when it appears on several floors; clicking it opens the first one (panel shows its floor). Real zones only.
+
+DO NOT
+- Change the approved layout (breadcrumb, rail outside drawing, clickable floors, info strip), the CAD plans, or other pages. Remove information. Add dependencies. Write to the DB (Supabase PRODUCTION, read-only). Nest a <form>; every button type="button".
+
+TESTS
+RED first. SSR/helper tests: facility grouping (duplicates -> one tag + count), panel rendered inside the drawing card when a zone is selected and the old below-strip block absent, admin controls inside the panel in edit mode. tsc exit 0. npm test: only the 7 known pre-existing failures. Extend scripts/capture-blueprint-nav.cjs: after clicking a tile, panel rect fully inside the viewport and inside the drawing card at 1440x900 and 1280x800 without any scroll (scrollY unchanged), bottom sheet at 390x844, Escape closes and focus returns, fullscreen rail shows all levels at 1440x900. Light + dark. Exit non-zero on failure.
+
+ACCEPTANCE (screenshots in <RUN_DIR>/shots, opened and inspected)
+Gouna /ar and /en: ground floor with "بوابة وسور المدخل" selected, a typical floor with a shared tile selected, a unit room selected; inline and fullscreen; light + dark; 1440 and 390.
+
+PROCESS
+Run dev servers / capture in the foreground with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server on this worktree: do not stop it; use another free port (not 51101-51105) and a separate NEXT_DIST_DIR build dir (gitignored).
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.
