@@ -1353,7 +1353,15 @@ div[style*="background:#ffffff"] select {
 .mini-markdown strong { font-weight: 700; }
 .mini-markdown em { font-style: italic; }
 
-/* Public light header: readable gold. Over photo heroes it stays transparent (rule 2 above). */
+/* Public light header: readable gold. Over photo heroes a faint frost keeps dark text legible
+   on bright skies without turning the bar into a white slab. */
+[data-theme="light"] .app-root .nav-glass-capsule.hero-blended {
+ background: rgba(255, 255, 255, 0.30) !important;
+ border: 1px solid rgba(255, 255, 255, 0.45) !important;
+ backdrop-filter: blur(14px) saturate(1.4) !important;
+ -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
+ box-shadow: 0 8px 24px rgba(30, 24, 16, 0.08) !important;
+}
 [data-theme="light"] .app-root .nav-glass-capsule :is(.nav-link.active, .lang-btn, .active-lang, .brand-sub-text, .brand-arabic-line) {
  color: var(--gold-dark) !important;
  -webkit-text-fill-color: var(--gold-dark) !important;
