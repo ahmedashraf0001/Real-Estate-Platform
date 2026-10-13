@@ -1353,14 +1353,7 @@ div[style*="background:#ffffff"] select {
 .mini-markdown strong { font-weight: 700; }
 .mini-markdown em { font-style: italic; }
 
-/* Public light header: readable gold on one shared glass surface. */
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended {
- background: var(--glass-strong) !important;
- border: var(--glass-border) !important;
- backdrop-filter: var(--glass-blur-nav) !important;
- -webkit-backdrop-filter: var(--glass-blur-nav) !important;
- box-shadow: var(--shadow-glass) !important;
-}
+/* Public light header: readable gold. Over photo heroes it stays transparent (rule 2 above). */
 [data-theme="light"] .app-root .nav-glass-capsule :is(.nav-link.active, .lang-btn, .active-lang, .brand-sub-text, .brand-arabic-line) {
  color: var(--gold-dark) !important;
  -webkit-text-fill-color: var(--gold-dark) !important;
