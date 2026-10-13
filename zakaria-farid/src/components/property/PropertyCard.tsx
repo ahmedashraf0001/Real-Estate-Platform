@@ -1083,11 +1083,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         /* Frosted Crystal Glass (Light Mode) */
         [data-theme="light"] .card-content-overlay {
-          background-color: rgba(255, 255, 255, 0.85) !important;
-          background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.90)) !important;
+          background-color: transparent !important;
+          background-image: var(--glass-card-strong) !important;
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
-          border: 1px solid rgba(255, 255, 255, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.70);
           box-shadow: 0 16px 36px rgba(30, 24, 16, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.95);
           text-shadow: none;
         }
