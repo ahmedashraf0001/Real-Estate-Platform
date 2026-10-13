@@ -13,7 +13,7 @@ import { shouldRenderThumbnailStrip, formatThumbnailCounter, toArabicNumerals } 
 import { createFrameScheduler } from '@/lib/utils/frameScheduler';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
-import { miniMarkdown, stripMarkdown } from '@/lib/markdown/miniMarkdown';
+import { miniMarkdown } from '@/lib/markdown/miniMarkdown';
 import { PublicStatusBadge } from './PublicStatusBadge';
 import { decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
@@ -482,44 +482,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     ];
   }, [routes, originLat, originLng, mapCoords.lat, mapCoords.lng, isAr]);
   const travelLoading = !routes || geoStatus === 'locating';
-
-  // Real Estate JSON-LD Schema
-  useEffect(() => {
-    const jsonLdData = {
-      "@context": "https://schema.org",
-      "@type": "SingleFamilyResidence",
-      "name": property.title,
-      "description": stripMarkdown(property.narrative),
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": property.district,
-        "addressCountry": "EG"
-      },
-      "numberOfBedrooms": property.beds,
-      "numberOfBathroomsTotal": property.baths,
-      "floorSize": {
-        "@type": "QuantitativeValue",
-        "value": property.sqm,
-        "unitCode": "MTK"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": property.price,
-        "priceCurrency": property.currency,
-        "availability": "https://schema.org/InStock"
-      },
-      "image": property.images
-    };
-
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.text = JSON.stringify(jsonLdData);
-    document.head.appendChild(script);
-
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, [property]);
 
   // Preload all property images for instant zero-latency slide transitions
   useEffect(() => {

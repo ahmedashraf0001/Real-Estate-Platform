@@ -109,7 +109,7 @@ export default async function PropertyDetailPage({ params }: Props) {
   };
 
   return (
-    <div key={`property-detail-${slug}`}>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -119,6 +119,6 @@ export default async function PropertyDetailPage({ params }: Props) {
         similarProperties={uiSimilar}
         locale={locale}
       />
-    </div>
+    </>
   );
 }

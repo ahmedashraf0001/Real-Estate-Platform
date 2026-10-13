@@ -1338,6 +1338,7 @@ div[style*="background:#ffffff"] select {
 .public-status-badge.public-status-sold { background: var(--sold-bg); border-color: var(--sold-border); color: var(--sold-text); }
 .public-status-badge.public-status-reserved { background: var(--reserved-bg); border-color: var(--reserved-border); color: var(--reserved-text); }
 .public-status-badge svg { flex-shrink: 0; color: inherit; }
+.property-card .public-status-badge { margin-block-end: 0.625rem; }
 .public-sold-media img { filter: saturate(.6) brightness(.92); }
 .mini-markdown { color: var(--text-secondary); line-height: 1.85; overflow-wrap: anywhere; text-align: start; }
 .mini-markdown p { margin: 0 0 1em; }
