@@ -17,7 +17,8 @@ interface AdminPlatformSettingsProps {
 export default function AdminPlatformSettings({adminLocale,initialAboutContent,initialGroup='home',lastSaved}:AdminPlatformSettingsProps) {
   const isAr=adminLocale==='ar',initialSettings=usePlatformSettings(),router=useRouter();
   const [saved,setSaved]=useState<SiteContentMap>(()=>({platform_settings:structuredClone(initialSettings),about_page:structuredClone(initialAboutContent)}));
-  const [draft,setDraft]=useState(saved),[group,setGroup]=useState(initialGroup),[target,setTarget]=useState('hero');
+  const [draft,setDraft]=useState(saved),[group,setGroup]=useState(initialGroup),[target,setTarget]=useState(()=>previewTarget(initialGroup,[]));
+  const [focusedPath,setFocusedPath]=useState<DraftPath>([]);
   const [status,setStatus]=useState<'idle'|'saving'|'saved'>('idle'),[errors,setErrors]=useState<Partial<Record<SiteContentKey,string>>>({});
   const [wide,setWide]=useState(true),[previewOpen,setPreviewOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null),nav=useRef<HTMLElement>(null);
@@ -48,7 +49,7 @@ export default function AdminPlatformSettings({adminLocale,initialAboutContent,i
       if(savingRef.current||!confirm(warning))return false;
       dirtyRef.current=false;setDraft(structuredClone(savedRef.current));return true;
     });
-    const sync=()=>{setGroup(settingsGroupFromUrl(location.search));};sync();
+    const sync=()=>{const next=settingsGroupFromUrl(location.search);setGroup(next);setTarget(previewTarget(next,[]));setFocusedPath([]);};sync();
     window.addEventListener('beforeunload',beforeUnload);document.addEventListener('click',click,true);window.addEventListener('popstate',sync);
     return()=>{uninstall();window.removeEventListener('beforeunload',beforeUnload);document.removeEventListener('click',click,true);window.removeEventListener('popstate',sync);};
   },[warning]);
@@ -69,9 +70,9 @@ export default function AdminPlatformSettings({adminLocale,initialAboutContent,i
     return()=>window.removeEventListener('popstate',back);
   },[warning]);
   const change=(path:DraftPath,value:DraftValue)=>{if(savingRef.current)return;setDraft(previous=>updateDraft(previous,path,value));setStatus('idle');setErrors({});};
-  const focus=(path:DraftPath)=>setTarget(previewTarget(group,path));
+  const focus=(path:DraftPath)=>{setFocusedPath(path);setTarget(previewTarget(group,path));};
   const selectGroup=(next:SettingsGroup)=>{
-    const url=new URL(location.href);url.searchParams.set('group',next);history.replaceState(history.state,'',url);setGroup(next);setTarget(next==='about'||next==='home'?'hero':next==='listings'?'price':next);
+    const url=new URL(location.href);url.searchParams.set('group',next);history.replaceState(history.state,'',url);setGroup(next);setFocusedPath([]);setTarget(previewTarget(next,[]));
   };
   const save=async()=>{
     if(savingRef.current||!hasChanges)return;
@@ -107,9 +108,9 @@ export default function AdminPlatformSettings({adminLocale,initialAboutContent,i
         </fieldset>
         {(['platform_settings','about_page'] as const).filter(key=>errors[key]).map(key=><p key={key} role="alert" className={styles.error}>{isAr?`تعذر حفظ ${key==='about_page'?'محتوى من نحن':'إعدادات المنصة'}. تبقى التغييرات لإعادة المحاولة.`:`Unable to save ${key==='about_page'?'About content':'platform settings'}: ${errors[key]}`}</p>)}
       </section>
-      {wide&&<aside className={styles.preview}><PreviewPanel {...{group,draft,isAr,target}}/></aside>}
+      {wide&&<aside className={styles.preview}><PreviewPanel {...{group,draft,isAr,target,focusedPath}}/></aside>}
     </div>
-    {!wide&&<dialog ref={dialog} className={styles.previewDialog} onCancel={()=>setPreviewOpen(false)} onClose={()=>{setPreviewOpen(false);previewButton.current?.focus();}} aria-label={isAr?'معاينة':'Preview'}><button type="button" onClick={()=>setPreviewOpen(false)}>{isAr?'إغلاق المعاينة':'Close preview'}</button>{previewOpen&&<PreviewPanel {...{group,draft,isAr,target}}/>}</dialog>}
+    {!wide&&<dialog ref={dialog} className={styles.previewDialog} onCancel={()=>setPreviewOpen(false)} onClose={()=>{setPreviewOpen(false);previewButton.current?.focus();}} aria-label={isAr?'معاينة':'Preview'}><button type="button" onClick={()=>setPreviewOpen(false)}>{isAr?'إغلاق المعاينة':'Close preview'}</button>{previewOpen&&<PreviewPanel {...{group,draft,isAr,target,focusedPath}}/>}</dialog>}
     <div className={styles.saveBar} style={barBounds?{position:'fixed',left:barBounds.left,width:barBounds.width,boxSizing:'border-box'}:undefined} role="region" aria-label={isAr?'حفظ التغييرات':'Save changes'}><span role="status" aria-live="polite">{status==='saving'?(isAr?'جارٍ الحفظ…':'Saving…'):status==='saved'?(isAr?'تم حفظ التغييرات':'Changes saved'):dirty.count===0?(isAr?'لا توجد تغييرات غير محفوظة':'No unsaved changes'):dirty.count===1?(isAr?'تغيير واحد غير محفوظ':'1 unsaved change'):`${dirty.count} ${isAr?'تغييرات غير محفوظة':'unsaved changes'}`}</span><div><button type="button" disabled={!hasChanges||status==='saving'} onClick={discard}>{isAr?'تجاهل':'Discard'}</button><button type="button" className={styles.primary} disabled={!hasChanges||status==='saving'} onClick={save}>{isAr?'حفظ التغييرات':'Save changes'}</button></div></div>
   </div>;
 }

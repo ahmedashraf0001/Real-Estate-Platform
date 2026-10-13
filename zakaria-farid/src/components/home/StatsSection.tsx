@@ -126,8 +126,9 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
         {!hideHeader && !compact && (displayEyebrow || displayTitle || displaySubtitle) && (
           <motion.div 
             className="stats-header-wrap"
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={preview ? false : { opacity: 0, y: 16 }}
+            animate={preview ? { opacity: 1, y: 0 } : undefined}
+            whileInView={preview ? undefined : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
@@ -145,7 +146,8 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
               <motion.div
                 className="metrology-cell"
                 initial={preview?false:{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                animate={preview ? { opacity: 1, y: 0 } : undefined}
+                whileInView={preview ? undefined : { opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               >

@@ -18,12 +18,14 @@ import { miniMarkdown } from '@/lib/markdown/miniMarkdown';
 interface AboutViewProps {
   locale: string;
   content: AboutPageContent;
+  preview?: boolean;
+  previewChapter?: number;
   block?: 'hero' | 'stats' | 'story' | 'charter' | 'founder' | 'portal';
   onNavigateToCatalog?: () => void;
   onOpenInquiry?: (subject?: string) => void;
 }
 
-export function AboutView({ locale, content: about, block, onNavigateToCatalog, onOpenInquiry }: AboutViewProps) {
+export function AboutView({ locale, content: about, block, preview = false, previewChapter = 0, onNavigateToCatalog, onOpenInquiry }: AboutViewProps) {
   const isAr = locale === 'ar';
   const text = (value: BilingualText) => value[isAr ? 'ar' : 'en'];
   const [activeFolio, setActiveFolio] = useState<number>(0);
@@ -50,7 +52,7 @@ export function AboutView({ locale, content: about, block, onNavigateToCatalog, 
               {/* Minimalist Parisian Coordinates Bar */}
               <motion.div
                 className="atelier-coordinates-bar"
-                initial={{ opacity: 0, y: -8 }}
+                initial={preview ? false : { opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
@@ -66,7 +68,7 @@ export function AboutView({ locale, content: about, block, onNavigateToCatalog, 
               {/* Monumental Headline */}
               <motion.h1 
                 className="atelier-hero-title"
-                initial={{ opacity: 0, y: 16 }}
+                initial={preview ? false : { opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               >
@@ -81,7 +83,7 @@ export function AboutView({ locale, content: about, block, onNavigateToCatalog, 
               {/* Editorial Manifesto */}
               <motion.div 
                 className="atelier-manifesto-wrap"
-                initial={{ opacity: 0, y: 20 }}
+                initial={preview ? false : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.65, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
@@ -92,7 +94,7 @@ export function AboutView({ locale, content: about, block, onNavigateToCatalog, 
               {/* Haute Actions */}
               <motion.div 
                 className="atelier-hero-actions"
-                initial={{ opacity: 0, y: 14 }}
+                initial={preview ? false : { opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
@@ -145,7 +147,7 @@ export function AboutView({ locale, content: about, block, onNavigateToCatalog, 
             {/* Interactive 4-Panel Paravent Accordion */}
             <div className="paravent-deck-container">
               {folios.map((folio, idx) => {
-                const isOpen = activeFolio === idx;
+                const isOpen = (preview ? previewChapter : activeFolio) === idx;
                 return (
                   <div
                     key={idx}
@@ -170,7 +172,7 @@ export function AboutView({ locale, content: about, block, onNavigateToCatalog, 
                     {isOpen && (
                       <motion.div 
                         className="paravent-body"
-                        initial={{ opacity: 0 }}
+                        initial={preview ? false : { opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
                       >

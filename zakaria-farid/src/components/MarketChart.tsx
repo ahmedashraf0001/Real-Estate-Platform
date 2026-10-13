@@ -10,14 +10,16 @@ import {
 
 interface MarketChartProps {
   locale?: string;
+  preview?: boolean;
+  previewDistrictId?: string;
 }
 
-export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
+export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en', preview = false, previewDistrictId }) => {
   const isAr = locale === 'ar';
   const settings = usePlatformSettings();
   const districts = settings.marketDistricts.filter(d => d.isEnabled);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selectedDistrict = districts.find(d => d.id === selectedId) || districts[0] || null;
+  const selectedDistrict = districts.find(d => d.id === (preview ? previewDistrictId : selectedId)) || districts[0] || null;
   const setSelectedDistrict = (district: MarketDistrictConfig) => setSelectedId(district.id);
   const isVisible = settings.showMarketRadar;
   const [mounted, setMounted] = useState(false);
@@ -130,9 +132,9 @@ export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
               <div className="row-gauge-track">
                 <motion.div 
                   className={`row-gauge-fill ${isSelected ? 'active-glow' : ''}`}
-                  initial={{ width: 0 }}
+                  initial={preview ? false : { width: 0 }}
                   animate={{ width: `${percentage}%` }}
-                  transition={{ type: 'spring', damping: 22, stiffness: 140 }}
+                  transition={preview ? {duration:0} : { type: 'spring', damping: 22, stiffness: 140 }}
                 />
               </div>
             </div>
@@ -141,14 +143,14 @@ export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
       </div>
 
       {/* 4. Sleek Executive Snapshot Pill */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode={preview ? "sync" : "wait"} initial={!preview}>
         {selectedDistrict && (
           <motion.div
             key={selectedDistrict.id}
-            initial={{ opacity: 0, y: 6 }}
+            initial={preview ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
+            exit={preview ? undefined : { opacity: 0, y: -6 }}
+            transition={{ duration: preview ? 0 : 0.2 }}
             className="executive-snapshot-card"
           >
             <div className="snapshot-top-row">

@@ -297,7 +297,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <motion.h1 
                   className={`hero-title hero-pill-lines-container ${isAr ? 'hero-ar' : 'hero-en'}`}
                   aria-label={`${line1Text} ${line2Text}`}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={preview ? false : { opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                 >
@@ -322,7 +322,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {/* Crisp Subtitle */}
               <motion.p
                 className="hero-subtitle"
-                initial={{ opacity: 0, y: 14 }}
+                initial={preview ? false : { opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
@@ -333,7 +333,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {/* Floating Frosted Glass QuickSearchBar */}
             <motion.div
               className="hero-search-wrapper"
-              initial={{ opacity: 0, y: 22 }}
+              initial={preview ? false : { opacity: 0, y: 22 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: 'spring', damping: 22, stiffness: 100, delay: 0.28 }}
             >
@@ -355,8 +355,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="container">
             <motion.div
               className="featured-header"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={preview ? false : { opacity: 0, y: 20 }}
+              animate={preview ? { opacity: 1, y: 0 } : undefined}
+              whileInView={preview ? undefined : { opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
@@ -385,8 +386,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {/* Destination Filter Pills */}
             <motion.div
               className="destination-pills-bar"
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={preview ? false : { opacity: 0, y: 15 }}
+              animate={preview ? { opacity: 1, y: 0 } : undefined}
+              whileInView={preview ? undefined : { opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
@@ -433,7 +435,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <motion.div
                       key={property.id}
                       layout
-                      initial={{ opacity: 0, scale: 0.96 }}
+                      initial={preview ? false : { opacity: 0, scale: 0.96 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.96 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}

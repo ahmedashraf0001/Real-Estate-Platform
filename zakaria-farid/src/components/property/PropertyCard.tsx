@@ -20,6 +20,7 @@ interface PropertyCardProps {
   onToggleCompare?: (propertyId: string) => void;
   isCompared?: boolean;
   locale?: string;
+  preview?: boolean;
 }
 
 const cardVariants: Variants = {
@@ -164,6 +165,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   viewMode = 'grid',
   onToggleCompare,
   isCompared = false,
+  preview = false,
   locale: propLocale
 }) => {
   const params = useParams();
@@ -222,9 +224,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       <motion.div
         className={`property-card-list ${status === 'sold' ? 'public-sold-media' : ''}`}
         onClick={() => onSelect(property.id)}
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
+        variants={preview ? undefined : cardVariants}
+        initial={preview ? false : "hidden"}
+        animate={preview ? undefined : "visible"}
         exit="exit"
         layout
         dir={isAr ? 'rtl' : 'ltr'}
@@ -801,9 +803,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     <motion.div 
       className={`property-card ${status === 'sold' ? 'public-sold-media' : ''} ${viewMode === 'compact' ? 'compact-card' : ''}`}
       onClick={() => onSelect(property.id)}
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
+      variants={preview ? undefined : cardVariants}
+      initial={preview ? false : "hidden"}
+      animate={preview ? undefined : "visible"}
       exit="exit"
       whileHover={{ 
         y: -6, 
