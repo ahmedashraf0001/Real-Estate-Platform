@@ -164,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           initial={false}
           animate={{
             x: 0,
-            maxWidth: isMapMode && isDesktop ? (isMapSidebarOpen ? 980 : 1080) : 1280,
+            maxWidth: isMapMode && isDesktop ? (isMapSidebarOpen ? 1100 : 1280) : 1280,
           }}
           transition={{
             type: 'spring',
@@ -318,15 +318,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         @media (min-width: 993px) {
           .nav-glass-capsule.map-glass-capsule {
-            padding: 0 1.5rem;
-            width: auto;
-            max-width: fit-content;
+            padding: 0 1.75rem;
+            width: 100%;
             height: 66px;
             gap: 1.25rem;
           }
 
           .map-glass-capsule .desktop-nav {
-            gap: 1.5rem;
+            gap: 1.75rem;
             flex-shrink: 0;
           }
 
@@ -344,6 +343,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           .map-glass-capsule .nav-controls {
             gap: 0.5rem;
             flex-shrink: 0;
+          }
+
+          /* Narrow desktops with the directory open: compact links so nothing overflows. */
+          @media (max-width: 1400px) {
+            html[data-map-sidebar="open"] .nav-glass-capsule.map-glass-capsule {
+              padding: 0 1rem;
+              gap: 0.75rem;
+            }
+            html[data-map-sidebar="open"] .map-glass-capsule .desktop-nav { gap: 0.75rem; }
+            html[data-map-sidebar="open"] .map-glass-capsule .nav-link {
+              padding: 0.35rem 0.3rem;
+              font-size: 0.88rem;
+            }
           }
 
           /* While sidebar is open on map page: */
