@@ -98,6 +98,12 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
           icon: Sliders, 
           exact: false 
         },
+        {
+          href: `/admin/${adminLocale}/page-content`,
+          label: isAr ? 'محتوى الصفحات' : 'Page content',
+          icon: Sliders,
+          exact: false
+        },
       ]
     }
   ];

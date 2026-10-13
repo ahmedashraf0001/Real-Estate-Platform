@@ -4,7 +4,7 @@ import { miniMarkdown } from '@/lib/markdown/miniMarkdown';
 import { insertMarkdown, type MarkdownAction } from '@/lib/markdown/insertMarkdown';
 import styles from './AdminPropertyForm.module.css';
 
-export default function MarkdownDescriptionEditor({ value, onChange, language, isAr }: { value: string; onChange: (value: string) => void; language: 'ar' | 'en'; isAr: boolean }) {
+export default function MarkdownDescriptionEditor({ value, onChange, language, isAr, id, placeholder }: { value: string; onChange: (value: string) => void; language: 'ar' | 'en'; isAr: boolean; id?: string; placeholder?: string }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
   const tools: [MarkdownAction, string, string][] = [
@@ -25,7 +25,7 @@ export default function MarkdownDescriptionEditor({ value, onChange, language, i
       <button type="button" aria-pressed={preview} onClick={() => setPreview(!preview)}>{isAr ? 'معاينة' : 'Preview'}</button>
     </div>
     {preview ? <div className={`mini-markdown ${styles.markdownPreview}`} aria-live="polite">{miniMarkdown(value)}</div>
-      : <textarea ref={textarea} className={styles.input} rows={8} dir={language === 'ar' ? 'rtl' : 'ltr'} aria-label={language === 'ar' ? 'الوصف بالعربية' : 'English description'} value={value} onChange={e => onChange(e.target.value)} />}
+      : <textarea id={id} placeholder={placeholder} ref={textarea} className={styles.input} rows={8} dir={language === 'ar' ? 'rtl' : 'ltr'} aria-label={language === 'ar' ? 'الوصف بالعربية' : 'EN'} value={value} onChange={e => onChange(e.target.value)} />}
     <p className={styles.markdownHelp}>{isAr ? 'يدعم: **عريض**، *مائل*، القوائم، عناوين (#)، خط فاصل (---)' : 'Supports: **bold**, *italic*, lists, headings (#), horizontal rule (---)'}</p>
   </div>;
 }

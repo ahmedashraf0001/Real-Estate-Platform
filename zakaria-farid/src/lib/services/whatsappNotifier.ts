@@ -8,7 +8,6 @@ import { WHATSAPP_NUMBER } from '@/lib/utils/formatting';
 import { 
   PlatformWhatsAppAutomationSettings, 
   DEFAULT_WHATSAPP_AUTOMATION_SETTINGS, 
-  getStoredPlatformSettings 
 } from './marketIntelligence';
 
 export interface LeadNotificationPayload {
@@ -48,15 +47,8 @@ export function formatInternationalWhatsAppNumber(phone: string): string {
 /**
  * Get Farid Zakaria's configured alert phone number.
  */
-export function getFaridWhatsAppNumber(): string {
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = getStoredPlatformSettings();
-      if (stored?.whatsappAutomation?.faridAlertPhone) {
-        return formatInternationalWhatsAppNumber(stored.whatsappAutomation.faridAlertPhone);
-      }
-    } catch {}
-  }
+export function getFaridWhatsAppNumber(config?: Partial<PlatformWhatsAppAutomationSettings>): string {
+  if (config?.faridAlertPhone) return formatInternationalWhatsAppNumber(config.faridAlertPhone);
   const envPhone = process.env.WHATSAPP_NOTIFY_NUMBER || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || WHATSAPP_NUMBER;
   return formatInternationalWhatsAppNumber(envPhone);
 }
@@ -101,8 +93,8 @@ export function formatFaridWhatsAppLeadMessage(lead: LeadNotificationPayload): s
 /**
  * Generates the direct WhatsApp Web / App dispatch URL to notify Farid Zakaria
  */
-export function getNotifyFaridWhatsAppUrl(lead: LeadNotificationPayload): string {
-  const targetNumber = getFaridWhatsAppNumber();
+export function getNotifyFaridWhatsAppUrl(lead: LeadNotificationPayload, config?: Partial<PlatformWhatsAppAutomationSettings>): string {
+  const targetNumber = getFaridWhatsAppNumber(config);
   const text = formatFaridWhatsAppLeadMessage(lead);
   return `https://wa.me/${targetNumber}?text=${encodeURIComponent(text)}`;
 }
@@ -115,6 +107,7 @@ export async function sendServerSideLeadNotification(
   lead: LeadNotificationPayload,
   customConfig?: Partial<PlatformWhatsAppAutomationSettings>
 ): Promise<{ success: boolean; method: string; messageId?: string; error?: string }> {
+  if (customConfig?.isEnabled === false) return { success: false, method: 'disabled' };
   const faridPhone = customConfig?.faridAlertPhone 
     ? formatInternationalWhatsAppNumber(customConfig.faridAlertPhone)
     : getFaridWhatsAppNumber();

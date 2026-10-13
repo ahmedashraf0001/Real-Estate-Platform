@@ -1,3 +1,4 @@
+import { getSiteContent } from '@/lib/siteContent/server';
 import { getTranslations } from 'next-intl/server';
 import { AboutView } from '@/components/about/AboutView';
 import type { Metadata } from 'next';
@@ -15,5 +16,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AboutPage({ params }: Props) {
   const { locale } = await params;
-  return <AboutView locale={locale} />;
+  const content = await getSiteContent('about_page');
+  return <AboutView locale={locale} content={content} />;
 }

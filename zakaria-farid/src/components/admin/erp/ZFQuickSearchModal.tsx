@@ -33,7 +33,8 @@ import { toast } from 'sonner';
 import { ERPContract, ERPPDCRecord, ERPPartnerProfile, ERPRescissionRecord, ERPTaxRecord } from '@/lib/erp/types';
 import { Property, Lead } from '@/lib/supabase/types';
 import { CANONICAL_COA } from '@/lib/erp/ledger';
-import { getStoredPlatformSettings, saveStoredPlatformSettings } from '@/lib/services/marketIntelligence';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { saveSiteContent } from '@/app/actions/siteContent';
 import { createClient } from '@/lib/supabase/client';
 import { TAB_REDIRECT_MAP } from '@/lib/erp/routing/tabRedirectMap';
 
@@ -95,6 +96,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   const currentLocale = adminLocale || locale || (isAr ? 'ar' : 'en');
   const effectiveIsAr = isAr !== undefined ? isAr : currentLocale === 'ar';
 
+  const platformSettings = usePlatformSettings();
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SearchCategoryKey>('all');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -465,10 +467,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         subtitle: isArMode ? 'التحكم في إظهار أو إخفاء أسعار العقارات للجمهور على الموقع' : 'Toggle public price display on client website (POA Mode)',
         category: isArMode ? 'أمر نظام' : 'System Command',
         icon: EyeOff,
-        action: () => {
-          const currentSettings = getStoredPlatformSettings();
-          const nextVal = !currentSettings.hidePropertyPrices;
-          saveStoredPlatformSettings({ ...currentSettings, hidePropertyPrices: nextVal });
+        action: async () => {
+          const nextVal = !platformSettings.hidePropertyPrices;
+          const result = await saveSiteContent('platform_settings', { ...platformSettings, hidePropertyPrices: nextVal });
+          if (!result.success) { toast.error(isArMode ? 'تعذر حفظ إعداد ظهور الأسعار' : result.error || 'Save failed'); return; }
+          router.refresh();
           toast.success(
             isArMode 
               ? (nextVal ? 'تم تفعيل سرية الأسعار: إخفاء الأسعار وعرض POA للجمهور' : 'تم تعطيل سرية الأسعار: عرض الأسعار الرسمية للجمهور') 
@@ -1077,7 +1080,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
 
     // Sort by priority and cap at 14 items for optimal UI ergonomics
     return categoryFiltered.sort((a, b) => b.priority - a.priority).slice(0, 14);
-  }, [
+  }, [platformSettings,
     query, 
     selectedCategory,
     effectiveIsAr, 

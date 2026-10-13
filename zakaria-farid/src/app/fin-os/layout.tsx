@@ -1,3 +1,5 @@
+import { getSiteContent } from '@/lib/siteContent/server';
+import { PlatformSettingsProvider } from '@/lib/hooks/usePlatformSettings';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -25,6 +27,8 @@ export default async function FinOSLayout({ children }: { children: React.ReactN
     redirect('/admin/login?next=/fin-os');
   }
 
+  const platformSettings = await getSiteContent('platform_settings');
+
   return (
     <html 
       lang="ar" 
@@ -37,7 +41,7 @@ export default async function FinOSLayout({ children }: { children: React.ReactN
         data-erp-workstation-root="true"
         style={{ margin: 0, padding: 0, height: '100%', width: '100%', overflow: 'hidden', background: '#f8fafc', color: '#0f172a', fontFamily: "'IBM Plex Sans Arabic', 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", WebkitFontSmoothing: 'antialiased' }}
       >
-        {children}
+        <PlatformSettingsProvider settings={platformSettings}>{children}</PlatformSettingsProvider>
         <ZFToaster />
         {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_AGENTATION === 'true') && <Agentation />}
       </body>

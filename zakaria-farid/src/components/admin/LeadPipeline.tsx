@@ -1,4 +1,5 @@
 'use client';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -80,6 +81,7 @@ function getWhatsAppUrl(phone: string, leadName: string, propertyTitle?: string,
 }
 
 export default function LeadPipeline({ initialLeads, properties, adminLocale }: LeadPipelineProps) {
+  const notificationSettings = usePlatformSettings().whatsappAutomation;
   const isAr = adminLocale === 'ar';
 
   const [leads, setLeads] = useState(initialLeads);
@@ -1924,7 +1926,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     propertyTitle: cleanLeadData?.displayTitle || 'استفسار عام عن المشاريع الفاخرة',
                     notes: selectedLead.notes,
                     source: selectedLead.source,
-                  })}
+                  }, notificationSettings)}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={isAr ? 'إرسال ملخص الطلب إلى واتساب زكريا فريد' : 'Forward lead summary to Farid Zakaria WhatsApp'}

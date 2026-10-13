@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Plus, 
@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice, formatPriceParts } from '@/lib/utils/formatting';
-import { getStoredPlatformSettings, saveStoredPlatformSettings } from '@/lib/services/marketIntelligence';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { saveSiteContent } from '@/app/actions/siteContent';
+import { useRouter } from 'next/navigation';
 import { toggleArchiveProperty, deletePropertyPermanently } from '@/app/actions/properties';
 import type { Property } from '@/lib/supabase/types';
 
@@ -39,27 +41,18 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
   const [selectedType, setSelectedType] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'area_desc'>('newest');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [hidePrices, setHidePrices] = useState<boolean>(false);
-
-  useEffect(() => {
-    setHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
-    const handleUpdate = () => {
-      setHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
-    };
-    window.addEventListener('zf_platform_settings_updated', handleUpdate);
-    return () => window.removeEventListener('zf_platform_settings_updated', handleUpdate);
-  }, []);
-
-  const handleToggleHidePrices = () => {
-    const current = getStoredPlatformSettings();
-    const next = !current.hidePropertyPrices;
-    saveStoredPlatformSettings({ ...current, hidePropertyPrices: next });
-    setHidePrices(next);
-    toast.success(
-      next
-        ? (isAr ? '🔒 تم إخفاء أسعار العقارات عن الزوار (السعر عند الطلب - POA)' : '🔒 Property prices hidden from public (POA enabled)')
-        : (isAr ? '👁️ تم إظهار أسعار العقارات للزوار' : '👁️ Public property prices are now visible to visitors')
-    );
+  const platformSettings = usePlatformSettings();
+  const router = useRouter();
+  const hidePrices = platformSettings.hidePropertyPrices ?? false;
+  const [priceSaveError, setPriceSaveError] = useState('');
+  const handleToggleHidePrices = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true); setPriceSaveError('');
+    const result = await saveSiteContent('platform_settings', { ...platformSettings, hidePropertyPrices: !hidePrices });
+    setIsProcessing(false);
+    if (!result.success) { setPriceSaveError(isAr ? 'تعذر حفظ إعداد ظهور الأسعار. حاول مجدداً.' : result.error || 'Unable to save price visibility.'); return; }
+    router.refresh();
+    toast.success(isAr ? 'تم حفظ إعداد ظهور الأسعار' : 'Price visibility saved');
   };
 
   const STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
@@ -179,6 +172,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', fontFamily: "var(--font-sans, 'ThmanyahSans', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif)" }} dir={isAr ? 'rtl' : 'ltr'}>
       
+      {priceSaveError && <p role="alert">{priceSaveError}</p>}
       {/* Header & View Switcher */}
       <div style={{
         display: 'flex',
@@ -247,6 +241,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
+            disabled={isProcessing}
             onClick={handleToggleHidePrices}
             style={{
               display: 'inline-flex',

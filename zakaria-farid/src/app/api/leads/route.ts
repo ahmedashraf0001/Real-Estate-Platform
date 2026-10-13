@@ -1,3 +1,4 @@
+import { getSiteContent } from '@/lib/siteContent/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient as createServerClient } from '@/lib/supabase/server';
@@ -267,6 +268,7 @@ export async function POST(request: Request) {
       }
     }
 
+    const notificationSettings = (await getSiteContent('platform_settings')).whatsappAutomation;
     const notificationPayload = {
       name: leadPayload.name,
       phone: leadPayload.phone,
@@ -283,13 +285,13 @@ export async function POST(request: Request) {
 
     // 1. Dispatch background notification if webhook/bot is active
     try {
-      await sendServerSideLeadNotification(notificationPayload);
+      await sendServerSideLeadNotification(notificationPayload, notificationSettings);
     } catch (notifyErr) {
       console.warn('[api/leads] WhatsApp server-side notification non-fatal error:', notifyErr);
     }
 
     // 2. Build direct WhatsApp URL to notify Farid Zakaria
-    const faridWhatsAppUrl = getNotifyFaridWhatsAppUrl(notificationPayload);
+    const faridWhatsAppUrl = getNotifyFaridWhatsAppUrl(notificationPayload, notificationSettings);
 
     // 3. Secure Response:
     // Do NOT return unmasked client phone or private details in response body

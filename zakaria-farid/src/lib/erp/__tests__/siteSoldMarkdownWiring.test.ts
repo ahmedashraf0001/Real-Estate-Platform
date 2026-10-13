@@ -8,6 +8,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as markdown from '../../markdown/miniMarkdown';
 import { adaptProperty } from '../../utils/propertyAdapter';
+import { DEFAULT_PLATFORM_SETTINGS } from '../../services/marketIntelligence';
 import { adminHarness, nodes, textOf } from './adminWizardHarness';
 
 const req = createRequire(import.meta.url);
@@ -70,6 +71,7 @@ test('real metadata and route JSON-LD use stripped Markdown for both locales', a
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const property = { slug: 'test', title_ar: 'عنوان', title_en: 'Title', description_ar: '<h3>عنوان</h3><p><strong>وصف</strong></p>', description_en: '<h4>Title</h4><p><em>Description</em></p>' };
   const imports: Record<string, any> = { '@/lib/markdown/miniMarkdown': markdown,
+    '@/lib/siteContent/server': { getSiteContent: async () => DEFAULT_PLATFORM_SETTINGS },
     'next/navigation': { notFound() { throw new Error('unexpected missing property'); } },
     '@/lib/supabase/queries': { getPropertyBySlug: async () => property, getAllProperties: async () => [] },
     '@/lib/utils/propertyAdapter': { adaptProperty, adaptProperties: () => [] },

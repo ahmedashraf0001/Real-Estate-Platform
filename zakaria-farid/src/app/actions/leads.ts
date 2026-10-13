@@ -1,5 +1,7 @@
 'use server';
 
+import { getSiteContent } from '@/lib/siteContent/server';
+
 import { revalidatePath } from 'next/cache';
 import { createClient as createBrowserServer } from '@/lib/supabase/server';
 import type { Lead } from '@/lib/supabase/types';
@@ -119,6 +121,7 @@ export async function createLead(payload: {
 
     // Trigger automated background notification to Farid Zakaria
     try {
+      const notificationSettings = (await getSiteContent('platform_settings')).whatsappAutomation;
       void sendServerSideLeadNotification({
         name: createdLead.name,
         phone: createdLead.phone,
@@ -127,7 +130,7 @@ export async function createLead(payload: {
         notes: createdLead.notes,
         source: createdLead.source || 'Admin Manual Entry',
         entryMethod: 'admin_manual',
-      });
+      }, notificationSettings);
     } catch (notifyErr) {
       console.warn('Background notification non-fatal error:', notifyErr);
     }

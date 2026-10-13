@@ -10,7 +10,7 @@ import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 
 import { useParams } from 'next/navigation';
-import { getStoredPlatformSettings } from '@/lib/services/marketIntelligence';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 
 interface PropertyCardProps {
   property: Property;
@@ -173,26 +173,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const { isFavorite, toggleFavorite, setIsDrawerOpen } = useFavorites();
   const isSaved = isFavorite(property.id) || (property.slug ? isFavorite(property.slug) : false);
 
-  const [isHidePrices, setIsHidePrices] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const cookieMatch = document.cookie.match(/zf_hide_prices=([^;]+)/);
-    if (cookieMatch) return cookieMatch[1] === 'true';
-    return getStoredPlatformSettings().hidePropertyPrices ?? false;
-  });
+  const isHidePrices = usePlatformSettings().hidePropertyPrices ?? false;
 
-  React.useEffect(() => {
-    const syncSettings = () => {
-      const cookieMatch = document.cookie.match(/zf_hide_prices=([^;]+)/);
-      if (cookieMatch) {
-        setIsHidePrices(cookieMatch[1] === 'true');
-      } else {
-        setIsHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
-      }
-    };
-    syncSettings();
-    window.addEventListener('zf_platform_settings_updated', syncSettings);
-    return () => window.removeEventListener('zf_platform_settings_updated', syncSettings);
-  }, []);
 
 
 

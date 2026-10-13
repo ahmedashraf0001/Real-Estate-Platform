@@ -4,6 +4,7 @@ import { getPropertyBySlug, getAllProperties } from '@/lib/supabase/queries';
 import { adaptProperty, adaptProperties } from '@/lib/utils/propertyAdapter';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 import type { Metadata } from 'next';
+import { getSiteContent } from '@/lib/siteContent/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PropertyDetailPage({ params }: Props) {
   const { locale, slug: rawSlug } = await params;
   const slug = decodeSlug(rawSlug);
+  const settings = await getSiteContent('platform_settings');
 
   const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) notFound();
@@ -88,7 +90,7 @@ export default async function PropertyDetailPage({ params }: Props) {
     image: property.property_images?.map((img) => img.url) ?? [],
     offers: {
       '@type': 'Offer',
-      price: property.price_egp,
+      ...(settings.hidePropertyPrices ? {} : { price: property.price_egp }),
       priceCurrency: 'EGP',
       availability: property.listing_status === 'active'
         ? 'https://schema.org/InStock'

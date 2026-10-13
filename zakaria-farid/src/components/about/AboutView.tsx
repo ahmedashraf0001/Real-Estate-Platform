@@ -1,159 +1,44 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ArrowUpRight,
   ShieldCheck,
   Award,
-  Sparkles,
-  TrendingUp,
   Compass,
   Scale,
   ChevronRight,
   ChevronLeft,
   Building2,
-  Layers,
-  Clock,
-  ArrowRight
 } from 'lucide-react';
-import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
-import { DEFAULT_ABOUT_SETTINGS } from '@/lib/services/marketIntelligence';
+import type { AboutPageContent, BilingualText } from '@/lib/siteContent/defaults';
+import { miniMarkdown } from '@/lib/markdown/miniMarkdown';
 
 interface AboutViewProps {
   locale: string;
+  content: AboutPageContent;
+  block?: 'hero' | 'stats' | 'story' | 'charter' | 'founder' | 'portal';
   onNavigateToCatalog?: () => void;
   onOpenInquiry?: (subject?: string) => void;
 }
 
-export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {} }: AboutViewProps) {
+export function AboutView({ locale, content: about, block, onNavigateToCatalog, onOpenInquiry }: AboutViewProps) {
   const isAr = locale === 'ar';
-  const settings = usePlatformSettings();
-  const about = settings.about || DEFAULT_ABOUT_SETTINGS;
-
+  const text = (value: BilingualText) => value[isAr ? 'ar' : 'en'];
   const [activeFolio, setActiveFolio] = useState<number>(0);
-  const [lightboxMode, setLightboxMode] = useState<'standard' | 'exclusion'>('standard');
-
-  const folios = [
-    {
-      id: 'genesis',
-      roman: 'I',
-      year: '2016',
-      tagEn: 'GENESIS & ADVISORY CHARTER',
-      tagAr: 'التأسيس وميثاق الاستشارات',
-      titleEn: 'Founding the Architectural Advisory Desk',
-      titleAr: 'تأسيس المكتب الاستشاري المعماري الأول',
-      subtitleEn: 'Challenging speculative brokerage through structural due diligence and legal title forensic audits.',
-      subtitleAr: 'إعادة تعريف الاستشارات العقارية بإنهاء عصر السمسرة العشوائية وتكريس الفحص الهندسي والتدقيق القانوني المستقل.',
-      narrativeEn: 'Established in Cairo as a private practice under Eng. Farid Zakaria, our charter was born out of an uncompromising conviction: luxury real estate in Egypt demanded engineering precision, not marketing hyperbole.',
-      narrativeAr: 'انطلقت مسيرتنا في القاهرة كمكتب استشاري خاص بقيادة المهندس فريد زكريا، برؤية واضحة: العقارات الفاخرة في مصر تستحق معايير هندسية صارمة وتدقيقاً قانونياً شاملاً يحمي استثمارات العائلات ورواد الأعمال.',
-      metrics: [
-        { val: '100%', labelEn: 'CAD Title Verified', labelAr: 'مخططات مدققة' },
-        { val: '0', labelEn: 'Compromised Titles', labelAr: 'نزاعات قانونية' },
-        { val: '12', labelEn: 'Founding Estates', labelAr: 'عقارات تأسيسية' }
-      ]
-    },
-    {
-      id: 'charter',
-      roman: 'II',
-      year: '2019',
-      tagEn: 'INSTITUTIONAL METROPOLIS',
-      tagAr: 'التوسع المؤسسي في العواصم',
-      titleEn: 'Expansion into Sovereign Urban Corridors',
-      titleAr: 'التوسع في المحاور والمجتمعات العمرانية الراقية',
-      subtitleEn: 'Curating flagship architectural statements across New Cairo Golden Square and Sheikh Zayed West Belt.',
-      subtitleAr: 'انتقاء الصروح السكنية في المربع الذهبي بالقاهرة الجديدة وحزام غرب القاهرة بالشيخ زايد.',
-      narrativeEn: 'As Greater Cairo expanded eastward and westward, AL ZAKARIA instituted the 70% Exclusion Rule, rejecting hundreds of developer offerings that failed acoustic attenuation, freehold documentation, or long-term liquidity benchmarks.',
-      narrativeAr: 'مع التوسع العمراني شرقاً وغرباً، أرسينا "قاعدة استبعاد الـ ٧٠٪"، رافضين المئات من المشاريع التي لا ترقى لمواصفات العزل الصوتي والإنشائي وسندات الملكية الحرة الموثقة.',
-      metrics: [
-        { val: '70%+', labelEn: 'Market Disqualification', labelAr: 'نسبة الاستبعاد' },
-        { val: '1.2B', labelEn: 'EGP Portfolio Curated', labelAr: 'حجم التدقيق' },
-        { val: '98.5%', labelEn: 'Retention Rate', labelAr: 'استمرارية العملاء' }
-      ]
-    },
-    {
-      id: 'cadence',
-      roman: 'III',
-      year: '2022',
-      tagEn: 'DIGITAL LAYER CAD PROTOCOL',
-      tagAr: 'بروتوكول التحليل المعماري الرقمي',
-      titleEn: 'Proprietary Layering & CAD Due Diligence',
-      titleAr: 'إطلاق منظومة التحليل الطبقي والمخططات التفاعلية',
-      subtitleEn: 'Engineering 1:1 blueprint inspectors, zone sun-path orientations, and private capital yield models.',
-      subtitleAr: 'تطوير تقنيات فحص المساقط الأفقية، مسارات الإضاءة الطبيعية، ونماذج التقييم الرأسمالي الحقيقي.',
-      narrativeEn: 'Pioneered Egypt’s first interactive Architectural CAD Blueprint Inspector, providing international buyers with exact structural dimensions, load-bearing verification, and verified secondary market yield forecasts.',
-      narrativeAr: 'أطلقنا أول منصة رقمية متطورة تتيح للمشترين والمستثمرين الدوليين فحص المخططات الإنشائية والمساقط بدقة ١:١ مع تدقيق بيانات السيولة والعائد الاستثماري المتوقع.',
-      metrics: [
-        { val: '1:1', labelEn: 'CAD Metric Precision', labelAr: 'دقة المخططات' },
-        { val: '15+', labelEn: 'Prime Districts', labelAr: 'مناطق مغطاة' },
-        { val: '< 2hr', labelEn: 'Concierge SLA', labelAr: 'سرعة الاستجابة' }
-      ]
-    },
-    {
-      id: 'frontiers',
-      roman: 'IV',
-      year: '2025–2026',
-      tagEn: 'THE SOVEREIGN HORIZON',
-      tagAr: 'الريادة والآفاق المستقبلية',
-      titleEn: 'Mediterranean Riviera & Ultra-Prime Frontiers',
-      titleAr: 'تغطية الساحل الشمالي ورأس الحكمة والبحر الأحمر',
-      subtitleEn: 'Directing private capital into Ras El Hekma, Sidi Heneish, and Red Sea lagoon trophy estates.',
-      subtitleAr: 'توجيه الاستثمارات الخاصة نحو قصور رأس الحكمة، سيدي حنيش، وبحيرات الجونة الساحرة.',
-      narrativeEn: 'Today, the atelier represents Egypt’s most discerning patrons, orchestrating confidential acquisitions of waterfront villas and generational trophy assets with absolute legal sovereignty and enduring architectural prestige.',
-      narrativeAr: 'اليوم، يُمثل مكتب زكريا فريد المرجع الأول لنخبة العملاء والمستثمرين، موفراً استشارات سرية واستحواذات آمنة على أرقى القصور والفيلات في أبرز الوجهات السياحية والاستثمارية في مصر.',
-      metrics: [
-        { val: '2.5B+', labelEn: 'EGP Asset Volume', labelAr: 'حجم المحفظة' },
-        { val: '10+', labelEn: 'Years Experience', labelAr: 'سنوات من الريادة' },
-        { val: '100%', labelEn: 'Freehold Assured', labelAr: 'ملكية حرة مؤكدة' }
-      ]
-    }
-  ];
-
-  const pillars = [
-    {
-      id: 0,
-      roman: 'I',
-      title: isAr ? 'الفحص الإنشائي والمعماري' : 'Forensic Structural & Material Audits',
-      subtitle: isAr ? 'تدقيق دقيق لجودة الخرسانة والمساقط والعزل' : 'CAD blueprint verification, structural load integrity, and certified envelopes',
-      desc: isAr ? 'نقوم بفحص كل عقار عبر مهندسين معتمدين للتأكد من سلامة الهيكل الإنشائي وأنظمة العزل وجودة التشطيبات قبل إدراجه.' : 'We inspect every property with licensed structural consultants, verifying spatial layouts, moisture barriers, and acoustic attenuation before representation.',
-      icon: Layers,
-      points: isAr
-        ? ['فحص مطابقة المساقط الأفقية للمواصفات', 'اختبار أنظمة العزل الحراري والمائي المعتمدة', 'مراجعة نسب التحميل وجودة المواد المستخدمة']
-        : ['1:1 CAD layout accuracy & scale verification', 'Thermal insulation & certified moisture barriers', 'Net-to-gross usable area audits']
-    },
-    {
-      id: 1,
-      roman: 'II',
-      title: isAr ? 'التوثيق القانوني والملكية الحرة' : 'Freehold Title & Legal Cadastral Clearance',
-      subtitle: isAr ? 'ضمان خلو العقار من النزاعات وصحة التسجيل' : '100% Registered freehold ownership deeds with zero encumbrances',
-      desc: isAr ? 'مراجعة تسلسل الملكية وتراخيص البناء وسندات الشهر العقاري لضمان عملية شراء آمنة تماماً بدون أي التزامات معلقة.' : 'Comprehensive legal title chain scrutiny, municipal permit ratification, and developer covenant audits to ensure zero legal liability.',
-      icon: ShieldCheck,
-      points: isAr
-        ? ['مراجعة تسلسل الملكية وتراخيص البناء الرسمية', 'التأكد من خلو العقار من أي رهونات أو نزاعات', 'توثيق رسمي شامل يحمي حقوق المشتري القانونية']
-        : ['Title chain vetting & building permit verification', 'Zero municipal liens, tax liabilities, or encumbrances', 'Institutional-grade contract protection']
-    },
-    {
-      id: 2,
-      roman: 'III',
-      title: isAr ? 'دراسة الجدوى والسيولة المالية' : 'Capital Valuation & Yield Liquidity',
-      subtitle: isAr ? 'بيانات حقيقية لمعدلات نمو الأسعار والعائد الإيجاري المتوقع' : 'Data-backed price appreciation modeling and rental liquidity',
-      desc: isAr ? 'نساعد المشترين على اتخاذ قرارات استثمارية مدروسة من خلال تحليلات دقيقة لحركة الأسعار والسيولة في أرقى مناطق مصر.' : 'We provide discerning patrons with micro-market pricing analyses, historical capital gains forecasting, and secondary market liquidity benchmarks.',
-      icon: TrendingUp,
-      points: isAr
-        ? ['تحليلات ارتفاع القيمة الرأسمالية عبر ٥ سنوات', 'تقديرات دقيقة للعائد الإيجاري الصافي المتوقع', 'رصد سيولة السوق والطلب المستمر في المناطق الراقية']
-        : ['5-Year compound capital growth projections', 'Audited net rental yield forecasting', 'Secondary market liquidity & exit analysis']
-    }
-  ];
+  const folios = about.chapters;
+  const visible = (name: AboutViewProps['block'], enabled: boolean) => (!block || block === name) && enabled;
 
   return (
     <div className="atelier-about-page" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ─── 1. Parisian Architectural Masthead Hero ─── */}
-      {about.showHero !== false && (
+      {visible('hero', about.showHero) && (
         <section className="atelier-hero-section">
           <div className="atelier-hero-bg">
             <img 
               src="/assets/hero-bg.webp" 
-              alt="AL ZAKARIA Architectural Atelier" 
+              alt={text(about.imageAlt)}
               className="atelier-hero-img"
             />
             <div className="atelier-hero-overlay" />
@@ -170,11 +55,11 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                 transition={{ duration: 0.5 }}
               >
                 <span className="coord-text">
-                  {isAr ? '٢٩.٩٨٧٠° شمالاً، ٣١.٤٢٨٥° شرقاً • القاهرة • رأس الحكمة • البحر الأحمر' : '29.9870° N, 31.4285° E • CAIRO • RAS EL HEKMA • RED SEA'}
+                  {text(about.coordinates)}
                 </span>
                 <span className="coord-sep">•</span>
                 <span className="coord-charter">
-                  {isAr ? (about.badgeAr || DEFAULT_ABOUT_SETTINGS.badgeAr) : (about.badgeEn || DEFAULT_ABOUT_SETTINGS.badgeEn)}
+                  {isAr ? about.badgeAr : about.badgeEn}
                 </span>
               </motion.div>
 
@@ -186,10 +71,10 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                 transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               >
                 <span className="title-lead-line">
-                  {isAr ? (about.heroTitle1Ar || DEFAULT_ABOUT_SETTINGS.heroTitle1Ar) : (about.heroTitle1En || DEFAULT_ABOUT_SETTINGS.heroTitle1En)}
+                  {isAr ? about.heroTitle1Ar : about.heroTitle1En}
                 </span>
                 <span className="title-gold-serif">
-                  {isAr ? (about.heroTitle2Ar || DEFAULT_ABOUT_SETTINGS.heroTitle2Ar) : (about.heroTitle2En || DEFAULT_ABOUT_SETTINGS.heroTitle2En)}
+                  {isAr ? about.heroTitle2Ar : about.heroTitle2En}
                 </span>
               </motion.h1>
 
@@ -201,12 +86,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                 transition={{ duration: 0.65, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
                 <div className="manifesto-hairline-rule" />
-                <p className="manifesto-lead-text">
-                  {isAr 
-                    ? (about.manifestoAr || DEFAULT_ABOUT_SETTINGS.manifestoAr)
-                    : (about.manifestoEn || DEFAULT_ABOUT_SETTINGS.manifestoEn)
-                  }
-                </p>
+                <div className="manifesto-lead-text mini-markdown">{miniMarkdown(isAr ? about.manifestoAr : about.manifestoEn)}</div>
               </motion.div>
 
               {/* Haute Actions */}
@@ -216,23 +96,21 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
-                <button 
-                  type="button" 
-                  onClick={onNavigateToCatalog} 
+                <a
+                  href={`/${locale}/properties`} onClick={onNavigateToCatalog ? event => { event.preventDefault(); onNavigateToCatalog(); } : undefined}
                   className="atelier-btn-primary"
                 >
-                  <span>{isAr ? (about.heroCta1TextAr || DEFAULT_ABOUT_SETTINGS.heroCta1TextAr) : (about.heroCta1TextEn || DEFAULT_ABOUT_SETTINGS.heroCta1TextEn)}</span>
+                  <span>{isAr ? about.heroCta1TextAr : about.heroCta1TextEn}</span>
                   <ArrowUpRight size={15} />
-                </button>
+                </a>
 
-                <button 
-                  type="button" 
-                  onClick={() => onOpenInquiry('Private Architectural Advisory')} 
+                <a
+                  href={`/${locale}/contact`} onClick={onOpenInquiry ? event => { event.preventDefault(); onOpenInquiry(isAr ? about.heroCta2TextAr : about.heroCta2TextEn); } : undefined}
                   className="atelier-btn-ghost"
                 >
                   <Compass size={14} className="ghost-icon-bronze" />
-                  <span>{isAr ? (about.heroCta2TextAr || DEFAULT_ABOUT_SETTINGS.heroCta2TextAr) : (about.heroCta2TextEn || DEFAULT_ABOUT_SETTINGS.heroCta2TextEn)}</span>
-                </button>
+                  <span>{isAr ? about.heroCta2TextAr : about.heroCta2TextEn}</span>
+                </a>
               </motion.div>
             </div>
           </div>
@@ -240,72 +118,28 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
       )}
 
       {/* ─── 2. Integrated Metrology Ribbon (Authority & Scale) ─── */}
-      {about.showMetrology !== false && (
+      {visible('stats', about.showMetrology) && (
         <section className="atelier-metrology-section">
           <div className="container">
             <div className="metrology-grid">
-              <div className="metrology-cell">
-                <span className="metrology-roman">I</span>
-                <span className="metrology-num">
-                  {isAr 
-                    ? (about.stat1ValueAr || (about.stat1Value && !about.stat1Value.includes('EGP') ? about.stat1Value : '٢.٥+ مليار ج.م'))
-                    : (about.stat1Value || DEFAULT_ABOUT_SETTINGS.stat1Value)}
-                </span>
-                <span className="metrology-lbl">{isAr ? (about.stat1LabelAr || DEFAULT_ABOUT_SETTINGS.stat1LabelAr) : (about.stat1LabelEn || DEFAULT_ABOUT_SETTINGS.stat1LabelEn)}</span>
-              </div>
-
-              <div className="metrology-sep" />
-
-              <div className="metrology-cell">
-                <span className="metrology-roman">II</span>
-                <span className="metrology-num">
-                  {isAr 
-                    ? (about.stat2ValueAr || (about.stat2Value && !about.stat2Value.toLowerCase().includes('district') ? about.stat2Value : '+١٥ منطقة'))
-                    : (about.stat2Value || DEFAULT_ABOUT_SETTINGS.stat2Value)}
-                </span>
-                <span className="metrology-lbl">{isAr ? (about.stat2LabelAr || DEFAULT_ABOUT_SETTINGS.stat2LabelAr) : (about.stat2LabelEn || DEFAULT_ABOUT_SETTINGS.stat2LabelEn)}</span>
-              </div>
-
-              <div className="metrology-sep" />
-
-              <div className="metrology-cell">
-                <span className="metrology-roman">III</span>
-                <span className="metrology-num">
-                  {isAr 
-                    ? (about.stat3ValueAr || (about.stat3Value === '98%' ? '٩٨٪' : about.stat3Value || '٩٨٪'))
-                    : (about.stat3Value || DEFAULT_ABOUT_SETTINGS.stat3Value)}
-                </span>
-                <span className="metrology-lbl">{isAr ? (about.stat3LabelAr || DEFAULT_ABOUT_SETTINGS.stat3LabelAr) : (about.stat3LabelEn || DEFAULT_ABOUT_SETTINGS.stat3LabelEn)}</span>
-              </div>
-
-              <div className="metrology-sep" />
-
-              <div className="metrology-cell">
-                <span className="metrology-roman">IV</span>
-                <span className="metrology-num">
-                  {isAr 
-                    ? (about.stat4ValueAr || (about.stat4Value && !about.stat4Value.toLowerCase().includes('year') ? about.stat4Value : '+١٠ سنوات'))
-                    : (about.stat4Value || DEFAULT_ABOUT_SETTINGS.stat4Value)}
-                </span>
-                <span className="metrology-lbl">{isAr ? (about.stat4LabelAr || DEFAULT_ABOUT_SETTINGS.stat4LabelAr) : (about.stat4LabelEn || DEFAULT_ABOUT_SETTINGS.stat4LabelEn)}</span>
-              </div>
+              {about.stats.filter(stat => text(stat.value).trim()).map((stat, index) => <div className="metrology-cell" key={index}>
+                <span className="metrology-roman">{['I', 'II', 'III', 'IV'][index] || index + 1}</span>
+                <span className="metrology-num">{text(stat.value)}</span>
+                <span className="metrology-lbl">{text(stat.label)}</span>
+              </div>)}
             </div>
           </div>
         </section>
       )}
 
       {/* ─── 3. The "Paravent" Foldable Architectural Folio (2016 → 2026) ─── */}
-      {about.showParavent !== false && (
+      {visible('story', about.showParavent) && (
         <section className="atelier-paravent-section">
           <div className="container">
             <div className="atelier-section-header">
-              <span className="atelier-eyebrow">{isAr ? 'سردية العقد الأول • ٢٠١٦ – ٢٠٢٦' : 'DECADE MONOGRAPH • 2016–2026'}</span>
-              <h2 className="atelier-title">{isAr ? 'عقد من الريادة والاستحواذ السيادي' : 'A Decade of Unfolding Mastery'}</h2>
-              <p className="atelier-subtext">
-                {isAr 
-                  ? 'استكشف الفصول الأربعة التي رسخت مكانة زكريا فريد كمرجع هندسي واستشاري أول لمشتري العقارات الفاخرة في مصر.'
-                  : 'Unfold the four defining chapters that established our private architectural advisory across Egypt’s premier frontiers.'}
-              </p>
+              <span className="atelier-eyebrow">{isAr ? about.paraventEyebrowAr : about.paraventEyebrowEn}</span>
+              <h2 className="atelier-title">{isAr ? about.paraventTitleAr : about.paraventTitleEn}</h2>
+              <div className="atelier-subtext mini-markdown">{miniMarkdown(isAr ? about.paraventDescAr : about.paraventDescEn)}</div>
             </div>
 
             {/* Interactive 4-Panel Paravent Accordion */}
@@ -314,17 +148,19 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                 const isOpen = activeFolio === idx;
                 return (
                   <div
-                    key={folio.id}
+                    key={idx}
                     className={`paravent-panel ${isOpen ? 'expanded' : 'collapsed'}`}
+                    role="button" tabIndex={0} aria-expanded={isOpen}
+                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveFolio(idx); } }}
                     onClick={() => setActiveFolio(idx)}
                   >
                     {/* Collapsed Spine Header */}
                     <div className="paravent-spine">
                       <div className="spine-top">
-                        <span className="spine-roman">{folio.roman}</span>
-                        <span className="spine-year">{folio.year}</span>
+                        <span className="spine-roman">{['I', 'II', 'III', 'IV'][idx] || idx + 1}</span>
+                        <span className="spine-year">{text(folio.year)}</span>
                       </div>
-                      <span className="spine-tag">{isAr ? folio.tagAr : folio.tagEn}</span>
+                      <span className="spine-tag">{text(folio.tag)}</span>
                       <div className="spine-indicator">
                         {isOpen ? <ChevronRight size={14} className="spine-arr active" /> : <ChevronLeft size={14} className="spine-arr" />}
                       </div>
@@ -341,31 +177,27 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                         <div className="paravent-content-inner">
                           <div className="paravent-body-top">
                             <div className="panel-chapter-stamp">
-                              <span>{isAr ? `المحطة ${folio.roman}` : `CHAPTER ${folio.roman}`}</span>
+                              <span>{isAr ? `المحطة ${['I', 'II', 'III', 'IV'][idx] || idx + 1}` : `CHAPTER ${['I', 'II', 'III', 'IV'][idx] || idx + 1}`}</span>
                               <span>•</span>
-                              <span>{folio.year}</span>
+                              <span>{text(folio.year)}</span>
                             </div>
-                            <span className="panel-tag-badge">{isAr ? folio.tagAr : folio.tagEn}</span>
+                            <span className="panel-tag-badge">{text(folio.tag)}</span>
                           </div>
 
                           <h3 className="panel-headline">
-                            {isAr ? folio.titleAr : folio.titleEn}
+                            {text(folio.title)}
                           </h3>
 
-                          <p className="panel-subtitle">
-                            {isAr ? folio.subtitleAr : folio.subtitleEn}
-                          </p>
+                          <div className="panel-subtitle mini-markdown">{miniMarkdown(text(folio.subtitle))}</div>
 
-                          <p className="panel-narrative">
-                            {isAr ? folio.narrativeAr : folio.narrativeEn}
-                          </p>
+                          <div className="panel-narrative mini-markdown">{miniMarkdown(text(folio.narrative))}</div>
 
                           {/* Metrics Bar */}
                           <div className="panel-metrics-strip">
-                            {folio.metrics.map((m, i) => (
+                            {folio.metrics.filter(metric => text(metric.value).trim()).map((m, i) => (
                               <div key={i} className="panel-metric-box">
-                                <span className="metric-box-val">{m.val}</span>
-                                <span className="metric-box-lbl">{isAr ? m.labelAr : m.labelEn}</span>
+                                <span className="metric-box-val">{text(m.value)}</span>
+                                <span className="metric-box-lbl">{text(m.label)}</span>
                               </div>
                             ))}
                           </div>
@@ -380,200 +212,41 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
         </section>
       )}
 
-      {/* ─── 4. The Architectural Lightbox & Curation Protocol ─── */}
-      {about.showCuration !== false && (
+      {visible('charter', about.showCuration) && (
         <section className="atelier-curation-section">
           <div className="container">
             <div className="atelier-section-header">
-              <span className="atelier-eyebrow">{isAr ? 'مختبر المعايير الهندسية' : 'THE CURATION STANDARD'}</span>
-              <h2 className="atelier-title">{isAr ? 'ميثاق الانتقاء والفحص المعماري' : 'The Architectural Due Diligence Protocol'}</h2>
-              <p className="atelier-subtext">
-                {isAr 
-                  ? 'استكشف معايير الفحص الثلاثة التي تحدد قبول أو استبعاد أي عقار من دليلنا الحصري.'
-                  : 'Every estate in our private directory must pass three forensic inspection protocols before representation.'}
-              </p>
+              <span className="atelier-eyebrow">{isAr ? about.curationEyebrowAr : about.curationEyebrowEn}</span>
+              <h2 className="atelier-title">{isAr ? about.curationTitleAr : about.curationTitleEn}</h2>
+              <div className="atelier-subtext mini-markdown">{miniMarkdown(isAr ? about.curationDescAr : about.curationDescEn)}</div>
             </div>
-
-            {/* Interactive Tactile Lightbox Specimen */}
-            <div className="curation-lightbox-card">
-              <div className="lightbox-nav-bar">
-                <div className="lightbox-nav-title">
-                  <Compass size={15} className="lightbox-title-icon" />
-                  <span>{isAr ? 'مخطط الفحص والتدقيق المعماري' : 'Architectural Audit Protocol & Title Clearance'}</span>
+            <div className="charter-stages">
+              {about.stages.map((stage, index) => <div className="charter-stage" data-charter-stage={index} key={index}>
+                <span className="charter-numeral" aria-hidden="true">{['I', 'II', 'III'][index] || index + 1}</span>
+                <div className="charter-heading">
+                  <h3>{text(stage.title)}</h3>
+                  <div className="mini-markdown">{miniMarkdown(text(stage.description))}</div>
                 </div>
-
-                {/* Minimalist Mode Selector */}
-                <div className="lightbox-toggle-pill">
-                  <button
-                    type="button"
-                    onClick={() => setLightboxMode('standard')}
-                    className={`lightbox-toggle-btn ${lightboxMode === 'standard' ? 'active' : ''}`}
-                  >
-                    <span>{isAr ? 'ميثاق الجودة المعتمد (المقبول)' : 'The Sovereign Standard (Accepted)'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLightboxMode('exclusion')}
-                    className={`lightbox-toggle-btn ${lightboxMode === 'exclusion' ? 'active' : ''}`}
-                  >
-                    <span>{isAr ? 'معايير الاستبعاد (٧٠٪+ مستبعد)' : 'The 70% Exclusion Benchmark'}</span>
-                  </button>
+                <div className="charter-column" data-charter-accept={index}>
+                  <h4>{text(about.acceptLabel)}</h4>
+                  <ul>{stage.accept.map((line, i) => <li key={i}><span aria-hidden="true">✓</span>{text(line)}</li>)}</ul>
                 </div>
-              </div>
-
-              {/* Lightbox Blueprint Content */}
-              <div className="lightbox-stage">
-                <div className="lightbox-grid-pattern" />
-                
-                <AnimatePresence mode="wait">
-                  {lightboxMode === 'standard' ? (
-                    <motion.div
-                      key="standard"
-                      className="lightbox-view-grid"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="lightbox-callout">
-                        <div className="callout-header">
-                          <span className="callout-roman">01</span>
-                          <h4 className="callout-title">{isAr ? 'فحص متانة الهيكل والعزل' : 'Structural & Thermal Envelope'}</h4>
-                        </div>
-                        <p className="callout-desc">
-                          {isAr 
-                            ? 'مراجعة خرسانية دقيقة، فحص أنظمة العزل المائي والحراري، والتأكد من مطابقة المواد لأعلى المعايير العالمية.'
-                            : 'Comprehensive structural load verification, high-performance thermal insulation audits, and certified acoustic attenuation.'}
-                        </p>
-                        <div className="callout-spec-tag">
-                          <span>{isAr ? 'مخططات ١:١ مدققة' : '1:1 CAD Blueprints Verified'}</span>
-                        </div>
-                      </div>
-
-                      <div className="lightbox-callout">
-                        <div className="callout-header">
-                          <span className="callout-roman">02</span>
-                          <h4 className="callout-title">{isAr ? 'التوثيق القانوني والملكية الحرة' : 'Freehold Title & Cadastral Clearance'}</h4>
-                        </div>
-                        <p className="callout-desc">
-                          {isAr 
-                            ? 'سندات ملكية حرة مسجلة ١٠٠٪ بدون أي رهونات أو التزامات مالية أو نزاعات بلدية.'
-                            : '100% Registered freehold ownership deeds with zero encumbrances, liens, or municipal pending approvals.'}
-                        </p>
-                        <div className="callout-spec-tag">
-                          <span>{isAr ? 'خلو تام من الرهونات' : 'Zero Encumbrance Guaranteed'}</span>
-                        </div>
-                      </div>
-
-                      <div className="lightbox-callout">
-                        <div className="callout-header">
-                          <span className="callout-roman">03</span>
-                          <h4 className="callout-title">{isAr ? 'الخصوصية ودراسة العائد' : 'Sightline Privacy & Yield Forecast'}</h4>
-                        </div>
-                        <p className="callout-desc">
-                          {isAr 
-                            ? 'زوايا رؤية مفتوحة غير مجروحة، تقييم حقيقي لحركة السوق والطلب، ودراسة دقيقة لنمو القيمة الرأسمالية.'
-                            : 'Unobstructed panoramic sightlines, private buffer corridors, and audited secondary market liquidity models.'}
-                        </p>
-                        <div className="callout-spec-tag">
-                          <span>{isAr ? 'عوائد وسيولة موثقة' : 'Audited Market Liquidity'}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="exclusion"
-                      className="lightbox-view-grid exclusion-view"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="lightbox-callout exclusion-box">
-                        <div className="callout-header">
-                          <span className="callout-roman">✕</span>
-                          <h4 className="callout-title">{isAr ? 'عيوب البناء والتشطيب' : 'Masonry & Insulation Deficiencies'}</h4>
-                        </div>
-                        <p className="callout-desc">
-                          {isAr 
-                            ? 'استبعاد فوري لأي عقار يعاني من شروخ إنشائية، ضعف في العزل المائي، أو استخدام مواد تشطيب رديئة.'
-                            : 'Immediate disqualification for unverified concrete grades, thermal bridging, or substandard cosmetic cover-ups.'}
-                        </p>
-                        <div className="callout-spec-tag exclusion-tag">
-                          <span>{isAr ? 'مستبعد في الفحص الإنشائي' : 'Disqualified on Inspection'}</span>
-                        </div>
-                      </div>
-
-                      <div className="lightbox-callout exclusion-box">
-                        <div className="callout-header">
-                          <span className="callout-roman">✕</span>
-                          <h4 className="callout-title">{isAr ? 'غموض سندات الملكية' : 'Ambiguous Legal & Municipal Status'}</h4>
-                        </div>
-                        <p className="callout-desc">
-                          {isAr 
-                            ? 'رفض أي عقار لا يمتلك تسلسلاً قانونياً واضحاً للملكية أو يتضمن التزامات بنكية معلقة.'
-                            : 'Rejection of unregistered contracts, unclear inheritance chains, or unresolved developer liens.'}
-                        </p>
-                        <div className="callout-spec-tag exclusion-tag">
-                          <span>{isAr ? 'مستبعد في الفحص القانوني' : 'Disqualified on Legal Audit'}</span>
-                        </div>
-                      </div>
-
-                      <div className="lightbox-callout exclusion-box">
-                        <div className="callout-header">
-                          <span className="callout-roman">✕</span>
-                          <h4 className="callout-title">{isAr ? 'انتهاك الخصوصية والأسعار الوهمية' : 'Compromised Privacy & Speculation'}</h4>
-                        </div>
-                        <p className="callout-desc">
-                          {isAr 
-                            ? 'استبعاد العقارات الملاصقة بدون حرم خصوصية كافٍ، أو تلك المدرجة بأسعار مضاربة غير واقعية.'
-                            : 'Exclusion of units with overlooked sightlines or speculative artificial pricing detached from reality.'}
-                        </p>
-                        <div className="callout-spec-tag exclusion-tag">
-                          <span>{isAr ? 'مستبعد في تقييم الخصوصية' : 'Disqualified on Spatial Review'}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                <div className="charter-column" data-charter-reject={index}>
+                  <h4>{text(about.rejectLabel)}</h4>
+                  <ul>{stage.reject.map((line, i) => <li key={i}><span aria-hidden="true">×</span>{text(line)}</li>)}</ul>
+                </div>
+              </div>)}
             </div>
-
-            {/* The 3 Pillars Folio Cards */}
-            <div className="pillars-folio-grid">
-              {pillars.map((p) => {
-                const Icon = p.icon;
-                return (
-                  <div key={p.id} className="pillar-folio-card">
-                    <div className="pillar-folio-header">
-                      <div className="pillar-folio-icon">
-                        <Icon size={20} />
-                      </div>
-                      <span className="pillar-folio-roman">{isAr ? `الركيزة ${p.roman}` : `PILLAR ${p.roman}`}</span>
-                    </div>
-
-                    <h3 className="pillar-folio-title">{p.title}</h3>
-                    <p className="pillar-folio-sub">{p.subtitle}</p>
-                    <p className="pillar-folio-desc">{p.desc}</p>
-
-                    <div className="pillar-folio-checklist">
-                      {p.points.map((pt, i) => (
-                        <div key={i} className="pillar-point-row">
-                          <span className="pillar-point-bullet">•</span>
-                          <span>{pt}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="charter-footer">
+              <p>{text(about.reportPrompt)}</p>
+              <a className="charter-report-link" href={`/${locale}/contact`}>{text(about.reportLink)}<ArrowUpRight size={16} /></a>
             </div>
           </div>
         </section>
       )}
 
       {/* ─── 5. Founder’s "Lettre d'Intention" (Eng. Farid Zakaria) ─── */}
-      {about.showFounder !== false && (
+      {visible('founder', about.showFounder) && (
         <section className="atelier-founder-section">
           <div className="container">
             <div className="founder-letter-card">
@@ -582,31 +255,26 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
               <div className="founder-letter-content">
                 <div className="founder-letter-top">
                   <span className="letter-eyebrow">
-                    {isAr ? (about.founderEyebrowAr || DEFAULT_ABOUT_SETTINGS.founderEyebrowAr) : (about.founderEyebrowEn || DEFAULT_ABOUT_SETTINGS.founderEyebrowEn)}
+                    {isAr ? about.founderEyebrowAr : about.founderEyebrowEn}
                   </span>
-                  <span className="letter-est">{isAr ? 'تأسست ٢٠١٦ • القاهرة' : 'EST. 2016 • CAIRO'}</span>
+                  <span className="letter-est">{text(about.founderEst)}</span>
                 </div>
 
-                <blockquote className="founder-quote-serif">
-                  {isAr 
-                    ? (about.founderQuoteAr || DEFAULT_ABOUT_SETTINGS.founderQuoteAr)
-                    : (about.founderQuoteEn || DEFAULT_ABOUT_SETTINGS.founderQuoteEn)
-                  }
-                </blockquote>
+                <blockquote className="founder-quote-serif mini-markdown">{miniMarkdown(isAr ? about.founderQuoteAr : about.founderQuoteEn)}</blockquote>
 
                 <div className="founder-letter-signoff">
                   <div className="signoff-meta">
                     <h4 className="signoff-name">
-                      {isAr ? (about.founderNameAr || DEFAULT_ABOUT_SETTINGS.founderNameAr) : (about.founderNameEn || DEFAULT_ABOUT_SETTINGS.founderNameEn)}
+                      {isAr ? about.founderNameAr : about.founderNameEn}
                     </h4>
                     <p className="signoff-role">
-                      {isAr ? (about.founderTitleAr || DEFAULT_ABOUT_SETTINGS.founderTitleAr) : (about.founderTitleEn || DEFAULT_ABOUT_SETTINGS.founderTitleEn)}
+                      {isAr ? about.founderTitleAr : about.founderTitleEn}
                     </p>
                   </div>
 
                   <div className="signoff-stamp">
                     <Award size={16} className="stamp-icon" />
-                    <span>{isAr ? (about.founderStampAr || DEFAULT_ABOUT_SETTINGS.founderStampAr) : (about.founderStampEn || DEFAULT_ABOUT_SETTINGS.founderStampEn)}</span>
+                    <span>{isAr ? about.founderStampAr : about.founderStampEn}</span>
                   </div>
                 </div>
               </div>
@@ -616,7 +284,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
       )}
 
       {/* ─── 6. Confidential Acquisitions Office (Private Portal CTA) ─── */}
-      {about.showPortal !== false && (
+      {visible('portal', about.showPortal) && (
         <section className="atelier-portal-section">
           <div className="container">
             <div className="atelier-portal-card">
@@ -627,37 +295,31 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
               <div className="portal-inner-wrap">
                 <div className="portal-tag-row">
                   <ShieldCheck size={15} className="portal-tag-icon" />
-                  <span>{isAr ? (about.portalEyebrowAr || DEFAULT_ABOUT_SETTINGS.portalEyebrowAr) : (about.portalEyebrowEn || DEFAULT_ABOUT_SETTINGS.portalEyebrowEn)}</span>
+                  <span>{isAr ? about.portalEyebrowAr : about.portalEyebrowEn}</span>
                 </div>
 
                 <h2 className="portal-heading-text">
-                  {isAr ? (about.portalHeadingAr || DEFAULT_ABOUT_SETTINGS.portalHeadingAr) : (about.portalHeadingEn || DEFAULT_ABOUT_SETTINGS.portalHeadingEn)}
+                  {isAr ? about.portalHeadingAr : about.portalHeadingEn}
                 </h2>
                 
-                <p className="portal-paragraph-text">
-                  {isAr
-                    ? 'تواصل مباشرة مع مدير الأصول الخاصة للحصول على ملفات العقارات الحصرية غير المعلنة أو لتمثيل عقارك الاستثنائي بأعلى درجات السرية.'
-                    : 'Connect directly with our Private Assets Director for a bespoke, unreleased portfolio presentation or discrete representation of your exceptional estate.'}
-                </p>
+                <div className="portal-paragraph-text mini-markdown">{miniMarkdown(isAr ? about.portalParagraphAr : about.portalParagraphEn)}</div>
 
                 <div className="portal-actions-group">
-                  <button 
-                    type="button" 
+                  <a
                     className="portal-btn-gold"
-                    onClick={() => onOpenInquiry('Private Wealth Consultation')}
+                    href={`/${locale}/contact`} onClick={onOpenInquiry ? event => { event.preventDefault(); onOpenInquiry(isAr ? about.portalCtaBtnAr : about.portalCtaBtnEn); } : undefined}
                   >
-                    <span>{isAr ? (about.portalCtaBtnAr || DEFAULT_ABOUT_SETTINGS.portalCtaBtnAr) : (about.portalCtaBtnEn || DEFAULT_ABOUT_SETTINGS.portalCtaBtnEn)}</span>
+                    <span>{isAr ? about.portalCtaBtnAr : about.portalCtaBtnEn}</span>
                     <ArrowUpRight size={15} />
-                  </button>
+                  </a>
 
-                  <button 
-                    type="button" 
+                  <a
                     className="portal-btn-outline"
-                    onClick={onNavigateToCatalog}
+                    href={`/${locale}/properties`} onClick={onNavigateToCatalog ? event => { event.preventDefault(); onNavigateToCatalog(); } : undefined}
                   >
                     <Building2 size={15} />
-                    <span>{isAr ? 'استعراض الدليل الحصري' : 'Explore Sovereign Directory'}</span>
-                  </button>
+                    <span>{text(about.portalCatalog)}</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -673,6 +335,10 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
           overflow-x: hidden;
           transition: background var(--transition-smooth);
         }
+        .atelier-about-page .mini-markdown { text-align: inherit; }
+        .atelier-about-page .mini-markdown p { color: inherit; margin: 0; }
+        .atelier-about-page .mini-markdown p + p { margin-top: 1em; }
+        .atelier-about-page .mini-markdown :is(h2, h3, h4) { color: inherit; }
 
         /* ─── 1. Parisian Architectural Hero ─── */
         .atelier-hero-section {
@@ -1517,359 +1183,22 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
           border-color: rgba(140, 104, 38, 0.2);
         }
 
-        .curation-lightbox-card {
-          border-radius: 20px;
-          background: #090B0F;
-          border: 1px solid rgba(184, 147, 74, 0.3);
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-          overflow: hidden;
-          margin-bottom: 3.5rem;
-        }
-
-        [data-theme="light"] .curation-lightbox-card {
-          background: #FCFAF7;
-          border: 1.5px solid rgba(140, 104, 38, 0.3);
-          box-shadow: 0 16px 40px rgba(30, 24, 16, 0.06);
-        }
-
-        .lightbox-nav-bar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 1.25rem 2rem;
-          background: rgba(255, 255, 255, 0.02);
-          border-bottom: 1px solid rgba(184, 147, 74, 0.2);
-          flex-wrap: wrap;
-          gap: 1rem;
-        }
-
-        [data-theme="light"] .lightbox-nav-bar {
-          background: #FFFFFF;
-          border-bottom: 1px solid rgba(140, 104, 38, 0.18);
-        }
-
-        .lightbox-nav-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-weight: 800;
-          font-size: 0.875rem;
-          color: #E5B869;
-          letter-spacing: 0.04em;
-        }
-
-        [data-theme="light"] .lightbox-nav-title {
-          color: #8C6826;
-        }
-
-        .lightbox-title-icon {
-          color: #B8934A;
-        }
-
-        .lightbox-toggle-pill {
-          display: inline-flex;
-          padding: 4px;
-          border-radius: 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(184, 147, 74, 0.2);
-          gap: 4px;
-        }
-
-        [data-theme="light"] .lightbox-toggle-pill {
-          background: #EFEAE1;
-          border-color: rgba(140, 104, 38, 0.2);
-        }
-
-        .lightbox-toggle-btn {
-          padding: 7px 16px;
-          border-radius: 8px;
-          font-size: 0.8125rem;
-          font-weight: 700;
-          border: none;
-          background: transparent;
-          color: var(--text-secondary, #94A3B8);
-          cursor: pointer;
-          transition: all var(--transition-fast);
-        }
-
-        [data-theme="light"] .lightbox-toggle-btn {
-          color: #64748B;
-        }
-
-        .lightbox-toggle-btn.active {
-          background: linear-gradient(135deg, #E5B869 0%, #B8934A 100%);
-          color: #0B0C10;
-          box-shadow: 0 2px 10px rgba(184, 147, 74, 0.35);
-        }
-
-        .lightbox-stage {
-          position: relative;
-          padding: 2.75rem 2rem;
-          overflow: hidden;
-        }
-
-        .lightbox-grid-pattern {
-          position: absolute;
-          inset: 0;
-          background-image: linear-gradient(rgba(184, 147, 74, 0.05) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(184, 147, 74, 0.05) 1px, transparent 1px);
-          background-size: 32px 32px;
-          pointer-events: none;
-        }
-
-        [data-theme="light"] .lightbox-grid-pattern {
-          background-image: linear-gradient(rgba(140, 104, 38, 0.06) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(140, 104, 38, 0.06) 1px, transparent 1px);
-        }
-
-        .lightbox-view-grid {
-          position: relative;
-          z-index: 1;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1.5rem;
-        }
-
-        @media (max-width: 900px) {
-          .lightbox-view-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .lightbox-callout {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(184, 147, 74, 0.25);
-          border-radius: 14px;
-          padding: 1.75rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          gap: 1rem;
-        }
-
-        [data-theme="light"] .lightbox-callout {
-          background: #FFFFFF;
-          border: 1px solid rgba(140, 104, 38, 0.25);
-          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.04);
-        }
-
-        .lightbox-callout.exclusion-box {
-          border-color: rgba(148, 163, 184, 0.3);
-          background: rgba(15, 23, 42, 0.4);
-        }
-
-        [data-theme="light"] .lightbox-callout.exclusion-box {
-          border-color: rgba(148, 163, 184, 0.4);
-          background: #F8FAFC;
-        }
-
-        .callout-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .callout-roman {
-          font-family: Georgia, serif;
-          font-weight: 700;
-          font-size: 1.1rem;
-          color: #B8934A;
-        }
-
-        [data-theme="light"] .callout-roman {
-          color: #8C6826;
-        }
-
-        .exclusion-box .callout-roman {
-          color: #94A3B8;
-        }
-
-        .callout-title {
-          font-family: var(--font-heading);
-          font-size: 1.05rem;
-          font-weight: 800;
-          color: var(--text-primary, #141210);
-          margin: 0;
-        }
-
-        .callout-desc {
-          font-size: 0.875rem;
-          line-height: 1.65;
-          color: var(--text-secondary, #94A3B8);
-          margin: 0;
-        }
-
-        [data-theme="light"] .callout-desc {
-          color: #475569;
-        }
-
-        .callout-spec-tag {
-          display: inline-block;
-          align-self: flex-start;
-          font-size: 0.6875rem;
-          font-weight: 800;
-          font-family: monospace;
-          letter-spacing: 0.05em;
-          padding: 4px 10px;
-          border-radius: 6px;
-          background: rgba(184, 147, 74, 0.12);
-          color: #E5B869;
-          border: 1px solid rgba(184, 147, 74, 0.3);
-        }
-
-        [data-theme="light"] .callout-spec-tag {
-          background: rgba(140, 104, 38, 0.08);
-          color: #8C6826;
-          border-color: rgba(140, 104, 38, 0.25);
-        }
-
-        .callout-spec-tag.exclusion-tag {
-          background: rgba(148, 163, 184, 0.1);
-          color: #94A3B8;
-          border-color: rgba(148, 163, 184, 0.25);
-        }
-
-        /* Pillars Folio Grid */
-        .pillars-folio-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1.5rem;
-        }
-
-        @media (max-width: 900px) {
-          .pillars-folio-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 768px) {
-          /* Horizontal swipe row instead of stacked cards */
-          .pillars-folio-grid {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            gap: 0.75rem;
-            margin: 0 -1rem;
-            padding: 0 1rem 8px;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-          }
-          .pillars-folio-grid::-webkit-scrollbar {
-            display: none;
-          }
-          .pillar-folio-card {
-            flex: 0 0 82%;
-            scroll-snap-align: center;
-            padding: 1.35rem 1.4rem;
-          }
-        }
-
-        .pillar-folio-card {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(184, 147, 74, 0.2);
-          border-radius: 16px;
-          padding: 2.25rem;
-          transition: all var(--transition-fast);
-        }
-
-        [data-theme="light"] .pillar-folio-card {
-          background: #FFFFFF;
-          border: 1px solid rgba(140, 104, 38, 0.2);
-          box-shadow: 0 4px 20px rgba(30, 24, 16, 0.04);
-        }
-
-        .pillar-folio-card:hover {
-          border-color: rgba(184, 147, 74, 0.45);
-          transform: translateY(-3px);
-        }
-
-        .pillar-folio-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 1.25rem;
-        }
-
-        .pillar-folio-icon {
-          width: 42px;
-          height: 42px;
-          border-radius: 10px;
-          background: rgba(184, 147, 74, 0.12);
-          color: #E5B869;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid rgba(184, 147, 74, 0.25);
-        }
-
-        [data-theme="light"] .pillar-folio-icon {
-          background: rgba(140, 104, 38, 0.08);
-          color: #8C6826;
-          border-color: rgba(140, 104, 38, 0.2);
-        }
-
-        .pillar-folio-roman {
-          font-family: Georgia, serif;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #B8934A;
-          letter-spacing: 0.1em;
-        }
-
-        [data-theme="light"] .pillar-folio-roman {
-          color: #8C6826;
-        }
-
-        .pillar-folio-title {
-          font-family: var(--font-heading);
-          font-size: 1.2rem;
-          font-weight: 800;
-          color: var(--text-primary, #141210);
-          margin: 0 0 0.5rem 0;
-        }
-
-        .pillar-folio-sub {
-          font-size: 0.8125rem;
-          font-weight: 600;
-          color: #B8934A;
-          margin: 0 0 0.85rem 0;
-        }
-
-        [data-theme="light"] .pillar-folio-sub {
-          color: #8C6826;
-        }
-
-        .pillar-folio-desc {
-          font-size: 0.875rem;
-          line-height: 1.6;
-          color: var(--text-secondary, #94A3B8);
-          margin: 0 0 1.25rem 0;
-        }
-
-        [data-theme="light"] .pillar-folio-desc {
-          color: #475569;
-        }
-
-        .pillar-folio-checklist {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          padding-top: 1rem;
-          border-top: 1px solid rgba(184, 147, 74, 0.15);
-        }
-
-        .pillar-point-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          font-size: 0.8125rem;
-          color: var(--text-primary, #141210);
-          font-weight: 500;
-        }
-
-        .pillar-point-bullet {
-          color: #B8934A;
-          font-weight: 800;
+        .atelier-curation-section { container-type: inline-size; }
+        .charter-stage { display: grid; grid-template-columns: 44px 1.2fr 1fr 1fr; gap: 2rem; padding: 2.5rem 0; border-top: 1px solid color-mix(in srgb, var(--gold-primary) 35%, transparent); }
+        .charter-numeral { font-family: Georgia, serif; font-size: 2.25rem; color: var(--gold-primary); }
+        .charter-heading h3 { font-size: 1.2rem; font-family: var(--font-heading); margin: 0 0 .7rem; }
+        .charter-heading .mini-markdown { color: var(--text-secondary); font-size: .95rem; line-height: 1.75; }
+        .charter-column h4 { font-size: .9rem; color: var(--gold-primary); margin: 0 0 1rem; }
+        .charter-column ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .75rem; }
+        .charter-column li { display: flex; align-items: baseline; gap: .65rem; color: var(--text-primary); font-size: .9rem; line-height: 1.65; }
+        .charter-column li span { color: var(--gold-primary); }
+        .charter-footer { display: flex; gap: 1.5rem; align-items: center; justify-content: space-between; padding-top: 2rem; border-top: 1px solid color-mix(in srgb, var(--gold-primary) 35%, transparent); }
+        .charter-report-link { display: inline-flex; align-items: center; justify-content: center; gap: .65rem; background: var(--gold-primary); color: var(--bg-primary); border-radius: 999px; padding: .85rem 1.5rem; text-decoration: none; }
+        .charter-report-link:focus-visible, .paravent-panel:focus-visible { outline: 2px solid var(--gold-primary); outline-offset: 4px; }
+        @container (max-width: 800px) {
+          .charter-stage { grid-template-columns: 36px 1fr; gap: 1rem; }
+          .charter-column { grid-column: 2; }
+          .charter-footer { align-items: start; flex-direction: column; }
         }
 
         /* ─── 5. Founder’s Lettre d'Intention ─── */
@@ -2165,34 +1494,6 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
           }
           .atelier-title {
             font-size: 1.75rem;
-          }
-          .curation-lightbox-card {
-            border-radius: 16px;
-            margin-bottom: 2rem;
-          }
-          .lightbox-nav-bar {
-            padding: 1rem 1.25rem;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 0.75rem;
-          }
-          .lightbox-toggle-pill {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-          }
-          .lightbox-toggle-btn {
-            width: 100%;
-            text-align: center;
-          }
-          .lightbox-stage {
-            padding: 1.25rem 1rem;
-          }
-          .lightbox-callout {
-            padding: 1.25rem 1rem;
-          }
-          .pillar-folio-card {
-            padding: 1.5rem 1.25rem;
           }
           .founder-quote-serif {
             font-size: 1.15rem;

@@ -1,3 +1,5 @@
+import { getSiteContent } from '@/lib/siteContent/server';
+import { PlatformSettingsProvider } from '@/lib/hooks/usePlatformSettings';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -21,13 +23,15 @@ export default async function DashboardGroupLayout({ children, params }: LayoutP
   const { adminLocale } = await params;
   const dir = adminLocale === 'ar' ? 'rtl' : 'ltr';
 
+  const platformSettings = await getSiteContent('platform_settings');
+
   return (
     <div className={styles.adminWrapper} dir={dir} data-admin-wrapper="true">
       <AdminAccentBridge />
       <AdminSidebar adminLocale={adminLocale} />
-      <AdminMainContent>
+      <PlatformSettingsProvider settings={platformSettings}><AdminMainContent>
         {children}
-      </AdminMainContent>
+      </AdminMainContent></PlatformSettingsProvider>
     </div>
   );
 }

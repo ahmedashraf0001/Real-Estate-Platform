@@ -24,7 +24,7 @@ import { InquiryModal } from '@/components/InquiryModal';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 import { createCachedTileLayer } from '@/lib/mapCache';
-import { getStoredPlatformSettings } from '@/lib/services/marketIntelligence';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 import { 
   Bed,
   Phone,
@@ -387,26 +387,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'denied' | 'unavailable'>('idle');
 
-  const [isHidePrices, setIsHidePrices] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const cookieMatch = document.cookie.match(/zf_hide_prices=([^;]+)/);
-    if (cookieMatch) return cookieMatch[1] === 'true';
-    return getStoredPlatformSettings().hidePropertyPrices ?? false;
-  });
+  const isHidePrices = usePlatformSettings().hidePropertyPrices ?? false;
 
-  useEffect(() => {
-    const syncSettings = () => {
-      const cookieMatch = document.cookie.match(/zf_hide_prices=([^;]+)/);
-      if (cookieMatch) {
-        setIsHidePrices(cookieMatch[1] === 'true');
-      } else {
-        setIsHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
-      }
-    };
-    syncSettings();
-    window.addEventListener('zf_platform_settings_updated', syncSettings);
-    return () => window.removeEventListener('zf_platform_settings_updated', syncSettings);
-  }, []);
 
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
   const similarProperties = propSimilar || [];

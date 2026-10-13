@@ -1,0 +1,44 @@
+TASK site-content-db — platform settings and About page content stored in the database and editable from the admin; About "charter" section redesign (branch feat/blueprint-nav, after a929e97)
+
+WHY [user-confirmed 2026-10-13]
+1. Platform settings (src/lib/services/marketIntelligence.ts PlatformDisplaySettings: showMarketRadar, showVIPAlerts, showFloorPlans, showCommuteTimes, hidePropertyPrices, contact, whatsappAutomation, home, about, marketDistricts) are saved ONLY in the admin's browser (localStorage + a zf_hide_prices cookie, saveStoredPlatformSettings ~l.562). Visitors never see admin changes. User approved moving them to the DB.
+2. The user wants ALL text on the public About page (src/components/about/AboutView.tsx, ~56 AR/EN literal pairs plus arrays such as the stats at ~l.69) editable from the admin. A PlatformAboutSettings type already exists inside the settings; build on it.
+3. Approved redesign of the About section "ميثاق الانتقاء والفحص المعماري" (class atelier-curation-section, AboutView.tsx ~l.400-560 plus the later "الركيزة I/II/III" pillar cards). Today it has a tabbed panel (accepted vs "معايير الاستبعاد (٧٠٪+ مستبعد)") with 3 cards, then the same 3 topics again as 3 large pillar cards; monospace tags; an unsupported "70%" claim.
+
+REQUIRED — DATABASE (write the migration file ONLY; do NOT apply it; Supabase is PRODUCTION)
+1. New migration in zakaria-farid/supabase/migrations/ (timestamp after 20261009100000): table public.site_content (key text primary key, content jsonb not null default '{}'::jsonb, updated_at timestamptz not null default now(), updated_by uuid references auth.users null). RLS enabled. Policy: select for anon and authenticated (public content). Insert/update/delete only for admins, using the SAME admin check the existing admin-only policies use (find it in the migrations, e.g. on properties/leads writes; reuse the function or expression, do not invent a new role model). Trigger or default for updated_at. No seed rows: an empty table means "use code defaults".
+2. Keys: 'platform_settings' (the whole PlatformDisplaySettings object) and 'about_page' (the About content object). Content is validated in code on read (unknown/missing fields fall back to defaults per field; never crash on bad JSON).
+3. Report the full SQL in final.md. Claude reviews it and asks the user before applying.
+
+REQUIRED — DATA LAYER
+4. Server read helper getSiteContent(key) with defaults merge (pure merge function, unit-tested), cached per request; used by server components/pages. Public pages read settings from the DB instead of localStorage. Keep the zf_hide_prices behaviour correct for SSR (prices hidden server-side when hidePropertyPrices is true; the cookie path becomes unnecessary — remove it if nothing else needs it, and report).
+5. usePlatformSettings (src/lib/hooks/usePlatformSettings.ts) and every reader listed by `grep -rln "getStoredPlatformSettings\|zf_hide_prices" src` get settings from the server-provided value (props/context), not localStorage. Remove the localStorage storage once nothing reads it.
+6. Admin save: a server action or route that checks the admin session server-side and upserts site_content (sets updated_by). Errors are shown inline in the admin. The admin UI never writes directly from the client with elevated keys.
+
+REQUIRED — ADMIN UI (admin colors/tokens only, no site gold; Arabic UI has no English words except the EN field labels)
+7. AdminPlatformSettings keeps its layout but saves to the DB through 6; the save button shows saving/saved/error states. "Reset to defaults" deletes the row after a confirm.
+8. New admin page "محتوى الصفحات" / "Page content" (add it to the admin nav next to settings), with a section per About-page block (hero, story/intro, charter, stats, values, team/CTA ... whatever AboutView has). Each text field has AR and EN inputs. Longer paragraphs use the existing MarkdownDescriptionEditor (src/components/admin/MarkdownDescriptionEditor.tsx). Lists (stats, charter stages and their accept/reject lines) support add, remove and reorder. Empty field = default shown as the placeholder. Live preview of the edited block (reuse the public component with the draft content). Every button type="button"; no nested forms.
+
+REQUIRED — PUBLIC ABOUT PAGE
+9. AboutView receives the merged content object; every visible AR/EN string comes from it (defaults = today's exact text, moved into one defaults module). Paragraph fields render with miniMarkdown.
+10. Charter redesign (approved mockup):
+ - eyebrow "مختبر المعايير الهندسية", title, one-line subtitle ("كل عقار يمر بثلاث مراحل فحص قبل أن يظهر في دليلنا. إن تعثّر في واحدة، لا يُدرج.").
+ - three rows (stages I, II, III), no tabs and no boxed cards: a serif gold numeral; the stage title and one-line description; a column "نقبل" with check items; a column "نستبعد" with x items. Thin gold hairlines between rows.
+ - Content per stage (defaults): I الفحص الإنشائي والمعماري — accept: مساقط مطابقة للمواصفات / عزل حراري ومائي معتمد / نسب تحميل وخامات سليمة; reject: عيوب بناء أو تشطيب / تسريب أو ضعف في العزل. II التوثيق القانوني والملكية — accept: ملكية مسجلة واضحة / تراخيص بناء سارية / خلو من الرهونات والنزاعات; reject: سندات غامضة أو ناقصة / مخالفات بلدية معلقة. III الخصوصية والقيمة — accept: إطلالة وخصوصية غير مجروحة / سعر متسق مع السوق; reject: خصوصية منتهكة / أسعار مبالغ فيها. Write matching English.
+ - footer line "تريد تقرير الفحص لعقار معين؟" + one gold pill link "اطلب تقرير الفحص" to the contact page (prefill the inquiry subject if the contact page supports it).
+ - Remove the tabbed panel, the duplicate pillar cards, the monospace tags and the "70%" claim. The stats entry "70%+ نسبة الاستبعاد" becomes editable and is hidden while its value is empty (default empty).
+ - Phone: each stage stacks title, then accept, then reject. Light and dark themes with the site tokens. No AI-slop or template look; follow the site visual rules.
+
+DO NOT
+- Apply the migration or write anything to the production DB (read-only SELECTs are fine). Change other tables or RLS. Add dependencies. Press save in a real admin session.
+- Change the property wizard, blueprint, map, or ERP screens.
+
+TESTS
+RED first: defaults merge (missing/unknown/wrong-type fields), admin-check on the save action (non-admin rejected), SSR of AboutView with defaults equals today's text set (snapshot of strings), SSR with overridden content shows it, charter structure (3 stages, accept/reject columns, no tabs, no "70%"), hidePropertyPrices respected server-side, admin page SSR (sections, AR/EN fields, add/remove/reorder controls, button types). Migration SQL contract test (RLS enabled, public select, admin-only write).
+Gates: tsc exit 0. npm test: only the 7 known baseline failures.
+Capture (separate port, Supabase reads intercepted with fixtures): About page AR/EN, light/dark, 1440 and 390 (charter section and full page); admin page content editor 1440 AR.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105) and a separate gitignored build dir; restore tsconfig.json/next-env.d.ts.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

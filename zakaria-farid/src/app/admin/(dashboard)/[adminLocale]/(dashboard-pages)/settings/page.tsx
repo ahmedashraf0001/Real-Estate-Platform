@@ -1,3 +1,4 @@
+import { getSiteContent } from '@/lib/siteContent/server';
 import React from 'react';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
 
@@ -18,9 +19,10 @@ export async function generateMetadata({ params }: AdminSettingsPageProps) {
 export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
   const { adminLocale } = await params;
 
+  const initialAboutContent = await getSiteContent('about_page');
   return (
     <div style={{ maxWidth: '1200px', width: '100%', minWidth: 0, margin: '0 auto', boxSizing: 'border-box' }}>
-      <AdminPlatformSettings adminLocale={adminLocale} />
+      <AdminPlatformSettings adminLocale={adminLocale} initialAboutContent={initialAboutContent} />
     </div>
   );
 }

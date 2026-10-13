@@ -1,12 +1,11 @@
 'use client';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, ShieldCheck, Sparkles } from 'lucide-react';
 import { 
   MarketDistrictConfig, 
-  getStoredPlatformSettings, 
-  DEFAULT_MARKET_DISTRICTS 
 } from '@/lib/services/marketIntelligence';
 
 interface MarketChartProps {
@@ -15,39 +14,14 @@ interface MarketChartProps {
 
 export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
   const isAr = locale === 'ar';
-  const [districts, setDistricts] = useState<MarketDistrictConfig[]>(
-    DEFAULT_MARKET_DISTRICTS.filter(d => d.isEnabled)
-  );
-  const [selectedDistrict, setSelectedDistrict] = useState<MarketDistrictConfig | null>(
-    districts[0] || null
-  );
+  const settings = usePlatformSettings();
+  const districts = settings.marketDistricts.filter(d => d.isEnabled);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedDistrict = districts.find(d => d.id === selectedId) || districts[0] || null;
+  const setSelectedDistrict = (district: MarketDistrictConfig) => setSelectedId(district.id);
+  const isVisible = settings.showMarketRadar;
   const [mounted, setMounted] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-
-  const loadSettings = () => {
-    const settings = getStoredPlatformSettings();
-    setIsVisible(settings.showMarketRadar !== false);
-    const active = (settings.marketDistricts || []).filter(d => d.isEnabled);
-    setDistricts(active);
-    if (active.length > 0) {
-      setSelectedDistrict(prev => (prev && active.find(d => d.id === prev.id)) ? prev : active[0]);
-    } else {
-      setSelectedDistrict(null);
-    }
-  };
-
-  useEffect(() => {
-    setMounted(true);
-    loadSettings();
-
-    const handleUpdate = () => loadSettings();
-    window.addEventListener('zf_platform_settings_updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('zf_platform_settings_updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   if (!isVisible || districts.length === 0) {
     return null;

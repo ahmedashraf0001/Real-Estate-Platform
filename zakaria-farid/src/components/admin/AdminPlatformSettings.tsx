@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import AdminPageContent from './AdminPageContent';
+import type { AboutPageContent } from '@/lib/siteContent/defaults';
+import { useRouter } from 'next/navigation';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { saveSiteContent, resetSiteContent } from '@/app/actions/siteContent';
 import { 
   Sparkles, 
   Sliders, 
@@ -19,41 +24,36 @@ import {
   MapPin,
   FileText,
   BookOpen,
-  Quote,
-  Award,
-  Layers,
-  Compass,
   Home,
   LayoutTemplate,
-  CheckSquare
 } from 'lucide-react';
 import { 
   MarketDistrictConfig, 
   PlatformDisplaySettings, 
   PlatformContactSettings,
   PlatformHomeSettings,
-  PlatformAboutSettings,
-  getStoredPlatformSettings, 
-  saveStoredPlatformSettings, 
   DEFAULT_PLATFORM_SETTINGS, 
-  DEFAULT_MARKET_DISTRICTS,
   DEFAULT_HOME_SETTINGS,
-  DEFAULT_ABOUT_SETTINGS,
   DEFAULT_CONTACT_SETTINGS
 } from '@/lib/services/marketIntelligence';
 import { formatDisplayPhoneNumber } from '@/lib/utils/formatPhone';
 
 interface AdminPlatformSettingsProps {
   adminLocale: string;
+  initialAboutContent: AboutPageContent;
 }
 
 type TabKey = 'radar' | 'home' | 'about' | 'contact';
 
-export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSettingsProps) {
+export default function AdminPlatformSettings({ adminLocale, initialAboutContent }: AdminPlatformSettingsProps) {
   const isAr = adminLocale === 'ar';
+  const initialSettings = usePlatformSettings();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>('radar');
-  const [settings, setSettings] = useState<PlatformDisplaySettings>(DEFAULT_PLATFORM_SETTINGS);
+  const [settings, setSettings] = useState<PlatformDisplaySettings>(initialSettings);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [newDistrict, setNewDistrict] = useState<Partial<MarketDistrictConfig>>({
     district: '',
     districtAr: '',
@@ -69,22 +69,22 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
   });
   const [isAddingNew, setIsAddingNew] = useState(false);
 
-  useEffect(() => {
-    setSettings(getStoredPlatformSettings());
-  }, []);
-
-  const handleSave = () => {
-    saveStoredPlatformSettings(settings);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+  const handleSave = async () => {
+    setSaving(true); setSavedSuccess(false); setSaveError('');
+    const result = await saveSiteContent('platform_settings', settings);
+    setSaving(false);
+    if (!result.success) { setSaveError(isAr ? 'تعذر حفظ الإعدادات. تحقق من تسجيل الدخول وإتاحة جدول المحتوى ثم حاول مجدداً.' : result.error || 'Save failed'); return; }
+    setSavedSuccess(true); router.refresh();
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     if (confirm(isAr ? 'هل أنت متأكد من استعادة كافة الإعدادات والنصوص الافتراضية؟' : 'Are you sure you want to restore all factory default platform settings and editorials?')) {
-      setSettings(DEFAULT_PLATFORM_SETTINGS);
-      saveStoredPlatformSettings(DEFAULT_PLATFORM_SETTINGS);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 2500);
+      setSaving(true); setSavedSuccess(false); setSaveError('');
+      const result = await resetSiteContent('platform_settings');
+      setSaving(false);
+      if (!result.success) { setSaveError(isAr ? 'تعذر استعادة الإعدادات الافتراضية. حاول مجدداً.' : result.error || 'Reset failed'); return; }
+      setSettings(structuredClone(DEFAULT_PLATFORM_SETTINGS));
+      setSavedSuccess(true); router.refresh();
     }
   };
 
@@ -166,17 +166,6 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
     }));
   };
 
-  // Helper for About editorial changes
-  const updateAbout = (field: keyof PlatformAboutSettings, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      about: {
-        ...(prev.about || DEFAULT_ABOUT_SETTINGS),
-        [field]: value
-      }
-    }));
-  };
-
   // Helper for Contact changes
   const updateContact = (field: keyof PlatformContactSettings, value: string) => {
     setSettings(prev => ({
@@ -189,11 +178,10 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
   };
 
   const home = settings.home || DEFAULT_HOME_SETTINGS;
-  const about = settings.about || DEFAULT_ABOUT_SETTINGS;
   const contact = settings.contact || DEFAULT_CONTACT_SETTINGS;
 
   return (
-    <div className={`admin-settings-root is-light`} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`admin-settings-root is-light`} dir={isAr ? 'rtl' : 'ltr'} onChangeCapture={() => setSavedSuccess(false)}>
       {/* Top Header Card */}
       <div className="settings-header-card">
         <div className="settings-header-left">
@@ -218,6 +206,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           <button 
             type="button" 
             onClick={handleResetDefaults}
+            disabled={saving}
             className="btn-outline-gold"
           >
             <RefreshCw size={15} />
@@ -227,14 +216,16 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           <button 
             type="button" 
             onClick={handleSave}
+            disabled={saving}
             className="btn-solid-gold"
           >
             {savedSuccess ? <Check size={16} /> : <Save size={16} />}
-            <span>{savedSuccess ? (isAr ? 'تم الحفظ بنجاح!' : 'Saved Successfully!') : (isAr ? 'حفظ التعديلات' : 'Save Changes')}</span>
+            <span>{saving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : savedSuccess ? (isAr ? 'تم الحفظ بنجاح!' : 'Saved Successfully!') : (isAr ? 'حفظ التعديلات' : 'Save Changes')}</span>
           </button>
         </div>
       </div>
 
+      {saveError && <p role="alert" style={{ color: 'var(--admin-danger, var(--erp-danger))' }}>{saveError}</p>}
       {/* Tabs Navigation Scroller */}
       <div className="settings-tabs-scroller">
         <div className="settings-tabs-track">
@@ -311,7 +302,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                   onChange={(e) => setSettings(prev => ({ ...prev, showVIPAlerts: e.target.checked }))}
                 />
                 <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? 'عرض صندوق تنبيهات الـ VIP' : 'Show VIP Property Alerts Card'}</span>
+                  <span className="toggle-title">{isAr ? 'عرض صندوق تنبيهات كبار العملاء' : 'Show VIP Property Alerts Card'}</span>
                   <span className="toggle-desc">{isAr ? 'تفعيل بطاقة الاشتراك في الفرص النادرة بالشريط الجانبي' : 'Enable email alerts subscription box in the properties sidebar'}</span>
                 </div>
               </label>
@@ -330,7 +321,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                 </div>
                 <div>
                   <h2 className="card-title">
-                    {isAr ? '🔒 إخفاء أسعار العقارات عن الزوار (السعر عند الطلب - POA)' : '🔒 Hide Property Prices from Public (Price on Application - POA)'}
+                    {isAr ? '🔒 إخفاء أسعار العقارات عن الزوار (السعر عند الطلب)' : '🔒 Hide Property Prices from Public (Price on Application - POA)'}
                   </h2>
                   <p className="card-sub">
                     {isAr 
@@ -347,7 +338,6 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                   onChange={(e) => {
                     const next = { ...settings, hidePropertyPrices: e.target.checked };
                     setSettings(next);
-                    saveStoredPlatformSettings(next);
                   }}
                   style={{ width: 18, height: 18, accentColor: 'var(--admin-accent)', cursor: 'pointer' }}
                 />
@@ -441,7 +431,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                     <div className="district-tag-group">
                       <span className="district-rank">#{district.rank}</span>
                       <span className="district-name-main">{isAr ? district.districtAr : district.district}</span>
-                      <span className="district-name-alt">({isAr ? district.district : district.districtAr})</span>
+                      {!isAr && <span className="district-name-alt">({district.districtAr})</span>}
                     </div>
 
                     <div className="district-quick-actions">
@@ -449,7 +439,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                         type="button" 
                         onClick={() => handleToggleDistrict(district.id)}
                         className={`btn-icon-toggle ${district.isEnabled ? 'active' : ''}`}
-                        title={district.isEnabled ? 'Disable' : 'Enable'}
+                        title={isAr ? (district.isEnabled ? 'إخفاء المنطقة' : 'إظهار المنطقة') : (district.isEnabled ? 'Disable' : 'Enable')}
                       >
                         {district.isEnabled ? <Eye size={16} /> : <EyeOff size={16} />}
                       </button>
@@ -458,7 +448,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                         type="button" 
                         onClick={() => handleDeleteDistrict(district.id)}
                         className="btn-icon-delete"
-                        title="Delete"
+                        title={isAr ? 'حذف المنطقة' : 'Delete'}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -746,508 +736,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
       {/* ══════════════════════════════════════════════════════════════════════
           TAB 3: ABOUT US EDITORIAL CMS & FULL SECTION TOGGLES
       ══════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'about' && (
-        <div className="settings-tab-pane">
-          {/* Master Section Toggles for About Us */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><LayoutTemplate size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? 'أقسام صفحة من نحن وإمكانية تفعيلها أو إخفائها' : 'About Us Section Visibility Toggles'}</h2>
-                <p className="card-sub">{isAr ? 'التحكم الشامل في إظهار أو إخفاء كل قسم بشكل منفصل في صفحة من نحن' : 'Show or hide every single section of the About Us page with dedicated switches.'}</p>
-              </div>
-            </div>
-
-            <div className="toggles-grid-2col">
-              <label className="toggle-checkbox-card">
-                <input 
-                  type="checkbox"
-                  checked={about.showHero !== false}
-                  onChange={(e) => updateAbout('showHero', e.target.checked)}
-                />
-                <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? '١. الهيرو الرئيسي والبيان التأسيسي' : '1. Masthead Hero & Editorial Manifesto'}</span>
-                  <span className="toggle-desc">{isAr ? 'صورة الهيرو والعنوان الباريسي والبيان المعماري' : 'Hero masthead, monumental title, coordinates, and manifesto'}</span>
-                </div>
-              </label>
-
-              <label className="toggle-checkbox-card">
-                <input 
-                  type="checkbox"
-                  checked={about.showMetrology !== false}
-                  onChange={(e) => updateAbout('showMetrology', e.target.checked)}
-                />
-                <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? '٢. شريط أرقام وإحصائيات الهيبة' : '2. Integrated Metrology Ribbon (Stats I–IV)'}</span>
-                  <span className="toggle-desc">{isAr ? 'الأرقام الرومانية الأربعة ومؤشرات الثقة وحجم الصفقات' : '4-metric authority strip with asset volume and retention'}</span>
-                </div>
-              </label>
-
-              <label className="toggle-checkbox-card">
-                <input 
-                  type="checkbox"
-                  checked={about.showParavent !== false}
-                  onChange={(e) => updateAbout('showParavent', e.target.checked)}
-                />
-                <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? '٣. سردية العقد الأول (فصول بارافينت ٢٠١٦-٢٠٢٦)' : '3. Decade Monograph Folio (2016–2026)'}</span>
-                  <span className="toggle-desc">{isAr ? 'الأكورديون التفاعلي ذو الأربعة فصول لتاريخ المكتب' : '4-chapter interactive unfolding accordion monograph'}</span>
-                </div>
-              </label>
-
-              <label className="toggle-checkbox-card">
-                <input 
-                  type="checkbox"
-                  checked={about.showCuration !== false}
-                  onChange={(e) => updateAbout('showCuration', e.target.checked)}
-                />
-                <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? '٤. ميثاق الانتقاء وركائز الفحص الثلاثة' : '4. Curation Protocol & 3 Pillars'}</span>
-                  <span className="toggle-desc">{isAr ? 'مختبر المعايير، الفحص الإنشائي والقانوني والمالي' : 'Lightbox inspection protocol and 3 forensic pillar cards'}</span>
-                </div>
-              </label>
-
-              <label className="toggle-checkbox-card">
-                <input 
-                  type="checkbox"
-                  checked={about.showFounder !== false}
-                  onChange={(e) => updateAbout('showFounder', e.target.checked)}
-                />
-                <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? '٥. رسالة ورؤية المؤسس (م. فريد زكريا)' : '5. Founder’s Letter (Eng. Farid Zakaria)'}</span>
-                  <span className="toggle-desc">{isAr ? 'المقولة الاقتباسية والاسم والختم الرسمي للاستشاري' : 'Bespoke quotation card, founder name, title, and seal'}</span>
-                </div>
-              </label>
-
-              <label className="toggle-checkbox-card">
-                <input 
-                  type="checkbox"
-                  checked={about.showPortal !== false}
-                  onChange={(e) => updateAbout('showPortal', e.target.checked)}
-                />
-                <div className="toggle-info">
-                  <span className="toggle-title">{isAr ? '٦. بوابة الاستحواذ الخاص الختامية' : '6. Confidential Acquisitions Office CTA'}</span>
-                  <span className="toggle-desc">{isAr ? 'بطاقة الاتصال المباشر وطلب استشارة شراء خاصة' : 'Private wealth consultation banner and directory link'}</span>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* 1. Hero Content */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><Sparkles size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? '١. نصوص الهيرو والبيان التأسيسي' : '1. Hero & Manifesto Content'}</h2>
-                <p className="card-sub">{isAr ? 'العبارات والعناوين الترحيبية وأزرار التوجيه' : 'Hero headline, subtitle, manifesto narrative, and action button labels.'}</p>
-              </div>
-            </div>
-
-            <div className="form-fields-grid">
-              <div className="field-group">
-                <label>{isAr ? 'شارة الهيرو التأسيسية (EN)' : 'Hero Coordinates / Charter Tag (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.badgeEn || ''} 
-                  onChange={(e) => updateAbout('badgeEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'شارة الهيرو التأسيسية (عربي)' : 'Hero Coordinates / Charter Tag (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.badgeAr || ''} 
-                  onChange={(e) => updateAbout('badgeAr', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label>{isAr ? 'العنوان الرئيسي - السطر الأول (EN)' : 'Hero Title Lead Line (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroTitle1En || ''} 
-                  onChange={(e) => updateAbout('heroTitle1En', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'العنوان الرئيسي - السطر الأول (عربي)' : 'Hero Title Lead Line (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroTitle1Ar || ''} 
-                  onChange={(e) => updateAbout('heroTitle1Ar', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label>{isAr ? 'العنوان الرئيسي - السطر الثاني الذهبي (EN)' : 'Hero Title Gold Serif Line (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroTitle2En || ''} 
-                  onChange={(e) => updateAbout('heroTitle2En', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'العنوان الرئيسي - السطر الثاني الذهبي (عربي)' : 'Hero Title Gold Serif Line (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroTitle2Ar || ''} 
-                  onChange={(e) => updateAbout('heroTitle2Ar', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group full-width">
-                <label>{isAr ? 'نص البيان المعماري التأسيسي (EN)' : 'Editorial Manifesto Lead Text (EN)'}</label>
-                <textarea 
-                  rows={3}
-                  value={about.manifestoEn || ''} 
-                  onChange={(e) => updateAbout('manifestoEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'نص البيان المعماري التأسيسي (عربي)' : 'Editorial Manifesto Lead Text (AR)'}</label>
-                <textarea 
-                  rows={3}
-                  value={about.manifestoAr || ''} 
-                  onChange={(e) => updateAbout('manifestoAr', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label>{isAr ? 'نص الزر الأول (EN)' : 'Hero Button 1 Text (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroCta1TextEn || ''} 
-                  onChange={(e) => updateAbout('heroCta1TextEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'نص الزر الأول (عربي)' : 'Hero Button 1 Text (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroCta1TextAr || ''} 
-                  onChange={(e) => updateAbout('heroCta1TextAr', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label>{isAr ? 'نص الزر الثاني (EN)' : 'Hero Button 2 Text (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroCta2TextEn || ''} 
-                  onChange={(e) => updateAbout('heroCta2TextEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'نص الزر الثاني (عربي)' : 'Hero Button 2 Text (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.heroCta2TextAr || ''} 
-                  onChange={(e) => updateAbout('heroCta2TextAr', e.target.value)} 
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Metrology Stats */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><BarChart3 size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? '٢. أرقام وإحصائيات الهيبة (I, II, III, IV)' : '2. Authority Stats Ribbon (I to IV)'}</h2>
-                <p className="card-sub">{isAr ? 'تعديل القيم والنصوص الوصفية لكل رقم' : 'Values and descriptive labels for the metrology strip.'}</p>
-              </div>
-            </div>
-
-            <div className="form-fields-grid">
-              {/* Stat 1 */}
-              <div className="field-group">
-                <label>{isAr ? 'الرقم I - القيمة (EN & AR)' : 'Stat I - Value (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="2.5B+ EGP" value={about.stat1Value || ''} onChange={(e) => updateAbout('stat1Value', e.target.value)} />
-                  <input type="text" placeholder="٢.٥+ مليار ج.م" value={about.stat1ValueAr || ''} onChange={(e) => updateAbout('stat1ValueAr', e.target.value)} />
-                </div>
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الرقم I - الوصف (EN / AR)' : 'Stat I - Label (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="Curated Asset Volume" value={about.stat1LabelEn || ''} onChange={(e) => updateAbout('stat1LabelEn', e.target.value)} />
-                  <input type="text" placeholder="حجم المحفظة" value={about.stat1LabelAr || ''} onChange={(e) => updateAbout('stat1LabelAr', e.target.value)} />
-                </div>
-              </div>
-
-              {/* Stat 2 */}
-              <div className="field-group">
-                <label>{isAr ? 'الرقم II - القيمة (EN & AR)' : 'Stat II - Value (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="15+ Districts" value={about.stat2Value || ''} onChange={(e) => updateAbout('stat2Value', e.target.value)} />
-                  <input type="text" placeholder="+١٥ منطقة" value={about.stat2ValueAr || ''} onChange={(e) => updateAbout('stat2ValueAr', e.target.value)} />
-                </div>
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الرقم II - الوصف (EN / AR)' : 'Stat II - Label (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="Prime Egyptian Markets" value={about.stat2LabelEn || ''} onChange={(e) => updateAbout('stat2LabelEn', e.target.value)} />
-                  <input type="text" placeholder="مناطق استراتيجية" value={about.stat2LabelAr || ''} onChange={(e) => updateAbout('stat2LabelAr', e.target.value)} />
-                </div>
-              </div>
-
-              {/* Stat 3 */}
-              <div className="field-group">
-                <label>{isAr ? 'الرقم III - القيمة (EN & AR)' : 'Stat III - Value (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="98%" value={about.stat3Value || ''} onChange={(e) => updateAbout('stat3Value', e.target.value)} />
-                  <input type="text" placeholder="٩٨٪" value={about.stat3ValueAr || ''} onChange={(e) => updateAbout('stat3ValueAr', e.target.value)} />
-                </div>
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الرقم III - الوصف (EN / AR)' : 'Stat III - Label (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="Client Retention Rate" value={about.stat3LabelEn || ''} onChange={(e) => updateAbout('stat3LabelEn', e.target.value)} />
-                  <input type="text" placeholder="استمرارية العملاء" value={about.stat3LabelAr || ''} onChange={(e) => updateAbout('stat3LabelAr', e.target.value)} />
-                </div>
-              </div>
-
-              {/* Stat 4 */}
-              <div className="field-group">
-                <label>{isAr ? 'الرقم IV - القيمة (EN & AR)' : 'Stat IV - Value (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="10+ Years" value={about.stat4Value || ''} onChange={(e) => updateAbout('stat4Value', e.target.value)} />
-                  <input type="text" placeholder="+١٠ سنوات" value={about.stat4ValueAr || ''} onChange={(e) => updateAbout('stat4ValueAr', e.target.value)} />
-                </div>
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الرقم IV - الوصف (EN / AR)' : 'Stat IV - Label (EN / AR)'}</label>
-                <div className="dual-inputs-row">
-                  <input type="text" placeholder="Bespoke Heritage" value={about.stat4LabelEn || ''} onChange={(e) => updateAbout('stat4LabelEn', e.target.value)} />
-                  <input type="text" placeholder="سنوات الخبرة" value={about.stat4LabelAr || ''} onChange={(e) => updateAbout('stat4LabelAr', e.target.value)} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Paravent Decade Monograph */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><BookOpen size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? '٣. نصوص سردية العقد الأول (فصول بارافينت)' : '3. Decade Monograph Folio Chapters'}</h2>
-                <p className="card-sub">{isAr ? 'تعديل فصول المسيرة الأربعة وعناوين المحطات' : 'Edit the 4 historical chapters and narrative monographs.'}</p>
-              </div>
-            </div>
-
-            <div className="form-fields-grid">
-              <div className="field-group">
-                <label>{isAr ? 'عنوان القسم الرئيسي (EN)' : 'Section Main Title (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.paraventTitleEn || ''} 
-                  onChange={(e) => updateAbout('paraventTitleEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'عنوان القسم الرئيسي (عربي)' : 'Section Main Title (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.paraventTitleAr || ''} 
-                  onChange={(e) => updateAbout('paraventTitleAr', e.target.value)} 
-                />
-              </div>
-
-              {/* Chapter 1 */}
-              <div className="field-group full-width">
-                <div className="sub-chapter-divider">{isAr ? 'الفصل الأول (٢٠١٦ - التأسيس والميثاق)' : 'Chapter I (2016 Genesis)'}</div>
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'عنوان الفصل (EN)' : 'Chapter I Title (EN)'}</label>
-                <input type="text" value={about.chap1TitleEn || ''} onChange={(e) => updateAbout('chap1TitleEn', e.target.value)} />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'عنوان الفصل (عربي)' : 'Chapter I Title (AR)'}</label>
-                <input type="text" value={about.chap1TitleAr || ''} onChange={(e) => updateAbout('chap1TitleAr', e.target.value)} />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'نص السردية للفصل الأول (عربي)' : 'Chapter I Narrative (AR)'}</label>
-                <textarea rows={2} value={about.chap1NarrativeAr || ''} onChange={(e) => updateAbout('chap1NarrativeAr', e.target.value)} />
-              </div>
-
-              {/* Chapter 4 */}
-              <div className="field-group full-width">
-                <div className="sub-chapter-divider">{isAr ? 'الفصل الرابع (٢٠٢٥-٢٠٢٦ - الآفاق المستقبلية والساحل)' : 'Chapter IV (2025–2026 Sovereign Horizon)'}</div>
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'عنوان الفصل الرابع (EN)' : 'Chapter IV Title (EN)'}</label>
-                <input type="text" value={about.chap4TitleEn || ''} onChange={(e) => updateAbout('chap4TitleEn', e.target.value)} />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'عنوان الفصل الرابع (عربي)' : 'Chapter IV Title (AR)'}</label>
-                <input type="text" value={about.chap4TitleAr || ''} onChange={(e) => updateAbout('chap4TitleAr', e.target.value)} />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'نص السردية للفصل الرابع (عربي)' : 'Chapter IV Narrative (AR)'}</label>
-                <textarea rows={2} value={about.chap4NarrativeAr || ''} onChange={(e) => updateAbout('chap4NarrativeAr', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Curation Protocol & Pillars */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><ShieldCheck size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? '٤. ركائز الفحص المعماري الثلاثة' : '4. Forensic Curation Protocol & 3 Pillars'}</h2>
-                <p className="card-sub">{isAr ? 'تعديل نصوص الفحص الإنشائي والقانوني والمالي' : 'Structural, legal, and capital liquidity pillar descriptions.'}</p>
-              </div>
-            </div>
-
-            <div className="form-fields-grid">
-              {/* Pillar 1 */}
-              <div className="field-group">
-                <label>{isAr ? 'الركيزة الأولى - الفحص الإنشائي (EN)' : 'Pillar I Title (EN)'}</label>
-                <input type="text" value={about.pillar1TitleEn || ''} onChange={(e) => updateAbout('pillar1TitleEn', e.target.value)} />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الركيزة الأولى - الفحص الإنشائي (عربي)' : 'Pillar I Title (AR)'}</label>
-                <input type="text" value={about.pillar1TitleAr || ''} onChange={(e) => updateAbout('pillar1TitleAr', e.target.value)} />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'شرح الركيزة الأولى (عربي)' : 'Pillar I Description (AR)'}</label>
-                <textarea rows={2} value={about.pillar1DescAr || ''} onChange={(e) => updateAbout('pillar1DescAr', e.target.value)} />
-              </div>
-
-              {/* Pillar 2 */}
-              <div className="field-group">
-                <label>{isAr ? 'الركيزة الثانية - التوثيق القانوني (EN)' : 'Pillar II Title (EN)'}</label>
-                <input type="text" value={about.pillar2TitleEn || ''} onChange={(e) => updateAbout('pillar2TitleEn', e.target.value)} />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الركيزة الثانية - التوثيق القانوني (عربي)' : 'Pillar II Title (AR)'}</label>
-                <input type="text" value={about.pillar2TitleAr || ''} onChange={(e) => updateAbout('pillar2TitleAr', e.target.value)} />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'شرح الركيزة الثانية (عربي)' : 'Pillar II Description (AR)'}</label>
-                <textarea rows={2} value={about.pillar2DescAr || ''} onChange={(e) => updateAbout('pillar2DescAr', e.target.value)} />
-              </div>
-
-              {/* Pillar 3 */}
-              <div className="field-group">
-                <label>{isAr ? 'الركيزة الثالثة - دراسة الجدوى (EN)' : 'Pillar III Title (EN)'}</label>
-                <input type="text" value={about.pillar3TitleEn || ''} onChange={(e) => updateAbout('pillar3TitleEn', e.target.value)} />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'الركيزة الثالثة - دراسة الجدوى (عربي)' : 'Pillar III Title (AR)'}</label>
-                <input type="text" value={about.pillar3TitleAr || ''} onChange={(e) => updateAbout('pillar3TitleAr', e.target.value)} />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'شرح الركيزة الثالثة (عربي)' : 'Pillar III Description (AR)'}</label>
-                <textarea rows={2} value={about.pillar3DescAr || ''} onChange={(e) => updateAbout('pillar3DescAr', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Founder Monograph */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><Quote size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? '٥. رسالة ورؤية المؤسس (م. فريد زكريا)' : '5. Founder’s Letter & Quotation'}</h2>
-                <p className="card-sub">{isAr ? 'نص المقولة الرسمية واسم والمسمى الوظيفي للمؤسس' : 'Quotation text, founder credentials, and official title.'}</p>
-              </div>
-            </div>
-
-            <div className="form-fields-grid">
-              <div className="field-group full-width">
-                <label>{isAr ? 'مقولة ورؤية المؤسس (EN)' : 'Founder Quote (EN)'}</label>
-                <textarea 
-                  rows={2} 
-                  value={about.founderQuoteEn || ''} 
-                  onChange={(e) => updateAbout('founderQuoteEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group full-width">
-                <label>{isAr ? 'مقولة ورؤية المؤسس (عربي)' : 'Founder Quote (AR)'}</label>
-                <textarea 
-                  rows={2} 
-                  value={about.founderQuoteAr || ''} 
-                  onChange={(e) => updateAbout('founderQuoteAr', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label>{isAr ? 'اسم المؤسس (EN)' : 'Founder Name (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.founderNameEn || ''} 
-                  onChange={(e) => updateAbout('founderNameEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'اسم المؤسس (عربي)' : 'Founder Name (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.founderNameAr || ''} 
-                  onChange={(e) => updateAbout('founderNameAr', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label>{isAr ? 'المسمى الوظيفي (EN)' : 'Founder Title (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.founderTitleEn || ''} 
-                  onChange={(e) => updateAbout('founderTitleEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'المسمى الوظيفي (عربي)' : 'Founder Title (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.founderTitleAr || ''} 
-                  onChange={(e) => updateAbout('founderTitleAr', e.target.value)} 
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 6. Closing Portal CTA */}
-          <div className="settings-card">
-            <div className="card-section-head">
-              <div className="card-icon-wrap"><Award size={18} /></div>
-              <div>
-                <h2 className="card-title">{isAr ? '٦. بطاقة الاستحواذ الخاص الختامية' : '6. Confidential Placement Portal CTA'}</h2>
-                <p className="card-sub">{isAr ? 'العنوان ونص الدعوة للتواصل في نهاية صفحة من نحن' : 'Closing banner headline and private advisory prompt.'}</p>
-              </div>
-            </div>
-
-            <div className="form-fields-grid">
-              <div className="field-group">
-                <label>{isAr ? 'العنوان الختامي (EN)' : 'Portal Headline (EN)'}</label>
-                <input 
-                  type="text" 
-                  value={about.portalHeadingEn || ''} 
-                  onChange={(e) => updateAbout('portalHeadingEn', e.target.value)} 
-                />
-              </div>
-              <div className="field-group">
-                <label>{isAr ? 'العنوان الختامي (عربي)' : 'Portal Headline (AR)'}</label>
-                <input 
-                  type="text" 
-                  value={about.portalHeadingAr || ''} 
-                  onChange={(e) => updateAbout('portalHeadingAr', e.target.value)} 
-                />
-              </div>
-
-              <div className="field-group full-width">
-                <label>{isAr ? 'الفقرة الختامية (عربي)' : 'Portal Paragraph (AR)'}</label>
-                <textarea 
-                  rows={2} 
-                  value={about.portalParagraphAr || ''} 
-                  onChange={(e) => updateAbout('portalParagraphAr', e.target.value)} 
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'about' && <div className="settings-tab-pane"><AdminPageContent adminLocale={adminLocale} initialContent={initialAboutContent} /></div>}
 
       {/* ══════════════════════════════════════════════════════════════════════
           TAB 4: PUBLIC ADVISORY DESK CONTACT INFO

@@ -1,3 +1,5 @@
+import { getSiteContent } from '@/lib/siteContent/server';
+import { PlatformSettingsProvider } from '@/lib/hooks/usePlatformSettings';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -53,6 +55,8 @@ export default async function LocaleLayout({ children, params }: Props) {
   const themeCookie = cookieStore.get('zf_theme')?.value;
   const initialTheme = (themeCookie === 'light' || themeCookie === 'dark') ? themeCookie : 'dark';
 
+  const platformSettings = await getSiteContent('platform_settings');
+
   return (
     <html lang={locale} dir={dir} data-theme={initialTheme} suppressHydrationWarning>
       <body>
@@ -85,6 +89,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           />
         )}
         <NextIntlClientProvider messages={messages}>
+          <PlatformSettingsProvider settings={platformSettings}>
           <FavoritesProvider>
             <LenisProvider locale={locale}>
               <ClientAppShell locale={locale}>
@@ -100,6 +105,7 @@ export default async function LocaleLayout({ children, params }: Props) {
               duration: 4000,
             }}
           />
+        </PlatformSettingsProvider>
         </NextIntlClientProvider>
         {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_AGENTATION === 'true') && <Agentation />}
       </body>

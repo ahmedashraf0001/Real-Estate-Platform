@@ -115,7 +115,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
       );
     }
 
-    if (isSettings) {
+    if (pathname.includes('/page-content') || isSettings) {
       return (
         <>
           <Link href={`/admin/${adminLocale}`} className={styles.breadcrumbRoot}>
@@ -123,7 +123,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
           </Link>
           <span className={styles.breadcrumbDivider}>/</span>
           <span className={styles.breadcrumbCurrent}>
-            {isAr ? 'إعدادات المنصة ورادار السوق' : 'Platform Settings'}
+            {pathname.includes('/page-content') ? (isAr ? 'محتوى الصفحات' : 'Page content') : (isAr ? 'إعدادات المنصة ورادار السوق' : 'Platform Settings')}
           </span>
         </>
       );
