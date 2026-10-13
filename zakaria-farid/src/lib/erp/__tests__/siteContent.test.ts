@@ -156,14 +156,14 @@ test('real property server route omits JSON-LD price and renders detail prices h
   }
 });
 
-test('admin SSR exposes each block, AR/EN inputs, list add/remove/reorder and reusable block preview', () => {
-  const html = renderToStaticMarkup(React.createElement(AdminPageContent, { adminLocale: 'ar', initialContent: DEFAULT_ABOUT_CONTENT }));
+test('admin SSR exposes each block, AR/EN inputs and list add/remove/reorder', () => {
+  const html = renderToStaticMarkup(React.createElement(AdminPageContent, { adminLocale: 'ar', initialContent: DEFAULT_ABOUT_CONTENT, savedContent: DEFAULT_ABOUT_CONTENT, onChange() {}, onFocus() {} }));
   for (const block of ['hero', 'stats', 'story', 'charter', 'founder', 'portal']) assert.match(html, new RegExp(`data-content-block="${block}"`));
   assert.match(html, /EN/); assert.match(html, /العربية/);
   for (const label of ['إضافة', 'حذف', 'لأعلى', 'لأسفل', 'معاينة']) assert.ok(html.includes(label), label);
   const buttons = html.match(/<button\b[^>]*>/g) || [];
   assert.ok(buttons.length > 20); assert.ok(buttons.every(button => button.includes('type="button"')));
-  assert.doesNotMatch(html, /<form/); assert.match(html, /data-about-preview/);
+  assert.doesNotMatch(html, /<form/);
 });
 
 test('migration contract: public read, existing admin expression on each write, actor FK, update trigger, no seed', () => {

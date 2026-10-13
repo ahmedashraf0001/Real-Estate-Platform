@@ -1,28 +1,9 @@
-import { getSiteContent } from '@/lib/siteContent/server';
-import React from 'react';
+import {getSiteContent,getSettingsLastSaved} from '@/lib/siteContent/server';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
-
-interface AdminSettingsPageProps {
-  params: Promise<{
-    adminLocale: string;
-  }>;
-}
-
-export async function generateMetadata({ params }: AdminSettingsPageProps) {
-  const { adminLocale } = await params;
-  const isAr = adminLocale === 'ar';
-  return {
-    title: isAr ? 'إعدادات المنصة ومؤشر الأسعار' : 'Platform & Market Radar Settings',
-  };
-}
-
-export default async function AdminSettingsPage({ params }: AdminSettingsPageProps) {
-  const { adminLocale } = await params;
-
-  const initialAboutContent = await getSiteContent('about_page');
-  return (
-    <div style={{ maxWidth: '1200px', width: '100%', minWidth: 0, margin: '0 auto', boxSizing: 'border-box' }}>
-      <AdminPlatformSettings adminLocale={adminLocale} initialAboutContent={initialAboutContent} />
-    </div>
-  );
+import {settingsGroupFromUrl} from '@/lib/siteContent/settingsDraft';
+interface Props {params:Promise<{adminLocale:string}>;searchParams:Promise<{group?:string}>;}
+export async function generateMetadata({params}:Props){const {adminLocale}=await params;return {title:adminLocale==='ar'?'الإعدادات':'Settings'};}
+export default async function AdminSettingsPage({params,searchParams}:Props){
+  const [{adminLocale},search,initialAboutContent,lastSaved]=await Promise.all([params,searchParams,getSiteContent('about_page'),getSettingsLastSaved()]);
+  return <AdminPlatformSettings {...{adminLocale,initialAboutContent,lastSaved}} initialGroup={settingsGroupFromUrl(new URLSearchParams({group:search.group||'home'}).toString())}/>;
 }

@@ -23,7 +23,6 @@ export const Footer: React.FC<FooterProps> = ({
   const router = useRouter();
   const pathname = usePathname() || '';
   const isAr = locale === 'ar';
-  const { contact } = usePlatformSettings();
   const isStatusPage = pathname.includes('/not-found') || pathname.includes('/maintenance');
 
   const onNavigate = (view: string) => {
@@ -57,14 +56,14 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="footer-main-grid">
           {/* Brand Column */}
           <div className="footer-brand-col">
-            <BrandLogo 
-              size="lg" 
+            <BrandLogo
+              size="lg"
               showSubtitle={true}
               locale={locale}
-              onClick={() => onNavigate('home')} 
+              onClick={() => onNavigate('home')}
             />
             <p className="footer-brand-desc">
-              {isAr 
+              {isAr
                 ? 'نرتقي بالعقارات المصرية الفاخرة إلى مستوى التحف المعمارية الخالدة. ننتقي ونمثل أندر القصور والصروح المعمارية بأعلى معايير الحصرية والسيادة.'
                 : "Elevating Egyptian real estate into an art form. We curate high-design, luxury architectural masterworks in the country's most sought-after destinations."}
             </p>
@@ -112,7 +111,7 @@ export const Footer: React.FC<FooterProps> = ({
                 { id: 'footer-apt-duplex', label: 'Duplexes & Roofs', filter: 'apartment' },
               ]).map((item) => (
                 <li key={item.id}>
-                  <button 
+                  <button
                     className="footer-link-btn"
                     onClick={() => {
                       if (propOnSelectType) {
@@ -150,7 +149,7 @@ export const Footer: React.FC<FooterProps> = ({
                 { label: 'Madinaty', filter: 'Madinaty' },
               ]).map((item) => (
                 <li key={item.filter}>
-                  <button 
+                  <button
                     className="footer-link-btn"
                     onClick={() => {
                       if (propOnSelectDest) {
@@ -168,25 +167,7 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Inquiries Column */}
-          <div className="footer-nav-col inquiries-col">
-            <h4 className="footer-col-title">{isAr ? 'بيانات التواصل' : 'INQUIRIES'}</h4>
-            <div className="inquiry-info-item">
-              <span className="inquiry-address">
-                {isAr ? (contact?.addressAr || 'برج جراند G-08، الحي المالي، القاهرة الجديدة، مصر') : (contact?.addressEn || 'G-08 Grand Tower, Financial District,\nNew Cairo, Egypt')}
-              </span>
-            </div>
-            <div className="inquiry-info-item">
-              <a href={`tel:${cleanPhoneNumber(contact?.phone || '+20 2 19688')}`} className="inquiry-phone">
-                <span dir="ltr" className="phone-digits">{formatDisplayPhoneNumber(contact?.phone || '+20 2 19688')}</span>
-              </a>
-            </div>
-            <div className="inquiry-info-item">
-              <a href={`mailto:${contact?.email || 'concierge@zakariafarid.com'}`} className="inquiry-email">
-                {contact?.email || 'concierge@zakariafarid.com'}
-              </a>
-            </div>
-          </div>
+          <FooterContact locale={locale} />
         </div>
 
         {/* Bottom Bar */}
@@ -209,7 +190,33 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
       </div>
 
-      <style>{`
+
+    </footer>
+  );
+};
+
+export function FooterContact({locale='en'}:{locale?:string}) {
+  const isAr=locale==='ar'; const {contact}=usePlatformSettings();
+  return <><div data-preview-target="contact" style={{ display: 'contents' }}>          {/* Inquiries Column */}
+          <div className="footer-nav-col inquiries-col">
+            <h4 className="footer-col-title">{isAr ? 'بيانات التواصل' : 'INQUIRIES'}</h4>
+            <div className="inquiry-info-item">
+              <span className="inquiry-address">
+                {isAr ? (contact?.addressAr || 'برج جراند G-08، الحي المالي، القاهرة الجديدة، مصر') : (contact?.addressEn || 'G-08 Grand Tower, Financial District,\nNew Cairo, Egypt')}
+              </span>
+            </div>
+            <div className="inquiry-info-item">
+              <a href={`tel:${cleanPhoneNumber(contact?.phone || '+20 2 19688')}`} className="inquiry-phone">
+                <span dir="ltr" className="phone-digits">{formatDisplayPhoneNumber(contact?.phone || '+20 2 19688')}</span>
+              </a>
+            </div>
+            <div className="inquiry-info-item">
+              <a href={`mailto:${contact?.email || 'concierge@zakariafarid.com'}`} className="inquiry-email">
+                {contact?.email || 'concierge@zakariafarid.com'}
+              </a>
+            </div>
+          </div>
+</div>      <style>{`
         .luxury-footer {
           background: var(--bg-surface);
           border-top: 1px solid var(--border-subtle);
@@ -411,7 +418,5 @@ export const Footer: React.FC<FooterProps> = ({
             text-align: center;
           }
         }
-      `}</style>
-    </footer>
-  );
-};
+      `}</style></>;
+}

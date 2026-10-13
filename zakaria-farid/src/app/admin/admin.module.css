@@ -232,21 +232,12 @@
   color: var(--admin-text-title) !important;
 }
 
-[data-theme="light"] .adminWrapper :global(.settings-card),
-[data-theme="light"] .adminWrapper :global(.settings-header-card) {
-  background: var(--admin-card-bg) !important;
-  border: 1px solid var(--admin-card-border) !important;
-  box-shadow: none !important;
-  color: var(--admin-text-title) !important;
-}
-
 [data-theme="light"] .adminWrapper :global(.leaderboard-title),
 [data-theme="light"] .adminWrapper :global(.matrix-title),
 [data-theme="light"] .adminWrapper :global(.advisory-title),
 [data-theme="light"] .adminWrapper :global(.velocity-title),
 [data-theme="light"] .adminWrapper :global(.section-title),
-[data-theme="light"] .adminWrapper :global(.settings-main-title),
-[data-theme="light"] .adminWrapper :global(.card-title) {
+[data-theme="light"] .adminWrapper :global(.card-title)  {
   color: var(--admin-text-title) !important;
 }
 
@@ -255,64 +246,30 @@
 [data-theme="light"] .adminWrapper :global(.advisory-sub),
 [data-theme="light"] .adminWrapper :global(.velocity-sub),
 [data-theme="light"] .adminWrapper :global(.section-sub),
-[data-theme="light"] .adminWrapper :global(.settings-main-desc),
-[data-theme="light"] .adminWrapper :global(.card-sub) {
+[data-theme="light"] .adminWrapper :global(.card-sub)  {
   color: var(--admin-text-muted) !important;
 }
 
 [data-theme="light"] .adminWrapper :global(.leaderboard-row),
 [data-theme="light"] .adminWrapper :global(.matrix-row),
 [data-theme="light"] .adminWrapper :global(.velocity-row),
-[data-theme="light"] .adminWrapper :global(.district-card),
 [data-theme="light"] .adminWrapper :global(.advisory-item),
-[data-theme="light"] .adminWrapper :global(.urgent-lead-row) {
+[data-theme="light"] .adminWrapper :global(.urgent-lead-row)  {
   background: var(--admin-card-bg-subtle) !important;
   border-color: var(--admin-card-border) !important;
   color: var(--admin-text-body) !important;
 }
 
-[data-theme="light"] .adminWrapper :global(.district-row-card),
-[data-theme="light"] .adminWrapper :global(.toggle-checkbox-card) {
-  background: var(--admin-card-bg-subtle) !important;
-  border: 1px solid var(--admin-card-border) !important;
-  border-radius: 10px !important;
-  color: var(--admin-text-body) !important;
-}
-
-[data-theme="light"] .adminWrapper :global(.district-row-card:hover),
-[data-theme="light"] .adminWrapper :global(.toggle-checkbox-card:hover) {
-  background: var(--admin-card-border-subtle) !important;
-  border-color: var(--admin-accent) !important;
-}
-
-[data-theme="light"] .adminWrapper :global(.toggle-title) {
-  color: var(--admin-text-title) !important;
-  font-weight: 800 !important;
-}
-
-[data-theme="light"] .adminWrapper :global(.toggle-desc) {
-  color: var(--admin-text-muted) !important;
-  font-weight: 500 !important;
-}
-
-[data-theme="light"] .adminWrapper :global(.prop-title-text),
-[data-theme="light"] .adminWrapper :global(.district-name-main) {
+[data-theme="light"] .adminWrapper :global(.prop-title-text) {
   color: var(--admin-text-title) !important;
 }
 
-[data-theme="light"] .adminWrapper :global(.prop-location-sub),
-[data-theme="light"] .adminWrapper :global(.district-name-alt) {
+[data-theme="light"] .adminWrapper :global(.prop-location-sub) {
   color: var(--admin-text-muted) !important;
 }
 
 [data-theme="light"] .adminWrapper :global(.rank-num) {
   color: var(--admin-text-dim) !important;
-}
-
-[data-theme="light"] .adminWrapper :global(.district-rank) {
-  background: var(--admin-accent-tint) !important;
-  color: var(--admin-accent) !important;
-  font-weight: 800 !important;
 }
 
 [data-theme="light"] .adminWrapper :global(.card-icon-wrap),
@@ -322,22 +279,19 @@
   color: var(--admin-accent) !important;
 }
 
-[data-theme="light"] .adminWrapper :global(.tier-pill-btn),
-[data-theme="light"] .adminWrapper :global(.settings-tab-btn) {
+[data-theme="light"] .adminWrapper :global(.tier-pill-btn) {
   background: var(--admin-card-bg) !important;
   border: 1px solid var(--admin-card-border) !important;
   color: var(--admin-text-muted) !important;
 }
 
-[data-theme="light"] .adminWrapper :global(.tier-pill-btn:hover),
-[data-theme="light"] .adminWrapper :global(.settings-tab-btn:hover) {
+[data-theme="light"] .adminWrapper :global(.tier-pill-btn:hover) {
   background: var(--admin-card-border-subtle) !important;
   border-color: var(--admin-accent) !important;
   color: var(--admin-text-title) !important;
 }
 
-[data-theme="light"] .adminWrapper :global(.tier-pill-btn.active),
-[data-theme="light"] .adminWrapper :global(.settings-tab-btn.active) {
+[data-theme="light"] .adminWrapper :global(.tier-pill-btn.active) {
   background: var(--admin-accent-subtle) !important;
   border: 1.5px solid var(--admin-accent) !important;
   color: var(--admin-accent) !important;

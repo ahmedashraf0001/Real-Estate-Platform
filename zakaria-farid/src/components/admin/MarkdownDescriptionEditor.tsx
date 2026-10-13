@@ -8,9 +8,9 @@ export default function MarkdownDescriptionEditor({ value, onChange, language, i
   const textarea = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
   const tools: [MarkdownAction, string, string][] = [
-    ['bold', 'B', isAr ? 'عريض' : 'Bold'], ['italic', 'I', isAr ? 'مائل' : 'Italic'],
+    ['bold', isAr ? 'ع' : 'B', isAr ? 'عريض' : 'Bold'], ['italic', isAr ? 'م' : 'I', isAr ? 'مائل' : 'Italic'],
     ['list', '•', isAr ? 'قائمة' : 'List'], ['ordered', '1.', isAr ? 'قائمة مرقمة' : 'Numbered list'],
-    ['heading', 'H', isAr ? 'عنوان' : 'Heading'],
+    ['heading', isAr ? 'عنوان' : 'H', isAr ? 'عنوان' : 'Heading'],
   ];
   const insert = (action: MarkdownAction) => {
     const field = textarea.current;

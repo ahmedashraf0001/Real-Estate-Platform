@@ -1,0 +1,40 @@
+TASK admin-settings-revamp — one consistent admin Settings page with grouped navigation, uniform fields and a live preview for every group (branch feat/blueprint-nav, after d0fd841)
+
+WHY [user-confirmed 2026-10-13, mockup approved]
+Today AdminPlatformSettings.tsx (~1800 lines) has 4 tabs built differently (radar, home, about, contact); only About has a preview; the About editor exists twice (Settings tab + separate "محتوى الصفحات" route /admin/[adminLocale]/page-content added in d0fd841); AR/EN fields are stacked in some tabs and side by side in others; labels mix languages; the price toggle saves immediately while other fields wait for a save button; showFloorPlans and showCommuteTimes exist in PlatformDisplaySettings but have no control; whatsappAutomation has no group. The user wants a consistent page with a quick preview across all settings.
+
+APPROVED LAYOUT (admin tokens only: --admin-accent etc.; no site gold in the admin chrome; the preview itself shows the real public site styling)
+1. Top bar: title "الإعدادات" / "Settings" and "آخر حفظ … · بواسطة …" from site_content.updated_at/updated_by (show the user's email or name if available; omit gracefully if unknown).
+2. Three columns at >= 1200px: group nav (start side), form (middle), live preview (end side, sticky). At 900-1199px the preview becomes a toggleable drawer/panel ("معاينة" button). Below 900px: nav becomes a horizontal scroll of group chips above the form; preview opens as a bottom sheet.
+3. Groups (in this order), each a URL-addressable section (?group=home etc.):
+   الصفحة الرئيسية / Home — section visibility toggles (all PlatformHomeSettings show* flags) + hero/featured/seller texts.
+   صفحة من نحن / About — the AdminPageContent editor (all About blocks).
+   عرض العقارات / Listings display — hidePropertyPrices, showFloorPlans, showCommuteTimes, showVIPAlerts, showMarketRadar (move the market radar visibility toggle here or to the radar group, pick one and report).
+   التواصل والمقر / Contact — phone, WhatsApp, email, address AR/EN (keep the existing phone formatting).
+   مؤشر الأسعار / Price index — market districts (add/edit/remove/reorder) with the existing fields.
+   تنبيهات واتساب / WhatsApp alerts — the whatsappAutomation settings (enabled, recipient, templates/fields that exist in PlatformWhatsAppAutomationSettings). Never show or store provider tokens (the d0fd841 credential guard stays).
+4. Uniform field pattern everywhere: group title + one-line description; sections separated by hairlines; each bilingual text = ONE label with AR and EN inputs side by side (EN input dir=ltr); toggles as rows (label + one-line hint + switch); long text uses MarkdownDescriptionEditor; lists with add/remove/reorder. Arabic UI has no English words except the "EN" marker on English inputs.
+5. One draft state for ALL groups. Sticky save bar at the bottom: "N تغييرات غير محفوظة", "تجاهل" (discard all, confirm), "حفظ التغييرات" (primary). Changed inputs get an amber outline; groups with unsaved changes get a dot in the nav. Nothing saves on toggle (remove the immediate save of hidePropertyPrices, including in PropertiesAdminClient if it duplicates this toggle — keep a quick toggle there only if it goes through the same save action and say so). beforeunload + in-app navigation warning when there are unsaved changes. Save writes both site_content keys that changed (platform_settings, about_page) through the existing server actions; inline error per failure; saving/saved states. "استعادة الافتراضي" per group (confirm) resets that group's draft to defaults (saved only on save).
+6. Live preview for EVERY group, rendering the real public components (or their real presentational parts) with the draft values, AR/EN toggle and desktop/phone width toggle, light/dark toggle. The field being edited is outlined in the preview (data attribute mapping is fine). Previews:
+   Home: hero + stats ribbon + section list (hidden sections shown as a collapsed placeholder "مخفي").
+   About: the edited block (existing).
+   Listings display: a real PropertyCard and the detail price/floor-plan/commute areas with the draft flags (sample listing data built from defaults in code, clearly a preview, never written to the DB).
+   Contact: the site footer contact block and the contact page card.
+   Price index: the real MarketChart with the draft districts.
+   WhatsApp alerts: the message as it will be sent (rendered text bubble) with sample lead values.
+7. Remove the separate "محتوى الصفحات" admin nav item; /admin/[adminLocale]/page-content redirects to settings?group=about. Remove dead code from the old tabs (no duplicated editors, no unused CSS). The settings file may be split into one component per group plus a shared shell; keep each file focused.
+
+DO NOT
+- Change the DB schema, RLS or the site_content keys/shape (shape changes only if additive and defaulted; report). Write to the production DB or press save in a real session. Add dependencies.
+- Change the public site behaviour beyond reading the same settings. Change ERP/FIN-OS screens.
+- Every button type="button"; no nested forms.
+
+TESTS
+RED first: draft/dirty tracking (count, per-group dots, discard, reset-to-defaults), single save writes only changed keys, no immediate save on toggles, unsaved-changes guard, preview receives draft values for each group (SSR), field-to-preview highlight mapping, page-content route redirect, admin nav has no separate content item, Arabic UI strings contain no English except "EN". Existing siteContent tests stay green.
+Gates: tsc exit 0. npm test: only the 7 known baseline failures.
+Capture (separate port, Supabase intercepted with fixtures, authenticated fixture session as in scripts/site-content-capture.cjs): each group at 1440 AR with the preview, one group with unsaved changes + save bar, phone 390 for two groups, the 1024 preview drawer. Inspect every image.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105) and a separate gitignored build dir; restore tsconfig.json/next-env.d.ts.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

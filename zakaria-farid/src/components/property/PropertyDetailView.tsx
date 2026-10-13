@@ -66,6 +66,7 @@ import { autoVideoTitle, propertyMediaVideos } from '@/lib/media';
 import type { PropertyVideo } from '@/lib/supabase/types';
 
 interface PropertyDetailViewProps {
+  preview?: boolean;
   propertyId?: string;
   property?: Property | any;
   similarProperties?: (Property | any)[];
@@ -173,6 +174,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   property: propProperty,
   similarProperties: propSimilar,
   locale = 'en',
+  preview = false,
   onBack: propOnBack,
   onSelectProperty: propOnSelectProperty,
   onOpenInquiry: propOnOpenInquiry
@@ -387,7 +389,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'denied' | 'unavailable'>('idle');
 
-  const isHidePrices = usePlatformSettings().hidePropertyPrices ?? false;
+  const displaySettings = usePlatformSettings();
+  const isHidePrices = displaySettings.hidePropertyPrices ?? false;
 
 
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
@@ -536,7 +539,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             </div>
 
             <div className="top-header-right">
-              <div className="property-price-card">
+              <div className="property-price-card" data-preview-target="price">
                 <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
                 {isHidePrices ? (
                   <>
@@ -1008,7 +1011,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             </div>
 
             {/* Right Side Column: Aligned Commute Times Card */}
-            <div className="location-suite-side">
+            {displaySettings.showCommuteTimes && <div className="location-suite-side" data-preview-target="commute">
               
               {/* Commute Times Card — Top Aligned with the Map */}
               <div className="sidebar-radar-card aligned-map-radar-card">
@@ -1059,7 +1062,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               </div>
 
-            </div>
+            </div>}
 
           </div>
         </div>
@@ -1067,8 +1070,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         )}
 
         {/* E. Architectural CAD Blueprint Section: only when the admin built a plan */}
-        {(rawProperty.spec_layers || []).length > 0 && (
-        <div className="content-section cad-blueprint-full-section" id="architectural-cad-section">
+        {displaySettings.showFloorPlans && (rawProperty.spec_layers || []).length > 0 && (
+        <div className="content-section cad-blueprint-full-section" data-preview-target="plans" id="architectural-cad-section">
           <ArchitecturalBlueprintInspector 
             zones={rawProperty.spec_layers || []} 
             propertyTitle={property.title} 
@@ -1107,9 +1110,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       </div>
 
       {/* Mobile Sticky Bottom Lead Bar (portaled: the page-transition wrapper's filter breaks position:fixed) */}
-      {mounted && typeof document !== 'undefined' && createPortal(
+      {!preview && mounted && typeof document !== 'undefined' && createPortal(
       <div ref={leadBarRef} className="mobile-bottom-lead-bar">
-        <div className="property-price-card">
+        <div className="property-price-card" data-preview-target="price">
           <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
           {isHidePrices ? (
             <>

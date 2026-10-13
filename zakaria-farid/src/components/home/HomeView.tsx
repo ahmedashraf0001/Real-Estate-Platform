@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 
 interface HomeViewProps {
+  preview?: boolean;
   properties?: Property[];
   locale?: string;
   onSelectProperty?: (id: string) => void;
@@ -28,6 +29,7 @@ interface HomeViewProps {
 export const HomeView: React.FC<HomeViewProps> = ({
   properties: propProperties,
   locale = 'en',
+  preview = false,
   onSelectProperty: propOnSelectProperty,
   onNavigateToCatalog: propOnNavigateToCatalog,
   onOpenMapModal: propOnOpenMapModal,
@@ -124,19 +126,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
   }, []);
 
   // Typewriter animation state for Hero Title
-  const line1Text = isMobileViewport
+  const line1Text = !preview && isMobileViewport
     ? (isAr ? (homeSettings.heroTitle1Ar?.includes('استكشف') ? 'أندر الصروح المعمارية' : homeSettings.heroTitle1Ar || 'أندر الصروح المعمارية')
       : (homeSettings.heroTitle1En?.includes('Discover') ? "Egypt's Premier Residences" : homeSettings.heroTitle1En || "Egypt's Premier Residences"))
     : (isAr ? (homeSettings.heroTitle1Ar || 'استكشف أندر الصروح المعمارية و')
       : (homeSettings.heroTitle1En || "Discover Egypt's Premier Residences &"));
 
-  const line2Text = isMobileViewport
+  const line2Text = !preview && isMobileViewport
     ? (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
       : (homeSettings.heroTitle2En?.includes('Living') ? 'Sovereign Luxury Estates' : homeSettings.heroTitle2En || 'Sovereign Luxury Estates'))
     : (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
       : (homeSettings.heroTitle2En || 'Luxury Living & Sovereign Estates'));
 
-  const heroSubtitle = isMobileViewport
+  const heroSubtitle = !preview && isMobileViewport
     ? (isAr
       ? (
         <>
@@ -163,6 +165,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isDoneTyping, setIsDoneTyping] = React.useState(false);
 
   React.useEffect(() => {
+    if (preview) return;
     setCharCount(0);
     setIsDoneTyping(false);
     let current = 0;
@@ -176,15 +179,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }, 22);
 
     return () => clearInterval(interval);
-  }, [totalChars, locale, line1Text, line2Text]);
+  }, [totalChars, locale, line1Text, line2Text, preview]);
 
-  const display1 = line1Text.slice(0, Math.min(charCount, line1Len));
-  const display2 = charCount > line1Len
+  const display1 = preview ? line1Text : line1Text.slice(0, Math.min(charCount, line1Len));
+  const display2 = preview ? line2Text : charCount > line1Len
     ? line2Text.slice(0, charCount - line1Len)
     : '';
 
-  const showCursorOnLine1 = charCount <= line1Len && !isDoneTyping;
-  const showCursorOnLine2 = charCount > line1Len && !isDoneTyping;
+  const showCursorOnLine1 = !preview && charCount <= line1Len && !isDoneTyping;
+  const showCursorOnLine2 = !preview && charCount > line1Len && !isDoneTyping;
 
   // Quick destination shortcuts for mobile hero
   const quickHeroDestinations = [
@@ -198,7 +201,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     <div className="home-view" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ─── 1. Full-Bleed Viewport Cinematic Hero ─── */}
       {homeSettings.showHero !== false && (
-        <section className="hero-section">
+        <section className="hero-section" data-preview-target="hero">
           <div className="hero-bg-media">
             <div className="hero-bg-cinematic-stage">
               <img
@@ -342,12 +345,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* ─── 2. Authority & Metrology Ribbon (Directly Below Hero Fold) ─── */}
       {homeSettings.showStatsRibbon !== false && (
-        <StatsSection locale={locale} hideHeader={true} compact={true} />
+        <div data-preview-target="stats"><StatsSection locale={locale} hideHeader={true} compact={true} preview={preview} /></div>
       )}
 
       {/* ─── 3. Featured Masterpieces Section (Primary Discovery Gallery) ─── */}
       {homeSettings.showFeaturedGrid !== false && (
-        <section className="featured-section">
+        <section className="featured-section" data-preview-target="featured">
           <div className="featured-horizon-glow" />
           <div className="container">
             <motion.div
@@ -451,18 +454,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* ─── 4. Interactive Real Cartography Map Explorer ─── */}
-      {homeSettings.showMapExplorer !== false && (
+      {!preview && homeSettings.showMapExplorer !== false && (
         <MapSection onOpenMapModal={onOpenMapModal} properties={allProps} locale={locale} />
       )}
 
       {/* ─── 5. Unified Sovereign Advisory & Client Provenance ─── */}
-      {homeSettings.showSovereignAdvisory !== false && (
+      {!preview && homeSettings.showSovereignAdvisory !== false && (
         <SovereignAdvisorySection locale={locale} onOpenListEstate={onOpenListEstate} />
       )}
 
       {/* ─── 6. Panoramic Confidential Placement & Consignment Portal ─── */}
       {homeSettings.showSellerConsignment !== false && (
-        <section className="seller-banner-section">
+        <section className="seller-banner-section" data-preview-target="seller">
           <div className="seller-ambient-glow" />
           <div className="container">
             <div className="seller-consignment-banner">

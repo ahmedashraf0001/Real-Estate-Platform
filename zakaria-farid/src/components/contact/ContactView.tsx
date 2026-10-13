@@ -1,15 +1,15 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  CheckCircle, 
-  Navigation, 
-  Compass, 
-  Clock, 
-  MessageCircle, 
-  PhoneCall, 
+import {
+  MapPin,
+  Phone,
+  Mail,
+  CheckCircle,
+  Navigation,
+  Compass,
+  Clock,
+  MessageCircle,
+  PhoneCall,
   ArrowUpRight,
   Send,
   Loader2,
@@ -147,10 +147,10 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
     setIsSubmitting(true);
     try {
-      const intentLabel = intent === 'sell' 
-        ? 'Exclusive Listing Request' 
-        : intent === 'advisory' 
-        ? 'Architectural Advisory' 
+      const intentLabel = intent === 'sell'
+        ? 'Exclusive Listing Request'
+        : intent === 'advisory'
+        ? 'Architectural Advisory'
         : 'Private Acquisition';
 
       const formattedNotes = [
@@ -210,7 +210,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
   return (
     <div className="contact-page" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="container">
-        
+
         {/* 1. Header Section */}
         <section className="contact-header-section">
           <div className="contact-header-content">
@@ -224,7 +224,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               <span>{isAr ? 'مكتب خدمة كبار العملاء' : 'PRIVATE CLIENT DESK'}</span>
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               className="contact-main-title"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -235,13 +235,13 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               </span>
             </motion.h1>
 
-            <motion.p 
+            <motion.p
               className="contact-hero-subtitle"
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.16 }}
             >
-              {isAr 
+              {isAr
                 ? 'تواصل مباشرة مع مكتب الاستشارات الخاصة لإجراء الدراسات المعمارية، وطلبات الاستحواذ الفاخرة، والترتيب لجولات المعاينة الحصرية لكبرى العقارات السيادية في مصر.'
                 : 'Connect directly with our private client advisory team for sovereign portfolio consultations, discrete property acquisitions, and chauffeured estate walkthroughs across Egypt.'}
             </motion.p>
@@ -251,14 +251,14 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         {/* 2. Main 2-Column Section: Inquiry Form + Direct Concierge Sidebar */}
         <section className="contact-form-grid-section">
           <div className="contact-two-col-grid">
-            
+
             {/* Left: Streamlined Luxury Advisory Form */}
             <div className="acquisition-form-card">
               <div className="form-card-header">
                 <span className="form-eyebrow">{isAr ? 'استمارة التواصل المباشر' : 'DIRECT ADVISORY DOSSIER'}</span>
                 <h2 className="form-card-title">{isAr ? 'طلب استشارة أو استحواذ رسمي' : 'Executive Client Inquiry'}</h2>
                 <p className="form-card-sub">
-                  {isAr 
+                  {isAr
                     ? 'حدد متطلباتك ومعلومات التواصل الخاصة بك، وسيقوم فريق الاستشارات بالتواصل معكم خلال ساعتي عمل.'
                     : 'Provide your credentials and requirements below. Our private client team will prepare a discreet dossier within 2 business hours.'}
                 </p>
@@ -266,7 +266,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
               {!isSubmitted ? (
                 <form className="acquisition-form" onSubmit={handleSubmit}>
-                  
+
                   {/* 1. Intent Selector */}
                   <div className="form-field-group">
                     <label className="form-field-label">{isAr ? 'نوع الاستشارة أو الطلب' : 'INQUIRY PURPOSE / INTENT'}</label>
@@ -288,9 +288,9 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                   <div className="form-inputs-grid">
                     <div className="form-field-group">
                       <label className="form-field-label">{isAr ? 'الاسم واللقب' : 'FULL NAME / TITLE'}</label>
-                      <input 
-                        type="text" 
-                        required 
+                      <input
+                        type="text"
+                        required
                         placeholder={isAr ? 'مثال: د. هشام الجمال' : 'e.g. Dr. Hisham El-Gammal'}
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
@@ -300,9 +300,9 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
                     <div className="form-field-group">
                       <label className="form-field-label">{isAr ? 'رقم الهاتف / الواتساب' : 'PHONE / WHATSAPP'}</label>
-                      <input 
-                        type="tel" 
-                        required 
+                      <input
+                        type="tel"
+                        required
                         placeholder="+20 100 000 0000"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -313,8 +313,8 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
                   <div className="form-field-group">
                     <label className="form-field-label">{isAr ? 'البريد الإلكتروني (اختياري لاستلام الملف الفني)' : 'EMAIL ADDRESS (FOR DOSSIER DELIVERY)'}</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       placeholder="client@domain.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -326,7 +326,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                   <div className="form-inputs-grid">
                     <div className="form-field-group">
                       <label className="form-field-label">{isAr ? 'المنطقة المستهدفة' : 'TARGET REGION'}</label>
-                      <select 
+                      <select
                         value={district}
                         onChange={(e) => setDistrict(e.target.value)}
                         className="form-dark-select"
@@ -339,7 +339,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
                     <div className="form-field-group">
                       <label className="form-field-label">{isAr ? 'الميزانية التقريبية' : 'CAPITAL ALLOCATION'}</label>
-                      <select 
+                      <select
                         value={budget}
                         onChange={(e) => setBudget(e.target.value)}
                         className="form-dark-select"
@@ -371,7 +371,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                   {/* Message / Notes */}
                   <div className="form-field-group">
                     <label className="form-field-label">{isAr ? 'المتطلبات الخاصة أو تفاصيل الطلب (اختياري)' : 'CONFIDENTIAL SPECIFICATIONS (OPTIONAL)'}</label>
-                    <textarea 
+                    <textarea
                       rows={3}
                       placeholder={isAr ? 'مثال: مطلوب قصر مستقل بمساحة تتجاوز 1000م² مع حمام سباحة وإطلالة بانورامية...' : 'Describe specific architectural nuances, compound preferences, or inspection schedule...'}
                       value={message}
@@ -439,7 +439,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                       </a>
                     )}
 
-                    <button 
+                    <button
                       className="btn-dark reset-form-btn"
                       onClick={() => {
                         setIsSubmitted(false);
@@ -455,9 +455,51 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               )}
             </div>
 
-            {/* Right: Direct Desk & WhatsApp Fast-Connect */}
+          <ContactCards locale={locale} />
+          </div>
+        </section>
+
+        {/* 3. AL ZAKARIA Grand HQ Panoramic Satellite Map Stage */}
+        <section className="grand-hq-map-section">
+          <div className="grand-hq-banner">
+            <div ref={mapContainerRef} className="grand-hq-leaflet-canvas" />
+            <div className="grand-hq-vignette" />
+
+            <div className="grand-hq-floating-card">
+              <span className="hq-eyebrow-pill">{isAr ? 'المقر الرئيسي' : 'FLAGSHIP HEADQUARTERS'}</span>
+              <h3 className="floating-hq-title">{isAr ? 'مقر آل زكريا الرئيسي' : 'AL ZAKARIA Grand HQ'}</h3>
+              <p className="floating-hq-address">
+                {isAr ? (contact?.addressAr || 'برج جراند G-08، الحي المالي، محور التسعين الجنوبي، القاهرة الجديدة، مصر') : (contact?.addressEn || 'G-08 Grand Tower, Financial District, South 90th Axis, New Cairo, Egypt')}
+              </p>
+              <div className="floating-hq-hours">
+                <Clock size={13} className="hq-clock" />
+                <span>{isAr ? 'مواعيد العمل: الأحد – الخميس · ٩:٠٠ ص – ٦:٠٠ م' : 'Open: Sun – Thu · 9:00 AM – 6:00 PM (EET)'}</span>
+              </div>
+              <a
+                href="https://maps.google.com/?q=New+Cairo+Financial+District"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="directions-btn"
+              >
+                <Navigation size={15} />
+                <span>{isAr ? 'الاتجاهات وخرائط القيادة' : 'Get Driving Directions'}</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+
+    </div>
+  );
+};
+
+export function ContactCards({locale='en'}:{locale?:string}) {
+  const isAr=locale==='ar'; const {contact}=usePlatformSettings();
+  return <><div data-preview-target="contact" style={{ display: 'contents' }}>            {/* Right: Direct Desk & WhatsApp Fast-Connect */}
             <div className="contact-sidebar-col">
-              
+
               {/* Direct Concierge WhatsApp Card */}
               <div className="direct-agent-card">
                 <div className="agent-card-top">
@@ -465,15 +507,15 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                 </div>
                 <h3 className="agent-card-title">{isAr ? 'مكتب خدمة العملاء عبر واتساب' : 'WhatsApp Client Desk'}</h3>
                 <p className="agent-card-desc">
-                  {isAr 
+                  {isAr
                     ? 'تواصل مباشرة مع المهندس زكريا فريد للحصول على الاستشارات الفورية، أو طلب الكتالوجات، أو حجز مواعيد المعاينات.'
                     : 'Connect immediately with our senior advisory team for real-time inquiries, catalog requests, or viewing schedules.'}
                 </p>
-                <a 
+                <a
                   href={`https://wa.me/${(contact?.whatsapp || '+201009998888').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
                     isAr ? 'مرحباً، أود الاستفسار عن عقارات واستشارات آل زكريا.' : 'Hello, I am inquiring about AL ZAKARIA estates.'
                   )}`}
-                  target="_blank" 
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="chat-agent-link btn-gold"
                 >
@@ -507,41 +549,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               </div>
 
             </div>
-          </div>
-        </section>
-
-        {/* 3. AL ZAKARIA Grand HQ Panoramic Satellite Map Stage */}
-        <section className="grand-hq-map-section">
-          <div className="grand-hq-banner">
-            <div ref={mapContainerRef} className="grand-hq-leaflet-canvas" />
-            <div className="grand-hq-vignette" />
-
-            <div className="grand-hq-floating-card">
-              <span className="hq-eyebrow-pill">{isAr ? 'المقر الرئيسي' : 'FLAGSHIP HEADQUARTERS'}</span>
-              <h3 className="floating-hq-title">{isAr ? 'مقر آل زكريا الرئيسي' : 'AL ZAKARIA Grand HQ'}</h3>
-              <p className="floating-hq-address">
-                {isAr ? (contact?.addressAr || 'برج جراند G-08، الحي المالي، محور التسعين الجنوبي، القاهرة الجديدة، مصر') : (contact?.addressEn || 'G-08 Grand Tower, Financial District, South 90th Axis, New Cairo, Egypt')}
-              </p>
-              <div className="floating-hq-hours">
-                <Clock size={13} className="hq-clock" />
-                <span>{isAr ? 'مواعيد العمل: الأحد – الخميس · ٩:٠٠ ص – ٦:٠٠ م' : 'Open: Sun – Thu · 9:00 AM – 6:00 PM (EET)'}</span>
-              </div>
-              <a 
-                href="https://maps.google.com/?q=New+Cairo+Financial+District" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="directions-btn"
-              >
-                <Navigation size={15} />
-                <span>{isAr ? 'الاتجاهات وخرائط القيادة' : 'Get Driving Directions'}</span>
-              </a>
-            </div>
-          </div>
-        </section>
-
-      </div>
-
-      <style>{`
+</div>      <style>{`
         .contact-page {
           background: var(--bg-primary);
           min-height: 100vh;
@@ -831,7 +839,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           cursor: pointer;
         }
 
-        [data-theme="dark"] .form-dark-input, 
+        [data-theme="dark"] .form-dark-input,
         [data-theme="dark"] .form-dark-select,
         [data-theme="dark"] .form-dark-textarea {
           background: rgba(255, 255, 255, 0.05);
@@ -844,12 +852,12 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           color: #FFFFFF;
         }
 
-        [data-theme="dark"] .form-dark-input::placeholder, 
+        [data-theme="dark"] .form-dark-input::placeholder,
         [data-theme="dark"] .form-dark-textarea::placeholder {
           color: rgba(255, 255, 255, 0.4);
         }
 
-        [data-theme="dark"] .form-dark-input:focus, 
+        [data-theme="dark"] .form-dark-input:focus,
         [data-theme="dark"] .form-dark-select:focus,
         [data-theme="dark"] .form-dark-textarea:focus {
           border-color: #DDA752;
@@ -857,7 +865,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           box-shadow: 0 0 14px rgba(221, 167, 82, 0.25);
         }
 
-        [data-theme="light"] .form-dark-input, 
+        [data-theme="light"] .form-dark-input,
         [data-theme="light"] .form-dark-select,
         [data-theme="light"] .form-dark-textarea {
           background: rgba(255, 255, 255, 0.85);
@@ -872,12 +880,12 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           color: #0D1117;
         }
 
-        [data-theme="light"] .form-dark-input::placeholder, 
+        [data-theme="light"] .form-dark-input::placeholder,
         [data-theme="light"] .form-dark-textarea::placeholder {
           color: #64748B;
         }
 
-        [data-theme="light"] .form-dark-input:focus, 
+        [data-theme="light"] .form-dark-input:focus,
         [data-theme="light"] .form-dark-select:focus,
         [data-theme="light"] .form-dark-textarea:focus {
           border-color: #A87E2C;
@@ -1551,8 +1559,8 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           }
 
           /* Prevent iOS input zoom with 16px and generous touch height */
-          .form-dark-input, 
-          .form-dark-select, 
+          .form-dark-input,
+          .form-dark-select,
           .form-dark-textarea {
             font-size: 16px !important;
             padding: 0.75rem 1rem;
@@ -1691,7 +1699,5 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
             font-size: 0.85rem;
           }
         }
-      `}</style>
-    </div>
-  );
-};
+      `}</style></>;
+}

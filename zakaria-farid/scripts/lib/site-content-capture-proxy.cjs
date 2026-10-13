@@ -2,7 +2,7 @@
 const http = require('node:http');
 module.exports = function createCaptureProxy() {
   const rows = { platform_settings: { hidePropertyPrices: true }, about_page: {} };
-  let failWrites = false, reads = 0, writes = 0;
+  let failWrites = false, reads = 0, writes = 0, writeDelayMs=0;
   const user = { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'capture@example.invalid', app_metadata: {}, user_metadata: {}, created_at: '2026-10-13T00:00:00Z' };
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://fixture.invalid');
@@ -13,11 +13,15 @@ module.exports = function createCaptureProxy() {
       const key = url.searchParams.get('key')?.replace(/^eq\./, '');
       if (['GET', 'HEAD'].includes(req.method)) {
         reads++;
-        if (table === 'site_content') return json(key && rows[key] ? [{ key, content: rows[key] }] : []);
+        if (table === 'site_content') {
+          const records=Object.entries(rows).filter(([name])=>!key||key.startsWith('in.')||key===name).map(([name,content])=>({key:name,content,updated_at:'2026-10-13T12:00:00Z',updated_by:user.id}));
+          return json(url.searchParams.get('limit')==='1'?records.slice(0,1):records);
+        }
         return json([]);
       }
       if (table !== 'site_content') return json({ message: 'Capture forbids writes to ' + table }, 403);
       writes++;
+      if(writeDelayMs)await new Promise(resolve=>setTimeout(resolve,writeDelayMs));
       if (failWrites) return json({ message: 'capture write rejected', code: '42501' }, 403);
       if (req.method === 'DELETE') delete rows[key];
       else if (req.method === 'POST') {
@@ -29,6 +33,7 @@ module.exports = function createCaptureProxy() {
     if (url.pathname === '/' && req.method === 'POST') {
       let body = ''; for await (const chunk of req) body += chunk;
       const command = JSON.parse(body);
+      if ('writeDelayMs' in command)writeDelayMs=command.writeDelayMs;
       if ('failWrites' in command) failWrites = command.failWrites;
       if (command.rows) Object.assign(rows, command.rows);
     } else if (url.pathname !== '/') return json({ message: 'Capture forbids this endpoint' }, 403);

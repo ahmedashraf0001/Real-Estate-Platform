@@ -1,20 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import {requestSettingsNavigation} from '@/lib/siteContent/settingsNavigationGuard';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Users, 
-  TrendingUp, 
-  LogOut, 
-  Languages, 
-  ExternalLink, 
-  Plus, 
-  Menu, 
-  X, 
-  Sliders, 
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  TrendingUp,
+  LogOut,
+  Languages,
+  ExternalLink,
+  Plus,
+  Menu,
+  X,
+  Sliders,
   Landmark,
   Search
 } from 'lucide-react';
@@ -36,55 +37,55 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
     {
       title: isAr ? 'القيادة والتحليلات' : 'COMMAND & INTELLIGENCE',
       items: [
-        { 
-          href: `/admin/${adminLocale}`, 
-          label: isAr ? 'لوحة القيادة التنفيذية' : 'Executive Dashboard', 
-          icon: LayoutDashboard, 
-          exact: true 
+        {
+          href: `/admin/${adminLocale}`,
+          label: isAr ? 'لوحة القيادة التنفيذية' : 'Executive Dashboard',
+          icon: LayoutDashboard,
+          exact: true
         },
-        { 
-          href: `/admin/${adminLocale}/analytics`, 
-          label: isAr ? 'تحليلات السوق والذكاء العقاري' : 'Market Intelligence', 
-          icon: TrendingUp, 
-          exact: false 
+        {
+          href: `/admin/${adminLocale}/analytics`,
+          label: isAr ? 'تحليلات السوق والذكاء العقاري' : 'Market Intelligence',
+          icon: TrendingUp,
+          exact: false
         },
       ]
     },
     {
       title: isAr ? 'محفظة العقارات والمشاريع' : 'PROPERTIES & INVENTORY',
       items: [
-        { 
-          href: `/admin/${adminLocale}/properties`, 
-          label: isAr ? 'محفظة العقارات' : 'Properties Portfolio', 
-          icon: Building2, 
-          exact: true 
+        {
+          href: `/admin/${adminLocale}/properties`,
+          label: isAr ? 'محفظة العقارات' : 'Properties Portfolio',
+          icon: Building2,
+          exact: true
         },
-        { 
-          href: `/admin/${adminLocale}/properties/new`, 
-          label: isAr ? 'إدراج صرح معماري جديد' : 'New Property Listing', 
-          icon: Plus, 
-          exact: true 
+        {
+          href: `/admin/${adminLocale}/properties/new`,
+          label: isAr ? 'إدراج صرح معماري جديد' : 'New Property Listing',
+          icon: Plus,
+          exact: true
         },
       ]
     },
     {
       title: isAr ? 'العملاء وخط الصفقات' : 'CLIENTS & PIPELINE',
       items: [
-        { 
-          href: `/admin/${adminLocale}/leads`, 
-          label: isAr ? 'إدارة العملاء والمعاينات' : 'Client CRM & Pipeline', 
-          icon: Users, 
-          exact: false 
+        {
+          href: `/admin/${adminLocale}/leads`,
+          label: isAr ? 'إدارة العملاء والمعاينات' : 'Client CRM & Pipeline',
+          icon: Users,
+          exact: false
         },
       ]
     },
     {
       title: isAr ? 'المنظومة المالية والمحاسبة' : 'FINANCIAL ERP WORKSTATION',
       items: [
-        { 
-          href: `/fin-os/${adminLocale}`, 
-          label: isAr ? 'محطة العمل المالية FIN-OS' : 'FIN-OS Workstation', 
-          icon: Landmark, 
+        {
+          href: `/fin-os/${adminLocale}`,
+          label: isAr ? 'محطة العمل المالية' : 'FIN-OS Workstation',
+          icon: Landmark,
           exact: false,
         },
       ]
@@ -92,15 +93,9 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
     {
       title: isAr ? 'إعدادات المنصة' : 'PLATFORM & SYSTEM',
       items: [
-        { 
-          href: `/admin/${adminLocale}/settings`, 
-          label: isAr ? 'إعدادات المنصة ورادار السوق' : 'Platform & Market Radar', 
-          icon: Sliders, 
-          exact: false 
-        },
         {
-          href: `/admin/${adminLocale}/page-content`,
-          label: isAr ? 'محتوى الصفحات' : 'Page content',
+          href: `/admin/${adminLocale}/settings`,
+          label: isAr ? 'الإعدادات' : 'Settings',
           icon: Sliders,
           exact: false
         },
@@ -109,6 +104,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
   ];
 
   async function signOut() {
+    if(!requestSettingsNavigation('/admin/login'))return;
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/admin/login');
@@ -123,9 +119,9 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
         <div className={styles.mobileBrand}>
           <BrandLogo size="sm" locale={adminLocale} />
         </div>
-        <button 
-          className={styles.hamburgerBtn} 
-          onClick={() => setIsOpen(!isOpen)} 
+        <button
+          className={styles.hamburgerBtn}
+          onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle Menu"
         >
           {isOpen ? <X size={22} /> : <Menu size={22} />}
@@ -188,8 +184,8 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
                   const isActive = exact ? pathname === href : pathname.startsWith(href);
                   return (
                     <div key={href} style={{ display: 'flex', flexDirection: 'column' }}>
-                      <Link 
-                        href={href} 
+                      <Link
+                        href={href}
                         className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                         onClick={() => setIsOpen(false)}
                       >
@@ -209,9 +205,9 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
 
         {/* Bottom System Actions */}
         <div className={styles.footerActions}>
-          <Link 
-            href={`/${adminLocale}`} 
-            className={styles.websiteBtn} 
+          <Link
+            href={`/${adminLocale}`}
+            className={styles.websiteBtn}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -223,7 +219,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
 
             <Link href={togglePath} className={styles.langBtn}>
               <Languages size={15} strokeWidth={1.8} />
-              <span>{isAr ? 'English' : 'العربية'}</span>
+              <span>{isAr ? 'EN' : 'العربية'}</span>
             </Link>
 
             <button className={styles.signOutBtn} onClick={signOut} title={isAr ? 'تسجيل الخروج' : 'Sign Out'}>

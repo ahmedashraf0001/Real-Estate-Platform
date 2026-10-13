@@ -1,4 +1,5 @@
 'use client';
+import {requestSettingsNavigation} from '@/lib/siteContent/settingsNavigationGuard';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -288,6 +289,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
 
   // Navigation handlers
   const handleNavigateToPath = useCallback((path: string) => {
+    if(!requestSettingsNavigation(path))return;
     router.push(path);
     onClose();
   }, [router, onClose]);
@@ -299,6 +301,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
     const defaultSub = mapping?.defaultSub ? `sub=${mapping.defaultSub}` : '';
     const combinedQuery = [defaultSub, extraQuery].filter(Boolean).join('&');
     const queryString = combinedQuery ? `?${combinedQuery}` : '';
+
+    if(!requestSettingsNavigation(`/fin-os/${currentLocale}${subPath}${queryString}`))return;
 
     router.push(`/fin-os/${currentLocale}${subPath}${queryString}`);
     onClose();
@@ -449,6 +453,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           } else if (onOpenAcademy) {
             onOpenAcademy();
           } else {
+            if(!requestSettingsNavigation(`/fin-os/${currentLocale}`))return;
             router.push(`/fin-os/${currentLocale}`);
             toast.info(
               isArMode 
@@ -796,6 +801,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             if (onSelectProperty) {
               onSelectProperty(p);
             } else {
+              if(!requestSettingsNavigation(`/admin/${currentLocale}/properties/${p.id}/edit`))return;
               router.push(`/admin/${currentLocale}/properties/${p.id}/edit`);
             }
             onClose();
@@ -830,6 +836,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                 if (onSelectProperty) {
                   onSelectProperty(p);
                 } else {
+                  if(!requestSettingsNavigation(`/admin/${currentLocale}/properties/${p.id}/edit`))return;
                   router.push(`/admin/${currentLocale}/properties/${p.id}/edit`);
                 }
                 onClose();
@@ -871,6 +878,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             if (onSelectLead) {
               onSelectLead(lead);
             } else {
+              if(!requestSettingsNavigation(`/admin/${currentLocale}/leads?search=${encodeURIComponent(phone || name)}`))return;
               router.push(`/admin/${currentLocale}/leads?search=${encodeURIComponent(phone || name)}`);
             }
             onClose();

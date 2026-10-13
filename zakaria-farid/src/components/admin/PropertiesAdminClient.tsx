@@ -23,8 +23,6 @@ import {
 import { toast } from 'sonner';
 import { formatPrice, formatPriceParts } from '@/lib/utils/formatting';
 import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
-import { saveSiteContent } from '@/app/actions/siteContent';
-import { useRouter } from 'next/navigation';
 import { toggleArchiveProperty, deletePropertyPermanently } from '@/app/actions/properties';
 import type { Property } from '@/lib/supabase/types';
 
@@ -42,19 +40,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'area_desc'>('newest');
   const [isProcessing, setIsProcessing] = useState(false);
   const platformSettings = usePlatformSettings();
-  const router = useRouter();
   const hidePrices = platformSettings.hidePropertyPrices ?? false;
-  const [priceSaveError, setPriceSaveError] = useState('');
-  const handleToggleHidePrices = async () => {
-    if (isProcessing) return;
-    setIsProcessing(true); setPriceSaveError('');
-    const result = await saveSiteContent('platform_settings', { ...platformSettings, hidePropertyPrices: !hidePrices });
-    setIsProcessing(false);
-    if (!result.success) { setPriceSaveError(isAr ? 'تعذر حفظ إعداد ظهور الأسعار. حاول مجدداً.' : result.error || 'Unable to save price visibility.'); return; }
-    router.refresh();
-    toast.success(isAr ? 'تم حفظ إعداد ظهور الأسعار' : 'Price visibility saved');
-  };
-
   const STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
     active: { bg: 'rgba(16, 185, 129, 0.12)', color: '#10B981', border: 'rgba(16, 185, 129, 0.3)' },
     under_offer: { bg: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B', border: 'rgba(245, 158, 11, 0.3)' },
@@ -172,7 +158,6 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', fontFamily: "var(--font-sans, 'ThmanyahSans', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif)" }} dir={isAr ? 'rtl' : 'ltr'}>
       
-      {priceSaveError && <p role="alert">{priceSaveError}</p>}
       {/* Header & View Switcher */}
       <div style={{
         display: 'flex',
@@ -242,7 +227,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
           <button
             type="button"
             disabled={isProcessing}
-            onClick={handleToggleHidePrices}
+            onClick={() => { window.location.href = `/admin/${adminLocale}/settings?group=listings`; }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

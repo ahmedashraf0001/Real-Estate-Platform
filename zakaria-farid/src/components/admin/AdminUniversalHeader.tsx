@@ -115,7 +115,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
       );
     }
 
-    if (pathname.includes('/page-content') || isSettings) {
+    if (isSettings) {
       return (
         <>
           <Link href={`/admin/${adminLocale}`} className={styles.breadcrumbRoot}>
@@ -123,7 +123,7 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
           </Link>
           <span className={styles.breadcrumbDivider}>/</span>
           <span className={styles.breadcrumbCurrent}>
-            {pathname.includes('/page-content') ? (isAr ? 'محتوى الصفحات' : 'Page content') : (isAr ? 'إعدادات المنصة ورادار السوق' : 'Platform Settings')}
+            {isAr ? 'الإعدادات' : 'Settings'}
           </span>
         </>
       );
@@ -189,10 +189,10 @@ export const AdminUniversalHeader: React.FC<AdminUniversalHeaderProps> = ({
         <Link
           href={togglePath}
           className={styles.iconBtn}
-          title={isAr ? 'Switch to English' : 'التحويل للعربية'}
+          title={isAr ? 'التحويل للإنجليزية' : 'التحويل للعربية'}
         >
           <Languages size={14} />
-          <span>{isAr ? 'English' : 'العربية'}</span>
+          <span>{isAr ? 'EN' : 'العربية'}</span>
         </Link>
       </div>
     </header>

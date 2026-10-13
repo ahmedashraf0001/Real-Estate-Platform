@@ -41,6 +41,7 @@ export const getStatsItems = (isAr: boolean) => [
 export const STATS_ITEMS = getStatsItems(false);
 
 interface StatsSectionProps {
+  preview?: boolean;
   eyebrow?: string;
   title?: string;
   subtitle?: string;
@@ -51,16 +52,18 @@ interface StatsSectionProps {
 }
 
 // Rolling Animated Number Component
-const RollingNumber: React.FC<{ target: number; suffix?: string; formatComma?: boolean }> = ({
+const RollingNumber: React.FC<{ target: number; suffix?: string; formatComma?: boolean; immediate?:boolean }> = ({
   target,
   suffix = '',
-  formatComma = false
+  formatComma = false,
+  immediate = false
 }) => {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(immediate?target:0);
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-40px' });
 
   useEffect(() => {
+    if (immediate) {setCount(target);return;}
     if (!isInView) return;
 
     let startTime: number | null = null;
@@ -82,7 +85,7 @@ const RollingNumber: React.FC<{ target: number; suffix?: string; formatComma?: b
 
     const animId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animId);
-  }, [isInView, target]);
+  }, [isInView, target, immediate]);
 
   const formatted = formatComma ? count.toLocaleString() : count.toString();
 
@@ -100,7 +103,8 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
   locale = 'en',
   className = '',
   hideHeader = false,
-  compact = false
+  compact = false,
+  preview = false
 }) => {
   const isAr = locale === 'ar';
 
@@ -140,7 +144,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
               {idx > 0 && <div className="metrology-sep" />}
               <motion.div
                 className="metrology-cell"
-                initial={{ opacity: 0, y: 18 }}
+                initial={preview?false:{ opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -148,6 +152,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
                 <span className="metrology-roman">{stat.roman}</span>
                 <div className="metrology-num">
                   <RollingNumber
+                    immediate={preview}
                     target={stat.numericValue}
                     suffix={stat.suffix}
                     formatComma={stat.formatComma}
