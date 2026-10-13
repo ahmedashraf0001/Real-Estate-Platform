@@ -659,7 +659,7 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="light"] .map-selected-preview-card,
         [data-theme="light"] .floating-sidebar-trigger,
         [data-theme="light"] .floating-glass-directory {
-          background: rgba(255, 255, 255, 0.72) !important;
+          background: var(--bg-glass) !important;
           backdrop-filter: var(--map-glass-blur-light) !important;
           -webkit-backdrop-filter: var(--map-glass-blur-light) !important;
           border: 1px solid rgba(255, 255, 255, 0.65) !important;
@@ -1475,7 +1475,7 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="light"] .floating-estate-card {
-          background: rgba(255, 255, 255, 0.72) !important;
+          background: var(--bg-glass) !important;
           backdrop-filter: var(--map-glass-blur-card) !important;
           -webkit-backdrop-filter: var(--map-glass-blur-card) !important;
           border: 1px solid rgba(0, 0, 0, 0.08) !important;

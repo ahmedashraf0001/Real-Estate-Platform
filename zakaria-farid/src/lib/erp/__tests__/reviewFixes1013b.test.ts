@@ -22,7 +22,7 @@ test('saved drawer theme overrides retain opaque site surface', () => {
 test('shared public light glass has translucent fill and white inner border', () => {
  const css=readFileSync('src/app/globals.css','utf8');
  const light=css.match(/\[data-theme="light"\] \{([\s\S]*?)\n\}/)![1];
- assert.match(light,/--glass-card-strong: linear-gradient\(180deg, rgba\(255, 255, 255, 0\.58\), rgba\(255, 255, 255, 0\.68\)\)/);
+ assert.match(light,/--glass-card-strong: linear-gradient\(180deg, rgba\(255, 255, 255, 0\.42\), rgba\(255, 255, 255, 0\.52\)\)/);
  assert.match(light,/--glass-border: 1px solid rgba\(255, 255, 255, 0\.70\)/);
  const gold=css.match(/--gold-text-light: #([0-9A-F]{6})/)![1];
  const luminance=(hex:string)=>hex.match(/../g)!.map(n=>parseInt(n,16)/255).map(n=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4).reduce((s,n,i)=>s+n*[.2126,.7152,.0722][i],0);

@@ -164,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           initial={false}
           animate={{
             x: 0,
-            maxWidth: isMapMode && isDesktop ? (isMapSidebarOpen ? 780 : 880) : 1280,
+            maxWidth: isMapMode && isDesktop ? (isMapSidebarOpen ? 980 : 1080) : 1280,
           }}
           transition={{
             type: 'spring',
@@ -318,21 +318,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         @media (min-width: 993px) {
           .nav-glass-capsule.map-glass-capsule {
-            padding: 0 1rem;
+            padding: 0 1.5rem;
             width: auto;
             max-width: fit-content;
-            height: 56px;
-            gap: 0.75rem;
+            height: 66px;
+            gap: 1.25rem;
           }
 
           .map-glass-capsule .desktop-nav {
-            gap: 0.75rem;
+            gap: 1.5rem;
             flex-shrink: 0;
           }
 
           .map-glass-capsule .nav-link {
-            padding: 0.35rem 0.3rem;
-            font-size: 0.88rem;
+            padding: 0.5rem 0.25rem;
+            font-size: 0.9375rem;
             white-space: nowrap;
             flex-shrink: 0;
           }
