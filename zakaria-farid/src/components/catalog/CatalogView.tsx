@@ -2638,21 +2638,21 @@ return true;
             padding: 1.15rem 1.15rem 1.4rem;
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
-            background: var(--bg-glass-card);
+            background: var(--bg-surface);
             border: var(--glass-border);
             box-shadow: var(--shadow-glass);
             text-shadow: var(--glass-text-shadow);
           }
 
           [data-theme="dark"] .omnibar-slots-group.sheet-open {
-            background: var(--bg-glass-card);
+            background: var(--bg-surface);
             border: var(--glass-border);
             border-bottom: none;
             box-shadow: var(--shadow-glass);
           }
 
           [data-theme="light"] .omnibar-slots-group.sheet-open {
-            background: var(--bg-glass-card);
+            background: var(--bg-surface);
             border: var(--glass-border);
             border-bottom: none;
             box-shadow: var(--shadow-glass);

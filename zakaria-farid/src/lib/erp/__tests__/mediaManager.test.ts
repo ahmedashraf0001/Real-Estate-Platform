@@ -4,6 +4,7 @@ import React from 'react';
 import { createRequire } from 'node:module';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { autoVideoTitle, validateMediaUrl, validateVideoFile, reorderMedia, propertyMediaVideos } from '../../media';
+import { parseVideoUrl } from '../../../components/video/LuxuryAmbientVideoPlayer';
 import type { ZoneInstance } from '../../layering/instances';
 import { adminHarness, nodes, textOf } from './adminWizardHarness';
 const req = createRequire(import.meta.url);
@@ -53,15 +54,17 @@ test('ZoneInspector renders shared media including photos for unit room and util
   assert.match(html, /example.com\/photo.jpg/); assert.doesNotMatch(html, /<form/);
  }
 });
-test('public unit view renders first overview with existing privacy embed and photos', () => {
+test('public unit view renders first compact overview and photos, retaining privacy embed parsing', () => {
  const z = zone('bld.unit'); z.videos!.push({ ...video, id: 'second', url: 'https://example.com/second.mp4' });
  const html = renderToStaticMarkup(React.createElement(Blueprint, { zones: [z], view: { mode: 'unit', floorKey: 'Floor 1', unitId: z.id }, selectedId: null, isAr: false, onSelect() {}, onViewChange() {} }));
- assert.match(html, /data-zone-media/); assert.match(html, /youtube-nocookie.com/); assert.match(html, /example.com\/photo.jpg/); assert.doesNotMatch(html, /second.mp4/);
+ assert.match(html, /data-zone-media/); assert.match(html, /data-compact-video/); assert.match(html, /Open video fullscreen/); assert.match(html, /example.com\/photo.jpg/); assert.doesNotMatch(html, /second.mp4|<iframe/);
+ assert.match(parseVideoUrl(video.url).embedUrl!, /^https:\/\/www.youtube-nocookie.com\/embed\/dQw4w9WgXcQ\?/);
 });
 test('public zone detail renders overview and keeps photos empty state', () => {
  const z = zone('bld.elevator'); z.images = [];
  const html = renderToStaticMarkup(React.createElement(Blueprint, { zones: [z], view: { mode: 'floor', floorKey: 'Floor 1' }, selectedId: z.id, isAr: false, onSelect() {}, onViewChange() {} }));
- assert.match(html, /data-zone-media/); assert.match(html, /youtube-nocookie.com/); assert.match(html, /No photos added yet/);
+ assert.match(html, /data-zone-media/); assert.match(html, /data-compact-video/); assert.match(html, /Open video fullscreen/); assert.match(html, /No photos added yet/); assert.doesNotMatch(html, /<iframe/);
+ assert.match(parseVideoUrl(video.url).embedUrl!, /^https:\/\/www.youtube-nocookie.com\/embed\//);
 });
 test('legacy property video_url fallback survives empty videos; populated videos take priority', () => {
  assert.equal(propertyMediaVideos([], 'https://example.com/legacy.mp4')[0].url, 'https://example.com/legacy.mp4');

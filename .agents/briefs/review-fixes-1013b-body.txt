@@ -1,0 +1,47 @@
+TASK review-fixes-1013b — second user review on the dev server (branch feat/blueprint-nav, after ab43a23)
+
+WHY [user-confirmed 2026-10-13, screenshots]
+1. Public blueprint zone panel (BuildingBlueprintPreview, ZoneMedia): zone photos and the overview video cannot be opened full screen. There is no click-to-enlarge.
+2. The overview video in the zone panel is broken. The ambient player (built for a wide hero) is cramped in the ~300px panel. Its title ("جولة فيديو داخل العقار — المطبخ — فيديو"), the "إضاءة محيطية مفعلة" chip, the play/seek buttons and the volume slider all overlap each other, and the progress bar sits on the top edge.
+3. A blueprint tile that has photos shows the photo as its background, and the tile's type icon disappears (e.g. المطبخ shows a screenshot and no chef-hat icon). Tiles without photos show the icon.
+4. The saved-properties drawer "محفظة العقارات المحفوظة" (bookmark button in the header) is transparent: the page (blueprint floor rail, tiles) shows through its body.
+5. Light mode, public site: the gold accents in the header (active nav item, logo subtitle, EN|عربي toggle) are too pale. The light glass surfaces (header bar, hero search bar "المدينة / المنطقة · نوع الصرح · النطاق السعري", card info glass) are so opaque and white that they read as flat blank white, not glass.
+
+REQUIRED
+A. Media lightbox (public)
+ 1. Clicking a zone photo or the overview video in the zone panel opens a full-screen lightbox: photos and videos of that zone in one sequence, prev/next arrows, swipe on touch, counter "2 / 5", Esc and an X to close, focus trapped and restored on close. Videos play inside the lightbox with native controls or the existing player in its large layout. YouTube uses the existing embed path (youtube-nocookie).
+ 2. If the site already has a gallery lightbox (search PropertyDetailView gallery / lightbox / Lightbox), reuse it. Do not write a second one. It must work inside blueprint fullscreen mode too (z-index above it; Lenis stays paused).
+B. Zone panel video
+ 3. Add a compact variant of the player for narrow containers (container query or a prop): a 16:9 poster with one centred play button and the title BELOW the frame (one line, ellipsis). No ambient chip, no volume slider, no skip buttons in compact mode. Clicking it opens the lightbox from A. Nothing may overlap at panel widths 280-420px.
+C. Tiles with photos
+ 4. The tile keeps its type icon and name above the photo. Add a dark scrim (gradient) under the icon/name for AA contrast in light and dark. Sold/reserved badges stay visible. This is the same for public and the admin editor's preview tiles if they share the markup; admin colors stay admin.
+D. Saved drawer
+ 5. Find why the drawer body is transparent (missing background token, backdrop-filter without a fill, or a token undefined in this theme). Give it an opaque surface in light and dark (a site surface token), plus a backdrop scrim over the page. Check the other public drawers/sheets (compare tray, filters sheet, mobile menu) for the same bug and fix any that share the cause.
+E. Light-mode header and glass (public site only; dark mode unchanged; admin unchanged)
+ 6. Header gold accents in light mode use the site's AA light gold (#8A5B0A, the token already used for the light sold badge text) or a slightly richer token between it and the dark gold. The active-nav underline and text, the logo subtitle and the language toggle must reach WCAG AA 4.5:1 for text on the actual header background.
+ 7. Light glass: lower the white fill (about rgba(255,255,255,.55-.68)), keep or raise the backdrop blur and saturation, add a 1px inner border (white at about .7) and a soft warm shadow, so the background visibly shows through and the bar reads as glass. Apply this through the shared light glass tokens, not per component. Text on glass must still pass AA. Verify on the hero (photo behind) and on plain page backgrounds (where it must not vanish: keep a visible border/shadow).
+
+DO NOT
+- Change the DB (Supabase PRODUCTION, read-only), migrations, or dependencies. Upload files. Press save/publish.
+- Change dark-mode visuals (except the drawer bug, if it exists there), admin colors, blueprint layout from ab43a23, or the wizard.
+
+TESTS
+RED first:
+ - lightbox opens from a zone photo and from the video; sequence/counter; Esc closes (SSR/unit level where possible).
+ - compact player renders no ambient chip/volume/skip.
+ - a tile with a photo still renders the icon.
+ - drawer surface uses an opaque token.
+ - light header/glass tokens: contrast helper for the gold text on the header background is >= 4.5.
+Gates: tsc exit 0. npm test: only the 7 known baseline failures.
+Capture (separate port, synthetic fixtures, Supabase intercepted):
+ - zone panel with video + 3 photos at 1440 and 390, dark and light;
+ - the lightbox open (photo and video);
+ - a tile with a photo, light and dark;
+ - the saved drawer open over the blueprint, light and dark;
+ - the light-mode header and hero search bar BEFORE and AFTER (same viewport, 1440).
+Assert no overlap of the compact player's controls and title in the browser, and the computed contrast of the header gold text.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 is the user's dev server: do not stop it; use another free port (not 51101-51105) and a separate gitignored build dir; restore tsconfig.json/next-env.d.ts.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

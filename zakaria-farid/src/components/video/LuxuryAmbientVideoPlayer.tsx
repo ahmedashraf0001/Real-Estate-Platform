@@ -88,7 +88,31 @@ export function parseVideoUrl(rawUrl: string): ParsedVideoSource {
   };
 }
 
-export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> = ({
+type PlayerProps = LuxuryAmbientVideoPlayerProps & ({ compact: true; onOpen: () => void } | { compact?: false });
+
+export const LuxuryAmbientVideoPlayer: React.FC<PlayerProps> = (props) => {
+  if (!props.compact) return <FullAmbientVideoPlayer {...props} />;
+  const video = typeof props.video === 'string' ? { url: props.video, title_en: props.title, title_ar: props.title_ar, thumbnail: props.poster } : props.video;
+  const title = props.isAr ? video.title_ar || video.title_en : video.title_en || video.title_ar;
+  const poster = props.poster || video.thumbnail || parseVideoUrl(video.url).thumbnail;
+  return <div data-compact-video className="compact-zone-video" dir={props.isAr ? 'rtl' : 'ltr'}>
+    <button type="button" onClick={props.onOpen} aria-label={props.isAr ? 'فتح الفيديو بملء الشاشة' : 'Open video fullscreen'}>
+      {poster ? <img src={poster} alt="" /> : <Film size={36} aria-hidden="true" />}
+      <span className="compact-zone-play"><Play size={24} aria-hidden="true" /></span>
+    </button>
+    <p data-compact-title title={title}>{title}</p>
+    <style>{`
+      .compact-zone-video { width: 100%; min-width: 0; }
+      .compact-zone-video > button { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9; border: var(--glass-border); border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--bg-surface); color: var(--text-primary); }
+      .compact-zone-video > button > img { width: 100%; height: 100%; object-fit: cover; }
+      .compact-zone-play { position: absolute; inset: 0; margin: auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--gold-primary); color: var(--bg-primary); }
+      .compact-zone-video > p { margin: 8px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); font-size: .85rem; }
+      .compact-zone-video > button:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 3px; }
+    `}</style>
+  </div>;
+};
+
+const FullAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> = ({
   video,
   title,
   title_ar,

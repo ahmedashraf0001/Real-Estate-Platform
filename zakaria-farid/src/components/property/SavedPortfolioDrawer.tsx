@@ -251,13 +251,13 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
             }
 
             [data-theme="dark"] .saved-portfolio-drawer {
-              background: var(--bg-glass-card);
+              background: var(--bg-surface);
               border: var(--glass-border);
               box-shadow: var(--shadow-glass);
             }
 
             [data-theme="light"] .saved-portfolio-drawer {
-              background: var(--bg-glass-card);
+              background: var(--bg-surface);
               border: var(--glass-border);
               box-shadow: var(--shadow-glass);
             }

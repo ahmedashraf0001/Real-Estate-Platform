@@ -236,18 +236,18 @@
   --bg-card: #FFFFFF;
   --bg-card-hover: #F8F5EE;
 
-  --bg-glass: rgba(255, 255, 255, 0.36);
-  --bg-glass-card: linear-gradient(180deg, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0.42));
+  --bg-glass: rgba(255, 255, 255, 0.62);
+  --bg-glass-card: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.65));
   --bg-glass-hover: var(--bg-glass-card);
-  --glass-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.70));
-  --glass-card-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.88));
-  --glass-border: 1px solid rgba(255, 255, 255, 0.60);
+  --glass-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.68));
+  --glass-card-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.68));
+  --glass-border: 1px solid rgba(255, 255, 255, 0.70);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.80);
   --glass-shadow: 0 20px 50px rgba(30, 24, 16, 0.10);
   --glass-fallback: rgba(255, 255, 255, 0.86);
   /* Dark text on light glass needs no edge; a dark shadow here smudges every glyph. */
   --glass-text-shadow: none;
-  --border-glass: rgba(255, 255, 255, 0.60);
+  --border-glass: rgba(255, 255, 255, 0.70);
   --border-glass-subtle: var(--border-glass);
 
   --sold-bg: #fff;
@@ -277,6 +277,8 @@
   --shadow-lg: 0 24px 52px rgba(30, 24, 16, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04);
   --shadow-gold: 0 10px 30px rgba(184, 133, 48, 0.20);
   --shadow-glass: var(--glass-shadow), var(--glass-highlight);
+  --glass-blur: blur(20px) saturate(160%);
+  --glass-blur-nav: blur(18px) saturate(160%);
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -1350,3 +1352,21 @@ div[style*="background:#ffffff"] select {
 .mini-markdown li { margin-block: .25em; }
 .mini-markdown strong { font-weight: 700; }
 .mini-markdown em { font-style: italic; }
+
+/* Public light header: readable gold on one shared glass surface. */
+[data-theme="light"] .app-root .nav-glass-capsule.hero-blended {
+ background: var(--glass-strong) !important;
+ border: var(--glass-border) !important;
+ backdrop-filter: var(--glass-blur-nav) !important;
+ -webkit-backdrop-filter: var(--glass-blur-nav) !important;
+ box-shadow: var(--shadow-glass) !important;
+}
+[data-theme="light"] .app-root .nav-glass-capsule :is(.nav-link.active, .lang-btn, .active-lang, .brand-sub-text, .brand-arabic-line) {
+ color: var(--gold-dark) !important;
+ -webkit-text-fill-color: var(--gold-dark) !important;
+ background: none !important;
+ filter: none !important;
+ opacity: 1;
+}
+[data-theme="light"] .app-root .nav-glass-capsule .nav-indicator { background: var(--gold-dark); box-shadow: none; }
+[data-theme="light"] .app-root .lang-btn.blended-pill { background: var(--bg-glass-card) !important; }

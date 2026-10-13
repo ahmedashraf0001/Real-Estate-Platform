@@ -152,7 +152,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
             <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
             <div className={styles.tilePhotoScrim} />
             <div className={styles.tilePhotoContent}>
-              <strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
+              {icon(z, 27)}<strong><bdi>{zoneLabel(z, isAr)}</bdi></strong>
               {unitFacts(z) && <span>{unitFacts(z)}</span>}
               {status(resolveBlueprintUnit(z, inventory).status)}
               <span className={styles.link}>{text('عرض مخطط الشقة ‹', 'View unit plan ›')}</span>
@@ -191,7 +191,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
             <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
             <div className={styles.tilePhotoScrim} />
             <div className={styles.tilePhotoContent}>
-              <strong>{zoneLabel(z, isAr)}</strong>
+              {icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>
               {dimensions(z) && <span className={styles.dims}>{dimensions(z)}</span>}
             </div>
           </>
@@ -223,7 +223,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
             <img src={z.images![0]} alt="" className={styles.tilePhotoCover} />
             <div className={styles.tilePhotoScrim} />
             <div className={styles.tilePhotoContent}>
-              <strong>{zoneLabel(z, isAr)}</strong>
+              {icon(z, 27)}<strong>{zoneLabel(z, isAr)}</strong>
               {dimensions(z) && <span>{dimensions(z)}</span>}
             </div>
           </>
@@ -359,7 +359,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
           <h4>{text('حالة التنفيذ لهذا العنصر', 'Execution status for this element')}</h4>
           <ul className={styles.trades}>{detail?.trades.map(t => <li key={t.id}><span>{blueprintLabel('trade', t.trade_template_id, isAr)}</span>{status(t.status)}</li>)}</ul>
           {!detail?.trades.length && <p>{text('لم تسجل أعمال لهذا العنصر', 'No trades recorded for this element')}</p>}
-          <ZoneMedia zone={selected} isAr={isAr} />
+          <ZoneMedia key={selected.id} zone={selected} isAr={isAr} />
         <p className={styles.note}>{text('الأعمال العامة للمبنى تظهر تحت «المبنى».', 'Building-wide work appears under “Building”.')}</p>
         {selected.zone_template_id === 'bld.unit' && onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(selected)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
         </div>
@@ -424,7 +424,7 @@ export default function BuildingBlueprintPreview({ zones, inventory = [], view, 
         {onRequestUnit && <button type="button" className={styles.request} onClick={() => onRequestUnit(unit)}>{text('اطلب هذه الشقة', 'Request this unit')}</button>}
       </div>;
     })()}
-    {unit && !ed.editing && Boolean(unit.videos?.length || unit.images?.length) && <ZoneMedia zone={unit} isAr={isAr} />}
+    {unit && !ed.editing && Boolean(unit.videos?.length || unit.images?.length) && <ZoneMedia key={unit.id} zone={unit} isAr={isAr} />}
 
     </div>
     <div className={styles.legend}><span className={styles.available}>{text('متاحة', 'Available')}</span>{edit ? <span>{text('مباعة / محجوزة', 'Sold / Reserved')}</span> : <><PublicStatusBadge status="sold" isAr={isAr} /><PublicStatusBadge status="reserved" isAr={isAr} /></>}<span>{text('مساحات مشتركة', 'Shared spaces')}</span><span><DoorOpen size={15} />{text('باب الشقة', 'Unit door')}</span></div>

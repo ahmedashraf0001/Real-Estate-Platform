@@ -644,7 +644,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           right: 0.75rem;
           width: auto;
           max-height: calc(100vh - 96px);
-          background: var(--glass-strong);
+          background: var(--bg-surface);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);
@@ -657,7 +657,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         [data-theme="dark"] .mobile-drawer-glass {
-          background: var(--glass-strong);
+          background: var(--bg-surface);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);
@@ -666,7 +666,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         [data-theme="light"] .mobile-drawer-glass {
-          background: var(--glass-strong);
+          background: var(--bg-surface);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);

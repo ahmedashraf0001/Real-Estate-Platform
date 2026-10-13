@@ -917,20 +917,20 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          background: var(--bg-glass-card);
+          background: var(--bg-surface);
           border: var(--glass-border);
           box-shadow: var(--shadow-glass);
           text-shadow: var(--glass-text-shadow);
         }
 
         [data-theme="dark"] .compare-modal-window {
-          background: var(--bg-glass-card);
+          background: var(--bg-surface);
           border: var(--glass-border);
           box-shadow: var(--shadow-glass);
         }
 
         [data-theme="light"] .compare-modal-window {
-          background: var(--bg-glass-card);
+          background: var(--bg-surface);
           backdrop-filter: var(--glass-blur);
           -webkit-backdrop-filter: var(--glass-blur);
           border: var(--glass-border);

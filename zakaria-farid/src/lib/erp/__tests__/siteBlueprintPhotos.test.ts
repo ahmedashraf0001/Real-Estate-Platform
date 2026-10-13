@@ -42,13 +42,13 @@ test('real public blueprint uses first zone photo and scrim for unit/shared/room
   const floor = render([unit, shared], { mode: 'floor', floorKey: 'Floor 2' });
   const unitTile = tile(floor, 'unit');
   photo(unitTile, '/unit-first.jpg', '/unit-second.jpg');
-  assert.doesNotMatch(unitTile.content, /lucide-house/);
+  assert.match(unitTile.content, /<svg/);
   const sharedTile = tile(floor, 'element');
   photo(sharedTile, '/shared-first.jpg', '/shared-second.jpg');
-  assert.doesNotMatch(sharedTile.content, /<svg/);
+  assert.match(sharedTile.content, /<svg/);
   const roomTile = tile(render([unit], { mode: 'unit', floorKey: 'Floor 2', unitId: 'unit' }), 'room');
   photo(roomTile, '/room-first.jpg', '/room-second.jpg');
-  assert.doesNotMatch(roomTile.content, /<svg/);
+  assert.match(roomTile.content, /<svg/);
 });
 
 test('real blueprint falls back to icons for unit/shared/room zones without photos', () => {
