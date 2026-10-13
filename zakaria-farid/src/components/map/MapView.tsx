@@ -640,11 +640,11 @@ export const MapView: React.FC<MapViewProps> = ({
         /* =========================================================
            BALANCED TRANSLUCENT LIQUID CRYSTAL GLASS OVER MAP
            ========================================================= */
-        [data-theme="dark"] .map-glass-ctrl-pill,
-        [data-theme="dark"] .map-mode-pill-btn,
-        [data-theme="dark"] .map-selected-preview-card,
-        [data-theme="dark"] .floating-sidebar-trigger,
-        [data-theme="dark"] .floating-glass-directory {
+        [data-theme] .map-glass-ctrl-pill,
+        [data-theme] .map-mode-pill-btn,
+        [data-theme] .map-selected-preview-card,
+        [data-theme] .floating-sidebar-trigger,
+        [data-theme] .floating-glass-directory {
           background: rgba(20, 24, 35, 0.58) !important;
           backdrop-filter: var(--map-glass-blur-dark) !important;
           -webkit-backdrop-filter: var(--map-glass-blur-dark) !important;
@@ -652,20 +652,6 @@ export const MapView: React.FC<MapViewProps> = ({
           box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
           text-shadow: var(--glass-text-shadow);
           color: #FFFFFF !important;
-        }
-
-        [data-theme="light"] .map-glass-ctrl-pill,
-        [data-theme="light"] .map-mode-pill-btn,
-        [data-theme="light"] .map-selected-preview-card,
-        [data-theme="light"] .floating-sidebar-trigger,
-        [data-theme="light"] .floating-glass-directory {
-          background: var(--bg-glass) !important;
-          backdrop-filter: var(--map-glass-blur-light) !important;
-          -webkit-backdrop-filter: var(--map-glass-blur-light) !important;
-          border: 1px solid rgba(255, 255, 255, 0.65) !important;
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
-          text-shadow: none !important;
-          color: #0D1117 !important;
         }
 
         /* Keyframe entrance animations */
@@ -777,13 +763,9 @@ export const MapView: React.FC<MapViewProps> = ({
           cursor: pointer;
         }
 
-        [data-theme="dark"] .map-glass-ctrl-btn {
+        [data-theme] .map-glass-ctrl-btn {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .map-glass-ctrl-btn {
-          color: #0D1117;
         }
 
         .map-glass-ctrl-btn:hover {
@@ -797,12 +779,8 @@ export const MapView: React.FC<MapViewProps> = ({
           margin: 0 3px;
         }
 
-        [data-theme="dark"] .ctrl-divider-v {
+        [data-theme] .ctrl-divider-v {
           background: rgba(255, 255, 255, 0.25);
-        }
-
-        [data-theme="light"] .ctrl-divider-v {
-          background: rgba(0, 0, 0, 0.12);
         }
 
         .map-mode-pill-btn {
@@ -818,13 +796,9 @@ export const MapView: React.FC<MapViewProps> = ({
           cursor: pointer;
         }
 
-        [data-theme="dark"] .map-mode-pill-btn {
+        [data-theme] .map-mode-pill-btn {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .map-mode-pill-btn {
-          color: #0D1117;
         }
 
         .map-mode-pill-btn:hover {
@@ -887,17 +861,11 @@ export const MapView: React.FC<MapViewProps> = ({
           border-radius: 6px;
         }
 
-        [data-theme="dark"] .preview-district-badge {
+        [data-theme] .preview-district-badge {
           color: #F5C672;
           background: rgba(221, 167, 82, 0.22);
           border: 1px solid rgba(221, 167, 82, 0.55);
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .preview-district-badge {
-          color: var(--gold-primary);
-          background: rgba(197, 154, 69, 0.12);
-          border: 1px solid rgba(197, 154, 69, 0.35);
         }
 
         .preview-id-badge {
@@ -910,17 +878,11 @@ export const MapView: React.FC<MapViewProps> = ({
           border-radius: 6px;
         }
 
-        [data-theme="dark"] .preview-id-badge {
+        [data-theme] .preview-id-badge {
           color: #FFFFFF;
           background: rgba(255, 255, 255, 0.16);
           border: 1px solid rgba(255, 255, 255, 0.35);
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .preview-id-badge {
-          color: #1E293B;
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         .badge-icon-gold {
@@ -939,29 +901,17 @@ export const MapView: React.FC<MapViewProps> = ({
           flex-shrink: 0;
         }
 
-        [data-theme="dark"] .preview-close-btn {
+        [data-theme] .preview-close-btn {
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.25);
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
         }
 
-        [data-theme="dark"] .preview-close-btn:hover {
+        [data-theme] .preview-close-btn:hover {
           color: #DDA752;
           border-color: rgba(221, 167, 82, 0.5);
           background: rgba(221, 167, 82, 0.25);
-        }
-
-        [data-theme="light"] .preview-close-btn {
-          background: rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          color: #475569;
-        }
-
-        [data-theme="light"] .preview-close-btn:hover {
-          color: #0D1117;
-          background: rgba(0, 0, 0, 0.1);
-          border-color: rgba(0, 0, 0, 0.15);
         }
 
         .preview-gallery-stage {
@@ -1076,13 +1026,9 @@ export const MapView: React.FC<MapViewProps> = ({
           text-overflow: ellipsis;
         }
 
-        [data-theme="dark"] .preview-title {
+        [data-theme] .preview-title {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .preview-title {
-          color: #0D1117;
         }
 
         .preview-price {
@@ -1110,13 +1056,9 @@ export const MapView: React.FC<MapViewProps> = ({
           text-overflow: ellipsis;
         }
 
-        [data-theme="dark"] .preview-location-line {
+        [data-theme] .preview-location-line {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .preview-location-line {
-          color: #1E293B;
         }
 
         /* 3-Column Grid */
@@ -1138,29 +1080,19 @@ export const MapView: React.FC<MapViewProps> = ({
           white-space: nowrap;
         }
 
-        [data-theme="dark"] .spec-item {
+        [data-theme] .spec-item {
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.25);
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
         }
 
-        [data-theme="light"] .spec-item {
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          color: #0D1117;
-        }
-
         .spec-item strong {
           font-weight: 800;
         }
 
-        [data-theme="dark"] .spec-item strong {
+        [data-theme] .spec-item strong {
           color: #FFFFFF;
-        }
-
-        [data-theme="light"] .spec-item strong {
-          color: #0D1117;
         }
 
         .spec-icon {
@@ -1209,13 +1141,9 @@ export const MapView: React.FC<MapViewProps> = ({
           left: 1.25rem;
         }
 
-        [data-theme="dark"] .floating-sidebar-trigger {
+        [data-theme] .floating-sidebar-trigger {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .floating-sidebar-trigger {
-          color: #0D1117;
         }
 
         .floating-sidebar-trigger:hover {
@@ -1268,12 +1196,8 @@ export const MapView: React.FC<MapViewProps> = ({
           gap: 0.4rem;
         }
 
-        [data-theme="dark"] .glass-directory-header {
+        [data-theme] .glass-directory-header {
           border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-        }
-
-        [data-theme="light"] .glass-directory-header {
-          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         .dir-header-top {
@@ -1300,13 +1224,9 @@ export const MapView: React.FC<MapViewProps> = ({
           line-height: 1.2;
         }
 
-        [data-theme="dark"] .dir-title {
+        [data-theme] .dir-title {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .dir-title {
-          color: #0D1117;
         }
 
         .dir-collapse-btn {
@@ -1321,16 +1241,10 @@ export const MapView: React.FC<MapViewProps> = ({
           flex-shrink: 0;
         }
 
-        [data-theme="dark"] .dir-collapse-btn {
+        [data-theme] .dir-collapse-btn {
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.25);
           color: #FFFFFF;
-        }
-
-        [data-theme="light"] .dir-collapse-btn {
-          background: rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          color: #0D1117;
         }
 
         .dir-collapse-btn:hover {
@@ -1345,13 +1259,9 @@ export const MapView: React.FC<MapViewProps> = ({
           margin-bottom: 0.4rem;
         }
 
-        [data-theme="dark"] .dir-sub {
+        [data-theme] .dir-sub {
           color: #CBD5E1;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .dir-sub {
-          color: #64748B;
         }
 
         .dir-search-wrap {
@@ -1390,28 +1300,14 @@ export const MapView: React.FC<MapViewProps> = ({
           text-align: right;
         }
 
-        [data-theme="dark"] .dir-search-input {
+        [data-theme] .dir-search-input {
           background: var(--bg-glass-card);
           border: var(--glass-border);
           color: #FFFFFF;
         }
 
-        [data-theme="dark"] .dir-search-input::placeholder {
+        [data-theme] .dir-search-input::placeholder {
           color: rgba(255, 255, 255, 0.65);
-        }
-
-        [data-theme="light"] .dir-search-input {
-          background: var(--bg-glass-card);
-          backdrop-filter: var(--glass-blur);
-          -webkit-backdrop-filter: var(--glass-blur);
-          border: var(--glass-border);
-          color: #0D1117;
-          box-shadow: var(--shadow-glass);
-          text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .dir-search-input::placeholder {
-          color: #94A3B8;
         }
 
         .dir-search-input:focus {
@@ -1467,21 +1363,11 @@ export const MapView: React.FC<MapViewProps> = ({
           text-shadow: var(--glass-text-shadow);
         }
 
-        [data-theme="dark"] .floating-estate-card {
+        [data-theme] .floating-estate-card {
           background: rgba(255, 255, 255, 0.07) !important;
           border: 1px solid rgba(255, 255, 255, 0.12) !important;
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
           color: #FFFFFF !important;
-        }
-
-        [data-theme="light"] .floating-estate-card {
-          background: var(--bg-glass) !important;
-          backdrop-filter: var(--map-glass-blur-card) !important;
-          -webkit-backdrop-filter: var(--map-glass-blur-card) !important;
-          border: 1px solid rgba(0, 0, 0, 0.08) !important;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
-          text-shadow: none !important;
-          color: #0D1117 !important;
         }
 
         .floating-estate-card:hover {
@@ -1489,14 +1375,9 @@ export const MapView: React.FC<MapViewProps> = ({
           transform: translateY(-2px);
         }
 
-        [data-theme="dark"] .floating-estate-card:hover {
+        [data-theme] .floating-estate-card:hover {
           background: rgba(255, 255, 255, 0.12) !important;
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-        }
-
-        [data-theme="light"] .floating-estate-card:hover {
-          background: rgba(255, 255, 255, 0.85) !important;
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
         }
 
         .floating-estate-card.active-pin {
@@ -1504,12 +1385,8 @@ export const MapView: React.FC<MapViewProps> = ({
           box-shadow: 0 0 0 1px var(--gold-primary) !important;
         }
 
-        [data-theme="dark"] .floating-estate-card.active-pin {
+        [data-theme] .floating-estate-card.active-pin {
           background: rgba(255, 255, 255, 0.14) !important;
-        }
-
-        [data-theme="light"] .floating-estate-card.active-pin {
-          background: rgba(255, 255, 255, 0.88) !important;
         }
 
         .estate-thumb-wrap {
@@ -1540,7 +1417,6 @@ export const MapView: React.FC<MapViewProps> = ({
           );
         }
 
-        [data-theme="light"] .estate-district-pill { color: var(--text-primary); }
 
         .estate-district-pill {
           position: absolute;
@@ -1596,13 +1472,9 @@ export const MapView: React.FC<MapViewProps> = ({
           text-overflow: ellipsis;
         }
 
-        [data-theme="dark"] .estate-card-title {
+        [data-theme] .estate-card-title {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .estate-card-title {
-          color: #0D1117;
         }
 
         .estate-type-tag {
@@ -1638,13 +1510,9 @@ export const MapView: React.FC<MapViewProps> = ({
           font-weight: 600;
         }
 
-        [data-theme="dark"] .estate-specs-row {
+        [data-theme] .estate-specs-row {
           color: #FFFFFF;
           text-shadow: var(--glass-text-shadow);
-        }
-
-        [data-theme="light"] .estate-specs-row {
-          color: #1E293B;
         }
 
         .spec-dot {
@@ -1663,12 +1531,8 @@ export const MapView: React.FC<MapViewProps> = ({
           justify-content: flex-start;
         }
 
-        [data-theme="dark"] .estate-card-actions {
+        [data-theme] .estate-card-actions {
           border-top: 1px solid rgba(255, 255, 255, 0.18);
-        }
-
-        [data-theme="light"] .estate-card-actions {
-          border-top: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         .estate-open-btn {
@@ -1791,22 +1655,12 @@ export const MapView: React.FC<MapViewProps> = ({
           text-shadow: var(--glass-text-shadow);
         }
 
-        [data-theme="light"] .pin-title-pill {
-          background: var(--glass-strong);
-          border: var(--glass-border);
-          box-shadow: var(--shadow-glass);
-        }
-
         .pin-title-pill span {
           font-family: var(--font-heading);
           font-size: 0.6875rem;
           font-weight: 700;
           color: #FFF0C2;
           letter-spacing: 0.02em;
-        }
-
-        [data-theme="light"] .pin-title-pill span {
-          color: #0D1117;
         }
 
         .leaflet-gold-pin-wrapper:hover .pin-title-pill,
@@ -1865,10 +1719,6 @@ export const MapView: React.FC<MapViewProps> = ({
 
           .dir-search-wrap input::placeholder {
             color: rgba(255, 255, 255, 0.65);
-          }
-
-          [data-theme="light"] .dir-search-wrap input::placeholder {
-            color: rgba(15, 23, 42, 0.55);
           }
 
           .glass-cards-scroll {
@@ -1936,19 +1786,7 @@ export const MapView: React.FC<MapViewProps> = ({
             font-size: 0.75rem;
           }
         }
-        [data-theme="light"] .floating-glass-directory .dir-eyebrow {
-          color: var(--gold-dark);
-        }
-        [data-theme="light"] .floating-glass-directory .dir-sub {
-          color: var(--text-secondary);
-        }
-        [data-theme="light"] .floating-glass-directory .estate-type-tag,
-        [data-theme="light"] .floating-glass-directory .estate-currency,
-        [data-theme="light"] .floating-glass-directory .estate-price-val,
-        [data-theme="light"] .floating-glass-directory .estate-open-btn {
-          color: var(--gold-dark);
-        }
-        [data-theme="dark"] .floating-glass-directory .dir-eyebrow {
+        [data-theme] .floating-glass-directory .dir-eyebrow {
           color: var(--gold-light);
         }
         .map-glass-ctrl-pill, .map-mode-pill-btn, .floating-sidebar-trigger {

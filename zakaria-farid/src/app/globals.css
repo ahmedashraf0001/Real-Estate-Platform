@@ -1354,19 +1354,19 @@ div[style*="background:#ffffff"] select {
 .mini-markdown em { font-style: italic; }
 
 /* Public light header (scrolled / non-photo pages): readable gold on glass. */
-[data-theme="light"] .app-root .nav-glass-capsule:not(.hero-blended) :is(.nav-link.active, .lang-btn, .active-lang, .brand-sub-text, .brand-arabic-line) {
+[data-theme="light"] .app-root .nav-glass-capsule:not(.hero-blended, .map-glass-capsule) :is(.nav-link.active, .lang-btn, .active-lang, .brand-sub-text, .brand-arabic-line) {
  color: var(--gold-dark) !important;
  -webkit-text-fill-color: var(--gold-dark) !important;
  background: none !important;
  filter: none !important;
  opacity: 1;
 }
-[data-theme="light"] .app-root .nav-glass-capsule:not(.hero-blended) .nav-indicator { background: var(--gold-dark); box-shadow: none; }
-[data-theme="light"] .app-root .nav-glass-capsule:not(.hero-blended) .lang-btn.blended-pill { background: var(--bg-glass-card) !important; }
+[data-theme="light"] .app-root .nav-glass-capsule:not(.hero-blended, .map-glass-capsule) .nav-indicator { background: var(--gold-dark); box-shadow: none; }
+[data-theme="light"] .app-root .nav-glass-capsule:not(.hero-blended, .map-glass-capsule) .lang-btn.blended-pill { background: var(--bg-glass-card) !important; }
 
-/* Over photo heroes the header is transparent in both themes and always uses the dark-theme
-   look: white links, bright gold brand, dark translucent pills. */
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended {
+/* Over photo heroes (transparent) and on the satellite map (dark glass) the header always uses
+   the dark-theme look: white links, bright gold brand, dark translucent pills. */
+[data-theme="light"] .app-root .nav-glass-capsule:is(.hero-blended, .map-glass-capsule) {
  --text-primary: #FFFFFF;
  --text-secondary: #C7D2DF;
  --gold-primary: #E5B869;
@@ -1375,23 +1375,55 @@ div[style*="background:#ffffff"] select {
  --gold-text: #E5B869;
  --glass-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended .nav-link {
+[data-theme="light"] .app-root .nav-glass-capsule:is(.hero-blended, .map-glass-capsule) .nav-link {
  color: #FFFFFF !important;
  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55) !important;
 }
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended :is(.nav-link:hover, .nav-link.active) {
+[data-theme="light"] .app-root .nav-glass-capsule:is(.hero-blended, .map-glass-capsule) :is(.nav-link:hover, .nav-link.active) {
  color: #E5B869 !important;
 }
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended .blended-pill {
+[data-theme="light"] .app-root .nav-glass-capsule:is(.hero-blended, .map-glass-capsule) .blended-pill {
  background: rgba(0, 0, 0, 0.25) !important;
  color: #FFFFFF !important;
  border-color: rgba(255, 255, 255, 0.2) !important;
 }
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended .name-serif-gold,
-[data-theme="light"] .app-root .nav-glass-capsule.hero-blended .brand-sub-text {
+[data-theme="light"] .app-root .nav-glass-capsule:is(.hero-blended, .map-glass-capsule) .name-serif-gold,
+[data-theme="light"] .app-root .nav-glass-capsule:is(.hero-blended, .map-glass-capsule) .brand-sub-text {
  background: linear-gradient(135deg, #FFFDF5 0%, #FEE8A0 22%, #E5B869 55%, #C59A45 85%, #9E7428 100%) !important;
  -webkit-background-clip: text !important;
  background-clip: text !important;
  -webkit-text-fill-color: transparent !important;
  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.95)) !important;
+}
+
+/* The satellite map is dark and busy, so its floating panels use the dark glass in both themes. */
+[data-theme="light"] .map-view-page,
+[data-theme="light"] .app-root .nav-glass-capsule.map-glass-capsule {
+ --bg-surface: #11141B;
+ --bg-card: #16171C;
+ --bg-card-hover: #1E2028;
+ --bg-glass: rgba(12, 15, 22, 0.36);
+ --bg-glass-card: linear-gradient(180deg, rgba(12, 15, 22, 0.30), rgba(12, 15, 22, 0.42));
+ --bg-glass-hover: var(--bg-glass-card);
+ --glass-strong: linear-gradient(180deg, rgba(12, 15, 22, 0.58), rgba(12, 15, 22, 0.70));
+ --glass-card-strong: linear-gradient(180deg, rgba(20, 25, 36, 0.38), rgba(12, 16, 24, 0.56));
+ --glass-border: 1px solid rgba(255, 255, 255, 0.16);
+ --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+ --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+ --glass-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+ --glass-fallback: rgba(12, 15, 22, 0.86);
+ --border-glass: rgba(255, 255, 255, 0.16);
+ --border-glass-subtle: var(--border-glass);
+ --shadow-glass: var(--glass-shadow), var(--glass-highlight);
+ --gold-primary: #E5B869;
+ --gold-light: #FFF0C2;
+ --gold-dark: #B8934A;
+ --gold-text: #E5B869;
+ --gold-border: rgba(229, 184, 105, 0.28);
+ --text-primary: #FFFFFF;
+ --text-secondary: #C7D2DF;
+ --text-muted: #8E9BAE;
+ --border-subtle: rgba(255, 255, 255, 0.08);
+ --border-medium: rgba(255, 255, 255, 0.16);
+ color-scheme: dark;
 }
