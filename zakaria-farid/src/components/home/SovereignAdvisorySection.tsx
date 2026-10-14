@@ -105,7 +105,7 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
   const reviewTouchX = useRef<number | null>(null);
 
   return (
-    <section className="sovereign-advisory-section" dir={isAr ? 'rtl' : 'ltr'}>
+    <section data-preview-target="advisory" className="sovereign-advisory-section" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="advisory-ambient-radial" />
 
       <div className="container">

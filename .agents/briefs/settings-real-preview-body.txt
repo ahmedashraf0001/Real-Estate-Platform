@@ -1,0 +1,28 @@
+TASK settings-real-preview — the admin Settings live preview shows the REAL public page with the unsaved draft applied (branch feat/blueprint-nav == main aeb80c2, deployed)
+
+WHY [user-confirmed 2026-10-14]
+User: "the preview does not show the actual page with the changes" -> answer: it shows a small cut-out piece; they want the full real page (like the live site) with their unsaved changes, scrolled to what they are editing. Today the preview (src/components/admin/settings/SettingsPreview.tsx + PreviewPanel.tsx) renders compact component regions in an iframe.
+
+REQUIRED
+1. The preview iframe loads the actual public route for the group, same origin, full page with the real Navbar/Footer/layout:
+   home -> /{locale}; about -> /{locale}/about; contact -> /{locale}/contact (and the footer contact block is visible by scrolling); listings display -> /{locale}/properties, and when a field concerns the detail page, the first property's detail page; radar -> the page where MarketChart lives; whatsapp -> keep a message-bubble preview (no public page), clearly labelled.
+   Locale follows the preview AR/EN toggle; theme follows the light/dark toggle; desktop = 1440 viewport scaled to the panel width (the user can scroll inside it), phone = 390.
+2. Draft injection: the iframe URL carries ?preview=1. In preview mode the public settings context (usePlatformSettings / server-provided settings) and the About content (AboutView content prop) can be overridden on the client by a postMessage from the parent. Security: accept messages only when window.parent !== window, event.origin === location.origin, event.source === window.parent, and a schema-validated payload (reuse the site_content merge/validation so a bad payload falls back to defaults). Never persist the override (no storage, no cookies, no DB). Outside preview mode nothing changes and no listener is attached.
+   The parent posts the full draft on load and on every change (debounced ~150 ms). Server-rendered values must be replaced without a full reload (text, section visibility, hidePropertyPrices on cards and detail, floor plans/commute visibility, contact data in footer and contact page, market districts).
+3. Preview mode UX inside the iframe: a slim non-interactive "معاينة — لم تُحفظ بعد" badge; links and forms inside the page are disabled (no navigation away, no lead submission, no WhatsApp/tel launches); scroll-reveal animations start visible (keep the preview-mode handling from aeb80c2); when the admin focuses a field, the iframe scrolls to the matching element and outlines it (reuse the existing field-to-target mapping, now resolved against the real page DOM via data attributes on the real components).
+4. Empty data: the production DB currently has NO properties. When the listings/radar route has no data, show the real page empty state AND a clearly labelled sample card rendered by the real PropertyCard below it ("مثال للمعاينة") so price/floor-plan toggles are still visible. Do not write sample data anywhere.
+5. Remove the now-unused compact region code from SettingsPreview (keep only what is still used, e.g. the WhatsApp bubble). No dead code.
+
+DO NOT
+- Write to the production DB or storage, change schema/RLS/site_content shape, or press save in a real session. Add dependencies.
+- Change the public site's behaviour outside ?preview=1 inside an admin iframe.
+- Every button type="button"; no nested forms.
+
+TESTS
+RED first: message guard (wrong origin, not framed, wrong source, invalid payload -> ignored), override applies to settings and About content, no listener outside preview mode, links/forms disabled in preview, empty-data sample card labelled, route mapping per group/locale. Gates: tsc exit 0; npm test only the 7 known baseline failures.
+Capture (separate port, Supabase intercepted with fixtures incl. an EMPTY properties fixture): each group at 1440 AR showing the real page in the preview with a visible draft change (e.g. edited hero title, hidden section, hidden prices, edited phone), focus-scroll to a lower field, phone mode, EN and dark once each. Inspect every image.
+
+PROCESS
+Foreground servers/tests with a timeout or stop them yourself. Never end your turn waiting on a background task. Port 51105 may be the user's dev server: do not stop it; use another free port (not 51101-51105) and a separate gitignored build dir; restore tsconfig.json/next-env.d.ts.
+
+ENVIRONMENT: work ONLY in C:/Users/lyr1csan/workspace/REP-main (branch feat/blueprint-nav). Do NOT edit any HANDOFF file. Do not commit. Tests use node:test via `npx tsx --test`.

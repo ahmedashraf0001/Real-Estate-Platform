@@ -1,4 +1,5 @@
 'use client';
+import { isSettingsPreview } from '@/lib/siteContent/preview';
 
 import React, { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
@@ -12,6 +13,7 @@ export const LenisProvider: React.FC<LenisProviderProps> = ({ children }) => {
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const desktopPointer = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
     // Only enable smooth scrolling on desktop devices (width >= 1024px and non-touch)

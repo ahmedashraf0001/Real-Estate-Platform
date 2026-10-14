@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { PreviewEmptyProperty } from '@/components/property/PreviewEmptyProperty';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MarketChart } from '@/components/MarketChart';
 import { CompareDrawer } from '@/components/property/CompareDrawer';
 import { Property } from '@/types';
 import { useFavorites } from '@/lib/context/FavoritesContext';
-import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { usePlatformSettings, useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 import { getDynamicDestinationPills, identifyPropertyDestinationKey } from '@/lib/utils/dynamicLocations';
 import {
   SlidersHorizontal,
@@ -151,6 +152,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const [mounted, setMounted] = useState(false);
   const { registerProperties } = useFavorites();
   const platformSettings = usePlatformSettings();
+  const previewState = useSettingsPreview();
+  useEffect(() => {
+    if (previewState.active && propProperties?.[0]) window.parent.postMessage({type:'settings-preview-property',slug:propProperties[0].slug || propProperties[0].id}, window.location.origin);
+  }, [previewState.active, propProperties]);
   const showSidebar = Boolean(
     platformSettings.showMarketRadar !== false || platformSettings.showVIPAlerts !== false
   );
@@ -1197,6 +1202,8 @@ return true;
               </div>
             )}
 
+            {allPropertiesList.length === 0 && <PreviewEmptyProperty locale={locale} />}
+
             {/* Dynamic Luxury Pagination Bar */}
             {filteredProperties.length > 0 && (
               <div className="catalog-pagination-wrap">
@@ -1241,11 +1248,11 @@ return true;
             <aside className="catalog-sidebar">
               {/* Interactive Data Visualization Widget (mobile: opens as bottom sheet) */}
               {platformSettings.showMarketRadar !== false && (
-                <div className="radar-mobile-wrap">
+                <div className="radar-mobile-wrap" data-preview-target="radar">
                   {isRadarOpen && (
                     <div className="radar-sheet-backdrop" onClick={() => setIsRadarOpen(false)} />
                   )}
-                  <div className={`radar-chart-holder ${isRadarOpen ? 'open' : ''}`}>
+                  <div className={`radar-chart-holder ${isRadarOpen || previewState.active ? 'open' : ''}`}>
                     <MarketChart locale={locale} />
                   </div>
                 </div>
@@ -1253,7 +1260,7 @@ return true;
 
               {/* Alert Subscription Card with Direct Email Input */}
               {platformSettings.showVIPAlerts !== false && (
-                <div className="sidebar-widget alert-widget">
+                <div className="sidebar-widget alert-widget" data-preview-target="vip">
                   <div className="widget-header-row">
                     <div className="widget-icon-wrap">
                       <Bell size={18} className="alert-bell-icon" />

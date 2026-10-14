@@ -8,7 +8,7 @@ import { MapSection } from '@/components/map/MapSection';
 import { SovereignAdvisorySection } from '@/components/home/SovereignAdvisorySection';
 import { Property } from '@/types';
 import { useFavorites } from '@/lib/context/FavoritesContext';
-import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { usePlatformSettings, useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/services/marketIntelligence';
 import { getDynamicDestinationPills, identifyPropertyDestinationKey } from '@/lib/utils/dynamicLocations';
 import { ArrowRight, ArrowUpRight, ShieldCheck, Building2, Scale, Compass, Sparkles, ChevronDown } from 'lucide-react';
@@ -29,12 +29,13 @@ interface HomeViewProps {
 export const HomeView: React.FC<HomeViewProps> = ({
   properties: propProperties,
   locale = 'en',
-  preview = false,
+  preview: explicitPreview = false,
   onSelectProperty: propOnSelectProperty,
   onNavigateToCatalog: propOnNavigateToCatalog,
   onOpenMapModal: propOnOpenMapModal,
   onOpenListEstate: propOnOpenListEstate
 }) => {
+  const preview = explicitPreview || useSettingsPreview().active;
   const isAr = locale === 'ar';
   const router = useRouter();
   const platformSettings = usePlatformSettings();
@@ -126,19 +127,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
   }, []);
 
   // Typewriter animation state for Hero Title
-  const line1Text = !preview && isMobileViewport
+  const line1Text = isMobileViewport
     ? (isAr ? (homeSettings.heroTitle1Ar?.includes('استكشف') ? 'أندر الصروح المعمارية' : homeSettings.heroTitle1Ar || 'أندر الصروح المعمارية')
       : (homeSettings.heroTitle1En?.includes('Discover') ? "Egypt's Premier Residences" : homeSettings.heroTitle1En || "Egypt's Premier Residences"))
     : (isAr ? (homeSettings.heroTitle1Ar || 'استكشف أندر الصروح المعمارية و')
       : (homeSettings.heroTitle1En || "Discover Egypt's Premier Residences &"));
 
-  const line2Text = !preview && isMobileViewport
+  const line2Text = isMobileViewport
     ? (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
       : (homeSettings.heroTitle2En?.includes('Living') ? 'Sovereign Luxury Estates' : homeSettings.heroTitle2En || 'Sovereign Luxury Estates'))
     : (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
       : (homeSettings.heroTitle2En || 'Luxury Living & Sovereign Estates'));
 
-  const heroSubtitle = !preview && isMobileViewport
+  const heroSubtitle = isMobileViewport
     ? (isAr
       ? (
         <>
@@ -456,12 +457,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* ─── 4. Interactive Real Cartography Map Explorer ─── */}
-      {!preview && homeSettings.showMapExplorer !== false && (
+      {homeSettings.showMapExplorer !== false && (
         <MapSection onOpenMapModal={onOpenMapModal} properties={allProps} locale={locale} />
       )}
 
       {/* ─── 5. Unified Sovereign Advisory & Client Provenance ─── */}
-      {!preview && homeSettings.showSovereignAdvisory !== false && (
+      {homeSettings.showSovereignAdvisory !== false && (
         <SovereignAdvisorySection locale={locale} onOpenListEstate={onOpenListEstate} />
       )}
 

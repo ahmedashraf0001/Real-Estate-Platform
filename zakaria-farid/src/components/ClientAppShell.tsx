@@ -1,4 +1,6 @@
 'use client';
+import { isSettingsPreview } from '@/lib/siteContent/preview';
+import { useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
@@ -17,6 +19,7 @@ interface ClientAppShellProps {
 
 export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale }) => {
   const pathname = usePathname() || '';
+  const preview = useSettingsPreview();
   const isMapRoute = pathname.endsWith('/map') || pathname.includes('/map');
 
   // Theme state — always starts dark to match SSR default; mount effect corrects from DOM (no hydration mismatch)
@@ -25,6 +28,7 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
   // On mount: read theme the inline script already applied to `data-theme` (set before React hydrates)
   // This is a one-time correction that never causes hydration mismatch because it runs after first paint
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     try {
       const saved = localStorage.getItem('zf_theme');
       const docTheme = document.documentElement.getAttribute('data-theme');
@@ -45,6 +49,7 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
 
   // Sync DOM data-theme attribute, localStorage, and cookie on mount and every route/locale change
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     try {
       const saved = localStorage.getItem('zf_theme');
       if (saved === 'light' || saved === 'dark') {
@@ -63,6 +68,7 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
 
   // MutationObserver to ensure data-theme is never stripped or desynced during Next.js client-side navigations
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     const applyExpectedTheme = () => {
       try {
         const saved = localStorage.getItem('zf_theme');
@@ -107,6 +113,7 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
   };
 
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     // Pre-cache sovereign property map sites in background during idle
     const timer = setTimeout(() => {
       preloadPropertyMapSites();
@@ -132,7 +139,7 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
       <Navbar
         locale={locale}
         onOpenInquiry={(title) => handleOpenInquiry(title)}
-        isDarkMode={isDarkMode}
+        isDarkMode={preview.value ? preview.value.theme === 'dark' : isDarkMode}
         onToggleTheme={handleToggleTheme}
       />
 

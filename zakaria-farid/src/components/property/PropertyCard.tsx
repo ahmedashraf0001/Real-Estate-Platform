@@ -10,11 +10,11 @@ import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 
 import { useParams } from 'next/navigation';
-import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { usePlatformSettings, useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 
 interface PropertyCardProps {
   property: Property;
-  onSelect: (propertyId: string) => void;
+  onSelect?: (propertyId: string) => void;
   index?: number;
   viewMode?: 'grid' | 'compact' | 'list';
   onToggleCompare?: (propertyId: string) => void;
@@ -165,11 +165,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   viewMode = 'grid',
   onToggleCompare,
   isCompared = false,
-  preview = false,
+  preview: explicitPreview = false,
   locale: propLocale
 }) => {
   const params = useParams();
   const currentLocale = (propLocale || (params?.locale as string) || 'en');
+  const preview = explicitPreview || useSettingsPreview().active;
   const isAr = currentLocale === 'ar';
 
   const { isFavorite, toggleFavorite, setIsDrawerOpen } = useFavorites();
@@ -223,7 +224,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     return (
       <motion.div
         className={`property-card-list ${status === 'sold' ? 'public-sold-media' : ''}`}
-        onClick={() => onSelect(property.id)}
+        onClick={onSelect ? () => onSelect?.(property.id) : undefined}
         variants={preview ? undefined : cardVariants}
         initial={preview ? false : "hidden"}
         animate={preview ? undefined : "visible"}
@@ -802,7 +803,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   return (
     <motion.div 
       className={`property-card ${status === 'sold' ? 'public-sold-media' : ''} ${viewMode === 'compact' ? 'compact-card' : ''}`}
-      onClick={() => onSelect(property.id)}
+      onClick={() => onSelect?.(property.id)}
       variants={preview ? undefined : cardVariants}
       initial={preview ? false : "hidden"}
       animate={preview ? undefined : "visible"}

@@ -65,6 +65,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function() {
+  if (window.parent !== window && new URLSearchParams(location.search).get('preview') === '1') return;
   try {
     var cookieMatch = document.cookie.match(/(?:^|;\\s*)zf_theme=([^;]*)/);
     var cookieTheme = cookieMatch ? cookieMatch[1] : null;

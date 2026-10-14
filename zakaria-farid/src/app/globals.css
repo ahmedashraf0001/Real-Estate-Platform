@@ -1428,3 +1428,14 @@ div[style*="background:#ffffff"] select {
  --border-medium: rgba(255, 255, 255, 0.16);
  color-scheme: dark;
 }
+
+/* Only active inside the guarded admin draft iframe. */
+[data-settings-preview] [data-preview-focus] {outline:3px solid var(--gold-primary);outline-offset:-3px;scroll-margin:48px;}
+[data-settings-preview] .settings-preview-badge {position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:99999;pointer-events:none;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:999px;padding:4px 12px;font-size:12px;}
+[data-settings-preview] .settings-preview-sample {padding:24px 0;}
+[data-settings-preview] .settings-preview-missing {padding:24px;margin:24px;color:var(--text-muted);border:1px dashed var(--border-color);}
+[data-settings-preview] .settings-preview-sample > [data-preview-target="price"] {max-width:390px;}
+[data-settings-preview] .radar-chart-holder.open {position:static!important;transform:none!important;max-height:none!important;overflow:visible!important;}
+[data-settings-preview] .catalog-sidebar {display:block!important;}
+[data-settings-preview] [style*="opacity: 0"] {opacity:1!important;}
+[data-settings-preview] a, [data-settings-preview] button {cursor:default;}

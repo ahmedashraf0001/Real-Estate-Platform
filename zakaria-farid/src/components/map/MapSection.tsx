@@ -111,7 +111,7 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
 
 
   return (
-    <section className="map-section section-padding" dir={isAr ? 'rtl' : 'ltr'}>
+    <section data-preview-target="map" className="map-section section-padding" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="map-horizon-glow" />
       <div className="container">
         {/* Header */}

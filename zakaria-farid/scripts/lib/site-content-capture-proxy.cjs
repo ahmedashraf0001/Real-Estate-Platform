@@ -3,6 +3,7 @@ const http = require('node:http');
 module.exports = function createCaptureProxy() {
   const rows = { platform_settings: { hidePropertyPrices: true }, about_page: {} };
   let failWrites = false, reads = 0, writes = 0, writeDelayMs=0;
+  let propertyRows = [];
   const user = { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'capture@example.invalid', app_metadata: {}, user_metadata: {}, created_at: '2026-10-13T00:00:00Z' };
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://fixture.invalid');
@@ -16,6 +17,11 @@ module.exports = function createCaptureProxy() {
         if (table === 'site_content') {
           const records=Object.entries(rows).filter(([name])=>!key||key.startsWith('in.')||key===name).map(([name,content])=>({key:name,content,updated_at:'2026-10-13T12:00:00Z',updated_by:user.id}));
           return json(url.searchParams.get('limit')==='1'?records.slice(0,1):records);
+        }
+        if (table === 'properties') {
+          const slug = url.searchParams.get('slug')?.replace(/^eq\./, '');
+          const records = propertyRows.filter(row => !slug || row.slug === slug);
+          return json(req.headers.accept?.includes('vnd.pgrst.object') ? records[0] || null : records);
         }
         return json([]);
       }
@@ -36,6 +42,7 @@ module.exports = function createCaptureProxy() {
       if ('writeDelayMs' in command)writeDelayMs=command.writeDelayMs;
       if ('failWrites' in command) failWrites = command.failWrites;
       if (command.rows) Object.assign(rows, command.rows);
+      if (command.propertyRows) propertyRows = command.propertyRows;
     } else if (url.pathname !== '/') return json({ message: 'Capture forbids this endpoint' }, 403);
     json({ reads, writes, rows, failWrites });
   });

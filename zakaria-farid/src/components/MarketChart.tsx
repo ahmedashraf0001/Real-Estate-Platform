@@ -1,5 +1,5 @@
 'use client';
-import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { usePlatformSettings, useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,12 +14,15 @@ interface MarketChartProps {
   previewDistrictId?: string;
 }
 
-export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en', preview = false, previewDistrictId }) => {
+export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en', preview: explicitPreview = false, previewDistrictId }) => {
+  const previewState = useSettingsPreview();
+  const preview = explicitPreview || previewState.active;
+  const selectedPreviewId = previewState.value?.focusedPath[1] === 'marketDistricts' ? previewState.value.draft.platform_settings.marketDistricts[Number(previewState.value.focusedPath[2])]?.id : previewDistrictId;
   const isAr = locale === 'ar';
   const settings = usePlatformSettings();
   const districts = settings.marketDistricts.filter(d => d.isEnabled);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selectedDistrict = districts.find(d => d.id === (preview ? previewDistrictId : selectedId)) || districts[0] || null;
+  const selectedDistrict = districts.find(d => d.id === (preview ? selectedPreviewId : selectedId)) || districts[0] || null;
   const setSelectedDistrict = (district: MarketDistrictConfig) => setSelectedId(district.id);
   const isVisible = settings.showMarketRadar;
   const [mounted, setMounted] = useState(false);

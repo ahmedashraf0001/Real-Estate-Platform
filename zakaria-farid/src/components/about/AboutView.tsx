@@ -1,4 +1,5 @@
 'use client';
+import { useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -25,7 +26,10 @@ interface AboutViewProps {
   onOpenInquiry?: (subject?: string) => void;
 }
 
-export function AboutView({ locale, content: about, block, preview = false, previewChapter = 0, onNavigateToCatalog, onOpenInquiry }: AboutViewProps) {
+export function AboutView({ locale, content: serverAbout, block, preview: explicitPreview = false, previewChapter = 0, onNavigateToCatalog, onOpenInquiry }: AboutViewProps) {
+  const previewState = useSettingsPreview();
+  const about = previewState.value?.draft.about_page || serverAbout;
+  const preview = explicitPreview || previewState.active;
   const isAr = locale === 'ar';
   const text = (value: BilingualText) => value[isAr ? 'ar' : 'en'];
   const [activeFolio, setActiveFolio] = useState<number>(0);
@@ -36,7 +40,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
     <div className="atelier-about-page" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ─── 1. Parisian Architectural Masthead Hero ─── */}
       {visible('hero', about.showHero) && (
-        <section className="atelier-hero-section">
+        <section className="atelier-hero-section" data-preview-target="hero">
           <div className="atelier-hero-bg">
             <img 
               src="/assets/hero-bg.webp" 
@@ -121,7 +125,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
 
       {/* ─── 2. Integrated Metrology Ribbon (Authority & Scale) ─── */}
       {visible('stats', about.showMetrology) && (
-        <section className="atelier-metrology-section">
+        <section className="atelier-metrology-section" data-preview-target="stats">
           <div className="container">
             <div className="metrology-grid">
               {about.stats.filter(stat => text(stat.value).trim()).map((stat, index) => <div className="metrology-cell" key={index}>
@@ -136,7 +140,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
 
       {/* ─── 3. The "Paravent" Foldable Architectural Folio (2016 → 2026) ─── */}
       {visible('story', about.showParavent) && (
-        <section className="atelier-paravent-section">
+        <section className="atelier-paravent-section" data-preview-target="story">
           <div className="container">
             <div className="atelier-section-header">
               <span className="atelier-eyebrow">{isAr ? about.paraventEyebrowAr : about.paraventEyebrowEn}</span>
@@ -147,7 +151,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
             {/* Interactive 4-Panel Paravent Accordion */}
             <div className="paravent-deck-container">
               {folios.map((folio, idx) => {
-                const isOpen = (preview ? previewChapter : activeFolio) === idx;
+                const isOpen = (preview ? Number(previewState.value?.focusedPath[1] === 'chapters' ? previewState.value.focusedPath[2] : previewChapter) : activeFolio) === idx;
                 return (
                   <div
                     key={idx}
@@ -215,7 +219,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
       )}
 
       {visible('charter', about.showCuration) && (
-        <section className="atelier-curation-section">
+        <section className="atelier-curation-section" data-preview-target="charter">
           <div className="container">
             <div className="atelier-section-header">
               <span className="atelier-eyebrow">{isAr ? about.curationEyebrowAr : about.curationEyebrowEn}</span>
@@ -249,7 +253,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
 
       {/* ─── 5. Founder’s "Lettre d'Intention" (Eng. Farid Zakaria) ─── */}
       {visible('founder', about.showFounder) && (
-        <section className="atelier-founder-section">
+        <section className="atelier-founder-section" data-preview-target="founder">
           <div className="container">
             <div className="founder-letter-card">
               <div className="founder-letter-watermark">“</div>
@@ -287,7 +291,7 @@ export function AboutView({ locale, content: about, block, preview = false, prev
 
       {/* ─── 6. Confidential Acquisitions Office (Private Portal CTA) ─── */}
       {visible('portal', about.showPortal) && (
-        <section className="atelier-portal-section">
+        <section className="atelier-portal-section" data-preview-target="portal">
           <div className="container">
             <div className="atelier-portal-card">
               <div className="portal-watermark-scale">

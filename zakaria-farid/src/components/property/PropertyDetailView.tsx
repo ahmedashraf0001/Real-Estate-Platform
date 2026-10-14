@@ -24,7 +24,7 @@ import { InquiryModal } from '@/components/InquiryModal';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 import { createCachedTileLayer } from '@/lib/mapCache';
-import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { usePlatformSettings, useSettingsPreview } from '@/lib/hooks/usePlatformSettings';
 import { 
   Bed,
   Phone,
@@ -174,12 +174,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   property: propProperty,
   similarProperties: propSimilar,
   locale = 'en',
-  preview = false,
+  preview: explicitPreview = false,
   onBack: propOnBack,
   onSelectProperty: propOnSelectProperty,
   onOpenInquiry: propOnOpenInquiry
 }) => {
   const router = useRouter();
+  const preview = explicitPreview || useSettingsPreview().active;
   const isAr = locale === 'ar';
   const effectiveId = propertyId || propProperty?.slug || propProperty?.id;
   const rawProperty = propProperty || null;

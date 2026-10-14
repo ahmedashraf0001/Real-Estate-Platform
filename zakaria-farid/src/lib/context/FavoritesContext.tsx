@@ -1,4 +1,5 @@
 'use client';
+import { isSettingsPreview } from '@/lib/siteContent/preview';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Property } from '@/types';
@@ -31,6 +32,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Load from localStorage on mount
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     try {
       const storedIds = localStorage.getItem(IDS_STORAGE_KEY);
       let parsedIds: string[] = [];
@@ -58,6 +60,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Sync to localStorage on update
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     if (!isLoaded) return;
     try {
       localStorage.setItem(IDS_STORAGE_KEY, JSON.stringify(favoriteIds));
@@ -69,6 +72,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Auto-Hydrate missing property objects from backend API if favoriteIds has IDs without objects
   useEffect(() => {
+    if (isSettingsPreview(window)) return;
     if (!isLoaded || favoriteIds.length === 0) return;
 
     const missingIds = favoriteIds.filter(

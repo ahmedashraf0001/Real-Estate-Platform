@@ -50,36 +50,45 @@ test('toggle edits do not write; reset defaults remains a draft; guard permits g
   assert.equal(previewTarget('about',['about_page','stages',0,'title','ar']),'charter');
   assert.equal(previewTarget('listings',['platform_settings','showCommuteTimes']),'commute');
 });
+let previewDraft: ReturnType<typeof initial> | null = null;
+let previewFocus = 'price';
 const req=createRequire(import.meta.url); const Module=req('node:module'); const original=Module._load;
 Module._load=function(id:string,...args:unknown[]){
+  if(id==='@/lib/hooks/usePlatformSettings') {
+    const actual = original.call(this,id,...args);
+    return { ...actual, usePlatformSettings: () => previewDraft?.platform_settings || actual.usePlatformSettings(),
+      useSettingsPreview: () => previewDraft ? {active:true,value:{draft:previewDraft,target:previewFocus,focusedPath:[]}} : actual.useSettingsPreview() };
+  }
   if(id==='@/app/actions/siteContent')return {saveSiteContent:async()=>({success:true})};
   if(id==='next/navigation')return { useRouter:()=>({push() {},refresh() {}}),useParams:()=>({locale:'ar'}),usePathname:()=>'/admin/ar/settings',redirect:(url:string)=>{throw new Error('REDIRECT '+url);} };
   return original.call(this,id,...args);
 };
 req.extensions['.css']=module=>{module.exports={__esModule:true,default:new Proxy({},{get:(_,key)=>String(key)})};};
-test('every real preview receives draft values in SSR and maps focused fields',()=>{
+test('real About consumes draft override and section visibility; empty sample uses real card and detail toggles',()=>{
+  const {AboutView}=req('../../../components/about/AboutView');
+  const {PreviewEmptyProperty}=req('../../../components/property/PreviewEmptyProperty');
+  const {FavoritesProvider}=req('../../context/FavoritesContext');
+  const draft=initial(); draft.about_page.heroTitle1En='Draft About title';
+  previewDraft=draft;
+  const about=()=>renderToStaticMarkup(React.createElement(AboutView,{locale:'en',content:initial().about_page}));
+  assert.match(about(),/Draft About title/);
+  draft.about_page.showHero=false;assert.doesNotMatch(about(),/Draft About title/);
+  const sample=()=>renderToStaticMarkup(React.createElement(FavoritesProvider,null,React.createElement(PreviewEmptyProperty,{locale:'en'})));
+  assert.match(sample(),/Preview sample/);assert.match(sample(),/class="property-card/);
+  draft.platform_settings.hidePropertyPrices=true;assert.match(sample(),/Price on Application/);
+  draft.platform_settings.hidePropertyPrices=false;assert.doesNotMatch(sample(),/Price on Application/);
+  previewFocus='plans';assert.match(sample(),/id="architectural-cad-section"/);
+  draft.platform_settings.showFloorPlans=false;assert.doesNotMatch(sample(),/id="architectural-cad-section"/);
+  previewFocus='commute';assert.match(sample(),/class="location-suite-side"/);
+  draft.platform_settings.showCommuteTimes=false;assert.doesNotMatch(sample(),/class="location-suite-side"/);
+  previewDraft=null;assert.equal(sample(),'');
+});
+test('WhatsApp bubble keeps draft phone and public groups no longer render compact regions',()=>{
   const {SettingsPreview}=req('../../../components/admin/settings/SettingsPreview');
-  const draft=initial();
-  draft.platform_settings.home!.heroTitle1Ar='عنوان البيت التجريبي'; draft.about_page.heroTitle1Ar='عنوان المكتب التجريبي';
-  draft.platform_settings.contact.email='preview@example.invalid'; draft.platform_settings.marketDistricts[0].districtAr='منطقة المعاينة';
-  draft.platform_settings.whatsappAutomation!.faridAlertPhone='+201234567890';
-  for(const [group,text] of [['home','عنوان البيت التجريبي'],['about','عنوان المكتب التجريبي'],['contact','preview@example.invalid'],['radar','منطقة المعاينة'],['whatsapp','201234567890']] as const){
-    const html=renderToStaticMarkup(React.createElement(SettingsPreview,{group,draft,locale:'ar',target:'hero'})); assert.ok(html.includes(text),group+' draft value missing');
-  }
-  const render=(hide:boolean)=>renderToStaticMarkup(React.createElement(SettingsPreview,{group:'listings',draft:{...draft,platform_settings:{...draft.platform_settings,hidePropertyPrices:hide}},locale:'en',target:'price'}));
-  assert.match(render(true),/Price on Application/); assert.doesNotMatch(render(false),/Price on Application/);
-  assert.match(render(true),/data-preview-target="price"/);
-  const listings=renderToStaticMarkup(React.createElement(SettingsPreview,{group:'listings',draft,locale:'ar',target:'plans'}));
-  assert.match(listings,/id="architectural-cad-section"/);assert.match(listings,/class="location-suite-side"/);
-  const hidden=renderToStaticMarkup(React.createElement(SettingsPreview,{group:'listings',draft:{...draft,platform_settings:{...draft.platform_settings,showFloorPlans:false,showCommuteTimes:false}},locale:'ar',target:'plans'}));
-  assert.doesNotMatch(hidden,/id="architectural-cad-section"|class="location-suite-side"/);assert.match(hidden,/مخفي/);
-  draft.about_page.stages[0].title.ar='معيار مسودة للمعاينة';
-  const charter=renderToStaticMarkup(React.createElement(SettingsPreview,{group:'about',draft,locale:'ar',target:'charter'}));
-  assert.match(charter,/معيار مسودة للمعاينة/);assert.doesNotMatch(charter,/عنوان المكتب التجريبي/);
-  draft.platform_settings.home!.showHero=false;
-  const home=renderToStaticMarkup(React.createElement(SettingsPreview,{group:'home',draft,locale:'ar',target:'hero'}));
-  assert.doesNotMatch(home,/class="hero-section"/);assert.match(home,/مخفي/);
-
+  const draft=initial();draft.platform_settings.whatsappAutomation!.faridAlertPhone='+201234567890';
+  const html=renderToStaticMarkup(React.createElement(SettingsPreview,{group:'whatsapp',draft,locale:'en'}));
+  assert.match(html,/Preview message only/);assert.match(html,/201234567890/);
+  for(const group of ['home','about','contact','listings','radar'])assert.equal(renderToStaticMarkup(React.createElement(SettingsPreview,{group,draft,locale:'en'})),'');
 });
 test('legacy content route redirects to unified About settings and sidebar drops duplicate editor',async()=>{
   const route=req('../../../app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/page-content/page').default;

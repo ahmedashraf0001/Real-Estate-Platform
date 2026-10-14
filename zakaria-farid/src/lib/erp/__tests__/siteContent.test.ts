@@ -114,7 +114,7 @@ test('About defaults preserve editorial strings in both languages; overrides and
     const html = renderToStaticMarkup(React.createElement(AboutView, { locale, content: DEFAULT_ABOUT_CONTENT }));
     for (const text of strings) assert.ok(html.includes(text.replaceAll('&', '&amp;')), text);
     for (const section of ['hero', 'metrology', 'paravent', 'founder', 'portal']) {
-      const body = html.match(new RegExp(`<section class="atelier-${section}-section">([\\s\\S]*?)</section>`))![1];
+      const body = html.match(new RegExp(`<section class="atelier-${section}-section"[^>]*>([\\s\\S]*?)</section>`))![1];
       const displayed = body.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       assert.equal(displayed, snapshot[locale][section], `${locale}/${section} editorial string snapshot`);
     }
